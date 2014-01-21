@@ -30,10 +30,12 @@ class Umbra:
     def on_message(self, ws, message):
         message = loads(message)
         if "method" in message.keys() and message["method"] == "Network.requestWillBeSent":
-            pass #print message
+            print message
             
     def on_open(self, ws):
         self.fetch_url("http://archive.org")
+        self.fetch_url("http://facebook.com")
+        self.fetch_url("http://flickr.com")
         time.sleep(10)
         sys.exit(0)
  
@@ -56,16 +58,18 @@ class Umbra:
         threading.Thread(target=socket.run_forever).start()
 
 class Chrome():
-    def __init__(self, port):
+    def __init__(self, port, executable, browser_wait):
         self.port = port
+        self.executable = executable
+        self.browser_wait=browser_wait
 
     def __enter__(self):
         import psutil, subprocess
-        self.chrome_process = subprocess.Popen(["google-chrome", "--remote-debugging-port=%s" % self.port])
+        self.chrome_process = subprocess.Popen([self.executable, "--temp-profile", "--remote-debugging-port=%s" % self.port])
         start = time.time()
         open_debug_port = lambda conn: conn.laddr[1] == int(self.port)
         chrome_ps_wrapper = psutil.Process(self.chrome_process.pid)
-        while time.time() - start < 10 and len(filter(open_debug_port, chrome_ps_wrapper.get_connections())) == 0:
+        while time.time() - start < self.browser_wait and len(filter(open_debug_port, chrome_ps_wrapper.get_connections())) == 0:
             time.sleep(1)
         if len(filter(open_debug_port, chrome_ps_wrapper.get_connections())) == 0:
             self.chrome_process.kill()
@@ -79,8 +83,12 @@ if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
             description='umbra - Browser automation tool',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    arg_parser.add_argument('-w', '--browser-wait', dest='browser_wait', default='10',
+            help='Seconds to wait for browser initialization')
+    arg_parser.add_argument('-e', '--executable', dest='executable', default='google-chrome',
+            help='Executable to use to invoke chrome')
     arg_parser.add_argument('-p', '--port', dest='port', default='9222',
             help='Port to have invoked chrome listen on for debugging connections')
     args = arg_parser.parse_args(args=sys.argv[1:])
-    with Chrome(args.port):
+    with Chrome(args.port, args.executable, args.browser_wait):
         Umbra(args.port)
