@@ -18,6 +18,8 @@ class Umbra:
     def get_websocket(self, on_open, url=None):
         def fetch_debugging_json():
             return loads(urllib.request.urlopen("http://localhost:%s/json" % self.chrome_debug_port).read().decode('utf-8').replace("\\n",""))
+        while len(fetch_debugging_json()) == 0:
+            time.sleep(0.5)
         debug_info = fetch_debugging_json()
         if url: #Polling for the data url we used to initialize the window
             while not [x for x in debug_info if x['url'] == url]:
