@@ -76,7 +76,7 @@ class Chrome():
     def __exit__(self, *args):
         self.chrome_process.kill() 
 
-if __name__ == "__main__":
+def main():
     arg_parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
             description='umbra - Browser automation tool',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -89,3 +89,6 @@ if __name__ == "__main__":
     args = arg_parser.parse_args(args=sys.argv[1:])
     with Chrome(args.port, args.executable, args.browser_wait):
         Umbra(args.port)
+
+if __name__ == "__main__":
+    main()
