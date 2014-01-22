@@ -16,10 +16,12 @@ class Umbra:
         self.launch_tab_socket.run_forever()
         
     def get_websocket(self, on_open, url=None):
-        debug_info = loads(urllib.request.urlopen("http://localhost:%s/json" % self.chrome_debug_port).read())
+        def fetch_debugging_json():
+            return loads(urllib.request.urlopen("http://localhost:%s/json" % self.chrome_debug_port).read().decode('utf-8').replace("\\n",""))
+        debug_info = fetch_debugging_json()
         if url: #Polling for the data url we used to initialize the window
             while not [x for x in debug_info if x['url'] == url]:
-                debug_info = loads(urllib.request.urlopen("http://localhost:%s/json" % self.chrome_debug_port).read())
+                debug_info = fetch_debugging_json()
                 time.sleep(0.5)
             debug_info = [x for x in debug_info if x['url'] == url]
         return_socket = websocket.WebSocketApp(debug_info[0]['webSocketDebuggerUrl'], on_message = self.on_message)
@@ -27,10 +29,10 @@ class Umbra:
         return return_socket
         
     def on_message(self, ws, message):
-        message = loads(message)
-        if "method" in list(message.keys()) and message["method"] == "Network.requestWillBeSent":
-            print(message)
-            
+       message = loads(message)
+       if "method" in list(message.keys()) and message["method"] == "Network.requestWillBeSent":
+           pass #print(message)
+ 
     def on_open(self, ws):
         self.fetch_url("http://archive.org")
         self.fetch_url("http://facebook.com")
@@ -68,7 +70,7 @@ class Chrome():
         start = time.time()
         open_debug_port = lambda conn: conn.laddr[1] == int(self.port)
         chrome_ps_wrapper = psutil.Process(self.chrome_process.pid)
-        while time.time() - start < self.browser_wait and len(list(filter(open_debug_port, chrome_ps_wrapper.get_connections()))) == 0:
+        while time.time() - start < float(self.browser_wait) and len(list(filter(open_debug_port, chrome_ps_wrapper.get_connections()))) == 0:
             time.sleep(1)
         if len(list(filter(open_debug_port, chrome_ps_wrapper.get_connections()))) == 0:
             self.chrome_process.kill()
