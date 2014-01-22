@@ -37,8 +37,7 @@ class Umbra:
         self.fetch_url("http://archive.org")
         self.fetch_url("http://facebook.com")
         self.fetch_url("http://flickr.com")
-        time.sleep(10)
-        sys.exit(0)
+        print("Ctrl + C to exit")
  
     def send_command(self,tab=None, **kwargs):
         if not tab:
@@ -68,16 +67,13 @@ class Chrome():
         import psutil, subprocess
         self.chrome_process = subprocess.Popen([self.executable, "--temp-profile", "--remote-debugging-port=%s" % self.port])
         start = time.time()
-        open_debug_port = lambda conn: conn.laddr[1] == int(self.port)
-        chrome_ps_wrapper = psutil.Process(self.chrome_process.pid)
-        while time.time() - start < float(self.browser_wait) and len(list(filter(open_debug_port, chrome_ps_wrapper.get_connections()))) == 0:
-            time.sleep(1)
-        if len(list(filter(open_debug_port, chrome_ps_wrapper.get_connections()))) == 0:
-            self.chrome_process.kill()
-            raise Exception("Chrome failed to listen on the debug port in time!")
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        while sock.connect_ex(('127.0.0.1',int(self.port))) != 0 and (time.time() - start) < float(self.browser_wait):
+            time.sleep(0.1)
+             
 
     def __exit__(self, *args):
-        print("Killing")
         self.chrome_process.kill() 
 
 if __name__ == "__main__":
