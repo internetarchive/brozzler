@@ -6,12 +6,15 @@ import time
 import uuid
 import logging
 import threading
-logging.basicConfig(level=logging.DEBUG)
+from kombu import Connection, Exchange, Queue
+logging.basicConfig(level=logging.INFO)
 
 class Umbra:
-    def __init__(self, port):
+    def __init__(self, port, amqpurl):
         self.cmd_id = 0
         self.chrome_debug_port = port
+        self.producer = None
+        self.amqpurl = amqpurl
         self.launch_tab_socket = self.get_websocket(self.on_open)
         self.launch_tab_socket.run_forever()
         
@@ -26,21 +29,33 @@ class Umbra:
                 debug_info = fetch_debugging_json()
                 time.sleep(0.5)
             debug_info = [x for x in debug_info if x['url'] == url]
-        return_socket = websocket.WebSocketApp(debug_info[0]['webSocketDebuggerUrl'], on_message = self.on_message)
+        return_socket = websocket.WebSocketApp(debug_info[0]['webSocketDebuggerUrl'], on_message = self.on_message, on_error = print )
         return_socket.on_open = on_open
         return return_socket
         
     def on_message(self, ws, message):
        message = loads(message)
        if "method" in list(message.keys()) and message["method"] == "Network.requestWillBeSent":
-           pass #print(message)
+            request_queue = Queue('requests',  routing_key='request', exchange=self.umbra_exchange)
+            self.producer.publish(message['params']['request'],routing_key='request', exchange=self.umbra_exchange, declare=[request_queue])
+
  
+    def start_amqp(self):
+        self.umbra_exchange = Exchange('umbra', 'direct', durable=True)
+        url_queue = Queue('urls',  routing_key='url', exchange=self.umbra_exchange)
+        with Connection(self.amqpurl) as conn:
+            self.producer = conn.Producer(serializer='json')
+            with conn.Consumer(url_queue, callbacks=[self.fetch_url]) as consumer:
+                while True:
+                    conn.drain_events()
+
     def on_open(self, ws):
-        self.fetch_url("http://archive.org")
-        self.fetch_url("http://facebook.com")
-        self.fetch_url("http://flickr.com")
-        print("Ctrl + C to exit")
- 
+        threading.Thread(target=self.start_amqp).start()
+        while not self.producer:
+            time.sleep(0.1)
+        self.producer.publish({'url': 'http://www.facebook.com'}, 'url', exchange=self.umbra_exchange)
+        
+
     def send_command(self,tab=None, **kwargs):
         if not tab:
             tab = self.launch_tab_socket
@@ -50,13 +65,15 @@ class Umbra:
         command['id'] = self.cmd_id
         tab.send(dumps(command))
        
-    def fetch_url(self, url):
+    def fetch_url(self, body, message):
+        url = body['url']
         new_page = 'data:text/html;charset=utf-8,<html><body>%s</body></html>' % str(uuid.uuid4())
         self.send_command(method="Runtime.evaluate", params={"expression":"window.open('%s');" % new_page})
         def on_open(ws):
             self.send_command(tab=ws, method="Network.enable")       
             self.send_command(tab=ws, method="Runtime.evaluate", params={"expression":"document.location = '%s';" % url})       
         socket = self.get_websocket(on_open, new_page)
+        message.ack()
         threading.Thread(target=socket.run_forever).start()
 
 class Chrome():
@@ -88,9 +105,11 @@ def main():
             help='Executable to use to invoke chrome')
     arg_parser.add_argument('-p', '--port', dest='port', default='9222',
             help='Port to have invoked chrome listen on for debugging connections')
+    arg_parser.add_argument('-u', '--url', dest='amqpurl', default='amqp://guest:guest@localhost:5672//',
+            help='URL identifying the amqp server to talk to')
     args = arg_parser.parse_args(args=sys.argv[1:])
     with Chrome(args.port, args.executable, args.browser_wait):
-        Umbra(args.port)
+        Umbra(args.port, args.amqpurl)
 
 if __name__ == "__main__":
     main()
