@@ -4,3 +4,5 @@
 /lib/
 /local/
 /share/
+/build/
+/umbra.egg-info/

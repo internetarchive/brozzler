@@ -16,7 +16,7 @@ class Umbra:
         self.producer = None
         self.amqpurl = amqpurl
         self.launch_tab_socket = self.get_websocket(self.on_open)
-        self.launch_tab_socket.run_forever()
+        threading.Thread(target=self.launch_tab_socket.run_forever).start()
         
     def get_websocket(self, on_open, url=None):
         def fetch_debugging_json():
@@ -29,15 +29,19 @@ class Umbra:
                 debug_info = fetch_debugging_json()
                 time.sleep(0.5)
             debug_info = [x for x in debug_info if x['url'] == url]
-        return_socket = websocket.WebSocketApp(debug_info[0]['webSocketDebuggerUrl'], on_message = self.on_message, on_error = print )
+        return_socket = websocket.WebSocketApp(debug_info[0]['webSocketDebuggerUrl'], on_message = self.handle_message, on_error = print )
         return_socket.on_open = on_open
+        print("Returning socket %s" % return_socket.url)
         return return_socket
         
-    def on_message(self, ws, message):
+    def handle_message(self, ws, message):
        message = loads(message)
+       if "result" in message.keys():
+            print(message)
        if "method" in list(message.keys()) and message["method"] == "Network.requestWillBeSent":
-            request_queue = Queue('requests',  routing_key='request', exchange=self.umbra_exchange)
-            self.producer.publish(message['params']['request'],routing_key='request', exchange=self.umbra_exchange, declare=[request_queue])
+             print(message['params']['request']['url'])
+#            request_queue = Queue('requests',  routing_key='request', exchange=self.umbra_exchange)
+ #           self.producer.publish(message['params']['request'],routing_key='request', exchange=self.umbra_exchange, declare=[request_queue])
 
  
     def start_amqp(self):
@@ -51,9 +55,6 @@ class Umbra:
 
     def on_open(self, ws):
         threading.Thread(target=self.start_amqp).start()
-        while not self.producer:
-            time.sleep(0.1)
-        self.producer.publish({'url': 'http://www.facebook.com'}, 'url', exchange=self.umbra_exchange)
         
 
     def send_command(self,tab=None, **kwargs):
@@ -63,17 +64,27 @@ class Umbra:
         command.update(kwargs)
         self.cmd_id += 1 
         command['id'] = self.cmd_id
+        print("Sending %s %s" % (tab.url, dumps(command)))
         tab.send(dumps(command))
        
     def fetch_url(self, body, message):
         url = body['url']
+        print("New URL")
         new_page = 'data:text/html;charset=utf-8,<html><body>%s</body></html>' % str(uuid.uuid4())
         self.send_command(method="Runtime.evaluate", params={"expression":"window.open('%s');" % new_page})
         def on_open(ws):
-            self.send_command(tab=ws, method="Network.enable")       
+            ws.on_message=self.handle_message
+            self.send_command(tab=ws, method="Network.enable")
+            print("Getting the url %s" % url)
             self.send_command(tab=ws, method="Runtime.evaluate", params={"expression":"document.location = '%s';" % url})       
+            print("Send the command")
+            def do_close():
+                time.sleep(5)
+                self.send_command(tab=ws, method="Runtime.evaluate", params={"expression":"window.open('', '_self', ''); window.close(); "})
+            threading.Thread(target=do_close).start()
         socket = self.get_websocket(on_open, new_page)
         message.ack()
+        print("Acked!")
         threading.Thread(target=socket.run_forever).start()
 
 class Chrome():
@@ -84,7 +95,7 @@ class Chrome():
 
     def __enter__(self):
         import psutil, subprocess
-        self.chrome_process = subprocess.Popen([self.executable, "--temp-profile", "--remote-debugging-port=%s" % self.port])
+        self.chrome_process = subprocess.Popen([self.executable, "--disable-web-sockets", "--temp-profile", "--remote-debugging-port=%s" % self.port])
         start = time.time()
         import socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -110,6 +121,8 @@ def main():
     args = arg_parser.parse_args(args=sys.argv[1:])
     with Chrome(args.port, args.executable, args.browser_wait):
         Umbra(args.port, args.amqpurl)
+        while True:
+            time.sleep(1)
 
 if __name__ == "__main__":
     main()
