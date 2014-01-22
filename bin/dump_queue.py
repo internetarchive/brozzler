@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 umbra_exchange = Exchange('umbra', 'direct', durable=True)
 requests_queue = Queue('requests', exchange=umbra_exchange)
 def print_and_ack(body, message):
-    print(body)
+    print(body['url'])
     message.ack()
 
 with Connection('amqp://guest:guest@localhost:5672//') as conn:

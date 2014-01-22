@@ -11,5 +11,6 @@ logging.basicConfig(level=logging.INFO)
 umbra_exchange = Exchange('umbra', 'direct', durable=True)
 with Connection('amqp://guest:guest@localhost:5672//') as conn:
     producer = conn.Producer(serializer='json')
-    producer.publish({'url': sys.argv[1]}, 'url', exchange=umbra_exchange)
+    for url in sys.argv[1:]:
+        producer.publish({'url': url}, 'url', exchange=umbra_exchange)
         

@@ -21,27 +21,21 @@ class Umbra:
     def get_websocket(self, on_open, url=None):
         def fetch_debugging_json():
             return loads(urllib.request.urlopen("http://localhost:%s/json" % self.chrome_debug_port).read().decode('utf-8').replace("\\n",""))
-        while len(fetch_debugging_json()) == 0:
             time.sleep(0.5)
-        debug_info = fetch_debugging_json()
-        if url: #Polling for the data url we used to initialize the window
-            while not [x for x in debug_info if x['url'] == url]:
-                debug_info = fetch_debugging_json()
-                time.sleep(0.5)
-            debug_info = [x for x in debug_info if x['url'] == url]
+        debug_info = []
+        while not debug_info:
+            debug_info = fetch_debugging_json()
+            if url: 
+                debug_info = [x for x in debug_info if x['url'] == url]
         return_socket = websocket.WebSocketApp(debug_info[0]['webSocketDebuggerUrl'], on_message = self.handle_message, on_error = print )
         return_socket.on_open = on_open
-        print("Returning socket %s" % return_socket.url)
         return return_socket
         
     def handle_message(self, ws, message):
-       message = loads(message)
-       if "result" in message.keys():
-            print(message)
-       if "method" in list(message.keys()) and message["method"] == "Network.requestWillBeSent":
-             print(message['params']['request']['url'])
-#            request_queue = Queue('requests',  routing_key='request', exchange=self.umbra_exchange)
- #           self.producer.publish(message['params']['request'],routing_key='request', exchange=self.umbra_exchange, declare=[request_queue])
+        message = loads(message)
+        if "method" in message.keys() and message["method"] == "Network.requestWillBeSent":
+             request_queue = Queue('requests',  routing_key='request', exchange=self.umbra_exchange)
+             self.producer.publish(message['params']['request'],routing_key='request', exchange=self.umbra_exchange, declare=[request_queue])
 
  
     def start_amqp(self):
@@ -64,27 +58,22 @@ class Umbra:
         command.update(kwargs)
         self.cmd_id += 1 
         command['id'] = self.cmd_id
-        print("Sending %s %s" % (tab.url, dumps(command)))
         tab.send(dumps(command))
        
     def fetch_url(self, body, message):
         url = body['url']
-        print("New URL")
         new_page = 'data:text/html;charset=utf-8,<html><body>%s</body></html>' % str(uuid.uuid4())
         self.send_command(method="Runtime.evaluate", params={"expression":"window.open('%s');" % new_page})
         def on_open(ws):
             ws.on_message=self.handle_message
             self.send_command(tab=ws, method="Network.enable")
-            print("Getting the url %s" % url)
             self.send_command(tab=ws, method="Runtime.evaluate", params={"expression":"document.location = '%s';" % url})       
-            print("Send the command")
             def do_close():
-                time.sleep(5)
+                time.sleep(10)
                 self.send_command(tab=ws, method="Runtime.evaluate", params={"expression":"window.open('', '_self', ''); window.close(); "})
-            threading.Thread(target=do_close).start()
+            #threading.Thread(target=do_close).start()
         socket = self.get_websocket(on_open, new_page)
         message.ack()
-        print("Acked!")
         threading.Thread(target=socket.run_forever).start()
 
 class Chrome():
@@ -112,7 +101,7 @@ def main():
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('-w', '--browser-wait', dest='browser_wait', default='10',
             help='Seconds to wait for browser initialization')
-    arg_parser.add_argument('-e', '--executable', dest='executable', default='google-chrome',
+    arg_parser.add_argument('-e', '--executable', dest='executable', default='chromium-browser',
             help='Executable to use to invoke chrome')
     arg_parser.add_argument('-p', '--port', dest='port', default='9222',
             help='Port to have invoked chrome listen on for debugging connections')
