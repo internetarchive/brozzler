@@ -90,7 +90,7 @@ class Chrome():
 		self.browser_wait=browser_wait
 
 	def __enter__(self):
-		import psutil, subprocess
+		import subprocess
 		self.chrome_process = subprocess.Popen([self.executable, "--disable-web-sockets", "--incognito", "--temp-profile", "--remote-debugging-port=%s" % self.port])
 		start = time.time()
 		import socket
