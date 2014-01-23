@@ -97,6 +97,8 @@ class Chrome():
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		while sock.connect_ex(('127.0.0.1',int(self.port))) != 0 and (time.time() - start) < float(self.browser_wait):
 			time.sleep(0.1)
+		if (time.time() - start) < float(self.browser_wait):
+			raise Exception("Browser appears to have failed to start")
 
 
 	def __exit__(self, *args):
