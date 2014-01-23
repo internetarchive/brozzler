@@ -1,0 +1,8 @@
+*.pyc
+/bin/
+/include/
+/lib/
+/local/
+/share/
+/build/
+/umbra.egg-info/
