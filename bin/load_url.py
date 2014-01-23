@@ -9,8 +9,8 @@ import threading
 from kombu import Connection, Exchange, Queue
 logging.basicConfig(level=logging.INFO)
 umbra_exchange = Exchange('umbra', 'direct', durable=True)
-with Connection('amqp://guest:guest@localhost:5672//') as conn:
+with Connection(sys.argv[1]) as conn:
     producer = conn.Producer(serializer='json')
-    for url in sys.argv[1:]:
+    for url in sys.argv[2:]:
         producer.publish({'url': url}, 'url', exchange=umbra_exchange)
         

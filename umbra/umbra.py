@@ -91,7 +91,7 @@ class Chrome():
 
 	def __enter__(self):
 		import subprocess
-		self.chrome_process = subprocess.Popen([self.executable, "--disable-web-sockets", "--incognito", "--temp-profile", "--remote-debugging-port=%s" % self.port])
+		self.chrome_process = subprocess.Popen([self.executable, "--disable-web-sockets", "--disable-cache", "--temp-profile", "--remote-debugging-port=%s" % self.port])
 		start = time.time()
 		import socket
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
