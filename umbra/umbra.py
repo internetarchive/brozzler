@@ -70,7 +70,7 @@ class Umbra:
 
 		with self.browser_lock:
 			self.send_command(method="Network.enable")
-			self.send_command(method="Runtime.evaluate", params={"expression":"document.location = '%s';" % url})
+			self.send_command(method="Page.navigate", params={"url": url})
 
 			# XXX more logic goes here
 			time.sleep(10)
