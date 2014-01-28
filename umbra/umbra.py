@@ -13,8 +13,7 @@ class Umbra:
 	def __init__(self, websocket_url, amqp_url):
 		self.cmd_id = 0
 		self.producer = None
-		self.browser_available = threading.Event()
-		self.browser_available.set()
+		self.browser_lock = threading.Lock()
 		self.amqp_url = amqp_url
 		self.producer_lock = threading.Lock()
 		self.websocket_url = websocket_url
@@ -69,20 +68,14 @@ class Umbra:
 
 		url = body['url']
 
-		# claim browser
-		self.browser_available.wait()
-		self.browser_available.clear()
+		with self.browser_lock:
+			self.send_command(method="Network.enable")
+			self.send_command(method="Runtime.evaluate", params={"expression":"document.location = '%s';" % url})
 
-		self.send_command(method="Network.enable")
-		self.send_command(method="Runtime.evaluate", params={"expression":"document.location = '%s';" % url})
+			# XXX more logic goes here
+			time.sleep(10)
 
-		# XXX more logic goes here
-		time.sleep(10)
-
-		# release browser
-		self.browser_available.set()
-
-		message.ack()
+			message.ack()
 
 class Chrome():
 	logger = logging.getLogger('umbra.Chrome')
