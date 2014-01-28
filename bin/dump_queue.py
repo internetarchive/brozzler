@@ -15,7 +15,7 @@ def print_and_ack(body, message):
     print(body['url'])
     message.ack()
 
-with Connection(sys.argv[1]) as conn:
+with Connection(sys.argv[1] if len(sys.argv) > 1 else "amqp://guest:guest@localhost:5672//") as conn:
     with conn.Consumer(requests_queue, callbacks=[print_and_ack]) as consumer:
         while True:
             conn.drain_events()
