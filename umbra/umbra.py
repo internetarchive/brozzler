@@ -34,11 +34,16 @@ class Umbra:
 		# self.logger.debug("handling message from websocket {} - {}".format(ws, message))
 		message = loads(message)
 		if "method" in message.keys() and message["method"] == "Network.requestWillBeSent":
+			to_send = message['params']['request']
+			to_send['parentUrl'] = self.url
+			to_send['parentUrlMetadata'] = self.url_metadata
+			self.logger.debug('sending to amqp: {}'.format(to_send))
 			request_queue = Queue('requests',  routing_key='request', 
 					exchange=self.umbra_exchange)
 			with self.producer_lock:
-				self.producer.publish(message['params']['request'], 
-						routing_key='request', exchange=self.umbra_exchange, 
+				self.producer.publish(to_send,
+						routing_key='request',
+						exchange=self.umbra_exchange,
 						declare=[request_queue])
 
 	def consume_amqp(self):
@@ -64,13 +69,14 @@ class Umbra:
 		self.websock.send(dumps(command))
 
 	def fetch_url(self, body, message):
-		self.logger.debug("body={} message={} message.headers={} message.payload={}".format(body, message, message.headers, message.payload))
+		self.logger.debug("body={} message={} message.headers={} message.payload={}".format(repr(body), message, message.headers, message.payload))
 
-		url = body['url']
+		self.url = body['url']
+		self.url_metadata = body['metadata']
 
 		with self.browser_lock:
 			self.send_command(method="Network.enable")
-			self.send_command(method="Page.navigate", params={"url": url})
+			self.send_command(method="Page.navigate", params={"url": self.url})
 
 			# XXX more logic goes here
 			time.sleep(10)
@@ -140,7 +146,7 @@ def main():
 			help='Executable to use to invoke chrome')
 	arg_parser.add_argument('-p', '--port', dest='port', default='9222',
 			help='Port to have invoked chrome listen on for debugging connections')
-	arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:guest@localhost:5672//',
+	arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
 			help='URL identifying the amqp server to talk to')
 	args = arg_parser.parse_args(args=sys.argv[1:])
 	with Chrome(args.port, args.executable, args.browser_wait) as websocket_url:
