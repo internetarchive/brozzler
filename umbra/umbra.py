@@ -20,10 +20,30 @@ class Umbra:
         self.producer_lock = threading.Lock()
         self.consume_amqp()
 
-    def get_message_handler(self, url, url_metadata):
+    def watchdog(self, command_id):
+        def wrapped():
+            timer = None
+            while True:
+                ws = yield
+                if timer:
+                    self.logger.info("Cancelling")
+                    timer.cancel()
+                def go():
+                    close_exp = "window.open('', '_self', ''); window.close(); "
+                    ws.send(dumps(dict(method="Runtime.evaluate", params={"expression": close_exp}, id=next(command_id))))
+                    self.logger.info("Going")
+                    ws.close()
+                timer = threading.Timer(10, go)
+                timer.start()
+        result = wrapped()
+        next(result)
+        return result
+
+    def get_message_handler(self, url, url_metadata, command_id):
+        this_watchdog = self.watchdog(command_id)
         def handle_message(ws, message):
+            this_watchdog.send(ws)
             message = loads(message)
-            self.logger.info(message)
             if "method" in message.keys() and message["method"] == "Network.requestWillBeSent":
                 to_send = {}
                 to_send.update(message['params']['request'])
@@ -47,19 +67,19 @@ class Umbra:
 
     def fetch_url(self, body, message):
         url, metadata = body['url'], body['metadata']
+        command_id = count(1)
         def send_websocket_commands(ws):
-            command_id = count(1)
             ws.send(dumps(dict(method="Network.enable", id=next(command_id))))
             ws.send(dumps(dict(method="Page.navigate", id=next(command_id), params={"url": url})))
             
-            #from umbra import behaviors
-            #behaviors.execute(url, ws, command_id)            
+            from umbra import behaviors
+            behaviors.execute(url, ws, command_id)            
             
             message.ack()
 
         with Chrome(*self.chrome_args) as websocket_url:
             websock = websocket.WebSocketApp(websocket_url)
-            websock.on_message = self.get_message_handler(url, metadata)
+            websock.on_message = self.get_message_handler(url, metadata, command_id)
             websock.on_open = send_websocket_commands
             websock.run_forever()
 

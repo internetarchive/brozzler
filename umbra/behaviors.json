@@ -1,0 +1,20 @@
+[
+    {
+        "scripts": [
+            "setInterval(function() { window.scrollBy(10000,10000); }, 1000);"
+        ], 
+        "site": ".*"
+    },
+    {
+        "scripts": [
+            "setInterval(function() { a = document.evaluate( '//a[(@href = \"#\" and @role = \"button\" and contains(.,\"more comments\")) or starts-with(@href, \"/browse/likes\")]', document, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null ); f = a.iterateNext(); f.click();}, 1000);"
+        ], 
+        "site": ".*facebook.com.*"
+    },
+    {
+        "scripts": [
+            ""
+        ], 
+        "site": ".*flickr.com.*"
+    }
+]
