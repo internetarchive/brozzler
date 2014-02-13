@@ -1,7 +1,7 @@
 [
     {
         "scripts": [
-            "setInterval(function() {}, 1000);"
+            "setInterval(function() { window.scrollBy(10000,10000); }, 1000);"
         ], 
         "site": ".*"
     },
