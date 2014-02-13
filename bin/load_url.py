@@ -24,5 +24,5 @@ umbra_exchange = Exchange('umbra', 'direct', durable=True)
 with Connection(args.amqp_url) as conn:
     producer = conn.Producer(serializer='json')
     for url in args.urls:
-        producer.publish({'url': url}, 'url', exchange=umbra_exchange)
+        producer.publish({'url': url, 'metadata' : {}}, 'url', exchange=umbra_exchange)
         
