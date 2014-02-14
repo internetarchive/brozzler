@@ -24,6 +24,8 @@ class UmbraWorker:
         self.chrome_exe = chrome_exe
         self.chrome_wait = chrome_wait
         self.client_id = client_id
+        self.page_done = threading.Event()
+        self.idle_timer = None
 
     def browse_page(self, url, url_metadata):
         with self.lock:
@@ -35,10 +37,19 @@ class UmbraWorker:
                 websock_thread = threading.Thread(target=websock.run_forever)
                 websock_thread.start()
 
-                # XXX more logic goes here
-                time.sleep(10)
+                self.page_done.clear()
+                self._reset_idle_timer()
+                while not self.page_done.is_set():
+                    time.sleep(0.5)
 
                 websock.close()
+                self.idle_timer = None
+
+    def _reset_idle_timer(self):
+        if self.idle_timer:
+            self.idle_timer.cancel()
+        self.idle_timer = threading.Timer(10, self.page_done.set)
+        self.idle_timer.start()
 
     def visit_page(self, websock):
         msg = dumps(dict(method="Network.enable", id=next(self.command_id)))
@@ -49,10 +60,14 @@ class UmbraWorker:
         self.logger.debug('sending message to {}: {}'.format(websock, msg))
         websock.send(msg)
 
+        from umbra import behaviors
+        behaviors.execute(self.url, websock, self.command_id)            
+
     def handle_message(self, websock, message):
         # self.logger.debug("handling message from websocket {} - {}".format(websock, message))
         message = loads(message)
         if "method" in message.keys() and message["method"] == "Network.requestWillBeSent":
+            self._reset_idle_timer()
             payload = message['params']['request']
             payload['parentUrl'] = self.url
             payload['parentUrlMetadata'] = self.url_metadata
@@ -70,6 +85,22 @@ class UmbraWorker:
                 self.umbra.producer.publish(payload,
                         routing_key=self.client_id,
                         exchange=self.umbra.umbra_exchange)
+
+    def get_message_handler(self, url, url_metadata, command_id):
+        this_watchdog = self.watchdog(command_id)
+        def handle_message(ws, message):
+            this_watchdog.send(ws)
+            message = loads(message)
+            if "method" in message.keys() and message["method"] == "Network.requestWillBeSent":
+                to_send = {}
+                to_send.update(message['params']['request'])
+                to_send.update(dict(parentUrl=url,parentUrlMetadata=url_metadata))
+                self.logger.debug('sending to amqp: {}'.format(to_send))
+                with self.producer_lock:
+                    self.producer.publish(to_send,
+                            routing_key='request',
+                            exchange=self.umbra_exchange)
+        return handle_message
 
 class Umbra:
     logger = logging.getLogger('umbra.Umbra')
