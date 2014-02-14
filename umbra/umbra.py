@@ -105,16 +105,8 @@ class Umbra:
                         conn.drain_events(timeout=0.5)
                     except socket.timeout:
                         pass
-                self.logger.debug('out of "while not self.amqp_stop.is_set()"')
-            self.logger.debug('out of "with conn.Consumer(url_queue, callbacks=[self.fetch_url]) as consumer"')
-        self.logger.debug('out of "with Connection(self.amqp_url) as conn"')
 
     def fetch_url(self, body, message):
-        self.logger.debug("body={} message={} message.headers={} message.payload={} message.delivery_info={}".format(repr(body), message, message.headers, message.payload, message.delivery_info))
-        self.logger.debug("dir(message)={}".format(dir(message)))
-        self.logger.debug("dir(message.delivery_info)={}".format(dir(message.delivery_info)))
-        self.logger.debug("message.channel={}".format(message.channel))
-
         client_id = body['clientId']
         with self.workers_lock:
             if not client_id in self.workers:
