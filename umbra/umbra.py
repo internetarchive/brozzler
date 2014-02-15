@@ -12,6 +12,7 @@ import threading
 import subprocess
 import signal
 from kombu import Connection, Exchange, Queue
+import tempfile
 
 class UmbraWorker:
     logger = logging.getLogger('umbra.UmbraWorker')
@@ -31,19 +32,20 @@ class UmbraWorker:
         with self.lock:
             self.url = url
             self.url_metadata = url_metadata
-            with Chrome(self.chrome_port, self.chrome_exe, self.chrome_wait) as websocket_url:
-                websock = websocket.WebSocketApp(websocket_url,
-                        on_open=self.visit_page, on_message=self.handle_message)
-                websock_thread = threading.Thread(target=websock.run_forever)
-                websock_thread.start()
+            with tempfile.TemporaryDirectory() as user_data_dir:
+                with Chrome(self.chrome_port, self.chrome_exe, self.chrome_wait, user_data_dir) as websocket_url:
+                    websock = websocket.WebSocketApp(websocket_url,
+                            on_open=self.visit_page, on_message=self.handle_message)
+                    websock_thread = threading.Thread(target=websock.run_forever)
+                    websock_thread.start()
 
-                self.page_done.clear()
-                self._reset_idle_timer()
-                while not self.page_done.is_set():
-                    time.sleep(0.5)
+                    self.page_done.clear()
+                    self._reset_idle_timer()
+                    while not self.page_done.is_set():
+                        time.sleep(0.5)
 
-                websock.close()
-                self.idle_timer = None
+                    websock.close()
+                    self.idle_timer = None
 
     def _reset_idle_timer(self):
         if self.idle_timer:
@@ -83,7 +85,7 @@ class UmbraWorker:
         elif "method" in message.keys() and message["method"] == "Page.loadEventFired":
             self.logger.debug("got Page.loadEventFired, starting behaviors for {}".format(self.url))
             from umbra import behaviors
-            behaviors.execute(self.url, websock, self.command_id)            
+            behaviors.execute(self.url, websock, self.command_id)
 
     def get_message_handler(self, url, url_metadata, command_id):
         this_watchdog = self.watchdog(command_id)
@@ -159,10 +161,11 @@ class Umbra:
 class Chrome:
     logger = logging.getLogger('umbra.Chrome')
 
-    def __init__(self, port, executable, browser_wait):
+    def __init__(self, port, executable, browser_wait, user_data_dir):
         self.port = port
         self.executable = executable
         self.browser_wait = browser_wait
+        self.user_data_dir = user_data_dir
 
     def fetch_debugging_json():
         raw_json = urllib.request.urlopen("http://localhost:%s/json" % self.port).read()
@@ -171,7 +174,8 @@ class Chrome:
 
     # returns websocket url to chrome window with about:blank loaded
     def __enter__(self):
-        chrome_args = [self.executable, "--temp-profile",
+        chrome_args = [self.executable,
+                "--user-data-dir={}".format(self.user_data_dir),
                 "--remote-debugging-port=%s" % self.port,
                 "--disable-web-sockets", "--disable-cache",
                 "--window-size=1100,900", "--enable-logging",
