@@ -8,7 +8,6 @@ import logging
 behaviors_file = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ['behaviors.json'])
 def execute(url, websock, command_id):
     logger = logging.getLogger('behaviors')
-    sleep(5)
     with open(behaviors_file) as js:
         behaviors = load(js)
         for behavior in behaviors:

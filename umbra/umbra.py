@@ -48,7 +48,7 @@ class UmbraWorker:
     def _reset_idle_timer(self):
         if self.idle_timer:
             self.idle_timer.cancel()
-        self.idle_timer = threading.Timer(10, self.page_done.set)
+        self.idle_timer = threading.Timer(60, self.page_done.set)
         self.idle_timer.start()
 
     def visit_page(self, websock):
@@ -56,35 +56,34 @@ class UmbraWorker:
         self.logger.debug('sending message to {}: {}'.format(websock, msg))
         websock.send(msg)
 
+        msg = dumps(dict(method="Page.enable", id=next(self.command_id)))
+        self.logger.debug('sending message to {}: {}'.format(websock, msg))
+        websock.send(msg)
+
         msg = dumps(dict(method="Page.navigate", id=next(self.command_id), params={"url": self.url}))
         self.logger.debug('sending message to {}: {}'.format(websock, msg))
         websock.send(msg)
 
-        from umbra import behaviors
-        behaviors.execute(self.url, websock, self.command_id)            
+    def send_request_to_amqp(self, chrome_msg):
+        payload = chrome_msg['params']['request']
+        payload['parentUrl'] = self.url
+        payload['parentUrlMetadata'] = self.url_metadata
+        self.logger.debug('sending to amqp exchange={} routing_key={} payload={}'.format(self.umbra.umbra_exchange, self.client_id, payload))
+        with self.umbra.producer_lock:
+            self.umbra.producer.publish(payload,
+                    exchange=self.umbra.umbra_exchange,
+                    routing_key=self.client_id)
 
     def handle_message(self, websock, message):
-        # self.logger.debug("handling message from websocket {} - {}".format(websock, message))
+        self.logger.debug("handling message from websocket {} - {}".format(websock, message[:95]))
+        self._reset_idle_timer()
         message = loads(message)
         if "method" in message.keys() and message["method"] == "Network.requestWillBeSent":
-            self._reset_idle_timer()
-            payload = message['params']['request']
-            payload['parentUrl'] = self.url
-            payload['parentUrlMetadata'] = self.url_metadata
-            self.logger.debug('sending to amqp exchange={} routing_key={} payload={}'.format(self.umbra.umbra_exchange, self.client_id, payload))
-            # bind a queue with the same name as the return routing key
-            # (AMQPUrlReceiver in heritrix expects this)
-            request_queue = Queue(self.client_id,
-                    routing_key=self.client_id,
-                    exchange=self.umbra.umbra_exchange)
-            with self.umbra.producer_lock:
-                # self.umbra.producer.publish(payload,
-                #         routing_key=self.client_id,
-                #         exchange=self.umbra.umbra_exchange,
-                #         declare=[request_queue])
-                self.umbra.producer.publish(payload,
-                        routing_key=self.client_id,
-                        exchange=self.umbra.umbra_exchange)
+            self.send_request_to_amqp(message)
+        elif "method" in message.keys() and message["method"] == "Page.loadEventFired":
+            self.logger.debug("got Page.loadEventFired, starting behaviors for {}".format(self.url))
+            from umbra import behaviors
+            behaviors.execute(self.url, websock, self.command_id)            
 
     def get_message_handler(self, url, url_metadata, command_id):
         this_watchdog = self.watchdog(command_id)
