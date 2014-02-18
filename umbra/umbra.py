@@ -209,7 +209,6 @@ class Chrome:
     def __exit__(self, *args):
         self.logger.info("killing chrome pid {}".format(self.chrome_process.pid))
         os.killpg(self.chrome_process.pid, signal.SIGINT)
-        # self.chrome_process.send_signal(signal.SIGINT)
         self.chrome_process.wait()
 
 def main():
