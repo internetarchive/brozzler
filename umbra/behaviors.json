@@ -1,0 +1,14 @@
+[
+    {
+        "scripts": [
+            "setInterval(function() { window.scrollBy(0,500); }, 150);"
+        ], 
+        "site": ".*facebook.com.*"
+    },
+    {
+        "scripts": [
+            "setInterval(function() { window.scrollBy(0,50); }, 50);"
+        ], 
+        "site": ".*flickr.com.*"
+    }
+]
