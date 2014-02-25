@@ -87,22 +87,6 @@ class UmbraWorker:
             from umbra import behaviors
             behaviors.execute(self.url, websock, self.command_id)
 
-    def get_message_handler(self, url, url_metadata, command_id):
-        this_watchdog = self.watchdog(command_id)
-        def handle_message(ws, message):
-            this_watchdog.send(ws)
-            message = loads(message)
-            if "method" in message.keys() and message["method"] == "Network.requestWillBeSent":
-                to_send = {}
-                to_send.update(message['params']['request'])
-                to_send.update(dict(parentUrl=url,parentUrlMetadata=url_metadata))
-                self.logger.debug('sending to amqp: {}'.format(to_send))
-                with self.producer_lock:
-                    self.producer.publish(to_send,
-                            routing_key='request',
-                            exchange=self.umbra_exchange)
-        return handle_message
-
 class Umbra:
     logger = logging.getLogger('umbra.Umbra')
 
