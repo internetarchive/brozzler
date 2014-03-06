@@ -4,7 +4,7 @@ var isOnScreen = function(e) {
         return eTop > window.scrollY && eTop < window.scrollY + window.innerHeight;
 };
  
-var THINGS_TO_CLICK_SELECTOR = 'a.UFIPagerLink > span, a.UFIPagerLink, a[href^="/browse/likes"], span.UFIReplySocialSentenceLinkText';
+var THINGS_TO_CLICK_SELECTOR = 'a.UFIPagerLink > span, a.UFIPagerLink, a[href^="/browse/likes"], span.UFIReplySocialSentenceLinkText, a.photo';
 var alreadyClicked = {};
 var intervalId;
  
@@ -15,7 +15,13 @@ var intervalFunc = function() {
                 closeButton.click();
                 return;
         }
-        
+        var closeTheaterButton = document.querySelector('a.closeTheater');
+        if (closeTheaterButton && closeTheaterButton.offsetWidth > 0) { 
+                console.log("clicking close button " + closeTheaterButton);
+                closeTheaterButton.click();
+                return;
+        }
+         
         var thingsToClick = document.querySelectorAll(THINGS_TO_CLICK_SELECTOR);
         var clickedSomething = false;
         var somethingLeftToClick = false;
