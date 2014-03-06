@@ -13,6 +13,7 @@ import subprocess
 import signal
 from kombu import Connection, Exchange, Queue
 import tempfile
+from umbra import behaviors
 
 class UmbraWorker:
     logger = logging.getLogger('umbra.UmbraWorker')
@@ -27,6 +28,7 @@ class UmbraWorker:
         self.client_id = client_id
         self.page_done = threading.Event()
         self.idle_timer = None
+        self.hard_stop_timer = None
 
     def browse_page(self, url, url_metadata):
         with self.lock:
@@ -50,7 +52,9 @@ class UmbraWorker:
     def _reset_idle_timer(self):
         if self.idle_timer:
             self.idle_timer.cancel()
-        self.idle_timer = threading.Timer(60, self.page_done.set)
+        self.idle_timer = threading.Timer(10, self.page_done.set)
+        if not self.hard_stop_timer: #10 minutes is as long as we should give 1 page
+            self.hard_stop_timer = threading.Timer(600, self.page_done.set)
         self.idle_timer.start()
 
     def visit_page(self, websock):
@@ -84,7 +88,6 @@ class UmbraWorker:
             self.send_request_to_amqp(message)
         elif "method" in message.keys() and message["method"] == "Page.loadEventFired":
             self.logger.debug("got Page.loadEventFired, starting behaviors for {}".format(self.url))
-            from umbra import behaviors
             behaviors.execute(self.url, websock, self.command_id)
 
 class Umbra:
@@ -196,9 +199,6 @@ class Chrome:
         self.chrome_process.wait()
 
 def main():
-    # logging.basicConfig(stream=sys.stdout, level=logging.INFO,
-    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
-            format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
 
     arg_parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
             description='umbra - Browser automation tool',
