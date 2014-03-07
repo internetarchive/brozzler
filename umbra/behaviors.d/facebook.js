@@ -1,4 +1,5 @@
-//.*facebook.com.* 
+//^https?://(?:www\.)?facebook.com/.*$
+
 var isOnScreen = function(e) {
         var eTop = e.getBoundingClientRect().top;
         return eTop > window.scrollY && eTop < window.scrollY + window.innerHeight;
