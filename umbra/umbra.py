@@ -87,10 +87,10 @@ class UmbraWorker:
                     routing_key=self.client_id)
 
     def handle_message(self, websock, message):
-        self.logger.debug("handling message from websocket {} - {}".format(websock, message[:95]))
-        self._reset_idle_timer()
+        # self.logger.debug("handling message from websocket {} - {}".format(websock, message[:95]))
         message = loads(message)
         if "method" in message.keys() and message["method"] == "Network.requestWillBeSent":
+            self._reset_idle_timer()
             self.send_request_to_amqp(message)
         elif "method" in message.keys() and message["method"] == "Page.loadEventFired":
             self.logger.debug("got Page.loadEventFired, starting behaviors for {}".format(self.url))
