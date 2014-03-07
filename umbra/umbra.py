@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 # vim: set sw=4 et:
 
+import logging
+import os, sys, argparse
+# logging.basicConfig(stream=sys.stdout, level=logging.INFO,
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
+        format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
+
 from json import dumps, loads
+import urllib.request, urllib.error, urllib.parse
 from itertools import count
-import os,sys,argparse, urllib.request, urllib.error, urllib.parse
 import websocket
 import time
 import uuid
-import logging
 import threading
 import subprocess
 import signal
@@ -53,9 +58,10 @@ class UmbraWorker:
         if self.idle_timer:
             self.idle_timer.cancel()
         self.idle_timer = threading.Timer(10, self.page_done.set)
+        self.idle_timer.start()
         if not self.hard_stop_timer: #10 minutes is as long as we should give 1 page
             self.hard_stop_timer = threading.Timer(600, self.page_done.set)
-        self.idle_timer.start()
+            self.hard_stop_timer.start()
 
     def visit_page(self, websock):
         msg = dumps(dict(method="Network.enable", id=next(self.command_id)))
@@ -81,10 +87,10 @@ class UmbraWorker:
                     routing_key=self.client_id)
 
     def handle_message(self, websock, message):
-        self.logger.debug("handling message from websocket {} - {}".format(websock, message[:95]))
-        self._reset_idle_timer()
+        # self.logger.debug("handling message from websocket {} - {}".format(websock, message[:95]))
         message = loads(message)
         if "method" in message.keys() and message["method"] == "Network.requestWillBeSent":
+            self._reset_idle_timer()
             self.send_request_to_amqp(message)
         elif "method" in message.keys() and message["method"] == "Page.loadEventFired":
             self.logger.debug("got Page.loadEventFired, starting behaviors for {}".format(self.url))
@@ -199,7 +205,6 @@ class Chrome:
         self.chrome_process.wait()
 
 def main():
-
     arg_parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
             description='umbra - Browser automation tool',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)

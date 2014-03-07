@@ -1,4 +1,5 @@
-//.*flickr.com.*
+//^https?://(?:www\.)?flickr.com/.*$
+
 setInterval(function() { window.scrollBy(0,50); }, 100);
 
 setTimeout(function() { 

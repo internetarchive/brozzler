@@ -6,21 +6,20 @@ from itertools import chain
 import os, re
 import logging
 
+logger = logging.getLogger('behaviors')
 behaviors_directory = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ['behaviors.d'])
-behavior_files = chain(*[[dir + os.path.sep + file for file in files] for dir, dirs, files  in os.walk(behaviors_directory)])
+behavior_files = chain(*[[os.path.join(dir, file) for file in files if file.endswith('.js')] for dir, dirs, files in os.walk(behaviors_directory)])
 behaviors = []
 for file_name in behavior_files:
+    logger.debug("reading behavior file {}".format(file_name))
     lines = open(file_name).readlines()
     pattern, script = lines[0][2:].strip(), ''.join(lines[1:])
-    behaviors.append({'site' : pattern, 'script': script})
+    behaviors.append({'url_regex': pattern, 'script': script, 'file': file_name})
+    logger.info("will run behaviors from {} to urls matching {}".format(file_name, pattern))
 
-print(behaviors)
 def execute(url, websock, command_id):
-    logger = logging.getLogger('behaviors')
-    print(behaviors)
     for behavior in behaviors:
-        print("Comparing %s and %s" %(behavior['site'], url))
-        if re.match(behavior['site'], url):
+        if re.match(behavior['url_regex'], url):
             msg = dumps(dict(method="Runtime.evaluate", params={"expression": behavior['script']}, id=next(command_id)))
             logger.debug('sending message to {}: {}'.format(websock, msg))
             websock.send(msg)
