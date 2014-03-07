@@ -8,7 +8,7 @@ import logging
 
 logger = logging.getLogger('behaviors')
 behaviors_directory = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ['behaviors.d'])
-behavior_files = chain(*[[os.path.join(dir, file) for file in files if re.match('^[^.].*\.js$', file)] for dir, dirs, files in os.walk(behaviors_directory)])
+behavior_files = chain(*[[os.path.join(dir, file) for file in files if file.endswith('.js')] for dir, dirs, files in os.walk(behaviors_directory)])
 behaviors = []
 for file_name in behavior_files:
     logger.debug("reading behavior file {}".format(file_name))
