@@ -58,9 +58,10 @@ class UmbraWorker:
         if self.idle_timer:
             self.idle_timer.cancel()
         self.idle_timer = threading.Timer(10, self.page_done.set)
+        self.idle_timer.start()
         if not self.hard_stop_timer: #10 minutes is as long as we should give 1 page
             self.hard_stop_timer = threading.Timer(600, self.page_done.set)
-        self.idle_timer.start()
+            self.hard_stop_timer.start()
 
     def visit_page(self, websock):
         msg = dumps(dict(method="Network.enable", id=next(self.command_id)))
