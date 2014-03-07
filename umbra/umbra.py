@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 # vim: set sw=4 et:
 
+import logging
+import os, sys, argparse
+# logging.basicConfig(stream=sys.stdout, level=logging.INFO,
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
+        format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
+
 from json import dumps, loads
+import urllib.request, urllib.error, urllib.parse
 from itertools import count
-import os,sys,argparse, urllib.request, urllib.error, urllib.parse
 import websocket
 import time
 import uuid
-import logging
 import threading
 import subprocess
 import signal
@@ -199,7 +204,6 @@ class Chrome:
         self.chrome_process.wait()
 
 def main():
-
     arg_parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
             description='umbra - Browser automation tool',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
