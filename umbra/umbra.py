@@ -55,12 +55,26 @@ class UmbraWorker:
                     self.idle_timer = None
 
     def _reset_idle_timer(self):
+        def _idle_timeout():
+            self.logger.debug('idle timeout')
+            self.page_done.set()
+            if self.hard_stop_timer:
+                self.hard_stop_timer.cancel()
+
+        def _hard_timeout():
+            self.logger.debug('hard timeout')
+            self.page_done.set()
+            if self.idle_timer:
+                self.idle_timer.cancel()
+
         if self.idle_timer:
             self.idle_timer.cancel()
-        self.idle_timer = threading.Timer(10, self.page_done.set)
+
+        self.idle_timer = threading.Timer(30, _idle_timeout)
         self.idle_timer.start()
-        if not self.hard_stop_timer: #10 minutes is as long as we should give 1 page
-            self.hard_stop_timer = threading.Timer(600, self.page_done.set)
+
+        if not self.hard_stop_timer: # 15 minutes is as long as we should give 1 page
+            self.hard_stop_timer = threading.Timer(900, _hard_timeout)
             self.hard_stop_timer.start()
 
     def visit_page(self, websock):
@@ -72,6 +86,10 @@ class UmbraWorker:
         self.logger.debug('sending message to {}: {}'.format(websock, msg))
         websock.send(msg)
 
+        msg = dumps(dict(method="Console.enable", id=next(self.command_id)))
+        self.logger.debug('sending message to {}: {}'.format(websock, msg))
+        websock.send(msg)
+
         msg = dumps(dict(method="Page.navigate", id=next(self.command_id), params={"url": self.url}))
         self.logger.debug('sending message to {}: {}'.format(websock, msg))
         websock.send(msg)
@@ -80,21 +98,29 @@ class UmbraWorker:
         payload = chrome_msg['params']['request']
         payload['parentUrl'] = self.url
         payload['parentUrlMetadata'] = self.url_metadata
-        self.logger.debug('sending to amqp exchange={} routing_key={} payload={}'.format(self.umbra.umbra_exchange, self.client_id, payload))
+        self.logger.debug('sending to amqp exchange={} routing_key={} payload={}'.format(self.umbra.umbra_exchange.name, self.client_id, payload))
         with self.umbra.producer_lock:
             self.umbra.producer.publish(payload,
                     exchange=self.umbra.umbra_exchange,
                     routing_key=self.client_id)
 
     def handle_message(self, websock, message):
-        # self.logger.debug("handling message from websocket {} - {}".format(websock, message[:95]))
+        # self.logger.debug("message from {} - {}".format(websock.url, message[:95]))
+        # self.logger.debug("message from {} - {}".format(websock.url, message))
         message = loads(message)
-        if "method" in message.keys() and message["method"] == "Network.requestWillBeSent":
+        if "method" in message and message["method"] == "Network.requestWillBeSent":
             self._reset_idle_timer()
-            self.send_request_to_amqp(message)
-        elif "method" in message.keys() and message["method"] == "Page.loadEventFired":
-            self.logger.debug("got Page.loadEventFired, starting behaviors for {}".format(self.url))
+            if not message["params"]["request"]["url"].lower().startswith("data:"):
+                self.send_request_to_amqp(message)
+            else:
+                self.logger.debug("ignoring data url {}".format(message["params"]["request"]["url"][:80]))
+        elif "method" in message and message["method"] == "Page.loadEventFired":
+            self.logger.debug("Page.loadEventFired, starting behaviors url={} message={}".format(self.url, message))
             behaviors.execute(self.url, websock, self.command_id)
+        elif "method" in message and message["method"] == "Console.messageAdded":
+            self.logger.debug("{} console {} {}".format(websock.url,
+                message["params"]["message"]["level"],
+                message["params"]["message"]["text"]))
 
 class Umbra:
     logger = logging.getLogger('umbra.Umbra')
@@ -119,7 +145,7 @@ class Umbra:
     def consume_amqp(self):
         self.umbra_exchange = Exchange(name='umbra', type='direct', durable=True)
         url_queue = Queue('urls', routing_key='url', exchange=self.umbra_exchange)
-        self.logger.info("connecting to amqp {} at {}".format(repr(self.umbra_exchange), self.amqp_url))
+        self.logger.info("connecting to amqp exchange={} at {}".format(self.umbra_exchange.name, self.amqp_url))
         with Connection(self.amqp_url) as conn:
             self.producer = conn.Producer(serializer='json')
             self.producer_lock = threading.Lock()
