@@ -5,20 +5,21 @@ var isOnScreen = function(e) {
         return eTop > window.scrollY && eTop < window.scrollY + window.innerHeight;
 };
  
-var THINGS_TO_CLICK_SELECTOR = 'a.UFIPagerLink > span, a.UFIPagerLink, a[href^="/browse/likes"], span.UFIReplySocialSentenceLinkText, a.photo';
+// comments - 'a.UFIPagerLink > span, a.UFIPagerLink, span.UFIReplySocialSentenceLinkText'
+var THINGS_TO_CLICK_SELECTOR = 'a[href^="/browse/likes"], *[rel="theater"]';
 var alreadyClicked = {};
 var intervalId;
  
 var intervalFunc = function() {
         var closeButton = document.querySelector('a[title="Close"]');
         if (closeButton) { 
-                console.log("clicking close button " + closeButton);
+                console.log("clicking close button " + closeButton.outerHTML);
                 closeButton.click();
                 return;
         }
         var closeTheaterButton = document.querySelector('a.closeTheater');
         if (closeTheaterButton && closeTheaterButton.offsetWidth > 0) { 
-                console.log("clicking close button " + closeTheaterButton);
+                console.log("clicking close button " + closeTheaterButton.outerHTML);
                 closeTheaterButton.click();
                 return;
         }
@@ -33,7 +34,7 @@ var intervalFunc = function() {
                         if (isOnScreen(target)) {
                                 // var pos = target.getBoundingClientRect().top;
                                 // window.scrollTo(0, target.getBoundingClientRect().top - 100);
-                                console.log("clicking at " + target.getBoundingClientRect().top + " on " + target);
+                                console.log("clicking at " + target.getBoundingClientRect().top + " on " + target.outerHTML);
                                 target.click();
                                 target.style.border = '1px solid #0a0';
                                 alreadyClicked[target] = true;
