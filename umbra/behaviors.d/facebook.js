@@ -35,7 +35,9 @@ var intervalFunc = function() {
                                 // var pos = target.getBoundingClientRect().top;
                                 // window.scrollTo(0, target.getBoundingClientRect().top - 100);
                                 console.log("clicking at " + target.getBoundingClientRect().top + " on " + target.outerHTML);
-                                target.click();
+                                if(target.click != undefined) {
+                                    target.click();
+                                }
                                 target.style.border = '1px solid #0a0';
                                 alreadyClicked[target] = true;
                                 clickedSomething = true;
