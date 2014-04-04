@@ -231,6 +231,9 @@ class Chrome:
         self.chrome_process.wait()
 
 def main():
+    import faulthandler
+    faulthandler.register(signal.SIGQUIT)
+
     arg_parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
             description='umbra - Browser automation tool',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
