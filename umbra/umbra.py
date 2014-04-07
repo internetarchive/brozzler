@@ -156,9 +156,6 @@ class Umbra:
                     with conn.Consumer(url_queue, callbacks=[self.fetch_url]) as consumer:
                         import socket
                         while not self.amqp_stop.is_set():
-                            import random
-                            if random.randrange(0, 30) == 0:
-                                raise BaseException("test exception!")
                             try:
                                 conn.drain_events(timeout=0.5)
                             except socket.timeout:
