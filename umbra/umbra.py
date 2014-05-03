@@ -90,6 +90,14 @@ class UmbraWorker:
         self.logger.debug('sending message to {}: {}'.format(websock, msg))
         websock.send(msg)
 
+        msg = dumps(dict(method="Debugger.enable", id=next(self.command_id)))
+        self.logger.debug('sending message to {}: {}'.format(websock, msg))
+        websock.send(msg)
+
+        msg = dumps(dict(method="Debugger.setBreakpointByUrl", id=next(self.command_id), params={"lineNumber": 1, "urlRegex":"https?://www.google-analytics.com/analytics.js"}))
+        self.logger.debug('sending message to {}: {}'.format(websock, msg))
+        websock.send(msg)
+
         msg = dumps(dict(method="Page.navigate", id=next(self.command_id), params={"url": self.url}))
         self.logger.debug('sending message to {}: {}'.format(websock, msg))
         websock.send(msg)
@@ -121,6 +129,18 @@ class UmbraWorker:
             self.logger.debug("{} console {} {}".format(websock.url,
                 message["params"]["message"]["level"],
                 message["params"]["message"]["text"]))
+        elif "method" in message and message["method"] == "Debugger.paused":
+            self.logger.debug("debugger paused! message={}".format(message))
+            scriptId = message['params']['callFrames'][0]['location']['scriptId']
+
+            msg = dumps(dict(method="Debugger.setScriptSource", id=next(self.command_id), params={"scriptId": scriptId, "scriptSource":"console.log('google analytics is no more!');"}))
+            self.logger.debug('sending message to {}: {}'.format(websock, msg))
+            websock.send(msg)
+
+            msg = dumps(dict(method="Debugger.resume", id=next(self.command_id)))
+            self.logger.debug('sending message to {}: {}'.format(websock, msg))
+            websock.send(msg)
+
 
 class Umbra:
     logger = logging.getLogger('umbra.Umbra')
