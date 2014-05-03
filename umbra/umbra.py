@@ -205,6 +205,7 @@ class Chrome:
                 "--remote-debugging-port=%s" % self.port,
                 "--disable-web-sockets", "--disable-cache",
                 "--window-size=1100,900", "--enable-logging",
+                "--no-default-browser-check", "--disable-first-run-ui", "--no-first-run",
                 "--homepage=about:blank", "about:blank"]
         self.logger.info("running {}".format(chrome_args))
         self.chrome_process = subprocess.Popen(chrome_args, start_new_session=True)
