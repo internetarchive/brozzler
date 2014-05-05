@@ -1,16 +1,18 @@
 # vim: set sw=4 et:
 
-from json import dumps, load
+import json
 from itertools import chain
-import os, re
+import os
+import re
 import logging
 import time
+import sys
 
 class Behavior:
     logger = logging.getLogger('umbra.behaviors.Behavior')
 
     _behaviors = None
-    _default_behavior_script = None
+    _default_behavior = None
 
     @staticmethod
     def behaviors():
@@ -20,21 +22,29 @@ class Behavior:
             Behavior._behaviors = []
             for file_name in behavior_files:
                 Behavior.logger.debug("reading behavior file {}".format(file_name))
-                lines = open(file_name).readlines()
-                pattern, script = lines[0][2:].strip(), ''.join(lines[1:])
-                Behavior._behaviors.append({'url_regex': pattern, 'script': script, 'file': file_name})
-                Behavior.logger.info("will run behaviors from {} to urls matching {}".format(file_name, pattern))
+                script = open(file_name, encoding='utf-8').read()
+                first_line = script[:script.find('\n')]
+                behavior = json.loads(first_line[2:].strip())
+                behavior['script'] = script
+                behavior['file'] = file_name
+                Behavior._behaviors.append(behavior)
+                Behavior.logger.info("will run behaviors from {} on urls matching {}".format(file_name, behavior['url_regex']))
 
         return Behavior._behaviors
 
     @staticmethod
-    def default_behavior_script():
-        if Behavior._default_behavior_script is None:
+    def default_behavior():
+        if Behavior._default_behavior is None:
             behaviors_directory = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ['behaviors.d'])
             file_name = os.path.join(behaviors_directory, 'default.js')
             Behavior.logger.debug("reading default behavior file {}".format(file_name))
-            Behavior._default_behavior_script = open(file_name).read()
-        return Behavior._default_behavior_script
+            script = open(file_name, encoding='utf-8').read()
+            first_line = script[:script.find('\n')]
+            behavior = json.loads(first_line[2:].strip())
+            behavior['script'] = script
+            behavior['file'] = file_name
+            Behavior._default_behavior = behavior
+        return Behavior._default_behavior
 
     def __init__(self, url, websock, command_id):
         self.url = url
@@ -43,32 +53,37 @@ class Behavior:
 
         self.script_finished = False
         self.waiting_result_msg_ids = []
+        self.active_behavior = None
+        self.last_activity = time.time()
 
     def start(self):
-        self.notify_of_activity()
-
-        script_started = False
         for behavior in Behavior.behaviors():
             if re.match(behavior['url_regex'], self.url):
-                msg = dumps(dict(method="Runtime.evaluate", params={"expression": behavior['script']}, id=next(self.command_id)))
-                self.logger.debug('sending message to {}: {}'.format(self.websock, msg))
-                self.websock.send(msg)
-                script_started = True
+                self.active_behavior = behavior
                 break
 
-        if not script_started:
-            msg = dumps(dict(method="Runtime.evaluate", params={"expression": Behavior.default_behavior_script()}, id=next(self.command_id)))
-            self.logger.debug('sending message to {}: {}'.format(self.websock, msg))
-            self.websock.send(msg)
+        if self.active_behavior is None:
+            self.active_behavior = Behavior.default_behavior()
+
+        msg = json.dumps(dict(method="Runtime.evaluate", params={"expression": self.active_behavior['script']}, id=next(self.command_id)))
+        self.logger.debug('sending message to {}: {}'.format(self.websock, msg))
+        self.websock.send(msg)
+
+        self.notify_of_activity()
 
     def is_finished(self):
         msg_id = next(self.command_id)
         self.waiting_result_msg_ids.append(msg_id)
-        msg = dumps(dict(method="Runtime.evaluate", params={"expression": "umbraBehaviorFinished()"}, id=msg_id))
+        msg = json.dumps(dict(method="Runtime.evaluate", params={"expression": "umbraBehaviorFinished()"}, id=msg_id))
         self.logger.debug('sending message to {}: {}'.format(self.websock, msg))
         self.websock.send(msg)
 
-        return self.script_finished    # XXX and idle_time > behavior_specified_idle_timeout
+        request_idle_timeout_sec = 30
+        if self.active_behavior and 'request_idle_timeout_sec' in self.active_behavior:
+            request_idle_timeout_sec = self.active_behavior['request_idle_timeout_sec']
+        idle_time = time.time() - self.last_activity
+
+        return self.script_finished and idle_time > request_idle_timeout_sec
 
     def is_waiting_on_result(self, msg_id):
         return msg_id in self.waiting_result_msg_ids
@@ -86,5 +101,12 @@ class Behavior:
 
     def notify_of_activity(self):
         self.last_activity = time.time()
+
+if __name__ == "__main__":
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
+            format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
+    logger = logging.getLogger('umbra.behaviors')
+    logger.info("custom behaviors: {}".format(Behavior.behaviors()))
+    logger.info("default behavior: {}".format(Behavior.default_behavior()))
 
 

@@ -1,7 +1,9 @@
-//^https?://(?:www\.)?facebook\.com/.*$
+// {"url_regex":"^https?://(?:www\\.)?facebook\\.com/.*$", "request_idle_timeout_sec":30}
+//
 // vim:set sw=8 et:
+//
 
-var aboveBelowOrOnScreen = function(e) {
+var umbraAboveBelowOrOnScreen = function(e) {
         var eTop = e.getBoundingClientRect().top;
         if (eTop < window.scrollY) {
                 return -1; // above
@@ -13,11 +15,11 @@ var aboveBelowOrOnScreen = function(e) {
 }
 
 // comments - 'a.UFIPagerLink > span, a.UFIPagerLink, span.UFIReplySocialSentenceLinkText'
-var THINGS_TO_CLICK_SELECTOR = 'a[href^="/browse/likes"], *[rel="theater"]';
-var alreadyClicked = {};
-var intervalId;
+var UMBRA_THINGS_TO_CLICK_SELECTOR = 'a[href^="/browse/likes"], *[rel="theater"]';
+var umbraAlreadyClicked = {};
+var umbraState = {'idleSince':null};
 
-var intervalFunc = function() {
+var umbraIntervalFunc = function() {
         var closeButton = document.querySelector('a[title="Close"]');
         if (closeButton) { 
                 console.log("clicking close button " + closeButton.outerHTML);
@@ -31,15 +33,15 @@ var intervalFunc = function() {
                 return;
         }
 
-        var thingsToClick = document.querySelectorAll(THINGS_TO_CLICK_SELECTOR);
+        var thingsToClick = document.querySelectorAll(UMBRA_THINGS_TO_CLICK_SELECTOR);
         var clickedSomething = false;
         var somethingLeftBelow = false;
         var missedAbove = 0;
 
         for (var i = 0; i < thingsToClick.length; i++) {
                 var target = thingsToClick[i]; 
-                if (!(target in alreadyClicked)) {
-                        var where = aboveBelowOrOnScreen(target);
+                if (!(target in umbraAlreadyClicked)) {
+                        var where = umbraAboveBelowOrOnScreen(target);
                         if (where == 0) { // on screen
                                 // var pos = target.getBoundingClientRect().top;
                                 // window.scrollTo(0, target.getBoundingClientRect().top - 100);
@@ -48,8 +50,9 @@ var intervalFunc = function() {
                                         target.click();
                                 }
                                 target.style.border = '1px solid #0a0';
-                                alreadyClicked[target] = true;
+                                umbraAlreadyClicked[target] = true;
                                 clickedSomething = true;
+                                umbraState.idleSince = null;
                                 break;
                         } else if (where > 0) { 
                                 somethingLeftBelow = true;
@@ -67,11 +70,31 @@ var intervalFunc = function() {
                 if (somethingLeftBelow) {
                         console.log("scrolling because everything on this screen has been clicked but there's more below document.body.clientHeight=" + document.body.clientHeight);
                         window.scrollBy(0, 200);
+                        umbraState.idleSince = null;
                 } else if (window.scrollY + window.innerHeight + 10 < document.body.clientHeight) {
                         console.log("scrolling because we're not to the bottom yet document.body.clientHeight=" + document.body.clientHeight);
                         window.scrollBy(0, 200);
-                } 
+                        umbraState.idleSince = null;
+                } else if (umbraState.idleSince == null) {
+                        umbraState.idleSince = Date.now();
+                }
         }
 }
 
-var intervalId = setInterval(intervalFunc, 200);
+// If we haven't had anything to do (scrolled, clicked, etc) in this amount of
+// time, then we consider ourselves finished with the page.
+var UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC = 10;
+
+// Called from outside of this script.
+var umbraBehaviorFinished = function() {
+        if (umbraState.idleSince != null) {
+                var idleTimeMs = Date.now() - umbraState.idleSince;
+                if (idleTimeMs / 1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC) {
+                        return true;
+                }
+        }
+        return false;
+}
+
+
+var umbraIntervalId = setInterval(umbraIntervalFunc, 200);
