@@ -3,13 +3,14 @@
 
 import logging
 import os, sys, argparse
+
 # logging.basicConfig(stream=sys.stdout, level=logging.INFO,
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
         format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
 
 from json import dumps, loads
 import urllib.request, urllib.error, urllib.parse
-from itertools import count
+import itertools
 import websocket
 import time
 import uuid
@@ -18,66 +19,61 @@ import subprocess
 import signal
 from kombu import Connection, Exchange, Queue
 import tempfile
-from umbra import behaviors
+from umbra.behaviors import Behavior
 
 class UmbraWorker:
+    """Runs chrome/chromium to synchronously browse one page at a time using
+    worker.browse_page(). Currently the implementation starts up a new instance
+    of chrome for each page browsed, always on the same debug port. (In the
+    future, it may keep the browser running indefinitely.)"""
     logger = logging.getLogger('umbra.UmbraWorker')
 
+    HARD_TIMEOUT_SECONDS = 60 * 15
+
     def __init__(self, umbra, chrome_port=9222, chrome_exe='chromium-browser', chrome_wait=10, client_id='request'):
-        self.command_id = count(1)
+        self.command_id = itertools.count(1)
         self.lock = threading.Lock()
         self.umbra = umbra
         self.chrome_port = chrome_port
         self.chrome_exe = chrome_exe
         self.chrome_wait = chrome_wait
         self.client_id = client_id
-        self.page_done = threading.Event()
-        self.idle_timer = None
-        self.hard_stop_timer = None
+        self._behavior = None
 
     def browse_page(self, url, url_metadata):
+        """Synchronously browse a page and run behaviors."""
         with self.lock:
             self.url = url
             self.url_metadata = url_metadata
             with tempfile.TemporaryDirectory() as user_data_dir:
                 with Chrome(self.chrome_port, self.chrome_exe, self.chrome_wait, user_data_dir) as websocket_url:
                     websock = websocket.WebSocketApp(websocket_url,
-                            on_open=self.visit_page, on_message=self.handle_message)
-                    websock_thread = threading.Thread(target=websock.run_forever)
+                            on_open=self._visit_page,
+                            on_message=self._handle_message)
+                    websock_thread = threading.Thread(target=websock.run_forever, kwargs={'ping_timeout':0.5})
                     websock_thread.start()
+                    start = time.time()
 
-                    self.page_done.clear()
-                    self._reset_idle_timer()
-                    while not self.page_done.is_set():
+                    while True:
                         time.sleep(0.5)
+                        if not websock or not websock.sock or not websock.sock.connected:
+                            self.logger.error("websocket closed, did chrome die??? {}".format(websock))
+                            break
+                        elif time.time() - start > UmbraWorker.HARD_TIMEOUT_SECONDS:
+                            self.logger.info("finished browsing page, reached hard timeout of {} seconds url={}".format(UmbraWorker.HARD_TIMEOUT_SECONDS, self.url))
+                            break
+                        elif self._behavior != None and self._behavior.is_finished():
+                            self.logger.info("finished browsing page according to behavior url={}".format(self.url))
+                            break
 
-                    websock.close()
-                    self.idle_timer = None
+                    try:
+                        websock.close()
+                    except BaseException as e:
+                        self.logger.error("exception closing websocket {} - {}".format(websock, e))
 
-    def _reset_idle_timer(self):
-        def _idle_timeout():
-            self.logger.debug('idle timeout')
-            self.page_done.set()
-            if self.hard_stop_timer:
-                self.hard_stop_timer.cancel()
+                    websock_thread.join()
 
-        def _hard_timeout():
-            self.logger.debug('hard timeout')
-            self.page_done.set()
-            if self.idle_timer:
-                self.idle_timer.cancel()
-
-        if self.idle_timer:
-            self.idle_timer.cancel()
-
-        self.idle_timer = threading.Timer(30, _idle_timeout)
-        self.idle_timer.start()
-
-        if not self.hard_stop_timer: # 15 minutes is as long as we should give 1 page
-            self.hard_stop_timer = threading.Timer(900, _hard_timeout)
-            self.hard_stop_timer.start()
-
-    def visit_page(self, websock):
+    def _visit_page(self, websock):
         msg = dumps(dict(method="Network.enable", id=next(self.command_id)))
         self.logger.debug('sending message to {}: {}'.format(websock, msg))
         websock.send(msg)
@@ -94,6 +90,11 @@ class UmbraWorker:
         self.logger.debug('sending message to {}: {}'.format(websock, msg))
         websock.send(msg)
 
+        msg = dumps(dict(method="Runtime.enable", id=next(self.command_id)))
+        self.logger.debug('sending message to {}: {}'.format(websock, msg))
+        websock.send(msg)
+
+        # disable google analytics, see _handle_message() where breakpoint is caught "Debugger.paused"
         msg = dumps(dict(method="Debugger.setBreakpointByUrl", id=next(self.command_id), params={"lineNumber": 1, "urlRegex":"https?://www.google-analytics.com/analytics.js"}))
         self.logger.debug('sending message to {}: {}'.format(websock, msg))
         websock.send(msg)
@@ -102,7 +103,9 @@ class UmbraWorker:
         self.logger.debug('sending message to {}: {}'.format(websock, msg))
         websock.send(msg)
 
-    def send_request_to_amqp(self, chrome_msg):
+    # XXX should this class know anything about amqp? or should it
+    # delegate this back up to the Umbra class?
+    def _send_request_to_amqp(self, chrome_msg):
         payload = chrome_msg['params']['request']
         payload['parentUrl'] = self.url
         payload['parentUrlMetadata'] = self.url_metadata
@@ -112,37 +115,86 @@ class UmbraWorker:
                     exchange=self.umbra.umbra_exchange,
                     routing_key=self.client_id)
 
-    def handle_message(self, websock, message):
+    def _handle_message(self, websock, message):
         # self.logger.debug("message from {} - {}".format(websock.url, message[:95]))
         # self.logger.debug("message from {} - {}".format(websock.url, message))
         message = loads(message)
         if "method" in message and message["method"] == "Network.requestWillBeSent":
-            self._reset_idle_timer()
+            if self._behavior:
+                self._behavior.notify_of_activity()
             if not message["params"]["request"]["url"].lower().startswith("data:"):
-                self.send_request_to_amqp(message)
+                self._send_request_to_amqp(message)
             else:
                 self.logger.debug("ignoring data url {}".format(message["params"]["request"]["url"][:80]))
         elif "method" in message and message["method"] == "Page.loadEventFired":
-            self.logger.debug("Page.loadEventFired, starting behaviors url={} message={}".format(self.url, message))
-            behaviors.execute(self.url, websock, self.command_id)
+            if self._behavior is None:
+                self.logger.info("Page.loadEventFired, starting behaviors url={} message={}".format(self.url, message))
+                self._behavior = Behavior(self.url, websock, self.command_id)
+                self._behavior.start()
+            else:
+                self.logger.warn("Page.loadEventFired but behaviors already running url={} message={}".format(self.url, message))
         elif "method" in message and message["method"] == "Console.messageAdded":
             self.logger.debug("{} console {} {}".format(websock.url,
                 message["params"]["message"]["level"],
                 message["params"]["message"]["text"]))
         elif "method" in message and message["method"] == "Debugger.paused":
+            # We hit the breakpoint set in visit_page. Get rid of google
+            # analytics script!
+
             self.logger.debug("debugger paused! message={}".format(message))
             scriptId = message['params']['callFrames'][0]['location']['scriptId']
 
+            # replace script
             msg = dumps(dict(method="Debugger.setScriptSource", id=next(self.command_id), params={"scriptId": scriptId, "scriptSource":"console.log('google analytics is no more!');"}))
             self.logger.debug('sending message to {}: {}'.format(websock, msg))
             websock.send(msg)
 
+            # resume execution
             msg = dumps(dict(method="Debugger.resume", id=next(self.command_id)))
             self.logger.debug('sending message to {}: {}'.format(websock, msg))
             websock.send(msg)
+        elif "result" in message:
+            if self._behavior and self._behavior.is_waiting_on_result(message['id']):
+                self._behavior.notify_of_result(message)
+        # elif "method" in message and message["method"] in ("Network.dataReceived", "Network.responseReceived", "Network.loadingFinished"):
+        #     pass
+        # elif "method" in message:
+        #     self.logger.debug("{} {}".format(message["method"], message))
+        # else:
+        #     self.logger.debug("[no-method] {}".format(message))
 
 
 class Umbra:
+    """Consumes amqp messages representing requests to browse urls, from the
+    amqp queue "urls" on exchange "umbra". Incoming amqp message is a json
+    object with 3 attributes:
+      {
+        "clientId": "umbra.client.123",
+        "url": "http://example.com/my_fancy_page",
+        "metadata": {"arbitrary":"fields", "etc":4}
+      }
+
+    "url" is the url to browse.
+
+    "clientId" uniquely idenfities the client of
+    umbra. Umbra uses the clientId to direct information via amqp back to the
+    client. It sends this information on that same "umbra" exchange, and uses
+    the clientId as the amqp routing key.
+
+    Each url requested in the browser is published to amqp this way. The
+    outgoing amqp message is a json object:
+
+      {
+        'url': 'http://example.com/images/embedded_thing.jpg',
+        'method': 'GET',
+        'headers': {'User-Agent': '...', 'Accept': '...'}
+        'parentUrl': 'http://example.com/my_fancy_page',
+        'parentUrlMetadata': {"arbitrary":"fields", "etc":4},
+      }
+
+    POST requests have an additional field, postData.
+    """
+
     logger = logging.getLogger('umbra.Umbra')
 
     def __init__(self, amqp_url, chrome_exe, browser_wait):
@@ -153,7 +205,7 @@ class Umbra:
         self.producer_lock = None
         self.workers = {}
         self.workers_lock = threading.Lock()
-        self.amqp_thread = threading.Thread(target=self.consume_amqp)
+        self.amqp_thread = threading.Thread(target=self._consume_amqp)
         self.amqp_stop = threading.Event()
         self.amqp_thread.start()
 
@@ -162,7 +214,7 @@ class Umbra:
         self.amqp_stop.set()
         self.amqp_thread.join()
 
-    def consume_amqp(self):
+    def _consume_amqp(self):
         while not self.amqp_stop.is_set():
             try:
                 self.umbra_exchange = Exchange(name='umbra', type='direct', durable=True)
@@ -173,7 +225,7 @@ class Umbra:
                         self.producer_lock = threading.Lock()
                     with self.producer_lock:
                         self.producer = conn.Producer(serializer='json')
-                    with conn.Consumer(url_queue, callbacks=[self.fetch_url]) as consumer:
+                    with conn.Consumer(url_queue, callbacks=[self._browse_page_requested]) as consumer:
                         import socket
                         while not self.amqp_stop.is_set():
                             try:
@@ -184,7 +236,12 @@ class Umbra:
                 self.logger.error("amqp exception {}".format(e))
                 self.logger.error("attempting to reopen amqp connection")
 
-    def fetch_url(self, body, message):
+    def _browse_page_requested(self, body, message):
+        """First waits for the UmbraWorker for the client body['clientId'] to
+        become available, or creates a new worker if this clientId has not been
+        served before. Starts a worker browsing the page asynchronously, then
+        acknowledges the amqp message, which lets the server know it can be
+        removed from the queue."""
         client_id = body['clientId']
         with self.workers_lock:
             if not client_id in self.workers:

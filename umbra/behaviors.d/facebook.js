@@ -1,4 +1,4 @@
-//^https?://(?:www\.)?facebook.com/.*$
+//^https?://(?:www\.)?facebook\.com/.*$
 // vim:set sw=8 et:
 
 var aboveBelowOrOnScreen = function(e) {
