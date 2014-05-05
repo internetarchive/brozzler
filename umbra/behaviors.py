@@ -1,7 +1,7 @@
 # vim: set sw=4 et:
 
 import json
-from itertools import chain
+import itertools
 import os
 import re
 import logging
@@ -18,7 +18,7 @@ class Behavior:
     def behaviors():
         if Behavior._behaviors is None:
             behaviors_directory = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ['behaviors.d'])
-            behavior_files = chain(*[[os.path.join(dir, file) for file in files if file.endswith('.js') and file != 'default.js'] for dir, dirs, files in os.walk(behaviors_directory)])
+            behavior_files = itertools.chain(*[[os.path.join(dir, file) for file in files if file.endswith('.js') and file != 'default.js'] for dir, dirs, files in os.walk(behaviors_directory)])
             Behavior._behaviors = []
             for file_name in behavior_files:
                 Behavior.logger.debug("reading behavior file {}".format(file_name))
@@ -46,10 +46,9 @@ class Behavior:
             Behavior._default_behavior = behavior
         return Behavior._default_behavior
 
-    def __init__(self, url, websock, command_id):
+    def __init__(self, url, umbra_worker):
         self.url = url
-        self.websock = websock
-        self.command_id = command_id
+        self.umbra_worker = umbra_worker
 
         self.script_finished = False
         self.waiting_result_msg_ids = []
@@ -65,18 +64,12 @@ class Behavior:
         if self.active_behavior is None:
             self.active_behavior = Behavior.default_behavior()
 
-        msg = json.dumps(dict(method="Runtime.evaluate", params={"expression": self.active_behavior['script']}, id=next(self.command_id)))
-        self.logger.debug('sending message to {}: {}'.format(self.websock, msg))
-        self.websock.send(msg)
-
+        self.umbra_worker.send_to_chrome(method="Runtime.evaluate", params={"expression": self.active_behavior['script']})
         self.notify_of_activity()
 
     def is_finished(self):
-        msg_id = next(self.command_id)
+        msg_id = self.umbra_worker.send_to_chrome(method="Runtime.evaluate", params={"expression": "umbraBehaviorFinished()"})
         self.waiting_result_msg_ids.append(msg_id)
-        msg = json.dumps(dict(method="Runtime.evaluate", params={"expression": "umbraBehaviorFinished()"}, id=msg_id))
-        self.logger.debug('sending message to {}: {}'.format(self.websock, msg))
-        self.websock.send(msg)
 
         request_idle_timeout_sec = 30
         if self.active_behavior and 'request_idle_timeout_sec' in self.active_behavior:
