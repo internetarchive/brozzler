@@ -17,25 +17,32 @@ var umbraAboveBelowOrOnScreen = function(e) {
 // comments - 'a.UFIPagerLink > span, a.UFIPagerLink, span.UFIReplySocialSentenceLinkText'
 var UMBRA_THINGS_TO_CLICK_SELECTOR = 'a[href^="/browse/likes"], *[rel="theater"]';
 var umbraAlreadyClicked = {};
-var umbraState = {'idleSince':null};
+var umbraState = {'idleSince':null,'expectingSomething':null};
 
 var umbraIntervalFunc = function() {
-        var closeButton = document.querySelector('a[title="Close"]');
-        if (closeButton) { 
-                console.log("clicking close button " + closeButton.outerHTML);
-                closeButton.click();
-                return;
+        var closeButtons = document.querySelectorAll('a[title="Close"], a.closeTheater');
+        for (var i = 0; i < closeButtons.length; i++) {
+                // XXX closeTheater buttons stick around in the dom after closing, clientWidth>0 is one way to check if they're visible
+                if (closeButtons[i].clientWidth > 0) {  
+                        if (umbraState.expectingSomething == 'closeButton') { 
+                                console.log("found expected close button, clicking on it " + closeButtons[i].outerHTML);
+                                umbraState.expectingSomething = null;
+                        } else {
+                                console.warn("found UNexpected close button, umbraState.expectingSomething=" + umbraState.expectingSomething + " ... clicking on it " + closeButtons[i].outerHTML);
+                        }
+                        closeButtons[i].click();
+                        return;
+                }
         }
-        var closeTheaterButton = document.querySelector('a.closeTheater');
-        if (closeTheaterButton && closeTheaterButton.offsetWidth > 0) { 
-                console.log("clicking close button " + closeTheaterButton.outerHTML);
-                closeTheaterButton.click();
+        if (umbraState.expectingSomething == 'closeButton') {
+                console.log("waiting for close button, haven't seen it yet");
                 return;
         }
 
         var thingsToClick = document.querySelectorAll(UMBRA_THINGS_TO_CLICK_SELECTOR);
         var clickedSomething = false;
         var somethingLeftBelow = false;
+        var somethingLeftAbove = false;
         var missedAbove = 0;
 
         for (var i = 0; i < thingsToClick.length; i++) {
@@ -46,7 +53,8 @@ var umbraIntervalFunc = function() {
                                 // var pos = target.getBoundingClientRect().top;
                                 // window.scrollTo(0, target.getBoundingClientRect().top - 100);
                                 console.log("clicking at " + target.getBoundingClientRect().top + " on " + target.outerHTML);
-                                if(target.click != undefined) {
+                                if (target.click != undefined) {
+                                        umbraState.expectingSomething = 'closeButton';
                                         target.click();
                                 }
                                 target.style.border = '1px solid #0a0';
@@ -56,22 +64,22 @@ var umbraIntervalFunc = function() {
                                 break;
                         } else if (where > 0) { 
                                 somethingLeftBelow = true;
-                        } else {
-                                missedAbove++;
+                        } else if (where < 0) {
+                                somethingLeftAbove = true;
                         }
                 }
         }
 
-        if (missedAbove > 0) {
-                console.log("somehow missed " + missedAbove + " click targets above");
-        }
-
         if (!clickedSomething) {
-                if (somethingLeftBelow) {
+                if (somethingLeftAbove) {
+                        console.log("scrolling UP because everything on this screen has been clicked but we missed something above");
+                        window.scrollBy(0, -200);
+                        umbraState.idleSince = null;
+                } else if (somethingLeftBelow) {
                         console.log("scrolling because everything on this screen has been clicked but there's more below document.body.clientHeight=" + document.body.clientHeight);
                         window.scrollBy(0, 200);
                         umbraState.idleSince = null;
-                } else if (window.scrollY + window.innerHeight + 10 < document.body.clientHeight) {
+                } else if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
                         console.log("scrolling because we're not to the bottom yet document.body.clientHeight=" + document.body.clientHeight);
                         window.scrollBy(0, 200);
                         umbraState.idleSince = null;
