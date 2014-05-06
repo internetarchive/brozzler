@@ -83,9 +83,10 @@ class Behavior:
 
     def notify_of_result(self, chrome_message):
         # {'id': 59, 'result': {'result': {'type': 'boolean', 'value': True}, 'wasThrown': False}}
+        # {'id': 59, 'result': {'result': {'type': 'boolean', 'value': False}}
         self.waiting_result_msg_ids.remove(chrome_message['id'])
         if ('result' in chrome_message
-                and not chrome_message['result']['wasThrown']
+                and not ('wasThrown' in chrome_message['result'] and chrome_message['result']['wasThrown'])
                 and 'result' in chrome_message['result']
                 and type(chrome_message['result']['result']['value']) == bool):
             self.script_finished = chrome_message['result']['result']['value']
