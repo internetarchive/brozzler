@@ -30,7 +30,7 @@ class UmbraWorker:
     future, it may keep the browser running indefinitely.)"""
     logger = logging.getLogger('umbra.UmbraWorker')
 
-    HARD_TIMEOUT_SECONDS = 60 * 15
+    HARD_TIMEOUT_SECONDS = 20 * 60
 
     def __init__(self, umbra, chrome_port=9222, chrome_exe='chromium-browser', chrome_wait=10, client_id='request'):
         self.command_id = itertools.count(1)
@@ -75,6 +75,7 @@ class UmbraWorker:
                         self.logger.error("exception closing websocket {} - {}".format(self.websock, e))
 
                     websock_thread.join()
+                    self._behavior = None
 
     def send_to_chrome(self, **kwargs):
         msg_id = next(self.command_id)
@@ -128,7 +129,7 @@ class UmbraWorker:
             else:
                 self.logger.warn("Page.loadEventFired but behaviors already running url={} message={}".format(self.url, message))
         elif "method" in message and message["method"] == "Console.messageAdded":
-            self.logger.debug("{} console {} {}".format(websock.url,
+            self.logger.debug("{} console.{} {}".format(websock.url,
                 message["params"]["message"]["level"],
                 message["params"]["message"]["text"]))
         elif "method" in message and message["method"] == "Debugger.paused":
