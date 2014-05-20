@@ -1,6 +1,45 @@
 #!/usr/bin/env python
+# vim: set sw=4 et:
  
-from umbra import umbra
+import logging
+import argparse
+import time
+import umbra
+import sys
+import signal
+import os
+import umbra.controller
 
 if __name__=="__main__":
-    umbra.main()
+    # logging.basicConfig(stream=sys.stdout, level=logging.INFO,
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
+            format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
+
+    import faulthandler
+    faulthandler.register(signal.SIGQUIT)
+
+    arg_parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
+            description='umbra - Browser automation tool',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    arg_parser.add_argument('-w', '--browser-wait', dest='browser_wait', default='60',
+            help='Seconds to wait for browser initialization')
+    arg_parser.add_argument('-e', '--executable', dest='executable', default='chromium-browser',
+            help='Executable to use to invoke chrome')
+    arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
+            help='URL identifying the amqp server to talk to')
+    arg_parser.add_argument('-n', '--max-workers', dest='max_workers', default='3',
+            help='Max number of chrome instances simultaneously browsing pages')
+    args = arg_parser.parse_args(args=sys.argv[1:])
+
+    controller = umbra.controller.AmqpBrowserController(args.amqp_url,
+		    args.executable, args.browser_wait,
+		    max_active_workers=int(args.max_workers))
+    try:
+        while True:
+            time.sleep(0.5)
+    except:
+        pass
+    finally:
+        controller.shutdown()
+
+

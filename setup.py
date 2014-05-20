@@ -1,6 +1,6 @@
 # vim: set sw=4 et:
 
-import setuptools 
+import setuptools
 
 setuptools.setup(name='umbra',
         version='0.1',
