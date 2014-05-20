@@ -1,6 +1,7 @@
 # vim: set sw=4 et:
 
 import setuptools
+import glob
 
 setuptools.setup(name='umbra',
         version='0.1',
@@ -13,7 +14,7 @@ setuptools.setup(name='umbra',
         packages=['umbra'],
         package_data={'umbra':['behaviors.d/*.js']},
         install_requires=['kombu', 'websocket-client-py3==0.13.1','argparse'],
-        scripts=['bin/umbra', 'bin/load_url.py', 'bin/dump_queue.py'],
+        scripts=glob.glob("bin/*"),
         zip_safe=False,
         classifiers=[
             'Development Status :: 3 - Alpha Development Status',
