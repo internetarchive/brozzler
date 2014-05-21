@@ -24,13 +24,12 @@ class Browser:
 
     HARD_TIMEOUT_SECONDS = 20 * 60
 
-    def __init__(self, chrome_port=9222, chrome_exe='chromium-browser', chrome_wait=60, client_id='request'):
+    def __init__(self, chrome_port=9222, chrome_exe='chromium-browser', chrome_wait=60):
         self.command_id = itertools.count(1)
         self._lock = threading.Lock()
         self.chrome_port = chrome_port
         self.chrome_exe = chrome_exe
         self.chrome_wait = chrome_wait
-        self.client_id = client_id
         self._behavior = None
         self.websock = None
 
@@ -99,7 +98,7 @@ class Browser:
                 self._behavior.notify_of_activity()
             if message["params"]["request"]["url"].lower().startswith("data:"):
                 self.logger.debug("ignoring data url {}".format(message["params"]["request"]["url"][:80]))
-            else:
+            elif self.on_request:
                 self.on_request(message)
         elif "method" in message and message["method"] == "Page.loadEventFired":
             if self._behavior is None:
