@@ -23,16 +23,16 @@ if __name__=="__main__":
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('-w', '--browser-wait', dest='browser_wait', default='60',
             help='Seconds to wait for browser initialization')
-    arg_parser.add_argument('-e', '--executable', dest='executable', default='chromium-browser',
+    arg_parser.add_argument('-e', '--executable', dest='chrome_exe', default='chromium-browser',
             help='Executable to use to invoke chrome')
     arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
             help='URL identifying the amqp server to talk to')
-    arg_parser.add_argument('-n', '--max-workers', dest='max_browsers', default='3',
+    arg_parser.add_argument('-n', '--max-browsers', dest='max_browsers', default='3',
             help='Max number of chrome instances simultaneously browsing pages')
     args = arg_parser.parse_args(args=sys.argv[1:])
 
     controller = umbra.controller.AmqpBrowserController(args.amqp_url,
-		    args.executable, args.browser_wait,
+		    args.chrome_exe, args.browser_wait,
 		    max_active_browsers=int(args.max_browsers))
     try:
         while True:
