@@ -125,7 +125,7 @@ class AmqpBrowserController:
                 # XXX should reuse ports
                 port = 9222 + len(self.browsers)
                 browser = Browser(chrome_port=port, chrome_exe=self.chrome_exe,
-                        chrome_wait=self.browser_wait, client_id=client_id)
+                        chrome_wait=self.browser_wait)
                 self.browsers[client_id] = browser
 
         def browse_page_async():
