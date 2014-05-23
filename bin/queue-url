@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # vim: set sw=4 et:
+
 import os
 import sys
 import argparse
@@ -7,7 +8,7 @@ import logging
 from kombu import Connection, Exchange, Queue
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
-        description='queue-url - send url to umbra via amqp',
+        description='queue-url - send url to umbra via AMQP',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
         help='URL identifying the AMQP server to talk to')
