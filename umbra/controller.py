@@ -8,9 +8,12 @@ import kombu
 from umbra.browser import Browser
 
 class AmqpBrowserController:
-    """Consumes amqp messages representing requests to browse urls, from the
-    amqp queue "urls" on exchange "umbra". Incoming amqp message is a json
-    object with 3 attributes:
+    """
+    Consumes amqp messages representing requests to browse urls, from the
+    specified amqp queue (default: "urls") on the specified amqp exchange
+    (default: "umbra"). Incoming amqp message is a json object with 3
+    attributes:
+
       {
         "clientId": "umbra.client.123",
         "url": "http://example.com/my_fancy_page",
@@ -19,20 +22,20 @@ class AmqpBrowserController:
 
     "url" is the url to browse.
 
-    "clientId" uniquely identifies the client of
-    umbra. Umbra uses the clientId to direct information via amqp back to the
-    client. It sends this information on that same "umbra" exchange, and uses
-    the clientId as the amqp routing key.
+    "clientId" uniquely identifies the client of umbra. Umbra uses the clientId
+    as the amqp routing key, to direct information via amqp back to the client.
+    It sends this information on the same specified amqp exchange (default:
+    "umbra").
 
     Each url requested in the browser is published to amqp this way. The
     outgoing amqp message is a json object:
 
       {
-        'url': 'http://example.com/images/embedded_thing.jpg',
-        'method': 'GET',
-        'headers': {'User-Agent': '...', 'Accept': '...'}
-        'parentUrl': 'http://example.com/my_fancy_page',
-        'parentUrlMetadata': {"arbitrary":"fields", "etc":4},
+        "url": "http://example.com/images/embedded_thing.jpg",
+        "method": "GET",
+        "headers": {"User-Agent": "...", "Accept": "...", ...},
+        "parentUrl": "http://example.com/my_fancy_page",
+        "parentUrlMetadata": {"arbitrary":"fields", "etc":4, ...}
       }
 
     POST requests have an additional field, postData.
@@ -102,6 +105,7 @@ class AmqpBrowserController:
                                 pass
             except BaseException as e:
                 self.logger.error("amqp exception {}".format(e))
+                time.sleep(0.5)
                 self.logger.error("attempting to reopen amqp connection")
 
     def _browse_page_requested(self, body, message):
