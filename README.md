@@ -1,18 +1,38 @@
 umbra
 =====
+Umbra is a browser automation tool, developed for the web archiving service
+https://archive-it.org/. 
 
-Browser automation via chrome debug protocol
+Umbra receives urls via AMQP. It opens them in the chrome or chromium browser,
+with which it communicates using the chrome remote debug protocol (see
+https://developer.chrome.com/devtools/docs/debugger-protocol). It runs
+javascript behaviors to simulate user interaction with the page. It publishes
+information about the the urls requested by the browser back to AMQP. The
+format of the incoming and outgoing AMQP messages is described in `pydoc
+umbra.controller`.
+
+Umbra can be used with the Heritrix web crawler, using these heritrix modules:
+* [AMQPUrlReceiver](https://github.com/internetarchive/heritrix3/blob/master/contrib/src/main/java/org/archive/crawler/frontier/AMQPUrlReceiver.java)
+* [AMQPPublishProcessor](https://github.com/internetarchive/heritrix3/blob/master/contrib/src/main/java/org/archive/modules/AMQPPublishProcessor.java)
 
 Install
-======
-Install via pip from this repo.
+------
+Install via pip from this repo, e.g.
+
+    pip install git+https://github.com/internetarchive/umbra.git
+
+Umbra requires an AMQP messaging service like RabbitMQ. On Ubuntu,
+`sudo apt-get install rabbitmq-server` will install and start RabbitMQ
+at amqp://guest:guest@localhost:5672/%2f, which the default AMQP url for umbra.
 
 Run
-=====
-"umbra" script should be in bin/.
-load_url.py takes urls as arguments and puts them onto a rabbitmq queue
-dump_queue.py prints resources discovered by the browser and sent over the return queue.
+---
+The command `umbra` will start umbra with default configuration. `umbra --help`
+describes all command line options.
 
-On ubuntu, rabbitmq install with `sudo apt-get install rabbitmq-server` should automatically
-be set up for these three scripts to function on localhost ( the default amqp url ).
+Umbra also comes with these utilities:
+* browse-url - open urls in chrome/chromium and run behaviors (without involving AMQP)
+* queue-url - send url to umbra via AMQP
+* drain-queue - consume messages from AMQP queue
+
 
