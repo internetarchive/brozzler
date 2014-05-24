@@ -65,7 +65,7 @@ class AmqpBrowserController:
             self._producer_conn = kombu.Connection(self.amqp_url)
             self._producer = self._producer_conn.Producer(serializer='json')
 
-        self._amqp_thread = threading.Thread(target=self._consume_amqp)
+        self._amqp_thread = threading.Thread(target=self._consume_amqp, name='AmqpConsumerThread')
         self._amqp_stop = threading.Event()
         self._amqp_thread.start()
 
@@ -139,5 +139,8 @@ class AmqpBrowserController:
             browser.browse_page(url, on_request=on_request)
             self._browser_pool.release(browser)
 
-        threading.Thread(target=browse_page_async).start()
+        import random
+        threadName = "BrowsingThread{}-{}".format(browser.chrome_port,
+                ''.join((random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(6))))
+        threading.Thread(target=browse_page_async, name=threadName).start()
 

@@ -16,6 +16,8 @@ import socket
 from umbra.behaviors import Behavior
 
 class BrowserPool:
+    logger = logging.getLogger(__module__ + "." + __qualname__)
+
     def __init__(self, size=3, chrome_exe='chromium-browser', chrome_wait=60):
         self._available = set()
 
@@ -25,6 +27,8 @@ class BrowserPool:
             self._available.add((browser, port_holder))
 
         self._lock = threading.Lock()
+
+        self.logger.info("browser ports: {}".format([browser.chrome_port for (browser, port_holder) in self._available]))
 
     def _grab_random_port(self):
         """Returns socket bound to some port."""
@@ -80,7 +84,11 @@ class Browser:
                     self.websock = websocket.WebSocketApp(websocket_url,
                             on_open=self._visit_page,
                             on_message=self._handle_message)
-                    websock_thread = threading.Thread(target=self.websock.run_forever, kwargs={'ping_timeout':0.5})
+
+                    import random
+                    threadName = "WebsockThread{}-{}".format(self.chrome_port,
+                            ''.join((random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(6))))
+                    websock_thread = threading.Thread(target=self.websock.run_forever, name=threadName, kwargs={'ping_timeout':0.5})
                     websock_thread.start()
                     start = time.time()
 
