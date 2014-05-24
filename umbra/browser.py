@@ -20,6 +20,7 @@ class BrowserPool:
 
     def __init__(self, size=3, chrome_exe='chromium-browser', chrome_wait=60):
         self._available = set()
+        self._in_use = set()
 
         for i in range(0, size):
             port_holder = self._grab_random_port()
@@ -47,12 +48,19 @@ class BrowserPool:
         with self._lock:
             (browser, port_holder) = self._available.pop()
             port_holder.close()
+            self._in_use.add(browser)
             return browser
 
     def release(self, browser):
         with self._lock:
             port_holder = self._hold_port(browser.chrome_port)
             self._available.add((browser, port_holder))
+            self._in_use.remove(browser)
+
+    def shutdown_now(self):
+        for browser in self._in_use:
+            browser.shutdown_now()
+
 
 class Browser:
     """Runs chrome/chromium to synchronously browse one page at a time using
@@ -72,6 +80,10 @@ class Browser:
         self.chrome_wait = chrome_wait
         self._behavior = None
         self.websock = None
+        self._shutdown_now = False
+
+    def shutdown_now(self):
+        self._shutdown_now = True
 
     def browse_page(self, url, on_request=None):
         """Synchronously browses a page and runs behaviors. First blocks to
@@ -102,6 +114,9 @@ class Browser:
                             break
                         elif self._behavior != None and self._behavior.is_finished():
                             self.logger.info("finished browsing page according to behavior url={}".format(self.url))
+                            break
+                        elif self._shutdown_now:
+                            self.logger.warn("immediate shutdown requested")
                             break
 
                     try:

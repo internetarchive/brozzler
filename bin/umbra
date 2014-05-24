@@ -9,6 +9,8 @@ import sys
 import signal
 import os
 import umbra
+import signal
+import threading
 
 if __name__=="__main__":
     import faulthandler
@@ -43,14 +45,34 @@ if __name__=="__main__":
             exchange_name=args.amqp_exchange, queue_name=args.amqp_queue,
             routing_key=args.amqp_routing_key)
 
+    class ShutdownRequested(Exception):
+        pass
+
+    def sigterm(signum, frame):
+        raise ShutdownRequested('shutdown requested (caught SIGTERM)')
+    def sigint(signum, frame):
+        raise ShutdownRequested('shutdown requested (caught SIGINT)')
+
+    signal.signal(signal.SIGTERM, sigterm)
+    signal.signal(signal.SIGINT, sigint)
+
     umbra.start()
 
     try:
         while True:
             time.sleep(0.5)
-    except:
-        pass
+    except ShutdownRequested as e:
+        logging.info(e)
+    except BaseException as e:
+        logging.fatal(e)
     finally:
-        umbra.shutdown()
+        try:
+            umbra.shutdown()
+            for th in threading.enumerate():
+                if th != threading.current_thread():
+                    th.join()
+        except BaseException as e:
+            logging.warn("caught {}".format(e))
+            umbra.shutdown_now()
 
 

@@ -73,9 +73,12 @@ class AmqpBrowserController:
         self.logger.info("shutting down amqp consumer {}".format(self.amqp_url))
         self._amqp_stop.set()
         self._amqp_thread.join()
-        with self._producer_lock:
-            self._producer_conn.close()
-            self._producer_conn = None
+        # with self._producer_lock:
+        #     self._producer_conn.close()
+        #     self._producer_conn = None
+
+    def shutdown_now(self):
+        self._browser_pool.shutdown_now()
 
     def _consume_amqp(self):
         # XXX https://webarchive.jira.com/browse/ARI-3811
@@ -86,11 +89,11 @@ class AmqpBrowserController:
         # reopen the connection every 15 minutes
         RECONNECT_AFTER_SECONDS = 15 * 60
 
-        browser = None
+        url_queue = kombu.Queue(self.queue_name, routing_key=self.routing_key,
+                exchange=self._exchange)
 
         while not self._amqp_stop.is_set():
             try:
-                url_queue = kombu.Queue(self.queue_name, routing_key=self.routing_key, exchange=self._exchange)
                 self.logger.info("connecting to amqp exchange={} at {}".format(self._exchange.name, self.amqp_url))
                 with kombu.Connection(self.amqp_url) as conn:
                     conn_opened = time.time()
@@ -99,13 +102,13 @@ class AmqpBrowserController:
                         while (not self._amqp_stop.is_set() and time.time() - conn_opened < RECONNECT_AFTER_SECONDS):
                             import socket
                             try:
-                                browser = self._browser_pool.acquire()
+                                browser = self._browser_pool.acquire() # raises KeyError if none available
                                 consumer.callbacks = [self._make_callback(browser)]
                                 conn.drain_events(timeout=0.5)
                                 consumer.callbacks = None
                             except KeyError:
                                 # no browsers available
-                                pass
+                                time.sleep(0.5)
                             except socket.timeout:
                                 # no urls in the queue
                                 self._browser_pool.release(browser)
@@ -122,9 +125,6 @@ class AmqpBrowserController:
         return callback
 
     def _browse_page(self, browser, client_id, url, parent_url_metadata):
-        """Kombu Consumer callback. Provisions a Browser and
-        asynchronously asks it to browse the requested url."""
-
         def on_request(chrome_msg):
             payload = chrome_msg['params']['request']
             payload['parentUrl'] = url
@@ -136,8 +136,10 @@ class AmqpBrowserController:
 
         def browse_page_async():
             self.logger.info('browser={} client_id={} url={}'.format(browser, client_id, url))
-            browser.browse_page(url, on_request=on_request)
-            self._browser_pool.release(browser)
+            try:
+                browser.browse_page(url, on_request=on_request)
+            finally:
+                self._browser_pool.release(browser)
 
         import random
         threadName = "BrowsingThread{}-{}".format(browser.chrome_port,
