@@ -8,7 +8,7 @@ import umbra
 import sys
 import signal
 import os
-import umbra.controller
+import umbra
 
 if __name__=="__main__":
     import faulthandler
@@ -38,11 +38,12 @@ if __name__=="__main__":
     logging.basicConfig(stream=sys.stdout, level=args.log_level,
             format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
 
-    controller = umbra.controller.AmqpBrowserController(args.amqp_url,
-            args.chrome_exe, args.browser_wait,
+    umbra = umbra.Umbra(args.amqp_url, args.chrome_exe, args.browser_wait,
             max_active_browsers=int(args.max_browsers),
             exchange_name=args.amqp_exchange, queue_name=args.amqp_queue,
             routing_key=args.amqp_routing_key)
+
+    umbra.start()
 
     try:
         while True:
@@ -50,6 +51,6 @@ if __name__=="__main__":
     except:
         pass
     finally:
-        controller.shutdown()
+        umbra.shutdown()
 
 

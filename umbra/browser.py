@@ -12,7 +12,43 @@ import subprocess
 import signal
 import tempfile
 import os
+import socket
 from umbra.behaviors import Behavior
+
+class BrowserPool:
+    def __init__(self, size=3, chrome_exe='chromium-browser', chrome_wait=60):
+        self._available = set()
+
+        for i in range(0, size):
+            port_holder = self._grab_random_port()
+            browser = Browser(port_holder.getsockname()[1], chrome_exe, chrome_wait)
+            self._available.add((browser, port_holder))
+
+        self._lock = threading.Lock()
+
+    def _grab_random_port(self):
+        """Returns socket bound to some port."""
+        sock = socket.socket()
+        sock.bind(('127.0.0.1', 0))
+        return sock
+
+    def _hold_port(self, port):
+        """Returns socket bound to supplied port."""
+        sock = socket.socket()
+        sock.bind(('127.0.0.1', port))
+        return sock
+
+    def acquire(self):
+        """Returns browser from pool if available, raises KeyError otherwise."""
+        with self._lock:
+            (browser, port_holder) = self._available.pop()
+            port_holder.close()
+            return browser
+
+    def release(self, browser):
+        with self._lock:
+            port_holder = self._hold_port(browser.chrome_port)
+            self._available.add((browser, port_holder))
 
 class Browser:
     """Runs chrome/chromium to synchronously browse one page at a time using
@@ -142,11 +178,6 @@ class Chrome:
         self.executable = executable
         self.browser_wait = browser_wait
         self.user_data_dir = user_data_dir
-
-    def fetch_debugging_json():
-        raw_json = urllib.request.urlopen("http://localhost:%s/json" % self.port).read()
-        json = raw_json.decode('utf-8')
-        return json.loads(json)
 
     # returns websocket url to chrome window with about:blank loaded
     def __enter__(self):

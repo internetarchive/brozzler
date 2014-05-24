@@ -37,6 +37,7 @@ queue = Queue(args.amqp_queue, exchange=exchange)
 try:
     with Connection(args.amqp_url) as conn:
         with conn.Consumer(queue, callbacks=[print_and_maybe_ack]) as consumer:
+            consumer.qos(prefetch_count=1)
             while True:
                 try:
                     conn.drain_events(timeout=0.5)
