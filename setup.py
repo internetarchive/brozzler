@@ -1,8 +1,11 @@
-import setuptools 
+# vim: set sw=4 et:
+
+import setuptools
+import glob
 
 setuptools.setup(name='umbra',
         version='0.1',
-        description='Google Chrome remote control interface',
+        description='Browser automation via chrome debug protocol',
         url='https://github.com/internetarchive/umbra',
         author='Eldon Stegall',
         author_email='eldon@archive.org',
@@ -10,8 +13,8 @@ setuptools.setup(name='umbra',
         license='Apache License 2.0',
         packages=['umbra'],
         package_data={'umbra':['behaviors.d/*.js']},
-        install_requires=['kombu', 'websocket-client-py3','argparse'],
-        scripts=['bin/umbra', 'bin/load_url.py', 'bin/dump_queue.py'],
+        install_requires=['kombu', 'websocket-client-py3==0.13.1','argparse'],
+        scripts=glob.glob("bin/*"),
         zip_safe=False,
         classifiers=[
             'Development Status :: 3 - Alpha Development Status',

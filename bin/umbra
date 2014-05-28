@@ -1,6 +1,78 @@
 #!/usr/bin/env python
- 
-from umbra import umbra
+# vim: set sw=4 et:
+
+import logging
+import argparse
+import time
+import umbra
+import sys
+import signal
+import os
+import umbra
+import signal
+import threading
 
 if __name__=="__main__":
-    umbra.main()
+    import faulthandler
+    faulthandler.register(signal.SIGQUIT)
+
+    arg_parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
+            description='umbra - browser automation tool communicating via AMQP',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    arg_parser.add_argument('-w', '--browser-wait', dest='browser_wait', default='60',
+            help='Seconds to wait for browser initialization')
+    arg_parser.add_argument('-e', '--executable', dest='chrome_exe', default='chromium-browser',
+            help='Executable to use to invoke chrome')
+    arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
+            help='URL identifying the amqp server to talk to')
+    arg_parser.add_argument('--exchange', dest='amqp_exchange', default='umbra',
+            help='AMQP exchange name')
+    arg_parser.add_argument('--queue', dest='amqp_queue', default='urls',
+            help='AMQP queue to consume urls from')
+    arg_parser.add_argument('--routing-key', dest='amqp_routing_key', default='url',
+            help='AMQP routing key to bind to the AMQP queue')
+    arg_parser.add_argument('-n', '--max-browsers', dest='max_browsers', default='3',
+            help='Max number of chrome instances simultaneously browsing pages')
+    arg_parser.add_argument('-v', '--verbose', dest='log_level',
+            action="store_const", default=logging.INFO, const=logging.DEBUG)
+    args = arg_parser.parse_args(args=sys.argv[1:])
+
+    logging.basicConfig(stream=sys.stdout, level=args.log_level,
+            format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
+
+    umbra = umbra.Umbra(args.amqp_url, args.chrome_exe, args.browser_wait,
+            max_active_browsers=int(args.max_browsers),
+            exchange_name=args.amqp_exchange, queue_name=args.amqp_queue,
+            routing_key=args.amqp_routing_key)
+
+    class ShutdownRequested(Exception):
+        pass
+
+    def sigterm(signum, frame):
+        raise ShutdownRequested('shutdown requested (caught SIGTERM)')
+    def sigint(signum, frame):
+        raise ShutdownRequested('shutdown requested (caught SIGINT)')
+
+    signal.signal(signal.SIGTERM, sigterm)
+    signal.signal(signal.SIGINT, sigint)
+
+    umbra.start()
+
+    try:
+        while True:
+            time.sleep(0.5)
+    except ShutdownRequested as e:
+        logging.info(e)
+    except BaseException as e:
+        logging.fatal(e)
+    finally:
+        try:
+            umbra.shutdown()
+            for th in threading.enumerate():
+                if th != threading.current_thread():
+                    th.join()
+        except BaseException as e:
+            logging.warn("caught {}".format(e))
+            umbra.shutdown_now()
+
+

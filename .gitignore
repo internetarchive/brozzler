@@ -1,8 +1,4 @@
 *.pyc
-/bin/
-/include/
-/lib/
-/local/
-/share/
-/build/
+*.diff
+.*.sw*
 /umbra.egg-info/
