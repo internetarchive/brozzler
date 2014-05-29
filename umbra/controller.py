@@ -114,7 +114,7 @@ class AmqpBrowserController:
                                 self._browser_pool.release(browser)
 
             except BaseException as e:
-                self.logger.error("amqp exception {}".format(e))
+                self.logger.error("caught exception {}".format(e), exc_info=True)
                 time.sleep(0.5)
                 self.logger.error("attempting to reopen amqp connection")
 

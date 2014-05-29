@@ -31,17 +31,24 @@ class BrowserPool:
 
         self.logger.info("browser ports: {}".format([browser.chrome_port for (browser, port_holder) in self._available]))
 
+    def _bind_port(self, port):
+        while True:
+            try:
+                s = socket.socket()
+                s.bind(("127.0.0.1", port))
+                return s
+            except:
+                # XXX trying to figure out why this would happen
+                self.logger.error("problem binding to port {}, will try again in 0.5 seconds".format(port))
+                time.sleep(0.5)
+
     def _grab_random_port(self):
         """Returns socket bound to some port."""
-        sock = socket.socket()
-        sock.bind(('127.0.0.1', 0))
-        return sock
+        return self._bind_port(0)
 
     def _hold_port(self, port):
         """Returns socket bound to supplied port."""
-        sock = socket.socket()
-        sock.bind(('127.0.0.1', port))
-        return sock
+        return self._bind_port(port)
 
     def acquire(self):
         """Returns browser from pool if available, raises KeyError otherwise."""
@@ -81,6 +88,9 @@ class Browser:
         self._behavior = None
         self.websock = None
         self._shutdown_now = False
+
+    def __repr__(self):
+        return "{}.{}:{}".format(Browser.__module__, Browser.__qualname__, self.chrome_port)
 
     def shutdown_now(self):
         self._shutdown_now = True
