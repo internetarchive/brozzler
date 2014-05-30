@@ -5,9 +5,10 @@ import os
 import sys
 import argparse
 import logging
+import umbra
 from kombu import Connection, Exchange, Queue
 
-arg_parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
+arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description='queue-url - send url to umbra via AMQP',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
@@ -20,6 +21,8 @@ arg_parser.add_argument('-i', '--client-id', dest='client_id', default='load_url
         help='client id - included in the json payload with each url; umbra uses this value as the routing key to send requests back to')
 arg_parser.add_argument('-v', '--verbose', dest='log_level',
         action="store_const", default=logging.INFO, const=logging.DEBUG)
+arg_parser.add_argument('--version', action='version',
+        version="umbra {} - {}".format(umbra.version, os.path.basename(__file__)))
 arg_parser.add_argument('urls', metavar='URL', nargs='+', help='URLs to send to umbra')
 args = arg_parser.parse_args(args=sys.argv[1:])
 

@@ -5,9 +5,10 @@ import sys
 import argparse
 import logging
 import socket
+import umbra
 from kombu import Connection, Exchange, Queue
 
-arg_parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
+arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description='drain-queue - consume messages from AMQP queue',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
@@ -22,6 +23,8 @@ arg_parser.add_argument('-r', '--run-forever', dest='run_forever', action="store
         default=False, const=True, help="run forever, waiting for new messages to appear on the queue (default: exit when all messages in the queue have been consumed)")
 arg_parser.add_argument('-v', '--verbose', dest='log_level',
         action="store_const", default=logging.INFO, const=logging.DEBUG)
+arg_parser.add_argument('--version', action='version',
+        version="umbra {} - {}".format(umbra.version, os.path.basename(__file__)))
 args = arg_parser.parse_args(args=sys.argv[1:])
 
 logging.basicConfig(stream=sys.stderr, level=args.log_level,

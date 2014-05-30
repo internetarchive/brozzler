@@ -9,7 +9,7 @@ import time
 import sys
 
 class Behavior:
-    logger = logging.getLogger('umbra.behaviors.Behavior')
+    logger = logging.getLogger(__module__ + "." + __qualname__)
 
     _behaviors = None
     _default_behavior = None
