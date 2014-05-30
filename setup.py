@@ -8,15 +8,13 @@ VERSION_BYTES = b'0.2'
 def full_version_bytes():
     import subprocess, time
     try:
-        git_status = subprocess.check_output(['git', 'status'])
-        line1 = git_status[:git_status.find(b'\n')]
-        git_head = line1.split()[-1]
+        commit_bytes = subprocess.check_output(['git', 'log', '-1', '--pretty=format:%h'])
 
         t_bytes = subprocess.check_output(['git', 'log', '-1', '--pretty=format:%ct'])
         t = int(t_bytes.strip().decode('utf-8'))
         tm = time.gmtime(t)
         timestamp_utc = time.strftime("%Y%m%d%H%M%S", time.gmtime(t))
-        return VERSION_BYTES + b'-' + git_head.strip() + b'-' + timestamp_utc.encode('utf-8')
+        return VERSION_BYTES + b'-' + timestamp_utc.encode('utf-8') + b'-' + commit_bytes.strip()
     except subprocess.CalledProcessError:
         return VERSION_BYTES
 
