@@ -18,50 +18,30 @@ from umbra.behaviors import Behavior
 class BrowserPool:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
+    BASE_PORT = 9200
+
     def __init__(self, size=3, chrome_exe='chromium-browser', chrome_wait=60):
         self._available = set()
         self._in_use = set()
 
         for i in range(0, size):
-            port_holder = self._grab_random_port()
-            browser = Browser(port_holder.getsockname()[1], chrome_exe, chrome_wait)
-            self._available.add((browser, port_holder))
+            browser = Browser(BrowserPool.BASE_PORT + i, chrome_exe, chrome_wait)
+            self._available.add(browser)
 
         self._lock = threading.Lock()
 
-        self.logger.info("browser ports: {}".format([browser.chrome_port for (browser, port_holder) in self._available]))
-
-    def _bind_port(self, port):
-        while True:
-            try:
-                s = socket.socket()
-                s.bind(("127.0.0.1", port))
-                return s
-            except:
-                # XXX trying to figure out why this would happen
-                self.logger.error("problem binding to port {}, will try again in 0.5 seconds".format(port))
-                time.sleep(0.5)
-
-    def _grab_random_port(self):
-        """Returns socket bound to some port."""
-        return self._bind_port(0)
-
-    def _hold_port(self, port):
-        """Returns socket bound to supplied port."""
-        return self._bind_port(port)
+        self.logger.info("browser ports: {}".format([browser.chrome_port for browser in self._available]))
 
     def acquire(self):
         """Returns browser from pool if available, raises KeyError otherwise."""
         with self._lock:
-            (browser, port_holder) = self._available.pop()
-            port_holder.close()
+            browser = self._available.pop()
             self._in_use.add(browser)
             return browser
 
     def release(self, browser):
         with self._lock:
-            port_holder = self._hold_port(browser.chrome_port)
-            self._available.add((browser, port_holder))
+            self._available.add(browser)
             self._in_use.remove(browser)
 
     def shutdown_now(self):
