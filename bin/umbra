@@ -16,7 +16,7 @@ if __name__=="__main__":
     import faulthandler
     faulthandler.register(signal.SIGQUIT)
 
-    arg_parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
+    arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
             description='umbra - browser automation tool communicating via AMQP',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('-w', '--browser-wait', dest='browser_wait', default='60',
@@ -36,13 +36,15 @@ if __name__=="__main__":
     arg_parser.add_argument('-v', '--verbose', dest='log_level',
             action="store_const", default=logging.INFO, const=logging.DEBUG)
     arg_parser.add_argument('--version', action='version',
-            version="umbra {}".format(umbra.version, os.path.basename(__file__)))
+            version="umbra {}".format(umbra.version))
     args = arg_parser.parse_args(args=sys.argv[1:])
 
     logging.basicConfig(stream=sys.stdout, level=args.log_level,
             format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
 
-    umbra = umbra.Umbra(args.amqp_url, args.chrome_exe, args.browser_wait,
+    logging.info("umbra {} starting up".format(umbra.version))
+
+    controller = umbra.Umbra(args.amqp_url, args.chrome_exe, args.browser_wait,
             max_active_browsers=int(args.max_browsers),
             exchange_name=args.amqp_exchange, queue_name=args.amqp_queue,
             routing_key=args.amqp_routing_key)
@@ -58,7 +60,7 @@ if __name__=="__main__":
     signal.signal(signal.SIGTERM, sigterm)
     signal.signal(signal.SIGINT, sigint)
 
-    umbra.start()
+    controller.start()
 
     try:
         while True:
@@ -69,12 +71,16 @@ if __name__=="__main__":
         logging.fatal(e)
     finally:
         try:
-            umbra.shutdown()
+            controller.shutdown()
             for th in threading.enumerate():
                 if th != threading.current_thread():
                     th.join()
         except BaseException as e:
             logging.warn("caught {}".format(e))
-            umbra.shutdown_now()
+            controller.shutdown_now()
+            for th in threading.enumerate():
+                if th != threading.current_thread():
+                    th.join()
 
+    logging.info("all finished, exiting")
 
