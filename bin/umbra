@@ -78,5 +78,9 @@ if __name__=="__main__":
         except BaseException as e:
             logging.warn("caught {}".format(e))
             controller.shutdown_now()
+            for th in threading.enumerate():
+                if th != threading.current_thread():
+                    th.join()
 
+    logging.info("all finished, exiting")
 
