@@ -138,8 +138,9 @@ class AmqpBrowserController:
             self.logger.info('browser={} client_id={} url={}'.format(browser, client_id, url))
             try:
                 browser.browse_page(url, on_request=on_request)
-            finally:
                 self._browser_pool.release(browser)
+            except:
+                self.logger.critical("problem browsing page, may have lost browser process", exc_info=True)
 
         import random
         threadName = "BrowsingThread{}-{}".format(browser.chrome_port,
