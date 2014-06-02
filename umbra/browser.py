@@ -228,7 +228,21 @@ class Chrome:
                     time.sleep(0.5)
 
     def __exit__(self, *args):
-        self.logger.info("killing chrome pid {}".format(self.chrome_process.pid))
-        os.killpg(self.chrome_process.pid, signal.SIGINT)
-        self.chrome_process.wait()
+        timeout_sec = 60
+        self.logger.info("terminating chrome pid {}".format(self.chrome_process.pid))
+        self.chrome_process.terminate()
+        start = time.time()
+        while time.time() - start < timeout_sec:
+            status = self.chrome_process.poll()
+            if status is not None:
+                if status == 0:
+                    self.logger.info("chrome pid {} exited normally".format(self.chrome_process.pid, status))
+                else:
+                    self.logger.warn("chrome pid {} exited with nonzero status {}".format(self.chrome_process.pid, status))
+                return
+            time.sleep(0.5)
 
+        self.logger.warn("chrome pid {} still alive {} seconds after sending SIGTERM, sending SIGKILL".format(self.chrome_process.pid, timeout_sec))
+        self.chrome_process.kill()
+        status = self.chrome_process.wait()
+        self.logger.warn("chrome pid {} reaped (status={}) after killing with SIGKILL".format(self.chrome_process.pid, status))
