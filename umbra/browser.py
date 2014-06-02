@@ -230,9 +230,13 @@ class Chrome:
     def __exit__(self, *args):
         timeout_sec = 60
         self.logger.info("terminating chrome pid {}".format(self.chrome_process.pid))
+
         self.chrome_process.terminate()
-        start = time.time()
-        while time.time() - start < timeout_sec:
+        first_sigterm = last_sigterm = time.time()
+
+        while time.time() - first_sigterm < timeout_sec:
+            time.sleep(0.5)
+
             status = self.chrome_process.poll()
             if status is not None:
                 if status == 0:
@@ -240,7 +244,11 @@ class Chrome:
                 else:
                     self.logger.warn("chrome pid {} exited with nonzero status {}".format(self.chrome_process.pid, status))
                 return
-            time.sleep(0.5)
+
+            # sometimes a hung chrome process will terminate on repeated sigterms
+            if time.time() - last_sigterm > 10:
+                self.chrome_process.terminate()
+                last_sigterm = time.time()
 
         self.logger.warn("chrome pid {} still alive {} seconds after sending SIGTERM, sending SIGKILL".format(self.chrome_process.pid, timeout_sec))
         self.chrome_process.kill()
