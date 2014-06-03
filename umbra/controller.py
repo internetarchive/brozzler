@@ -106,11 +106,15 @@ class AmqpBrowserController:
                                 consumer.callbacks = [self._make_callback(browser)]
                                 conn.drain_events(timeout=0.5)
                                 consumer.callbacks = None
+
+                                # browser startup is a heavy operation, so do
+                                # it once every 5 seconds at most
+                                time.sleep(5)
                             except KeyError:
-                                # no browsers available
+                                # thrown by self._browser_pool.acquire() - no browsers available
                                 time.sleep(0.5)
                             except socket.timeout:
-                                # no urls in the queue
+                                # thrown by conn.drain_events(timeout=0.5) - no urls in the queue
                                 self._browser_pool.release(browser)
 
             except BaseException as e:
