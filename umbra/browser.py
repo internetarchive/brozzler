@@ -81,8 +81,8 @@ class Browser:
         with self._lock:
             self.url = url
             self.on_request = on_request
-            with tempfile.TemporaryDirectory() as user_data_dir:
-                with Chrome(self.chrome_port, self.chrome_exe, self.chrome_wait, user_data_dir) as websocket_url:
+            with tempfile.TemporaryDirectory() as user_home_dir:
+                with Chrome(self.chrome_port, self.chrome_exe, self.chrome_wait, user_home_dir) as websocket_url:
                     self.websock = websocket.WebSocketApp(websocket_url,
                             on_open=self._visit_page,
                             on_message=self._handle_message)
@@ -186,23 +186,24 @@ class Browser:
 class Chrome:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, port, executable, browser_wait, user_data_dir):
+    def __init__(self, port, executable, browser_wait, user_home_dir):
         self.port = port
         self.executable = executable
         self.browser_wait = browser_wait
-        self.user_data_dir = user_data_dir
+        self.user_home_dir = user_home_dir
 
     # returns websocket url to chrome window with about:blank loaded
     def __enter__(self):
+        new_env = os.environ.copy()
+        new_env["HOME"] = self.user_home_dir
         chrome_args = [self.executable,
-                "--user-data-dir={}".format(self.user_data_dir),
                 "--remote-debugging-port={}".format(self.port),
                 "--disable-web-sockets", "--disable-cache",
                 "--window-size=1100,900", "--no-default-browser-check",
                 "--disable-first-run-ui", "--no-first-run",
                 "--homepage=about:blank", "about:blank"]
         self.logger.info("running {}".format(chrome_args))
-        self.chrome_process = subprocess.Popen(chrome_args, start_new_session=True)
+        self.chrome_process = subprocess.Popen(chrome_args, env=new_env, start_new_session=True)
         self.logger.info("chrome running, pid {}".format(self.chrome_process.pid))
         start = time.time()
 
