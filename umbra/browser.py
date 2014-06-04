@@ -155,7 +155,9 @@ class Browser:
                 self._behavior = Behavior(self.url, self)
                 self._behavior.start()
             else:
-                self.logger.warn("Page.loadEventFired but behaviors already running url={} message={}".format(self.url, message))
+                self.logger.warn("Page.loadEventFired again, perhaps original url had a meta refresh, or behaviors accidentally navigated to another page? starting behaviors again url={} message={}".format(self.url, message))
+                self._behavior = Behavior(self.url, self)
+                self._behavior.start()
         elif "method" in message and message["method"] == "Console.messageAdded":
             self.logger.debug("{} console.{} {}".format(websock.url,
                 message["params"]["message"]["level"],
