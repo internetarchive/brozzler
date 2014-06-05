@@ -18,43 +18,30 @@ from umbra.behaviors import Behavior
 class BrowserPool:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
+    BASE_PORT = 9200
+
     def __init__(self, size=3, chrome_exe='chromium-browser', chrome_wait=60):
         self._available = set()
         self._in_use = set()
 
         for i in range(0, size):
-            port_holder = self._grab_random_port()
-            browser = Browser(port_holder.getsockname()[1], chrome_exe, chrome_wait)
-            self._available.add((browser, port_holder))
+            browser = Browser(BrowserPool.BASE_PORT + i, chrome_exe, chrome_wait)
+            self._available.add(browser)
 
         self._lock = threading.Lock()
 
-        self.logger.info("browser ports: {}".format([browser.chrome_port for (browser, port_holder) in self._available]))
-
-    def _grab_random_port(self):
-        """Returns socket bound to some port."""
-        sock = socket.socket()
-        sock.bind(('127.0.0.1', 0))
-        return sock
-
-    def _hold_port(self, port):
-        """Returns socket bound to supplied port."""
-        sock = socket.socket()
-        sock.bind(('127.0.0.1', port))
-        return sock
+        self.logger.info("browser ports: {}".format([browser.chrome_port for browser in self._available]))
 
     def acquire(self):
         """Returns browser from pool if available, raises KeyError otherwise."""
         with self._lock:
-            (browser, port_holder) = self._available.pop()
-            port_holder.close()
+            browser = self._available.pop()
             self._in_use.add(browser)
             return browser
 
     def release(self, browser):
         with self._lock:
-            port_holder = self._hold_port(browser.chrome_port)
-            self._available.add((browser, port_holder))
+            self._available.add(browser)
             self._in_use.remove(browser)
 
     def shutdown_now(self):
@@ -82,6 +69,9 @@ class Browser:
         self.websock = None
         self._shutdown_now = False
 
+    def __repr__(self):
+        return "{}.{}:{}".format(Browser.__module__, Browser.__qualname__, self.chrome_port)
+
     def shutdown_now(self):
         self._shutdown_now = True
 
@@ -91,8 +81,8 @@ class Browser:
         with self._lock:
             self.url = url
             self.on_request = on_request
-            with tempfile.TemporaryDirectory() as user_data_dir:
-                with Chrome(self.chrome_port, self.chrome_exe, self.chrome_wait, user_data_dir) as websocket_url:
+            with tempfile.TemporaryDirectory() as user_home_dir:
+                with Chrome(self.chrome_port, self.chrome_exe, self.chrome_wait, user_home_dir) as websocket_url:
                     self.websock = websocket.WebSocketApp(websocket_url,
                             on_open=self._visit_page,
                             on_message=self._handle_message)
@@ -165,7 +155,9 @@ class Browser:
                 self._behavior = Behavior(self.url, self)
                 self._behavior.start()
             else:
-                self.logger.warn("Page.loadEventFired but behaviors already running url={} message={}".format(self.url, message))
+                self.logger.warn("Page.loadEventFired again, perhaps original url had a meta refresh, or behaviors accidentally navigated to another page? starting behaviors again url={} message={}".format(self.url, message))
+                self._behavior = Behavior(self.url, self)
+                self._behavior.start()
         elif "method" in message and message["method"] == "Console.messageAdded":
             self.logger.debug("{} console.{} {}".format(websock.url,
                 message["params"]["message"]["level"],
@@ -196,23 +188,24 @@ class Browser:
 class Chrome:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, port, executable, browser_wait, user_data_dir):
+    def __init__(self, port, executable, browser_wait, user_home_dir):
         self.port = port
         self.executable = executable
         self.browser_wait = browser_wait
-        self.user_data_dir = user_data_dir
+        self.user_home_dir = user_home_dir
 
     # returns websocket url to chrome window with about:blank loaded
     def __enter__(self):
+        new_env = os.environ.copy()
+        new_env["HOME"] = self.user_home_dir
         chrome_args = [self.executable,
-                "--user-data-dir={}".format(self.user_data_dir),
                 "--remote-debugging-port={}".format(self.port),
                 "--disable-web-sockets", "--disable-cache",
                 "--window-size=1100,900", "--no-default-browser-check",
                 "--disable-first-run-ui", "--no-first-run",
                 "--homepage=about:blank", "about:blank"]
         self.logger.info("running {}".format(chrome_args))
-        self.chrome_process = subprocess.Popen(chrome_args, start_new_session=True)
+        self.chrome_process = subprocess.Popen(chrome_args, env=new_env, start_new_session=True)
         self.logger.info("chrome running, pid {}".format(self.chrome_process.pid))
         start = time.time()
 
@@ -238,7 +231,29 @@ class Chrome:
                     time.sleep(0.5)
 
     def __exit__(self, *args):
-        self.logger.info("killing chrome pid {}".format(self.chrome_process.pid))
-        os.killpg(self.chrome_process.pid, signal.SIGINT)
-        self.chrome_process.wait()
+        timeout_sec = 60
+        self.logger.info("terminating chrome pid {}".format(self.chrome_process.pid))
 
+        self.chrome_process.terminate()
+        first_sigterm = last_sigterm = time.time()
+
+        while time.time() - first_sigterm < timeout_sec:
+            time.sleep(0.5)
+
+            status = self.chrome_process.poll()
+            if status is not None:
+                if status == 0:
+                    self.logger.info("chrome pid {} exited normally".format(self.chrome_process.pid, status))
+                else:
+                    self.logger.warn("chrome pid {} exited with nonzero status {}".format(self.chrome_process.pid, status))
+                return
+
+            # sometimes a hung chrome process will terminate on repeated sigterms
+            if time.time() - last_sigterm > 10:
+                self.chrome_process.terminate()
+                last_sigterm = time.time()
+
+        self.logger.warn("chrome pid {} still alive {} seconds after sending SIGTERM, sending SIGKILL".format(self.chrome_process.pid, timeout_sec))
+        self.chrome_process.kill()
+        status = self.chrome_process.wait()
+        self.logger.warn("chrome pid {} reaped (status={}) after killing with SIGKILL".format(self.chrome_process.pid, status))

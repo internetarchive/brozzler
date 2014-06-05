@@ -106,15 +106,19 @@ class AmqpBrowserController:
                                 consumer.callbacks = [self._make_callback(browser)]
                                 conn.drain_events(timeout=0.5)
                                 consumer.callbacks = None
+
+                                # browser startup is a heavy operation, so do
+                                # it once every 5 seconds at most
+                                time.sleep(5)
                             except KeyError:
-                                # no browsers available
+                                # thrown by self._browser_pool.acquire() - no browsers available
                                 time.sleep(0.5)
                             except socket.timeout:
-                                # no urls in the queue
+                                # thrown by conn.drain_events(timeout=0.5) - no urls in the queue
                                 self._browser_pool.release(browser)
 
             except BaseException as e:
-                self.logger.error("amqp exception {}".format(e))
+                self.logger.error("caught exception {}".format(e), exc_info=True)
                 time.sleep(0.5)
                 self.logger.error("attempting to reopen amqp connection")
 
@@ -138,8 +142,9 @@ class AmqpBrowserController:
             self.logger.info('browser={} client_id={} url={}'.format(browser, client_id, url))
             try:
                 browser.browse_page(url, on_request=on_request)
-            finally:
                 self._browser_pool.release(browser)
+            except:
+                self.logger.critical("problem browsing page, may have lost browser process", exc_info=True)
 
         import random
         threadName = "BrowsingThread{}-{}".format(browser.chrome_port,

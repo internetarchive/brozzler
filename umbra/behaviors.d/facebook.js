@@ -73,7 +73,7 @@ var umbraIntervalFunc = function() {
         if (!clickedSomething) {
                 if (somethingLeftAbove) {
                         console.log("scrolling UP because everything on this screen has been clicked but we missed something above");
-                        window.scrollBy(0, -200);
+                        window.scrollBy(0, -500);
                         umbraState.idleSince = null;
                 } else if (somethingLeftBelow) {
                         console.log("scrolling because everything on this screen has been clicked but there's more below document.body.clientHeight=" + document.body.clientHeight);
