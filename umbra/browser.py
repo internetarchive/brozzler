@@ -203,7 +203,8 @@ class Chrome:
                 "--disable-web-sockets", "--disable-cache",
                 "--window-size=1100,900", "--no-default-browser-check",
                 "--disable-first-run-ui", "--no-first-run",
-                "--homepage=about:blank", "about:blank"]
+                "--homepage=about:blank", "--disable-direct-npapi-requests",
+                "about:blank"]
         self.logger.info("running {}".format(chrome_args))
         self.chrome_process = subprocess.Popen(chrome_args, env=new_env, start_new_session=True)
         self.logger.info("chrome running, pid {}".format(self.chrome_process.pid))
