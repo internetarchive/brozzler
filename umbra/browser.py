@@ -46,8 +46,10 @@ class BrowserPool:
 
     def shutdown_now(self):
         for browser in self._in_use:
-            browser.shutdown_now()
+            browser.abort_browse_page()
 
+class BrowsingException(Exception):
+    pass
 
 class Browser:
     """Runs chrome/chromium to synchronously browse one page at a time using
@@ -61,68 +63,87 @@ class Browser:
 
     def __init__(self, chrome_port=9222, chrome_exe='chromium-browser', chrome_wait=60):
         self.command_id = itertools.count(1)
-        self._lock = threading.Lock()
         self.chrome_port = chrome_port
         self.chrome_exe = chrome_exe
         self.chrome_wait = chrome_wait
         self._behavior = None
-        self.websock = None
-        self._shutdown_now = False
+        self._websock = None
+        self._abort_browse_page = False
 
     def __repr__(self):
         return "{}.{}:{}".format(Browser.__module__, Browser.__qualname__, self.chrome_port)
 
-    def shutdown_now(self):
-        self._shutdown_now = True
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *args):
+        self.stop()
+
+    def start(self):
+        # these can raise exceptions
+        self._work_dir = tempfile.TemporaryDirectory()
+        self._chrome_instance = Chrome(self.chrome_port, self.chrome_exe,
+                self.chrome_wait, self._work_dir.name,
+                os.sep.join([self._work_dir.name, "chrome-user-data"]))
+        self._websocket_url = self._chrome_instance.start()
+
+    def stop(self):
+        self._chrome_instance.stop()
+        self._work_dir.cleanup()
+
+    def abort_browse_page(self):
+        self._abort_browse_page = True
 
     def browse_page(self, url, on_request=None):
-        """Synchronously browses a page and runs behaviors. First blocks to
-        acquire lock to ensure we only browse one page at a time."""
-        with self._lock:
-            self.url = url
-            self.on_request = on_request
-            with tempfile.TemporaryDirectory() as user_home_dir:
-                with Chrome(self.chrome_port, self.chrome_exe, self.chrome_wait, user_home_dir) as websocket_url:
-                    self.websock = websocket.WebSocketApp(websocket_url,
-                            on_open=self._visit_page,
-                            on_message=self._handle_message)
+        """Synchronously browses a page and runs behaviors. 
 
-                    import random
-                    threadName = "WebsockThread{}-{}".format(self.chrome_port,
-                            ''.join((random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(6))))
-                    websock_thread = threading.Thread(target=self.websock.run_forever, name=threadName, kwargs={'ping_timeout':0.5})
-                    websock_thread.start()
-                    start = time.time()
+        Raises BrowsingException if browsing the page fails in a non-critical
+        way.
+        """
+        self.url = url
+        self.on_request = on_request
 
-                    while True:
-                        time.sleep(0.5)
-                        if not self.websock or not self.websock.sock or not self.websock.sock.connected:
-                            self.logger.error("websocket closed, did chrome die??? {}".format(self.websock))
-                            break
-                        elif time.time() - start > Browser.HARD_TIMEOUT_SECONDS:
-                            self.logger.info("finished browsing page, reached hard timeout of {} seconds url={}".format(Browser.HARD_TIMEOUT_SECONDS, self.url))
-                            break
-                        elif self._behavior != None and self._behavior.is_finished():
-                            self.logger.info("finished browsing page according to behavior url={}".format(self.url))
-                            break
-                        elif self._shutdown_now:
-                            self.logger.warn("immediate shutdown requested")
-                            break
+        self._websock = websocket.WebSocketApp(self._websocket_url,
+                on_open=self._visit_page, on_message=self._handle_message)
 
-                    try:
-                        self.websock.close()
-                    except BaseException as e:
-                        self.logger.error("exception closing websocket {} - {}".format(self.websock, e))
+        import random
+        threadName = "WebsockThread{}-{}".format(self.chrome_port,
+                ''.join((random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(6))))
+        websock_thread = threading.Thread(target=self._websock.run_forever, name=threadName, kwargs={'ping_timeout':0.5})
+        websock_thread.start()
+        start = time.time()
+        aborted = False
 
-                    websock_thread.join()
-                    self._behavior = None
+        try:
+            while True:
+                time.sleep(0.5)
+                if not self._websock or not self._websock.sock or not self._websock.sock.connected:
+                    raise BrowsingException("websocket closed, did chrome die? {}".format(self._websock))
+                elif time.time() - start > Browser.HARD_TIMEOUT_SECONDS:
+                    self.logger.info("finished browsing page, reached hard timeout of {} seconds url={}".format(Browser.HARD_TIMEOUT_SECONDS, self.url))
+                    return
+                elif self._behavior != None and self._behavior.is_finished():
+                    self.logger.info("finished browsing page according to behavior url={}".format(self.url))
+                    return
+                elif self._abort_browse_page:
+                    raise BrowsingException("browsing page aborted")
+        finally:
+            if self._websock and self._websock.sock and self._websock.sock.connected:
+                try:
+                    self._websock.close()
+                except BaseException as e:
+                    self.logger.error("exception closing websocket {} - {}".format(self._websock, e))
+
+            websock_thread.join()
+            self._behavior = None
 
     def send_to_chrome(self, **kwargs):
         msg_id = next(self.command_id)
         kwargs['id'] = msg_id
         msg = json.dumps(kwargs)
-        self.logger.debug('sending message to {}: {}'.format(self.websock, msg))
-        self.websock.send(msg)
+        self.logger.debug('sending message to {}: {}'.format(self._websock, msg))
+        self._websock.send(msg)
         return msg_id
 
     def _visit_page(self, websock):
@@ -188,17 +209,27 @@ class Browser:
 class Chrome:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, port, executable, browser_wait, user_home_dir):
+    def __init__(self, port, executable, browser_wait, user_home_dir, user_data_dir):
         self.port = port
         self.executable = executable
         self.browser_wait = browser_wait
         self.user_home_dir = user_home_dir
+        self.user_data_dir = user_data_dir
 
     # returns websocket url to chrome window with about:blank loaded
     def __enter__(self):
+        return self.start()
+
+    def __exit__(self, *args):
+        self.stop()
+
+    # returns websocket url to chrome window with about:blank loaded
+    def start(self):
         new_env = os.environ.copy()
         new_env["HOME"] = self.user_home_dir
         chrome_args = [self.executable,
+                "--use-mock-keychain", # mac thing
+                "--user-data-dir={}".format(self.user_data_dir),
                 "--remote-debugging-port={}".format(self.port),
                 "--disable-web-sockets", "--disable-cache",
                 "--window-size=1100,900", "--no-default-browser-check",
@@ -231,7 +262,7 @@ class Chrome:
                 else:
                     time.sleep(0.5)
 
-    def __exit__(self, *args):
+    def stop(self):
         timeout_sec = 60
         self.logger.info("terminating chrome pid {}".format(self.chrome_process.pid))
 
