@@ -19,8 +19,6 @@ if __name__=="__main__":
     arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
             description='umbra - browser automation tool communicating via AMQP',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    arg_parser.add_argument('-w', '--browser-wait', dest='browser_wait', default='60',
-            help='Seconds to wait for browser initialization')
     arg_parser.add_argument('-e', '--executable', dest='chrome_exe', default='chromium-browser',
             help='Executable to use to invoke chrome')
     arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
@@ -29,9 +27,7 @@ if __name__=="__main__":
             help='AMQP exchange name')
     arg_parser.add_argument('--queue', dest='amqp_queue', default='urls',
             help='AMQP queue to consume urls from')
-    arg_parser.add_argument('--routing-key', dest='amqp_routing_key', default='url',
-            help='AMQP routing key to bind to the AMQP queue')
-    arg_parser.add_argument('-n', '--max-browsers', dest='max_browsers', default='3',
+    arg_parser.add_argument('-n', '--max-browsers', dest='max_browsers', default='1',
             help='Max number of chrome instances simultaneously browsing pages')
     arg_parser.add_argument('-v', '--verbose', dest='log_level',
             action="store_const", default=logging.INFO, const=logging.DEBUG)
@@ -44,10 +40,9 @@ if __name__=="__main__":
 
     logging.info("umbra {} starting up".format(umbra.version))
 
-    controller = umbra.Umbra(args.amqp_url, args.chrome_exe, args.browser_wait,
+    controller = umbra.Umbra(args.amqp_url, args.chrome_exe, 
             max_active_browsers=int(args.max_browsers),
-            exchange_name=args.amqp_exchange, queue_name=args.amqp_queue,
-            routing_key=args.amqp_routing_key)
+            exchange_name=args.amqp_exchange, queue_name=args.amqp_queue)
 
     class ShutdownRequested(Exception):
         pass
@@ -77,10 +72,15 @@ if __name__=="__main__":
                     th.join()
         except BaseException as e:
             logging.warn("caught exception {}".format(e))
-            controller.shutdown_now()
-            for th in threading.enumerate():
-                if th != threading.current_thread():
-                    th.join()
+            for i in range(6,0,-1):
+                controller.shutdown_now()
+                try:
+                    for th in threading.enumerate():
+                        if th != threading.current_thread():
+                            th.join()
+                    break # if we get here, we're done, all threads finished
+                except:
+                    logging.warn("caught exception {}".format(e))
 
     logging.info("all finished, exiting")
 

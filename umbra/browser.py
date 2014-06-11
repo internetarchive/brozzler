@@ -20,12 +20,12 @@ class BrowserPool:
 
     BASE_PORT = 9200
 
-    def __init__(self, size=3, chrome_exe='chromium-browser', chrome_wait=60):
+    def __init__(self, size=3, chrome_exe='chromium-browser'):
         self._available = set()
         self._in_use = set()
 
         for i in range(0, size):
-            browser = Browser(BrowserPool.BASE_PORT + i, chrome_exe, chrome_wait)
+            browser = Browser(BrowserPool.BASE_PORT + i, chrome_exe)
             self._available.add(browser)
 
         self._lock = threading.Lock()
@@ -61,11 +61,10 @@ class Browser:
 
     HARD_TIMEOUT_SECONDS = 20 * 60
 
-    def __init__(self, chrome_port=9222, chrome_exe='chromium-browser', chrome_wait=60):
+    def __init__(self, chrome_port=9222, chrome_exe='chromium-browser'):
         self.command_id = itertools.count(1)
         self.chrome_port = chrome_port
         self.chrome_exe = chrome_exe
-        self.chrome_wait = chrome_wait
         self._behavior = None
         self._websock = None
         self._abort_browse_page = False
@@ -84,8 +83,7 @@ class Browser:
         # these can raise exceptions
         self._work_dir = tempfile.TemporaryDirectory()
         self._chrome_instance = Chrome(self.chrome_port, self.chrome_exe,
-                self.chrome_wait, self._work_dir.name,
-                os.sep.join([self._work_dir.name, "chrome-user-data"]))
+                self._work_dir.name, os.sep.join([self._work_dir.name, "chrome-user-data"]))
         self._websocket_url = self._chrome_instance.start()
 
     def stop(self):
@@ -119,7 +117,7 @@ class Browser:
             while True:
                 time.sleep(0.5)
                 if not self._websock or not self._websock.sock or not self._websock.sock.connected:
-                    raise BrowsingException("websocket closed, did chrome die? {}".format(self._websock))
+                    raise BrowsingException("websocket closed, did chrome die? {}".format(self._websocket_url))
                 elif time.time() - start > Browser.HARD_TIMEOUT_SECONDS:
                     self.logger.info("finished browsing page, reached hard timeout of {} seconds url={}".format(Browser.HARD_TIMEOUT_SECONDS, self.url))
                     return
@@ -209,10 +207,9 @@ class Browser:
 class Chrome:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, port, executable, browser_wait, user_home_dir, user_data_dir):
+    def __init__(self, port, executable, user_home_dir, user_data_dir):
         self.port = port
         self.executable = executable
-        self.browser_wait = browser_wait
         self.user_home_dir = user_home_dir
         self.user_data_dir = user_data_dir
 
@@ -225,6 +222,7 @@ class Chrome:
 
     # returns websocket url to chrome window with about:blank loaded
     def start(self):
+        timeout_sec = 60
         new_env = os.environ.copy()
         new_env["HOME"] = self.user_home_dir
         chrome_args = [self.executable,
@@ -257,7 +255,7 @@ class Chrome:
             except:
                 pass
             finally:
-                if time.time() - start > float(self.browser_wait):
+                if time.time() - start > timeout_sec:
                     raise Exception("failed to retrieve {} after {} seconds".format(json_url, time.time() - start))
                 else:
                     time.sleep(0.5)
