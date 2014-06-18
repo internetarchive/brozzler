@@ -130,8 +130,8 @@ class AmqpBrowserController:
         # consumer looks normal but doesn't consume any messages. Not clear if
         # it's hanging in drain_events() or not. As a temporary measure for
         # mitigation (if it works) or debugging (if it doesn't work), close and
-        # reopen the connection every 15 minutes
-        RECONNECT_AFTER_SECONDS = 15 * 60
+        # reopen the connection every 2.5 hours
+        RECONNECT_AFTER_SECONDS = 150 * 60
 
         url_queue = kombu.Queue(self.queue_name, exchange=self._exchange)
 
