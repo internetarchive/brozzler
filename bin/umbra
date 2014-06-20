@@ -11,11 +11,10 @@ import os
 import umbra
 import signal
 import threading
+import traceback
+import pprint
 
-if __name__=="__main__":
-    import faulthandler
-    faulthandler.register(signal.SIGQUIT)
-
+if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
             description='umbra - browser automation tool communicating via AMQP',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -43,6 +42,35 @@ if __name__=="__main__":
     controller = umbra.Umbra(args.amqp_url, args.chrome_exe, 
             max_active_browsers=int(args.max_browsers),
             exchange_name=args.amqp_exchange, queue_name=args.amqp_queue)
+
+    def dump_browser(b):
+        pprint.pprint(b.__dict__, indent=4)
+        if b._chrome_instance:
+            print("=> {} chrome instance:".format(b))
+            pprint.pprint(b._chrome_instance.__dict__, indent=4)
+        if b._behavior:
+            print("=> {} active behavior:".format(b))
+            pprint.pprint(b._behavior.__dict__, indent=4)
+
+    def dump_state(signum, frame):
+        logging.warn("dumping state (caught signal {})".format(signum))
+        for th in threading.enumerate():
+            print(th)
+            traceback.print_stack(sys._current_frames()[th.ident])
+            print()
+        print("umbra controller:")
+        pprint.pprint(controller.__dict__, indent=4)
+        print()
+        for b in controller._browser_pool._in_use:
+            print("{} (in use):".format(b))
+            dump_browser(b)
+            print()
+        for b in controller._browser_pool._available:
+            print("{} (not in use):".format(b))
+            dump_browser(b)
+            print()
+
+    signal.signal(signal.SIGQUIT, dump_state)
 
     class ShutdownRequested(Exception):
         pass

@@ -68,6 +68,7 @@ class Browser:
         self._behavior = None
         self._websock = None
         self._abort_browse_page = False
+        self._chrome_instance = None
 
     def __repr__(self):
         return "{}.{}:{}".format(Browser.__module__, Browser.__qualname__, self.chrome_port)
@@ -110,7 +111,7 @@ class Browser:
                 ''.join((random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(6))))
         websock_thread = threading.Thread(target=self._websock.run_forever, name=threadName, kwargs={'ping_timeout':0.5})
         websock_thread.start()
-        start = time.time()
+        self._start = time.time()
         aborted = False
 
         try:
@@ -118,7 +119,7 @@ class Browser:
                 time.sleep(0.5)
                 if not self._websock or not self._websock.sock or not self._websock.sock.connected:
                     raise BrowsingException("websocket closed, did chrome die? {}".format(self._websocket_url))
-                elif time.time() - start > Browser.HARD_TIMEOUT_SECONDS:
+                elif time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
                     self.logger.info("finished browsing page, reached hard timeout of {} seconds url={}".format(Browser.HARD_TIMEOUT_SECONDS, self.url))
                     return
                 elif self._behavior != None and self._behavior.is_finished():
@@ -237,7 +238,7 @@ class Chrome:
         self.logger.info("running {}".format(chrome_args))
         self.chrome_process = subprocess.Popen(chrome_args, env=new_env, start_new_session=True)
         self.logger.info("chrome running, pid {}".format(self.chrome_process.pid))
-        start = time.time()
+        self._start = time.time()   # member variable just so that kill -QUIT reports it
 
         json_url = "http://localhost:%s/json" % self.port
 
@@ -255,8 +256,8 @@ class Chrome:
             except:
                 pass
             finally:
-                if time.time() - start > timeout_sec:
-                    raise Exception("failed to retrieve {} after {} seconds".format(json_url, time.time() - start))
+                if time.time() - self._start > timeout_sec:
+                    raise Exception("failed to retrieve {} after {} seconds".format(json_url, time.time() - self._start))
                 else:
                     time.sleep(0.5)
 
