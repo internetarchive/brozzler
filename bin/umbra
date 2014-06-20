@@ -43,32 +43,40 @@ if __name__ == "__main__":
             max_active_browsers=int(args.max_browsers),
             exchange_name=args.amqp_exchange, queue_name=args.amqp_queue)
 
-    def dump_browser(b):
-        pprint.pprint(b.__dict__, indent=4)
+    def browserdump_str(pp, b):
+        x = []
+        x.append(pp.pformat(b.__dict__))
         if b._chrome_instance:
-            print("=> {} chrome instance:".format(b))
-            pprint.pprint(b._chrome_instance.__dict__, indent=4)
+            x.append("=> {} chrome instance:".format(b))
+            x.append(pp.pformat(b._chrome_instance.__dict__))
         if b._behavior:
-            print("=> {} active behavior:".format(b))
-            pprint.pprint(b._behavior.__dict__, indent=4)
+            x.append("=> {} active behavior:".format(b))
+            x.append(pp.pformat(b._behavior.__dict__))
+        return "\n".join(x)
 
     def dump_state(signum, frame):
-        logging.warn("dumping state (caught signal {})".format(signum))
+        pp = pprint.PrettyPrinter(indent=4, width=-1)
+        state_strs = []
+
         for th in threading.enumerate():
-            print(th)
-            traceback.print_stack(sys._current_frames()[th.ident])
-            print()
-        print("umbra controller:")
-        pprint.pprint(controller.__dict__, indent=4)
-        print()
+            state_strs.append(str(th))
+            stack = traceback.format_stack(sys._current_frames()[th.ident])
+            state_strs.append("".join(stack))
+
+        state_strs.append("umbra controller:")
+        state_strs.append(pp.pformat(controller.__dict__))
+        state_strs.append("")
+
         for b in controller._browser_pool._in_use:
-            print("{} (in use):".format(b))
-            dump_browser(b)
-            print()
+            state_strs.append("{} (in use):".format(b))
+            state_strs.append(browserdump_str(pp, b))
+            state_strs.append("")
         for b in controller._browser_pool._available:
-            print("{} (not in use):".format(b))
-            dump_browser(b)
-            print()
+            state_strs.append("{} (not in use):".format(b))
+            state_strs.append(browserdump_str(pp, b))
+            state_strs.append("")
+
+        logging.warn("dumping state (caught signal {})\n{}".format(signum, "\n".join(state_strs)))
 
     signal.signal(signal.SIGQUIT, dump_state)
 
@@ -91,7 +99,7 @@ if __name__ == "__main__":
     except ShutdownRequested as e:
         logging.info(e)
     except BaseException as e:
-        logging.fatal(e)
+        logging.fatal(e, exc_info=sys.exc_info())
     finally:
         try:
             controller.shutdown()
