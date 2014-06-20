@@ -55,7 +55,7 @@ if __name__ == "__main__":
         return "\n".join(x)
 
     def dump_state(signum, frame):
-        pp = pprint.PrettyPrinter(indent=4, width=10000)
+        pp = pprint.PrettyPrinter(indent=4)
         state_strs = []
 
         for th in threading.enumerate():
