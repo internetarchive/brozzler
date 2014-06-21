@@ -134,7 +134,14 @@ class Browser:
                 except BaseException as e:
                     self.logger.error("exception closing websocket {} - {}".format(self._websock, e))
 
-            websock_thread.join()
+            websock_thread.join(timeout=30)
+            if websock_thread.is_alive():
+                self.logger.error("{} still alive 30 seconds after closing {}, will forcefully nudge it again".format(websock_thread, self._websock))
+                self._websock.keep_running = False
+                websock_thread.join(timeout=30)
+                if websock_thread.is_alive():
+                    self.logger.critical("{} still alive 60 seconds after closing {}".format(websock_thread, self._websock))
+
             self._behavior = None
 
     def send_to_chrome(self, **kwargs):
