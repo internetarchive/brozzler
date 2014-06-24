@@ -78,7 +78,6 @@ if __name__ == "__main__":
 
         logging.warn("dumping state (caught signal {})\n{}".format(signum, "\n".join(state_strs)))
 
-    signal.signal(signal.SIGQUIT, dump_state)
 
     class ShutdownRequested(Exception):
         pass
@@ -88,6 +87,8 @@ if __name__ == "__main__":
     def sigint(signum, frame):
         raise ShutdownRequested('shutdown requested (caught SIGINT)')
 
+    signal.signal(signal.SIGQUIT, dump_state)
+    signal.signal(signal.SIGHUP, controller.reconnect)
     signal.signal(signal.SIGTERM, sigterm)
     signal.signal(signal.SIGINT, sigint)
 
