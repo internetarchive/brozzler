@@ -50,6 +50,7 @@ class AmqpBrowserController:
         self.amqp_url = amqp_url
         self.queue_name = queue_name
         self.exchange_name = exchange_name
+        self.max_active_browsers = max_active_browsers
 
         self._browser_pool = BrowserPool(size=max_active_browsers, chrome_exe=chrome_exe)
 
@@ -89,7 +90,7 @@ class AmqpBrowserController:
     def _wait_for_and_browse_urls(self, conn, consumer, timeout):
         start = time.time()
         browser = None
-        consumer.qos(prefetch_count=1)
+        consumer.qos(prefetch_count=self.max_active_browsers)
 
         while not self._consumer_stop.is_set() and time.time() - start < timeout and not self._reconnect_requested:
             try:
