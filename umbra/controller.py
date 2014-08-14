@@ -5,7 +5,8 @@ import logging
 import time
 import threading
 import kombu
-from umbra.browser import BrowserPool
+import socket
+from umbra.browser import BrowserPool, BrowsingException
 
 class AmqpBrowserController:
     """
@@ -44,20 +45,23 @@ class AmqpBrowserController:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
     def __init__(self, amqp_url='amqp://guest:guest@localhost:5672/%2f',
-            chrome_exe='chromium-browser', browser_wait=60,
-            max_active_browsers=1, queue_name='urls', routing_key='url',
-            exchange_name='umbra'):
+            chrome_exe='chromium-browser', max_active_browsers=1, 
+            queue_name='urls', exchange_name='umbra'):
         self.amqp_url = amqp_url
         self.queue_name = queue_name
-        self.routing_key = routing_key
         self.exchange_name = exchange_name
+        self.max_active_browsers = max_active_browsers
 
-        self._browser_pool = BrowserPool(size=max_active_browsers,
-                chrome_exe=chrome_exe, chrome_wait=browser_wait)
+        self._browser_pool = BrowserPool(size=max_active_browsers, chrome_exe=chrome_exe)
 
     def start(self):
+        self._browsing_threads = set()
+        self._browsing_threads_lock = threading.Lock()
+
         self._exchange = kombu.Exchange(name=self.exchange_name, type='direct',
                 durable=True)
+
+        self._reconnect_requested = False
 
         self._producer = None
         self._producer_lock = threading.Lock()
@@ -65,20 +69,67 @@ class AmqpBrowserController:
             self._producer_conn = kombu.Connection(self.amqp_url)
             self._producer = self._producer_conn.Producer(serializer='json')
 
-        self._amqp_thread = threading.Thread(target=self._consume_amqp, name='AmqpConsumerThread')
-        self._amqp_stop = threading.Event()
-        self._amqp_thread.start()
+        self._consumer_thread = threading.Thread(target=self._consume_amqp, name='AmqpConsumerThread')
+        self._consumer_stop = threading.Event()
+        self._consumer_thread.start()
 
     def shutdown(self):
         self.logger.info("shutting down amqp consumer {}".format(self.amqp_url))
-        self._amqp_stop.set()
-        self._amqp_thread.join()
-        # with self._producer_lock:
-        #     self._producer_conn.close()
-        #     self._producer_conn = None
+        self._consumer_stop.set()
+        self._consumer_thread.join()
 
     def shutdown_now(self):
+        self._consumer_stop.set()
         self._browser_pool.shutdown_now()
+        self._consumer_thread.join()
+
+    def reconnect(self, *args, **kwargs):
+        self._reconnect_requested = True
+        self._browser_pool.shutdown_now()
+
+    def _wait_for_and_browse_urls(self, conn, consumer, timeout):
+        start = time.time()
+        browser = None
+        consumer.qos(prefetch_count=self.max_active_browsers)
+
+        while not self._consumer_stop.is_set() and time.time() - start < timeout and not self._reconnect_requested:
+            try:
+                browser = self._browser_pool.acquire() # raises KeyError if none available
+                browser.start()
+
+                def callback(body, message):
+                    self._start_browsing_page(browser, message, body['clientId'], body['url'], body['metadata'])
+                consumer.callbacks = [callback]
+
+                while True:
+                    try:
+                        conn.drain_events(timeout=0.5)
+                        break # out of "while True" to acquire another browser
+                    except socket.timeout:
+                        pass
+
+                    if self._consumer_stop.is_set() or time.time() - start >= timeout or self._reconnect_requested:
+                        browser.stop()
+                        self._browser_pool.release(browser)
+                        break
+
+            except KeyError:
+                # no browsers available
+                time.sleep(0.5)
+            except:
+                self.logger.critical("problem with browser initialization", exc_info=True)
+                time.sleep(0.5)
+            finally:
+                consumer.callbacks = None
+
+    def _wait_for_active_browsers(self):
+        self.logger.info("waiting for browsing threads to finish")
+        while True:
+            with self._browsing_threads_lock:
+                if len(self._browsing_threads) == 0:
+                    break
+            time.sleep(0.5)
+        self.logger.info("active browsing threads finished")
 
     def _consume_amqp(self):
         # XXX https://webarchive.jira.com/browse/ARI-3811
@@ -86,49 +137,29 @@ class AmqpBrowserController:
         # consumer looks normal but doesn't consume any messages. Not clear if
         # it's hanging in drain_events() or not. As a temporary measure for
         # mitigation (if it works) or debugging (if it doesn't work), close and
-        # reopen the connection every 15 minutes
-        RECONNECT_AFTER_SECONDS = 15 * 60
+        # reopen the connection every 2.5 hours
+        RECONNECT_AFTER_SECONDS = 150 * 60
 
-        url_queue = kombu.Queue(self.queue_name, routing_key=self.routing_key,
-                exchange=self._exchange)
+        url_queue = kombu.Queue(self.queue_name, exchange=self._exchange)
 
-        while not self._amqp_stop.is_set():
+        while not self._consumer_stop.is_set():
             try:
                 self.logger.info("connecting to amqp exchange={} at {}".format(self._exchange.name, self.amqp_url))
+                self._reconnect_requested = False
                 with kombu.Connection(self.amqp_url) as conn:
-                    conn_opened = time.time()
                     with conn.Consumer(url_queue) as consumer:
-                        consumer.qos(prefetch_count=1)
-                        while (not self._amqp_stop.is_set() and time.time() - conn_opened < RECONNECT_AFTER_SECONDS):
-                            import socket
-                            try:
-                                browser = self._browser_pool.acquire() # raises KeyError if none available
-                                consumer.callbacks = [self._make_callback(browser)]
-                                conn.drain_events(timeout=0.5)
-                                consumer.callbacks = None
+                        self._wait_for_and_browse_urls(conn, consumer, timeout=RECONNECT_AFTER_SECONDS)
 
-                                # browser startup is a heavy operation, so do
-                                # it once every 5 seconds at most
-                                time.sleep(5)
-                            except KeyError:
-                                # thrown by self._browser_pool.acquire() - no browsers available
-                                time.sleep(0.5)
-                            except socket.timeout:
-                                # thrown by conn.drain_events(timeout=0.5) - no urls in the queue
-                                self._browser_pool.release(browser)
-
+                    # need to wait for browsers to finish here, before closing
+                    # the amqp connection,  because they use it to do
+                    # message.ack() after they finish browsing a page
+                    self._wait_for_active_browsers()
             except BaseException as e:
                 self.logger.error("caught exception {}".format(e), exc_info=True)
                 time.sleep(0.5)
                 self.logger.error("attempting to reopen amqp connection")
 
-    def _make_callback(self, browser):
-        def callback(body, message):
-            self._browse_page(browser, body['clientId'], body['url'], body['metadata'])
-            message.ack()
-        return callback
-
-    def _browse_page(self, browser, client_id, url, parent_url_metadata):
+    def _start_browsing_page(self, browser, message, client_id, url, parent_url_metadata):
         def on_request(chrome_msg):
             payload = chrome_msg['params']['request']
             payload['parentUrl'] = url
@@ -138,16 +169,31 @@ class AmqpBrowserController:
                 publish = self._producer_conn.ensure(self._producer, self._producer.publish)
                 publish(payload, exchange=self._exchange, routing_key=client_id)
 
-        def browse_page_async():
+        def browse_page_sync():
             self.logger.info('browser={} client_id={} url={}'.format(browser, client_id, url))
             try:
                 browser.browse_page(url, on_request=on_request)
-                self._browser_pool.release(browser)
+                message.ack()
+            except BrowsingException as e:
+                self.logger.warn("browsing did not complete normally, requeuing url {} - {}".format(url, e))
+                message.requeue()
             except:
-                self.logger.critical("problem browsing page, may have lost browser process", exc_info=True)
+                self.logger.critical("problem browsing page, requeuing url {}, may have lost browser process".format(url), exc_info=True)
+                message.requeue()
+            finally:
+                browser.stop()
+                self._browser_pool.release(browser)
+
+        def browse_thread_run_then_cleanup():
+            browse_page_sync()
+            with self._browsing_threads_lock:
+                self._browsing_threads.remove(threading.current_thread())
 
         import random
-        threadName = "BrowsingThread{}-{}".format(browser.chrome_port,
+        thread_name = "BrowsingThread{}-{}".format(browser.chrome_port,
                 ''.join((random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(6))))
-        threading.Thread(target=browse_page_async, name=threadName).start()
+        th = threading.Thread(target=browse_thread_run_then_cleanup, name=thread_name)
+        with self._browsing_threads_lock:
+            self._browsing_threads.add(th)
+        th.start()
 
