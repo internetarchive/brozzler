@@ -31,7 +31,10 @@ logging.basicConfig(stream=sys.stderr, level=args.log_level,
         format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
 
 def print_and_maybe_ack(body, message):
-    print(body)
+    # do this instead of print(body) so that output syntax is json, not python
+    # dict (they are similar but not identical)
+    print(message.body.decode('utf-8'))
+
     if not args.no_ack:
         message.ack()
 
