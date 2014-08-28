@@ -98,7 +98,17 @@ class AmqpBrowserController:
                 browser.start()
 
                 def callback(body, message):
-                    self._start_browsing_page(browser, message, body['clientId'], body['url'], body['metadata'])
+                    try:
+                        client_id, url, metadata = body['clientId'], body['url'], body['metadata']
+                    except:
+                        self.logger.error("unable to decipher message {}".format(message), exc_info=True)
+                        self.logger.error("discarding bad message")
+                        message.reject()
+                        browser.stop()
+                        self._browser_pool.release(browser)
+                        return
+                    self._start_browsing_page(browser, message, client_id, url, metadata)
+
                 consumer.callbacks = [callback]
 
                 while True:
