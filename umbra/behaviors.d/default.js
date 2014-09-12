@@ -18,7 +18,7 @@ var umbraAboveBelowOrOnScreen = function(e) {
 
 var umbraState = {'idleSince':null};
 var umbraAlreadyClicked = {};
-var UMBRA_IFRAME_SOUNDCLOUD_EMBEDDED_SELECTOR = "iframe[src^='https://w.soundcloud.com/player']";
+var UMBRA_IFRAME_SOUNDCLOUD_EMBEDDED_SELECTOR = "iframe[src^='http://w.soundcloud.com/player'], iframe[src^='https://w.soundcloud.com/player']";
 var UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR = "button.playButton";
 var umbraFinished = false;
 var umbraIntervalFunc = function() {
@@ -89,18 +89,16 @@ var getUmbraSoundCloudEmbeddedElements = function() {
 	
 	[].forEach.call(document.querySelectorAll(UMBRA_IFRAME_SOUNDCLOUD_EMBEDDED_SELECTOR), 
 		function  fn(elem){ 
-			if (elem.src.indexOf("auto_play=false") != -1) {
-				    var button = elem.contentWindow.document.body.querySelectorAll(UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR);
-				   
-				    //use the iframe's src attribute as the key to the sound cloud player button. assumption is that each iframe created by the sound cloud widget
-				    //contains only a single unique audio file on a given page
-					if (button && button.length > 0) {
-						//get the Element from the NodeList
-						soundCloudEmbeddedElements.push({"id" : elem.src, "target" : button.item(0)});
-						id++;
-					}
-			    }
+		    var button = elem.contentWindow.document.body.querySelectorAll(UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR);
+		   
+		    //use the iframe's src attribute as the key to the sound cloud player button. assumption is that each iframe created by the sound cloud widget
+		    //contains only a single unique audio file on a given page
+			if (button && button.length > 0) {
+				//get the Element from the NodeList
+				soundCloudEmbeddedElements.push({"id" : elem.src, "target" : button.item(0)});
+				id++;
 			}
+	    }
 	);
 	
 	return soundCloudEmbeddedElements;
