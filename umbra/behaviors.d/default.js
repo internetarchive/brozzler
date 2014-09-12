@@ -4,7 +4,6 @@
 //
 // Scrolls to the bottom of the page. That's it at the moment.
 //
-
 var umbraAboveBelowOrOnScreen = function(e) {
         var eTop = e.getBoundingClientRect().top;
         if (eTop < window.scrollY) {
@@ -16,14 +15,17 @@ var umbraAboveBelowOrOnScreen = function(e) {
         }
 }
 
+var UMBRA_IFRAME_SOUNDCLOUD_EMBEDDED_SELECTOR = "iframe";
+var UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR = "button.sc-button-play, button.playButton";
+var MAX_IFRAME_RECURSE_DEPTH = 1; //0-based
 var umbraState = {'idleSince':null};
 var umbraAlreadyClicked = {};
-var UMBRA_IFRAME_SOUNDCLOUD_EMBEDDED_SELECTOR = "iframe[src^='http://w.soundcloud.com/player'], iframe[src^='https://w.soundcloud.com/player']";
-var UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR = "button.playButton";
 var umbraFinished = false;
 var umbraIntervalFunc = function() {
 
-	var umbraSoundCloudEmbeddedElements = getUmbraSoundCloudEmbeddedElements();
+	var umbraSoundCloudEmbeddedElements = [];
+
+	getUmbraSoundCloudEmbeddedElements(umbraSoundCloudEmbeddedElements);
 	
     var clickedSomething = false;
     var somethingLeftBelow = false;
@@ -36,6 +38,7 @@ var umbraIntervalFunc = function() {
             var target = umbraSoundCloudEmbeddedElements[i].target;
             
             if (!(targetId in umbraAlreadyClicked)) {
+            		
                     var where = umbraAboveBelowOrOnScreen(target);
                     
                     if (where == 0) { // on screen
@@ -81,27 +84,33 @@ var umbraIntervalFunc = function() {
 }
 
 //try to detect sound cloud "Play" buttons and return them as targets for clicking
-var getUmbraSoundCloudEmbeddedElements = function() {
+var getUmbraSoundCloudEmbeddedElements = function(soundCloudEmbeddedElements, currentIframeDepth, currentDocument) {
 	
-	var soundCloudEmbeddedElements = [];
+	//set default values for parameters
+	currentIframeDepth = currentIframeDepth || 0;
+	currentDocument = currentDocument || document;
 	
-	var id = 0;
+	if (currentIframeDepth > MAX_IFRAME_RECURSE_DEPTH) {
+		return;
+	}
 	
-	[].forEach.call(document.querySelectorAll(UMBRA_IFRAME_SOUNDCLOUD_EMBEDDED_SELECTOR), 
-		function  fn(elem){ 
-		    var button = elem.contentWindow.document.body.querySelectorAll(UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR);
-		   
-		    //use the iframe's src attribute as the key to the sound cloud player button. assumption is that each iframe created by the sound cloud widget
-		    //contains only a single unique audio file on a given page
-			if (button && button.length > 0) {
-				//get the Element from the NodeList
-				soundCloudEmbeddedElements.push({"id" : elem.src, "target" : button.item(0)});
-				id++;
-			}
-	    }
-	);
+	//collect all buttons on current document first
+	var button = [];
 	
-	return soundCloudEmbeddedElements;
+	button = currentDocument.querySelectorAll(UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR);
+
+	for (var i = 0; i < button.length; i++) {
+		soundCloudEmbeddedElements.push({"id" : getElementCssPath(button.item(i)), "target" : button.item(i)});
+	}
+	
+	//now get all buttons in embedded iframes
+	var iframe = [];
+	
+	iframe = currentDocument.querySelectorAll(UMBRA_IFRAME_SOUNDCLOUD_EMBEDDED_SELECTOR);
+	
+	for (var i = 0; i < iframe.length; i++) {
+		getUmbraSoundCloudEmbeddedElements(soundCloudEmbeddedElements, currentIframeDepth + 1, iframe[i].contentWindow.document.body);
+	}
 }
 
 // If we haven't had anything to do (scrolled, clicked, etc) in this amount of
@@ -117,6 +126,32 @@ var umbraBehaviorFinished = function() {
                 }
         }
         return false;
+}
+
+//copied from http://stackoverflow.com/questions/4588119/get-elements-css-selector-without-element-id
+var getElementCssPath = function(element) {
+
+	var names = [];
+	  
+	while (element.parentNode){
+		if (element.id){
+			names.unshift('#' + element.id);
+			break;
+		} else {
+			if (element == element.ownerDocument.documentElement) {
+				names.unshift(element.tagName);
+			}
+			else {
+				for (var c = 1, e = element; e.previousElementSibling; e = e.previousElementSibling, c++);
+				
+				names.unshift(element.tagName + ":nth-child(" + c + ")");
+			}
+			
+			element = element.parentNode;
+		}
+	}
+	  
+	return names.join(" > ");
 }
 
 var umbraIntervalId = setInterval(umbraIntervalFunc, 100);
