@@ -3,34 +3,37 @@
 // vim:set sw=8 et:
 //
 
-var umbraState = {'idleSince':null,'done':null};
-
-
-var intervalID = setInterval(scrollInterval,50);
-var images;
-var imageID=0;
-var imageCount=0;
-function scrollInterval() {
-   scroll();
+var umbraState = {'idleSince':null};
+var umbraIntervalID = setInterval(umbraScrollInterval,50);
+var umbraAlreadyClicked = {};
+function umbraScrollInterval() {
 
    //if not at the bottom
    if(window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
-       umbraState.idleSince=Date.now();
-   }
-   else {
-       clearInterval(intervalID);
+       umbraScroll();
        umbraState.idleSince=null;
-	var videoBox = document.querySelectorAll("div#vid_box a");
-	if(videoBox.length>0) {
-	    for(i=0;i<videoBox.length;i++) {
-		videoBox[i].click();
-		umbraState.idleSince=Date.now();
+   }
+   else { 
+	var videoBoxes = document.querySelectorAll("div#vid_box a");
+	var clickedVideo = false;
+	if(videoBoxes.length>0) {
+	    for(i=0;i<videoBoxes.length;i++) {
+		if(!(videoBoxes[i] in umbraAlreadyClicked)){
+		    videoBoxes[i].click();
+		    umbraState.idleSince=Date.now();
+		    umbraAlreadyClicked[videoBoxes[i]]=true;
+		    clickedVideo=true;
+		}
 	    }
 	}
+	if(!clickedVideo && umbraState.idleSince==null) {
+	    umbraState.idleSince=Date.now();
+	}
    }
+
 }
 
-function scroll() {
+function umbraScroll() {
     window.scrollBy(0,50);
 }
 
@@ -42,9 +45,6 @@ var UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC = 10;
 
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
-    if(umbraState.done!=null && umbraState.done==true) {
-	return true;
-    }
     if (umbraState.idleSince != null) {
 	var idleTimeMs = Date.now() - umbraState.idleSince;
 	if (idleTimeMs / 1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC) {
