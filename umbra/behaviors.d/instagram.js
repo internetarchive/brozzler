@@ -2,77 +2,68 @@
 //
 // vim:set sw=8 et:
 //
+var UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC = 10;
 
-var umbraState = {'idleSince':null,'done':null};
+var umbraState = {'idleSince':null,'expectingSomething':null,'done':false};
 
+var umbraIntervalID = setInterval(umbraScrollInterval,50);
+var umbraImages;
+var umbraImageID=0;
+var umbraImageCount=0;
 
-var intervalID = setInterval(scrollInterval,50);
-var images;
-var imageID=0;
-var imageCount=0;
-function scrollInterval() {
-   scroll();
+function umbraScrollInterval() {
 
-   //if not at the bottom
-   if(window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
-       umbraState.idleSince=Date.now();
-   }
-   else {
+    //if not at the bottom, keep scrolling
+    if(window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
+	window.scrollBy(0,50);
+	umbraState.expectingSomething=null;
+	umbraState.idleSince=null;
+    }
+    else {
 	var more = document.querySelectorAll("span.more-photos a.more-photos-enabled");
-	if(more.length>0) {
+	if(more.length>0 && umbraState.expectingSomething==null) {
 	    more[0].click();
+	    umbraState.expectingSomething="load more";
 	    umbraState.idleSince=Date.now();
 	}
-	else if(document.querySelectorAll("span.more-photos a.more-photos-disabled").length>0) { //finally done scrolling/loading
-	    clearInterval(intervalID);
-	    umbraState.idleSince=null;
-	    images = document.querySelectorAll("li.photo div.photo-wrapper a.bg[data-reactid]");
-	    if(images && images !=='undefined' && images.length>0 ) {
-		images[0].click();
-		imageID++;
-		imageCount=images.length;
+	else if(document.querySelectorAll("span.more-photos a.more-photos-disabled").length>0 || umbraTimeoutExpired() ) { //done scrolling/loading
+	    clearInterval(umbraIntervalID);
+	    umbraImages = document.querySelectorAll("li.photo div.photo-wrapper a.bg[data-reactid]");
+	    
+	    //click first image
+	    if(umbraImages && umbraImages !=='undefined' && umbraImages.length>0 ) {
+		umbraImages[0].click();
+		umbraImageID++;
+		umbraImageCount=umbraImages.length;
 	    }
-	    intervalID = setInterval(clickPhotosInterval,200);
+	    intervalID = setInterval(umbraClickPhotosInterval,200);
 	}
-   }
+    }
 }
 
-function clickPhotosInterval() {
+function umbraClickPhotosInterval() {
     rightArrow = document.querySelectorAll("a.mmRightArrow");
     
-    if(imageID>=imageCount) {
-	clearInterval(intervalID);
-	umbraState.done=true;
-	umbraState.idleSince=(Date.now()-50000);//ready to exit
+    if(umbraImageID>=umbraImageCount) {
+	clearInterval(umbraIntervalID);
+	umbraState.done=true
     }
     else {
 	rightArrow[0].click();
-	imageID++;
-	umbraState.idleSince=Date.now();
+	umbraImageID++;
     }
 }
 
-function scroll() {
-    window.scrollBy(0,50);
+function umbraTimeoutExpired () {
+    if (umbraState.idleSince != null) {
+	var idleTimeMs = Date.now() - umbraState.idleSince;
+	return (idleTimeMs/1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC);
+    }
+    return false;
 }
-
-
-// If we haven't had anything to do (scrolled, clicked, etc) in this amount of
-// time, then we consider ourselves finished with the page.
-
-var UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC = 10;
 
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
-    if(umbraState.done!=null && umbraState.done==true) {
-	return true;
-    }
-    if (umbraState.idleSince != null) {
-	var idleTimeMs = Date.now() - umbraState.idleSince;
-	if (idleTimeMs / 1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC) {
-	    return true;
-	}
-    }
-    return false;
+    return umbraState.done;
 }
     
