@@ -23,9 +23,9 @@ var umbraAlreadyClicked = {};
 var umbraFinished = false;
 var umbraIntervalFunc = function() {
 
-	var umbraSoundCloudEmbeddedElements = [];
+    var umbraSoundCloudEmbeddedElements = [];
 
-	getUmbraSoundCloudEmbeddedElements(umbraSoundCloudEmbeddedElements);
+    getUmbraSoundCloudEmbeddedElements(umbraSoundCloudEmbeddedElements);
 	
     var clickedSomething = false;
     var somethingLeftBelow = false;
