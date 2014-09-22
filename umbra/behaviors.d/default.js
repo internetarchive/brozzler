@@ -34,7 +34,7 @@ var umbraIntervalFunc = function() {
     
     for (var i = 0; i < umbraSoundCloudEmbeddedElements.length; i++) {
     
-    		var targetId = umbraSoundCloudEmbeddedElements[i].id;
+            var targetId = umbraSoundCloudEmbeddedElements[i].id;
             var target = umbraSoundCloudEmbeddedElements[i].target;
             
             if (!(targetId in umbraAlreadyClicked)) {
