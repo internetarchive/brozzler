@@ -10,6 +10,7 @@ var umbraIntervalID = setInterval(umbraScrollInterval,50);
 var umbraImages;
 var umbraImageID=0;
 var umbraImageCount=0;
+var umbraBigImage=undefined;
 
 function umbraScrollInterval() {
 
@@ -35,22 +36,42 @@ function umbraScrollInterval() {
 		umbraImages[0].click();
 		umbraImageID++;
 		umbraImageCount=umbraImages.length;
+		intervalID = setInterval(umbraClickPhotosInterval,200);
 	    }
-	    intervalID = setInterval(umbraClickPhotosInterval,200);
+	    
 	}
     }
 }
 
 function umbraClickPhotosInterval() {
+
     rightArrow = document.querySelectorAll("a.mmRightArrow");
-    
-    if(umbraImageID>=umbraImageCount) {
-	clearInterval(umbraIntervalID);
-	umbraState.done=true
+
+    if(umbraIsBigImageLoaded()) {
+	if(umbraImageID>=umbraImageCount) {
+	    clearInterval(umbraIntervalID);
+	    umbraState.done=true;
+	}
+	else {
+	    umbraBigImage = undefined;
+	    rightArrow[0].click();
+	    umbraImageID++;
+	}
+    }
+}
+
+function umbraIsBigImageLoaded(){
+    if(umbraBigImage === undefined) {
+	var imageFrame = document.querySelectorAll("div.Modal div.Item div.iMedia div.Frame");
+	if(imageFrame.length>0) {
+	    umbraBigImage = new Image();
+	    umbraBigImage.src = imageFrame[0].getAttribute("src");
+	}
+	return false;
     }
     else {
-	rightArrow[0].click();
-	umbraImageID++;
+	return (umbraBigImage.naturalWidth !== 0)
+
     }
 }
 
