@@ -68,7 +68,8 @@ class Behavior:
         self.notify_of_activity()
 
     def is_finished(self):
-        msg_id = self.umbra_worker.send_to_chrome(method="Runtime.evaluate", params={"expression": "umbraBehaviorFinished()"})
+        msg_id = self.umbra_worker.send_to_chrome(method="Runtime.evaluate",
+                suppress_logging=True, params={"expression":"umbraBehaviorFinished()"})
         self.waiting_result_msg_ids.append(msg_id)
 
         request_idle_timeout_sec = 30

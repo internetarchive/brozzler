@@ -8,8 +8,14 @@ var umbraAboveBelowOrOnScreen = function(e) {
         if (eTop < window.scrollY) {
                 return -1; // above
         } else if (eTop > window.scrollY + window.innerHeight) {
+                // if (e.clientWidth != 0) {
+                //         console.warn("e.clientWidth=" + e.clientWidth + " though it appears to be below the screen? e.getBoundingClientRect().top=" + eTop + " window.scrollY=" + window.scrollY + " window.innerHeight=" + window.innerHeight + " e=" + e);
+                // }
                 return 1;  // below
         } else {
+                // if (e.clientWidth != 0) {
+                //         console.warn("e.clientWidth=" + e.clientWidth + " though it appears to be on screen? e.getBoundingClientRect().top=" + eTop + " window.scrollY=" + window.scrollY + " window.innerHeight=" + window.innerHeight + " e=" + e);
+                // }
                 return 0;  // on screen
         }
 }
@@ -17,7 +23,7 @@ var umbraAboveBelowOrOnScreen = function(e) {
 // comments - 'a.UFIPagerLink > span, a.UFIPagerLink, span.UFIReplySocialSentenceLinkText'
 var UMBRA_THINGS_TO_CLICK_SELECTOR = 'a[href^="/browse/likes"], *[rel="theater"]';
 var umbraAlreadyClicked = {};
-var umbraState = {'idleSince':null,'expectingSomething':null};
+var umbraState = {'idleSince':null,'expectingSomething':null,'bottomReachedScrollY':0};
 
 var umbraIntervalFunc = function() {
         var closeButtons = document.querySelectorAll('a[title="Close"], a.closeTheater');
@@ -70,18 +76,22 @@ var umbraIntervalFunc = function() {
                 }
         }
 
+        if (window.scrollY > umbraState.bottomReachedScrollY) {
+                umbraState.bottomReachedScrollY = window.scrollY;
+        }
+
         if (!clickedSomething) {
-                if (somethingLeftAbove) {
-                        console.log("scrolling UP because everything on this screen has been clicked but we missed something above");
-                        window.scrollBy(0, -500);
+                if (somethingLeftBelow) {
+                        // console.log("scrolling down because everything on this screen has been clicked but there's more below document.body.clientHeight=" + document.body.clientHeight);
+                        window.scrollBy(0, 300);
                         umbraState.idleSince = null;
-                } else if (somethingLeftBelow) {
-                        console.log("scrolling because everything on this screen has been clicked but there's more below document.body.clientHeight=" + document.body.clientHeight);
-                        window.scrollBy(0, 200);
+                } else if (umbraState.bottomReachedScrollY + window.innerHeight < document.documentElement.scrollHeight) {
+                        // console.log("scrolling down because we haven't reached the bottom yet document.body.clientHeight=" + document.body.clientHeight);
+                        window.scrollBy(0, 300);
                         umbraState.idleSince = null;
-                } else if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
-                        console.log("scrolling because we're not to the bottom yet document.body.clientHeight=" + document.body.clientHeight);
-                        window.scrollBy(0, 200);
+                } else if (somethingLeftAbove) {
+                        // console.log("scrolling UP because we've already been to the bottom, everything on or below this screen has been clicked, but we missed something above");
+                        window.scrollBy(0, -600);
                         umbraState.idleSince = null;
                 } else if (umbraState.idleSince == null) {
                         umbraState.idleSince = Date.now();
