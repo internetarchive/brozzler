@@ -144,11 +144,12 @@ class Browser:
 
             self._behavior = None
 
-    def send_to_chrome(self, **kwargs):
+    def send_to_chrome(self, suppress_logging=False, **kwargs):
         msg_id = next(self.command_id)
         kwargs['id'] = msg_id
         msg = json.dumps(kwargs)
-        self.logger.debug('sending message to {}: {}'.format(self._websock, msg))
+        if not suppress_logging:
+            self.logger.debug('sending message to {}: {}'.format(self._websock, msg))
         self._websock.send(msg)
         return msg_id
 
