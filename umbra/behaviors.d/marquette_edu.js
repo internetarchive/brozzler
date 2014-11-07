@@ -16,16 +16,16 @@ function umbraScrollInterval() {
    else { 
 	var videoBoxes = document.querySelectorAll("div#vid_box a");
 	var clickedVideo = false;
-	if(videoBoxes.length>0) {
-	    for(i=0;i<videoBoxes.length;i++) {
-		if(!(videoBoxes[i] in umbraAlreadyClicked)){
-		    videoBoxes[i].click();
-		    umbraState.idleSince=Date.now();
-		    umbraAlreadyClicked[videoBoxes[i]]=true;
-		    clickedVideo=true;
-		}
+
+	for(i=0;i<videoBoxes.length;i++) {
+	    if(!(videoBoxes[i] in umbraAlreadyClicked)){
+		videoBoxes[i].click();
+		umbraState.idleSince=null;
+		umbraAlreadyClicked[videoBoxes[i]]=true;
+		clickedVideo=true;
 	    }
 	}
+
 	if(!clickedVideo && umbraState.idleSince==null) {
 	    umbraState.idleSince=Date.now();
 	}
