@@ -15,7 +15,7 @@ arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:gu
         help='URL identifying the AMQP server to talk to')
 arg_parser.add_argument('--exchange', dest='amqp_exchange', default='umbra',
         help='AMQP exchange name')
-arg_parser.add_argument('--routing-key', dest='amqp_routing_key', default='url',
+arg_parser.add_argument('--routing-key', dest='amqp_routing_key', default='urls',
         help='AMQP routing key')
 arg_parser.add_argument('-i', '--client-id', dest='client_id', default='load_url.0',
         help='client id - included in the json payload with each url; umbra uses this value as the routing key to send requests back to')
