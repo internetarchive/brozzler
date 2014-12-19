@@ -102,7 +102,7 @@ var umbraIntervalFunc = function() {
                         if (where == 0) { // on screen
                                 // var pos = target.getBoundingClientRect().top;
                                 // window.scrollTo(0, target.getBoundingClientRect().top - 100);
-                                console.log("clicking at " + target.getBoundingClientRect().top + " on " + target.outerHTML);
+                                console.log("clicking at " + target.getBoundingClientRect().top + " on " + target.id);
                                 if (target.click != undefined) {
                                         umbraState.expectingSomething = 'closeButton';
                                         target.click();
