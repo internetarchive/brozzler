@@ -39,7 +39,7 @@ var umbraIntervalFunc = function() {
 			
 			if (!(target in umbraAlreadyScrolledThing)) {				
 				
-				console.log("scrolling to " + target.scrollHeight + " on " + target.outerHTML);
+				console.log("scrolling to " + target.scrollHeight + " on element of type " + target.nodeName + " with id of " + target.id);
 				var lastScrollTop = target.scrollTop;
 				target.scrollTop = target.scrollHeight;
 				
@@ -56,7 +56,7 @@ var umbraIntervalFunc = function() {
 						umbraScrolledThingFailedScrollAttempts[target] = 1;
 					}
 					
-					if (umbraScrolledThingFailedScrollAttempts[target] == NUMBER_FAILED_SCROLL_ATTEMPTS_ON_THING_TO_SCROLL_BEFORE_STOP_SCROLLING) {
+					if (umbraScrolledThingFailedScrollAttempts[target] >= NUMBER_FAILED_SCROLL_ATTEMPTS_ON_THING_TO_SCROLL_BEFORE_STOP_SCROLLING) {
 						umbraAlreadyScrolledThing[target] = true;
 					}
 				}
@@ -66,8 +66,10 @@ var umbraIntervalFunc = function() {
 				}
 			}
 			else {
-				console.log("done scrolling for " + target.outerHTML)
+				console.log("done scrolling for element of type " + target.nodeName + " with id of " + target.id)
 			} 
+			
+			umbraState.expectingSomething = null;
 		}
 	
         var closeButtons = document.querySelectorAll('a[title="Close"], a.closeTheater');
@@ -102,7 +104,7 @@ var umbraIntervalFunc = function() {
                         if (where == 0) { // on screen
                                 // var pos = target.getBoundingClientRect().top;
                                 // window.scrollTo(0, target.getBoundingClientRect().top - 100);
-                                console.log("clicking at " + target.getBoundingClientRect().top + " on " + target.id);
+                                console.log("clicking at " + target.getBoundingClientRect().top + " on " + target.outerHTML);
                                 if (target.click != undefined) {
                                         umbraState.expectingSomething = 'closeButton';
                                         target.click();
@@ -149,6 +151,11 @@ var UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC = 10;
 
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
+	
+	console.log("xx " + umbraState.idleSince);
+    var idleTimeMs = Date.now() - umbraState.idleSince;
+    console.log(idleTimeMs / 1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC);
+	
         if (umbraState.idleSince != null) {
                 var idleTimeMs = Date.now() - umbraState.idleSince;
                 if (idleTimeMs / 1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC) {
