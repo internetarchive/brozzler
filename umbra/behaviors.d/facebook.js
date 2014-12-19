@@ -33,13 +33,16 @@ var umbraState = {'idleSince':null,'expectingSomething':null,'bottomReachedScrol
 var umbraIntervalFunc = function() {
 	
 		var thingsToScroll = document.querySelectorAll(UMBRA_THINGS_TO_SCROLL_SELECTOR);
+		var everythingScrolled = true;
 		
 		for (var i = 0; i < thingsToScroll.length; i++) {
 			var target = thingsToScroll[i];
 			
-			if (!(target in umbraAlreadyScrolledThing)) {				
+			if (!(target in umbraAlreadyScrolledThing)) {
 				
-				console.log("scrolling to " + target.scrollHeight + " on element of type " + target.nodeName + " with id of " + target.id);
+				everythingScrolled = false;
+				
+				console.log("scrolling to " + target.scrollHeight + " on element with nodeName " + target.nodeName + " with id of " + target.id);
 				var lastScrollTop = target.scrollTop;
 				target.scrollTop = target.scrollHeight;
 				
@@ -66,10 +69,18 @@ var umbraIntervalFunc = function() {
 				}
 			}
 			else {
-				console.log("done scrolling for element of type " + target.nodeName + " with id of " + target.id)
+				console.log("done scrolling for element with nodeName " + target.nodeName + " with id of " + target.id)
 			} 
 			
 			umbraState.expectingSomething = null;
+		}
+		
+		if (thingsToScroll && thingsToScroll.length > 0 && everythingScrolled) {
+			if (umbraState.idleSince == null) {
+				umbraState.idleSince = Date.now();
+			}
+            
+			return;
 		}
 	
         var closeButtons = document.querySelectorAll('a[title="Close"], a.closeTheater');
@@ -151,10 +162,6 @@ var UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC = 10;
 
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
-	
-	console.log("xx " + umbraState.idleSince);
-    var idleTimeMs = Date.now() - umbraState.idleSince;
-    console.log(idleTimeMs / 1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC);
 	
         if (umbraState.idleSince != null) {
                 var idleTimeMs = Date.now() - umbraState.idleSince;
