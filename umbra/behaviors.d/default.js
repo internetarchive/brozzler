@@ -84,7 +84,8 @@ var umbraIntervalFunc = function() {
 }
 
 //try to detect sound cloud "Play" buttons and return them as targets for clicking
-var getUmbraSoundCloudEmbeddedElements = function(soundCloudEmbeddedElements, currentIframeDepth, currentDocument) {
+var getUmbraSoundCloudEmbeddedElements = function(soundCloudEmbeddedElements, currentIframeDepth, currentDocument,
+		iframeElement) {
 	
 	//set default values for parameters
 	currentIframeDepth = currentIframeDepth || 0;
@@ -99,8 +100,10 @@ var getUmbraSoundCloudEmbeddedElements = function(soundCloudEmbeddedElements, cu
 	
 	button = currentDocument.querySelectorAll(UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR);
 
+	var cssPathIframe = iframeElement ? getElementCssPath(iframeElement) : "";
+	
 	for (var i = 0; i < button.length; i++) {
-		soundCloudEmbeddedElements.push({"id" : getElementCssPath(button.item(i)), "target" : button.item(i)});
+		soundCloudEmbeddedElements.push({"id" : cssPathIframe + getElementCssPath(button.item(i)), "target" : button.item(i)});
 	}
 	
 	//now get all buttons in embedded iframes
@@ -109,7 +112,7 @@ var getUmbraSoundCloudEmbeddedElements = function(soundCloudEmbeddedElements, cu
 	iframe = currentDocument.querySelectorAll(UMBRA_IFRAME_SOUNDCLOUD_EMBEDDED_SELECTOR);
 	
 	for (var i = 0; i < iframe.length; i++) {
-		getUmbraSoundCloudEmbeddedElements(soundCloudEmbeddedElements, currentIframeDepth + 1, iframe[i].contentWindow.document.body);
+		getUmbraSoundCloudEmbeddedElements(soundCloudEmbeddedElements, currentIframeDepth + 1, iframe[i].contentWindow.document.body, iframe[i]);
 	}
 }
 
