@@ -117,6 +117,9 @@ class AmqpBrowserController:
                         break # out of "while True" to acquire another browser
                     except socket.timeout:
                         pass
+                    except socket.error:
+                        self.logger.error("problem consuming messages from AMQP, will try reconnecting after active browsing finishes", exc_info=True)
+                        self._reconnect_requested = True
 
                     if self._consumer_stop.is_set() or time.time() - start >= timeout or self._reconnect_requested:
                         browser.stop()

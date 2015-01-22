@@ -8,18 +8,81 @@ var umbraAboveBelowOrOnScreen = function(e) {
         if (eTop < window.scrollY) {
                 return -1; // above
         } else if (eTop > window.scrollY + window.innerHeight) {
+                // if (e.clientWidth != 0) {
+                //         console.warn("e.clientWidth=" + e.clientWidth + " though it appears to be below the screen? e.getBoundingClientRect().top=" + eTop + " window.scrollY=" + window.scrollY + " window.innerHeight=" + window.innerHeight + " e=" + e);
+                // }
                 return 1;  // below
         } else {
+                // if (e.clientWidth != 0) {
+                //         console.warn("e.clientWidth=" + e.clientWidth + " though it appears to be on screen? e.getBoundingClientRect().top=" + eTop + " window.scrollY=" + window.scrollY + " window.innerHeight=" + window.innerHeight + " e=" + e);
+                // }
                 return 0;  // on screen
         }
 }
 
 // comments - 'a.UFIPagerLink > span, a.UFIPagerLink, span.UFIReplySocialSentenceLinkText'
 var UMBRA_THINGS_TO_CLICK_SELECTOR = 'a[href^="/browse/likes"], *[rel="theater"]';
+//div[class="phm pluginLikeboxStream"] = facebook widget embedded in 3rd party pages
+var UMBRA_THINGS_TO_SCROLL_SELECTOR = 'div[class="phm pluginLikeboxStream"]';
+var NUMBER_FAILED_SCROLL_ATTEMPTS_ON_THING_TO_SCROLL_BEFORE_STOP_SCROLLING = 5;
 var umbraAlreadyClicked = {};
-var umbraState = {'idleSince':null,'expectingSomething':null};
+var umbraAlreadyScrolledThing = {};
+var umbraScrolledThingFailedScrollAttempts = {};
+var umbraState = {'idleSince':null,'expectingSomething':null,'bottomReachedScrollY':0};
 
 var umbraIntervalFunc = function() {
+	
+		var thingsToScroll = document.querySelectorAll(UMBRA_THINGS_TO_SCROLL_SELECTOR);
+		var everythingScrolled = true;
+		
+		for (var i = 0; i < thingsToScroll.length; i++) {
+			var target = thingsToScroll[i];
+			
+			if (!(target in umbraAlreadyScrolledThing)) {
+				
+				everythingScrolled = false;
+				
+				console.log("scrolling to " + target.scrollHeight + " on element with nodeName " + target.nodeName + " with id of " + target.id);
+				var lastScrollTop = target.scrollTop;
+				target.scrollTop = target.scrollHeight;
+				
+				umbraState.idleSince = null;
+				
+				if (target.scrollTop >= target.scrollHeight) {
+					umbraAlreadyScrolledThing[target] = true;
+				} 
+				else if (target.scrollTop == lastScrollTop) {
+					if (umbraScrolledThingFailedScrollAttempts[target]) {
+						umbraScrolledThingFailedScrollAttempts[target]++;
+					}
+					else {
+						umbraScrolledThingFailedScrollAttempts[target] = 1;
+					}
+					
+					if (umbraScrolledThingFailedScrollAttempts[target] >= NUMBER_FAILED_SCROLL_ATTEMPTS_ON_THING_TO_SCROLL_BEFORE_STOP_SCROLLING) {
+						umbraAlreadyScrolledThing[target] = true;
+					}
+				}
+				else {
+					//reset failed count on a successful scroll
+					umbraScrolledThingFailedScrollAttempts[target] = 0;
+				}
+			}
+			else {
+				console.log("done scrolling for element with nodeName " + target.nodeName + " with id of " + target.id)
+			} 
+			
+			umbraState.expectingSomething = null;
+		}
+		
+		if (thingsToScroll && thingsToScroll.length > 0 && everythingScrolled) {
+			if (umbraState.idleSince == null) {
+				umbraState.idleSince = Date.now();
+			}
+            
+			return;
+		}
+	
         var closeButtons = document.querySelectorAll('a[title="Close"], a.closeTheater');
         for (var i = 0; i < closeButtons.length; i++) {
                 // XXX closeTheater buttons stick around in the dom after closing, clientWidth>0 is one way to check if they're visible
@@ -69,19 +132,23 @@ var umbraIntervalFunc = function() {
                         }
                 }
         }
+        
+        if (window.scrollY > umbraState.bottomReachedScrollY) {
+                umbraState.bottomReachedScrollY = window.scrollY;
+        }
 
         if (!clickedSomething) {
-                if (somethingLeftAbove) {
-                        console.log("scrolling UP because everything on this screen has been clicked but we missed something above");
-                        window.scrollBy(0, -500);
+                if (somethingLeftBelow) {
+                        // console.log("scrolling down because everything on this screen has been clicked but there's more below document.body.clientHeight=" + document.body.clientHeight);
+                        window.scrollBy(0, 300);
                         umbraState.idleSince = null;
-                } else if (somethingLeftBelow) {
-                        console.log("scrolling because everything on this screen has been clicked but there's more below document.body.clientHeight=" + document.body.clientHeight);
-                        window.scrollBy(0, 200);
+                } else if (umbraState.bottomReachedScrollY + window.innerHeight < document.documentElement.scrollHeight) {
+                        // console.log("scrolling down because we haven't reached the bottom yet document.body.clientHeight=" + document.body.clientHeight);
+                        window.scrollBy(0, 300);
                         umbraState.idleSince = null;
-                } else if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
-                        console.log("scrolling because we're not to the bottom yet document.body.clientHeight=" + document.body.clientHeight);
-                        window.scrollBy(0, 200);
+                } else if (somethingLeftAbove) {
+                        // console.log("scrolling UP because we've already been to the bottom, everything on or below this screen has been clicked, but we missed something above");
+                        window.scrollBy(0, -600);
                         umbraState.idleSince = null;
                 } else if (umbraState.idleSince == null) {
                         umbraState.idleSince = Date.now();
@@ -95,6 +162,7 @@ var UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC = 10;
 
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
+	
         if (umbraState.idleSince != null) {
                 var idleTimeMs = Date.now() - umbraState.idleSince;
                 if (idleTimeMs / 1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC) {
