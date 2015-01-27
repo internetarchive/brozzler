@@ -8,6 +8,7 @@ import logging
 import time
 import sys
 import yaml
+import string
 
 class Behavior:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -22,10 +23,16 @@ class Behavior:
                 conf = yaml.load(fin)
             Behavior._behaviors = conf['behaviors']
 
+            simpleclicks_js_in = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ["behaviors.d"] + ["simpleclicks.js.in"])
+            with open(simpleclicks_js_in) as fin:
+                simpleclicks_js_template = string.Template(fin.read())
+
             for behavior in Behavior._behaviors:
                 if "behavior_js" in behavior:
                     behavior_js = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ["behaviors.d"] + [behavior["behavior_js"]])
                     behavior["script"] = open(behavior_js, encoding="utf-8").read()
+                elif "click_css_selector" in behavior:
+                    behavior["script"] = simpleclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"])
 
         return Behavior._behaviors
 
@@ -43,11 +50,15 @@ class Behavior:
             if re.match(behavior['url_regex'], self.url):
                 if "behavior_js" in behavior:
                     self.logger.info("using {} behavior for {}".format(behavior["behavior_js"], self.url))
+                elif "click_css_selector" in behavior:
+                    self.logger.info("using simple click behavior with css selector {} for {}".format(behavior["click_css_selector"], self.url))
+
                 self.active_behavior = behavior
                 self.umbra_worker.send_to_chrome(method="Runtime.evaluate",
                         suppress_logging=True, params={"expression": behavior["script"]})
                 self.notify_of_activity()
                 return
+
         self.logger.warn("no behavior to run on {}".format(self.url))
 
     def is_finished(self):
@@ -85,6 +96,5 @@ if __name__ == "__main__":
             format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
     logger = logging.getLogger('umbra.behaviors')
     logger.info("custom behaviors: {}".format(Behavior.behaviors()))
-    logger.info("default behavior: {}".format(Behavior.default_behavior()))
 
 

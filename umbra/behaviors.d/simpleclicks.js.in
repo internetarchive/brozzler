@@ -1,0 +1,38 @@
+var umbraSimpleClicksBehavior = {
+        IDLE_TIMEOUT_SEC: 10,
+        idleSince: null,
+        clickTargets: [],
+        nextClickIndex: 0,
+
+        intervalFunc: function() {
+                if (this.nextClickIndex < this.clickTargets.length) {
+                        this.clickTargets[this.nextClickIndex].click();
+                        this.idleSince = null;
+                        this.nextClickIndex++;
+                } else if (this.idleSince == null) {
+                        this.idleSince = Date.now();
+                }
+        },
+
+        start: function() {
+                this.clickTargets = document.querySelectorAll("${click_css_selector}");
+
+                var that = this;
+                this.intervalId = setInterval(function(){ that.intervalFunc() }, 50);
+        },
+
+        isFinished: function() {
+                if (this.idleSince != null) {
+                        var idleTimeMs = Date.now() - this.idleSince;
+                        if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
+                                return true;
+                        }
+                }
+                return false;
+        },
+};
+
+// Called from outside of this script.
+var umbraBehaviorFinished = function() { return umbraSimpleClicksBehavior.isFinished() };
+
+umbraSimpleClicksBehavior.start();
