@@ -231,7 +231,7 @@ class Chrome:
 
     # returns websocket url to chrome window with about:blank loaded
     def start(self):
-        timeout_sec = 60
+        timeout_sec = 600
         new_env = os.environ.copy()
         new_env["HOME"] = self.user_home_dir
         chrome_args = [self.executable,
@@ -270,7 +270,7 @@ class Chrome:
                     time.sleep(0.5)
 
     def stop(self):
-        timeout_sec = 60
+        timeout_sec = 300
         self.logger.info("terminating chrome pid {}".format(self.chrome_process.pid))
 
         self.chrome_process.terminate()
