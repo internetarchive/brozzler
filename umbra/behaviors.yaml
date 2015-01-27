@@ -1,0 +1,22 @@
+# first matched behavior is used, so order matters here
+behaviors:
+ -
+   url_regex: '^https?://(?:www\.)?facebook\.com/.*$'
+   behavior_js: facebook.js
+   request_idle_timeout_sec: 30
+ -
+   url_regex: '^https?://(?:www\.)?flickr\.com/.*$'
+   behavior_js: flickr.js
+   request_idle_timeout_sec: 10
+ -
+   url_regex: '^https?://(?:www\.)?marquette\.edu/.*$'
+   behavior_js: marquette_edu.js
+   request_idle_timeout_sec: 10
+ -
+   url_regex: '^https?://(?:www\.)?vimeo\.com/.*$'
+   behavior_js: vimeo.js
+   request_idle_timeout_sec: 10
+ -
+   url_regex: '^.*$'
+   request_idle_timeout_sec: 10
+   behavior_js: default.js

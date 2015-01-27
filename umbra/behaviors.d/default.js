@@ -1,5 +1,3 @@
-// {"request_idle_timeout_sec":10}
-//
 // vim:set sw=8 et:
 //
 // Scrolls to the bottom of the page. That's it at the moment.
