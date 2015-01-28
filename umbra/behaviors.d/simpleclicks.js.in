@@ -1,24 +1,30 @@
 var umbraSimpleClicksBehavior = {
         IDLE_TIMEOUT_SEC: 10,
         idleSince: null,
-        clickTargets: [],
-        nextClickIndex: 0,
+        alreadyClicked: {},
 
         intervalFunc: function() {
-                if (this.nextClickIndex < this.clickTargets.length) {
-                        this.clickTargets[this.nextClickIndex].click();
-                        this.idleSince = null;
-                        this.nextClickIndex++;
-                } else if (this.idleSince == null) {
+                var clickTargets = document.querySelectorAll("${click_css_selector}");
+
+                for (var i = 0; i < clickTargets.length; i++) {
+                        var key = clickTargets[i].outerHTML;
+                        if (!this.alreadyClicked[key]) {
+                                console.log("clicking on " + key);
+                                clickTargets[i].click();
+                                this.alreadyClicked[key] = true;
+                                this.idleSince = null;
+                                return;
+                        }
+                }
+
+                if (!this.idleSince) {
                         this.idleSince = Date.now();
                 }
         },
 
         start: function() {
-                this.clickTargets = document.querySelectorAll("${click_css_selector}");
-
                 var that = this;
-                this.intervalId = setInterval(function(){ that.intervalFunc() }, 50);
+                this.intervalId = setInterval(function(){ that.intervalFunc() }, 250);
         },
 
         isFinished: function() {

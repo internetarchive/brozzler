@@ -20,7 +20,11 @@ behaviors:
    url_regex: '^https?://.*[?&]catoid=[^?]*$'
    click_css_selector: a[onclick]
    request_idle_timeout_sec: 10
- -
+ - # https://webarchive.jira.com/browse/ARI-3956
+   url_regex: '^https?://(?:www\.)?usask.ca/.*$'
+   click_css_selector: a[id='feature-next']
+   request_idle_timeout_sec: 10
+ - # default fallback brhavior
    url_regex: '^.*$'
    request_idle_timeout_sec: 10
    behavior_js: default.js
