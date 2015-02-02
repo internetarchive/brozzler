@@ -1,7 +1,9 @@
 // vim:set sw=8 et:
 //
-// Scrolls to the bottom of the page. That's it at the moment.
+// Scrolls to the bottom of the page, and clicks on embedded soundcloud
+// elements.
 //
+
 var umbraAboveBelowOrOnScreen = function(e) {
         var eTop = e.getBoundingClientRect().top;
         if (eTop < window.scrollY) {
