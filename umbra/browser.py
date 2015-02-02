@@ -231,7 +231,7 @@ class Chrome:
 
     # returns websocket url to chrome window with about:blank loaded
     def start(self):
-        timeout_sec = 60
+        timeout_sec = 600
         new_env = os.environ.copy()
         new_env["HOME"] = self.user_home_dir
         chrome_args = [self.executable,
@@ -242,6 +242,7 @@ class Chrome:
                 "--window-size=1100,900", "--no-default-browser-check",
                 "--disable-first-run-ui", "--no-first-run",
                 "--homepage=about:blank", "--disable-direct-npapi-requests",
+                "--disable-web-security",
                 "about:blank"]
         self.logger.info("running {}".format(chrome_args))
         self.chrome_process = subprocess.Popen(chrome_args, env=new_env, start_new_session=True)
@@ -270,7 +271,7 @@ class Chrome:
                     time.sleep(0.5)
 
     def stop(self):
-        timeout_sec = 60
+        timeout_sec = 300
         self.logger.info("terminating chrome pid {}".format(self.chrome_process.pid))
 
         self.chrome_process.terminate()
