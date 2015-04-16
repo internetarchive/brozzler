@@ -9,7 +9,6 @@ def full_version_bytes():
     import subprocess, time
     try:
         commit_bytes = subprocess.check_output(['git', 'log', '-1', '--pretty=format:%h'])
-
         t_bytes = subprocess.check_output(['git', 'log', '-1', '--pretty=format:%ct'])
         t = int(t_bytes.strip().decode('utf-8'))
         tm = time.gmtime(t)
@@ -32,8 +31,8 @@ setuptools.setup(name='umbra',
         long_description=open('README.md').read(),
         license='Apache License 2.0',
         packages=['umbra'],
-        package_data={'umbra':['behaviors.d/*.js', 'version.txt']},
-        install_requires=['kombu', 'websocket-client-py3==0.13.1','argparse'],
+        package_data={'umbra':['behaviors.d/*.js*', 'behaviors.yaml', 'version.txt']},
+        install_requires=['kombu', 'websocket-client-py3==0.13.1', 'argparse', 'PyYAML'],
         scripts=glob.glob('bin/*'),
         zip_safe=False,
         classifiers=[

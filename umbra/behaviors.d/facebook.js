@@ -1,7 +1,4 @@
-// {"url_regex":"^https?://(?:www\\.)?facebook\\.com/.*$", "request_idle_timeout_sec":30}
-//
 // vim:set sw=8 et:
-//
 
 var umbraAboveBelowOrOnScreen = function(e) {
         var eTop = e.getBoundingClientRect().top;

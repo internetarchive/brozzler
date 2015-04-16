@@ -7,44 +7,34 @@ import re
 import logging
 import time
 import sys
+import yaml
+import string
 
 class Behavior:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
     _behaviors = None
-    _default_behavior = None
 
     @staticmethod
     def behaviors():
         if Behavior._behaviors is None:
-            behaviors_directory = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ['behaviors.d'])
-            behavior_files = itertools.chain(*[[os.path.join(dir, file) for file in files if file.endswith('.js') and file != 'default.js'] for dir, dirs, files in os.walk(behaviors_directory)])
-            Behavior._behaviors = []
-            for file_name in behavior_files:
-                Behavior.logger.debug("reading behavior file {}".format(file_name))
-                script = open(file_name, encoding='utf-8').read()
-                first_line = script[:script.find('\n')]
-                behavior = json.loads(first_line[2:].strip())
-                behavior['script'] = script
-                behavior['file'] = file_name
-                Behavior._behaviors.append(behavior)
-                Behavior.logger.info("will run behaviors from {} on urls matching {}".format(file_name, behavior['url_regex']))
+            behaviors_yaml = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ['behaviors.yaml'])
+            with open(behaviors_yaml) as fin:
+                conf = yaml.load(fin)
+            Behavior._behaviors = conf['behaviors']
+
+            simpleclicks_js_in = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ["behaviors.d"] + ["simpleclicks.js.in"])
+            with open(simpleclicks_js_in) as fin:
+                simpleclicks_js_template = string.Template(fin.read())
+
+            for behavior in Behavior._behaviors:
+                if "behavior_js" in behavior:
+                    behavior_js = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ["behaviors.d"] + [behavior["behavior_js"]])
+                    behavior["script"] = open(behavior_js, encoding="utf-8").read()
+                elif "click_css_selector" in behavior:
+                    behavior["script"] = simpleclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"])
 
         return Behavior._behaviors
-
-    @staticmethod
-    def default_behavior():
-        if Behavior._default_behavior is None:
-            behaviors_directory = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ['behaviors.d'])
-            file_name = os.path.join(behaviors_directory, 'default.js')
-            Behavior.logger.debug("reading default behavior file {}".format(file_name))
-            script = open(file_name, encoding='utf-8').read()
-            first_line = script[:script.find('\n')]
-            behavior = json.loads(first_line[2:].strip())
-            behavior['script'] = script
-            behavior['file'] = file_name
-            Behavior._default_behavior = behavior
-        return Behavior._default_behavior
 
     def __init__(self, url, umbra_worker):
         self.url = url
@@ -58,14 +48,18 @@ class Behavior:
     def start(self):
         for behavior in Behavior.behaviors():
             if re.match(behavior['url_regex'], self.url):
+                if "behavior_js" in behavior:
+                    self.logger.info("using {} behavior for {}".format(behavior["behavior_js"], self.url))
+                elif "click_css_selector" in behavior:
+                    self.logger.info("using simple click behavior with css selector {} for {}".format(behavior["click_css_selector"], self.url))
+
                 self.active_behavior = behavior
-                break
+                self.umbra_worker.send_to_chrome(method="Runtime.evaluate",
+                        suppress_logging=True, params={"expression": behavior["script"]})
+                self.notify_of_activity()
+                return
 
-        if self.active_behavior is None:
-            self.active_behavior = Behavior.default_behavior()
-
-        self.umbra_worker.send_to_chrome(method="Runtime.evaluate", params={"expression": self.active_behavior['script']})
-        self.notify_of_activity()
+        self.logger.warn("no behavior to run on {}".format(self.url))
 
     def is_finished(self):
         msg_id = self.umbra_worker.send_to_chrome(method="Runtime.evaluate",
@@ -102,6 +96,5 @@ if __name__ == "__main__":
             format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
     logger = logging.getLogger('umbra.behaviors')
     logger.info("custom behaviors: {}".format(Behavior.behaviors()))
-    logger.info("default behavior: {}".format(Behavior.default_behavior()))
 
 

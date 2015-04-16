@@ -1,5 +1,3 @@
-// {"url_regex":"^https?://(?:www\\.)?instagram\\.com/.*$", "request_idle_timeout_sec":10}
-//
 // vim:set sw=8 et:
 //
 

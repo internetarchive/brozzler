@@ -1,7 +1,4 @@
-// {"url_regex":"^https?://(?:www\\.)?marquette\\.edu/.*$", "request_idle_timeout_sec":10}
-//
 // vim:set sw=8 et:
-//
 
 var umbraState = {'idleSince':null};
 var umbraIntervalID = setInterval(umbraScrollInterval,50);

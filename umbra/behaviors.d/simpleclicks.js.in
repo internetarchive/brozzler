@@ -1,0 +1,44 @@
+var umbraSimpleClicksBehavior = {
+        IDLE_TIMEOUT_SEC: 10,
+        idleSince: null,
+        alreadyClicked: {},
+
+        intervalFunc: function() {
+                var clickTargets = document.querySelectorAll("${click_css_selector}");
+
+                for (var i = 0; i < clickTargets.length; i++) {
+                        var key = clickTargets[i].outerHTML;
+                        if (!this.alreadyClicked[key]) {
+                                console.log("clicking on " + key);
+                                clickTargets[i].click();
+                                this.alreadyClicked[key] = true;
+                                this.idleSince = null;
+                                return;
+                        }
+                }
+
+                if (!this.idleSince) {
+                        this.idleSince = Date.now();
+                }
+        },
+
+        start: function() {
+                var that = this;
+                this.intervalId = setInterval(function(){ that.intervalFunc() }, 250);
+        },
+
+        isFinished: function() {
+                if (this.idleSince != null) {
+                        var idleTimeMs = Date.now() - this.idleSince;
+                        if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
+                                return true;
+                        }
+                }
+                return false;
+        },
+};
+
+// Called from outside of this script.
+var umbraBehaviorFinished = function() { return umbraSimpleClicksBehavior.isFinished() };
+
+umbraSimpleClicksBehavior.start();
