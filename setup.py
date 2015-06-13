@@ -3,7 +3,7 @@
 import setuptools
 import glob
 
-VERSION_BYTES = b'0.2'
+VERSION_BYTES = b'1.0'
 
 def full_version_bytes():
     import subprocess, time
@@ -36,7 +36,7 @@ setuptools.setup(name='umbra',
         scripts=glob.glob('bin/*'),
         zip_safe=False,
         classifiers=[
-            'Development Status :: 3 - Alpha Development Status',
+            'Development Status :: 5 - Production/Stable',
             'Environment :: Console',
             'License :: OSI Approved :: Apache Software License',
             'Programming Language :: Python :: 3.3',
