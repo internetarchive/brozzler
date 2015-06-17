@@ -13,6 +13,7 @@ import signal
 import tempfile
 import os
 import socket
+import base64
 from umbra.behaviors import Behavior
 
 class BrowserPool:
@@ -94,7 +95,7 @@ class Browser:
     def abort_browse_page(self):
         self._abort_browse_page = True
 
-    def browse_page(self, url, on_request=None):
+    def browse_page(self, url, on_request=None, on_screenshot=None):
         """Synchronously browses a page and runs behaviors. 
 
         Raises BrowsingException if browsing the page fails in a non-critical
@@ -102,6 +103,8 @@ class Browser:
         """
         self.url = url
         self.on_request = on_request
+        self.on_screenshot = on_screenshot
+        self._waiting_on_screenshot_msg_id = None
 
         self._websock = websocket.WebSocketApp(self._websocket_url,
                 on_open=self._visit_page, on_message=self._handle_message)
@@ -128,6 +131,8 @@ class Browser:
                 elif self._abort_browse_page:
                     raise BrowsingException("browsing page aborted")
         finally:
+            self.capture_screenshot()
+
             if self._websock and self._websock.sock and self._websock.sock.connected:
                 try:
                     self._websock.close()
@@ -143,6 +148,10 @@ class Browser:
                     self.logger.critical("{} still alive 60 seconds after closing {}".format(websock_thread, self._websock))
 
             self._behavior = None
+
+
+    def capture_screenshot(self):
+        time.sleep(10)
 
     def send_to_chrome(self, suppress_logging=False, **kwargs):
         msg_id = next(self.command_id)
@@ -178,14 +187,8 @@ class Browser:
             elif self.on_request:
                 self.on_request(message)
         elif "method" in message and message["method"] == "Page.loadEventFired":
-            if self._behavior is None:
-                self.logger.info("Page.loadEventFired, starting behaviors url={} message={}".format(self.url, message))
-                self._behavior = Behavior(self.url, self)
-                self._behavior.start()
-            else:
-                self.logger.warn("Page.loadEventFired again, perhaps original url had a meta refresh, or behaviors accidentally navigated to another page? starting behaviors again url={} message={}".format(self.url, message))
-                self._behavior = Behavior(self.url, self)
-                self._behavior.start()
+            self.logger.info("Page.loadEventFired, requesting screenshot url={} message={}".format(self.url, message))
+            self._waiting_on_screenshot_msg_id = self.send_to_chrome(method="Page.captureScreenshot")
         elif "method" in message and message["method"] == "Console.messageAdded":
             self.logger.debug("{} console.{} {}".format(websock.url,
                 message["params"]["message"]["level"],
@@ -203,7 +206,15 @@ class Browser:
             # resume execution
             self.send_to_chrome(method="Debugger.resume")
         elif "result" in message:
-            if self._behavior and self._behavior.is_waiting_on_result(message['id']):
+            if message["id"] == self._waiting_on_screenshot_msg_id:
+                if self.on_screenshot:
+                    self.on_screenshot(base64.b64decode(message["result"]["data"]))
+                self._waiting_on_screenshot_msg_id = None
+
+                self.logger.info("got screenshot, moving on to starting behaviors url={}".format(self.url))
+                self._behavior = Behavior(self.url, self)
+                self._behavior.start()
+            elif self._behavior and self._behavior.is_waiting_on_result(message["id"]):
                 self._behavior.notify_of_result(message)
         # elif "method" in message and message["method"] in ("Network.dataReceived", "Network.responseReceived", "Network.loadingFinished"):
         #     pass
@@ -211,7 +222,6 @@ class Browser:
         #     self.logger.debug("{} {}".format(message["method"], message))
         # else:
         #     self.logger.debug("[no-method] {}".format(message))
-
 
 class Chrome:
     logger = logging.getLogger(__module__ + "." + __qualname__)
