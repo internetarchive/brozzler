@@ -62,6 +62,8 @@ class Behavior:
         self.logger.warn("no behavior to run on {}".format(self.url))
 
     def is_finished(self):
+        """Asynchronously asks behavior if it is finished, and in the mean time
+        returns the response from the previous such query."""
         msg_id = self.umbra_worker.send_to_chrome(method="Runtime.evaluate",
                 suppress_logging=True, params={"expression":"umbraBehaviorFinished()"})
         self.waiting_result_msg_ids.append(msg_id)

@@ -14,6 +14,7 @@ import tempfile
 import os
 import socket
 import base64
+import random
 from umbra.behaviors import Behavior
 
 class BrowserPool:
@@ -95,21 +96,25 @@ class Browser:
     def abort_browse_page(self):
         self._abort_browse_page = True
 
-    def browse_page(self, url, on_request=None, on_screenshot=None):
-        """Synchronously browses a page and runs behaviors. 
+    def browse_page(self, url, on_request=None, on_screenshot=None, on_outlinks=None):
+        """Synchronously loads a page, takes a screenshot, and runs behaviors. 
 
         Raises BrowsingException if browsing the page fails in a non-critical
         way.
         """
         self.url = url
         self.on_request = on_request
+
         self.on_screenshot = on_screenshot
         self._waiting_on_screenshot_msg_id = None
+
+        self.on_outlinks = on_outlinks
+        self._waiting_on_outlinks_msg_id = None
+        self._got_outlinks = False
 
         self._websock = websocket.WebSocketApp(self._websocket_url,
                 on_open=self._visit_page, on_message=self._handle_message)
 
-        import random
         threadName = "WebsockThread{}-{}".format(self.chrome_port,
                 ''.join((random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(6))))
         websock_thread = threading.Thread(target=self._websock.run_forever, name=threadName, kwargs={'ping_timeout':0.5})
@@ -120,19 +125,9 @@ class Browser:
         try:
             while True:
                 time.sleep(0.5)
-                if not self._websock or not self._websock.sock or not self._websock.sock.connected:
-                    raise BrowsingException("websocket closed, did chrome die? {}".format(self._websocket_url))
-                elif time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
-                    self.logger.info("finished browsing page, reached hard timeout of {} seconds url={}".format(Browser.HARD_TIMEOUT_SECONDS, self.url))
+                if self._browse_interval_func():
                     return
-                elif self._behavior != None and self._behavior.is_finished():
-                    self.logger.info("finished browsing page according to behavior url={}".format(self.url))
-                    return
-                elif self._abort_browse_page:
-                    raise BrowsingException("browsing page aborted")
         finally:
-            self.capture_screenshot()
-
             if self._websock and self._websock.sock and self._websock.sock.connected:
                 try:
                     self._websock.close()
@@ -149,9 +144,24 @@ class Browser:
 
             self._behavior = None
 
-
-    def capture_screenshot(self):
-        time.sleep(10)
+    def _browse_interval_func(self):
+        """Returns True when finished browsing."""
+        if not self._websock or not self._websock.sock or not self._websock.sock.connected:
+            raise BrowsingException("websocket closed, did chrome die? {}".format(self._websocket_url))
+        elif self._behavior != None and self._behavior.is_finished():
+            if self._got_outlinks:
+                self.logger.info("got outlinks, finished url={}".format(self.url))
+                return True
+            elif not self._waiting_on_outlinks_msg_id:
+                self.logger.info("finished browsing page according to behavior, retrieving outlinks url={}".format(self.url))
+                self._waiting_on_outlinks_msg_id = self.send_to_chrome(method="Runtime.evaluate", 
+                        params={"expression":"Array.prototype.slice.call(document.querySelectorAll('a[href]')).join(' ')"})
+                return False
+        elif time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
+            self.logger.info("finished browsing page, reached hard timeout of {} seconds url={}".format(Browser.HARD_TIMEOUT_SECONDS, self.url))
+            return True
+        elif self._abort_browse_page:
+            raise BrowsingException("browsing page aborted")
 
     def send_to_chrome(self, suppress_logging=False, **kwargs):
         msg_id = next(self.command_id)
@@ -196,7 +206,6 @@ class Browser:
         elif "method" in message and message["method"] == "Debugger.paused":
             # We hit the breakpoint set in visit_page. Get rid of google
             # analytics script!
-
             self.logger.debug("debugger paused! message={}".format(message))
             scriptId = message['params']['callFrames'][0]['location']['scriptId']
 
@@ -214,6 +223,12 @@ class Browser:
                 self.logger.info("got screenshot, moving on to starting behaviors url={}".format(self.url))
                 self._behavior = Behavior(self.url, self)
                 self._behavior.start()
+            elif message["id"] == self._waiting_on_outlinks_msg_id:
+                self.logger.debug("got outlinks message={}".format(message))
+                self._got_outlinks = True
+                # {'result': {'wasThrown': False, 'result': {'value': 'https://archive-it.org/cgi-bin/dedup-test/change_every_second https://archive-it.org/cgi-bin/dedup-test/change_every_minute https://archive-it.org/cgi-bin/dedup-test/change_every_10minutes https://archive-it.org/cgi-bin/dedup-test/change_every_hour https://archive-it.org/cgi-bin/dedup-test/change_every_day https://archive-it.org/cgi-bin/dedup-test/change_every_month https://archive-it.org/cgi-bin/dedup-test/change_every_year https://archive-it.org/cgi-bin/dedup-test/change_never http://validator.w3.org/check?uri=referer', 'type': 'string'}}, 'id': 32}
+                if self.on_outlinks:
+                    self.on_outlinks(frozenset(message["result"]["result"]["value"].split(" ")))
             elif self._behavior and self._behavior.is_waiting_on_result(message["id"]):
                 self._behavior.notify_of_result(message)
         # elif "method" in message and message["method"] in ("Network.dataReceived", "Network.responseReceived", "Network.loadingFinished"):
