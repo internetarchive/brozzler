@@ -7,6 +7,8 @@ import sys
 import logging
 import umbra
 import umbra.frontier
+import threading
+import time
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description='browse-url - open urls in chrome/chromium and run behaviors',
@@ -16,6 +18,8 @@ arg_parser.add_argument('-w', '--browser-wait', dest='browser_wait', default='60
         help='seconds to wait for browser initialization')
 arg_parser.add_argument('-e', '--executable', dest='chrome_exe', default='chromium-browser',
         help='executable to use to invoke chrome')
+arg_parser.add_argument('-n', '--max-browsers', dest='max_browsers', default='1',
+        help='Max number of chrome instances simultaneously browsing pages')
 arg_parser.add_argument('-v', '--verbose', dest='log_level',
         action="store_const", default=logging.INFO, const=logging.DEBUG)
 arg_parser.add_argument('--version', action='version',
@@ -30,15 +34,23 @@ for url in args.urls:
     frontier.schedule(umbra.frontier.CrawlUrl(url, priority=1000))
 
 def frontier_schedule(urls):
-    logging.info("adding {} urls to frontier".format(len(urls)))
+    logging.info("scheduling {} urls".format(len(urls)))
     for url in urls:
         frontier.schedule(umbra.frontier.CrawlUrl(url))
 
-with umbra.Browser(chrome_exe=args.chrome_exe) as browser:
-    try:
+def crawl_from_frontier(i):
+    with umbra.Browser(chrome_port=9200 + i, chrome_exe=args.chrome_exe) as browser:
         while True:
-            crawl_url = frontier.pop()
-            browser.browse_page(crawl_url.url, on_outlinks=frontier_schedule)
-    except IndexError:
-        logging.info("finished, frontier is empty")
+            try:
+                crawl_url = frontier.pop()
+                browser.browse_page(crawl_url.url, on_outlinks=frontier_schedule)
+            except KeyError:
+                time.sleep(0.5)
 
+for i in range(int(args.max_browsers)):
+    th = threading.Thread(target=lambda: crawl_from_frontier(i), 
+            name="BrowsingThread{}".format(i))
+    th.start()
+
+while True:
+    time.sleep(0.5)
