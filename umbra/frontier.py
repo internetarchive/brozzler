@@ -18,7 +18,7 @@ class CrawlUrl:
         self.priority_key = (priority << 32) | (hash(self.url) & (2**32 - 1))
 
     def get_priority(self):
-        return self.priority >> 32
+        return self.priority_key >> 32
 
     @property
     def host(self):
@@ -29,8 +29,8 @@ class CrawlUrl:
 class Frontier:
     def __init__(self):
         # {url:CrawlUrl}
-        self.urls = {} 
-        
+        self.urls = {}
+
         # {host:SortedDict{priority_key:CrawlUrl}}
         self.queues_by_host = {}
 
