@@ -32,7 +32,7 @@ setuptools.setup(name='umbra',
         license='Apache License 2.0',
         packages=['umbra'],
         package_data={'umbra':['behaviors.d/*.js*', 'behaviors.yaml', 'version.txt']},
-        install_requires=['kombu', 'websocket-client-py3==0.13.1', 'argparse', 'PyYAML'],
+        install_requires=['kombu', 'websocket-client-py3==0.13.1', 'argparse', 'PyYAML', 'sortedcontainers'],
         scripts=glob.glob('bin/*'),
         zip_safe=False,
         classifiers=[

@@ -6,6 +6,7 @@ import os
 import sys
 import logging
 import umbra
+import umbra.frontier
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description='browse-url - open urls in chrome/chromium and run behaviors',
@@ -24,16 +25,20 @@ args = arg_parser.parse_args(args=sys.argv[1:])
 logging.basicConfig(stream=sys.stdout, level=args.log_level,
         format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
 
-frontier = list(args.urls)
+frontier = umbra.frontier.Frontier()
+for url in args.urls:
+    frontier.schedule(umbra.frontier.CrawlUrl(url, priority=1000))
 
-def add_to_frontier(urls):
+def frontier_schedule(urls):
     logging.info("adding {} urls to frontier".format(len(urls)))
-    frontier.extend(urls)
+    for url in urls:
+        frontier.schedule(umbra.frontier.CrawlUrl(url))
 
 with umbra.Browser(chrome_exe=args.chrome_exe) as browser:
     try:
         while True:
-            browser.browse_page(frontier.pop(), on_outlinks=add_to_frontier)
+            crawl_url = frontier.pop()
+            browser.browse_page(crawl_url.url, on_outlinks=frontier_schedule)
     except IndexError:
         logging.info("finished, frontier is empty")
 
