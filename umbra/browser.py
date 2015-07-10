@@ -96,11 +96,13 @@ class Browser:
     def abort_browse_page(self):
         self._abort_browse_page = True
 
-    def browse_page(self, url, on_request=None, on_screenshot=None, on_outlinks=None):
+    def browse_page(self, url, on_request=None, on_screenshot=None):
         """Synchronously loads a page, takes a screenshot, and runs behaviors. 
 
         Raises BrowsingException if browsing the page fails in a non-critical
         way.
+
+        Returns extracted outlinks.
         """
         self.url = url
         self.on_request = on_request
@@ -108,9 +110,8 @@ class Browser:
         self.on_screenshot = on_screenshot
         self._waiting_on_screenshot_msg_id = None
 
-        self.on_outlinks = on_outlinks
         self._waiting_on_outlinks_msg_id = None
-        self._got_outlinks = False
+        self._outlinks = None
 
         self._websock = websocket.WebSocketApp(self._websocket_url,
                 on_open=self._visit_page, on_message=self._handle_message)
@@ -126,7 +127,7 @@ class Browser:
             while True:
                 time.sleep(0.5)
                 if self._browse_interval_func():
-                    return
+                    return self._outlinks
         finally:
             if self._websock and self._websock.sock and self._websock.sock.connected:
                 try:
@@ -149,7 +150,7 @@ class Browser:
         if not self._websock or not self._websock.sock or not self._websock.sock.connected:
             raise BrowsingException("websocket closed, did chrome die? {}".format(self._websocket_url))
         elif self._behavior != None and self._behavior.is_finished():
-            if self._got_outlinks:
+            if self._outlinks:
                 self.logger.info("got outlinks, finished url={}".format(self.url))
                 return True
             elif not self._waiting_on_outlinks_msg_id:
@@ -225,10 +226,8 @@ class Browser:
                 self._behavior.start()
             elif message["id"] == self._waiting_on_outlinks_msg_id:
                 self.logger.debug("got outlinks message={}".format(message))
-                self._got_outlinks = True
                 # {'result': {'wasThrown': False, 'result': {'value': 'https://archive-it.org/cgi-bin/dedup-test/change_every_second https://archive-it.org/cgi-bin/dedup-test/change_every_minute https://archive-it.org/cgi-bin/dedup-test/change_every_10minutes https://archive-it.org/cgi-bin/dedup-test/change_every_hour https://archive-it.org/cgi-bin/dedup-test/change_every_day https://archive-it.org/cgi-bin/dedup-test/change_every_month https://archive-it.org/cgi-bin/dedup-test/change_every_year https://archive-it.org/cgi-bin/dedup-test/change_never http://validator.w3.org/check?uri=referer', 'type': 'string'}}, 'id': 32}
-                if self.on_outlinks:
-                    self.on_outlinks(frozenset(message["result"]["result"]["value"].split(" ")))
+                self._outlinks = frozenset(message["result"]["result"]["value"].split(" "))
             elif self._behavior and self._behavior.is_waiting_on_result(message["id"]):
                 self._behavior.notify_of_result(message)
         # elif "method" in message and message["method"] in ("Network.dataReceived", "Network.responseReceived", "Network.loadingFinished"):
