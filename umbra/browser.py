@@ -53,6 +53,9 @@ class BrowserPool:
 class BrowsingException(Exception):
     pass
 
+class BrowsingAborted(BrowsingException):
+    pass
+
 class Browser:
     """Runs chrome/chromium to synchronously browse one page at a time using
     worker.browse_page(). Currently the implementation starts up a new instance
@@ -162,7 +165,7 @@ class Browser:
             self.logger.info("finished browsing page, reached hard timeout of {} seconds url={}".format(Browser.HARD_TIMEOUT_SECONDS, self.url))
             return True
         elif self._abort_browse_page:
-            raise BrowsingException("browsing page aborted")
+            raise BrowsingAborted("browsing page aborted")
 
     def send_to_chrome(self, suppress_logging=False, **kwargs):
         msg_id = next(self.command_id)
