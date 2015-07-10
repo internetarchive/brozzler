@@ -64,7 +64,6 @@ class CrawlUrlQueue:
         return len(self._urls)
 
     def schedule(self, crawl_url):
-        logging.info("before: self._pq={}".format(self._pq))
         self.aggregate_priority += crawl_url.priority
 
         try:
@@ -79,12 +78,13 @@ class CrawlUrlQueue:
         self._urls[crawl_url.surt] = crawl_url
         self._pq[crawl_url.priority_key] = crawl_url
 
-    def pop(self):
+    def next_url(self):
         res0 = self._pq.popitem(last=True)[1]
         res1 = self._urls.pop(res0.surt)
         assert res0 is res1
 
-        self.aggregate_priority -= res0.priority
+        new_low_priority = CrawlUrl(res0.url, -1000)
+        self.schedule(new_low_priority)
 
         return res0
 
@@ -112,7 +112,7 @@ class Site:
 def brozzle_site(site, chrome_port):
     with umbra.Browser(chrome_port=chrome_port, chrome_exe=args.chrome_exe) as browser:
         while True:
-            crawl_url = site.q.pop()
+            crawl_url = site.q.next_url()
             outlinks = browser.browse_page(crawl_url.url)
             site.submit(outlinks)
 
