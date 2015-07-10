@@ -64,6 +64,7 @@ class CrawlUrlQueue:
         return len(self._urls)
 
     def schedule(self, crawl_url):
+        logging.info("before: self._pq={}".format(self._pq))
         self.aggregate_priority += crawl_url.priority
 
         try:
@@ -102,21 +103,18 @@ class Site:
     def submit(self, urls):
         for url in urls:
             if self.is_in_scope(url):
-                logging.debug("accepted {}".format(url))
-                site.q.schedule(CrawlUrl(url))
+                logging.info("{} accepted {}".format(self.seed.surt, url))
+                self.q.schedule(CrawlUrl(url))
             else:
-                logging.info("rejected {}".format(url))
+                logging.info("{} rejected {}".format(self.seed.surt, url))
 
 # "browse" + "crawl" = "brozzle"
 def brozzle_site(site, chrome_port):
     with umbra.Browser(chrome_port=chrome_port, chrome_exe=args.chrome_exe) as browser:
         while True:
-            try:
-                crawl_url = site.q.pop()
-                outlinks = browser.browse_page(crawl_url.url)
-                site.submit(outlinks)
-            except KeyError:
-                break
+            crawl_url = site.q.pop()
+            outlinks = browser.browse_page(crawl_url.url)
+            site.submit(outlinks)
 
 chrome_port = 9200
 for seed_url in args.urls:
