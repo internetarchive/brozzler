@@ -74,6 +74,11 @@ class BrozzlerHQDb:
         else:
             return None
 
+    def completed(self, crawl_url):
+        cursor = self._conn.cursor()
+        cursor.execute("update brozzler_urls set in_progress=0 where id=?", (crawl_url.id,))
+        self._conn.commit()
+
     def new_site(self, site):
         cursor = self._conn.cursor()
         cursor.execute("insert into brozzler_sites (site_json) values (?)", (site.to_json(),))
@@ -172,6 +177,7 @@ class BrozzlerHQ:
                 msg = q.get(block=False)
                 completed_url = umbra.CrawlUrl(**msg.payload)
                 msg.ack()
+                self._db.completed(completed_url)
 
                 counts = {"added":0,"updated":0,"rejected":0}
                 if completed_url.outlinks:
