@@ -13,7 +13,7 @@ import surt
 import signal
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
-        description='browse-url - open urls in chrome/chromium and run behaviors',
+        description='crawl-url - browse urls, follow links',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 arg_parser.add_argument('urls', metavar='URL', nargs='+', help='URL(s) to browse')
 arg_parser.add_argument('-w', '--browser-wait', dest='browser_wait', default='60',
@@ -21,7 +21,7 @@ arg_parser.add_argument('-w', '--browser-wait', dest='browser_wait', default='60
 arg_parser.add_argument('-e', '--executable', dest='chrome_exe', default='chromium-browser',
         help='executable to use to invoke chrome')
 arg_parser.add_argument('-n', '--max-browsers', dest='max_browsers', default='1',
-        help='Max number of chrome instances simultaneously browsing pages')
+        help='max number of chrome instances simultaneously browsing pages')
 arg_parser.add_argument('-v', '--verbose', dest='log_level',
         action="store_const", default=logging.INFO, const=logging.DEBUG)
 arg_parser.add_argument('--version', action='version',

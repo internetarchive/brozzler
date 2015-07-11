@@ -1,0 +1,53 @@
+possible architecture of brozzler-hq
+====================================
+
+keeps queues in rdbms
+because easy to update, index on priority, index on canonicalized url
+also easy to inspect
+initially sqlite
+
+-- sqlite3 syntax
+create table brozzler_sites (
+	id integer primary key,
+	-- claimed boolean,
+	site_json text,
+	-- data_limit integer,  -- bytes
+	-- time_limit integer,  -- seconds
+	-- page_limit integer,
+);
+
+create table brozzler_urls (
+	id integer primary key,
+	site_id integer,
+	priority integer,
+	in_progress boolean,
+	canon_url varchar(4000),
+	crawl_url_json text,
+	index(priority), 
+	index(canon_url),
+	index(site_id)
+);
+
+feeds rabbitmq:
+ - json payloads
+ - queue per site brozzler.{site_id}.crawl_urls
+ - queue of unclaimed sites brozzler.sites.unclaimed
+
+reads from rabbitmq
+ - queue of new sites brozzler.sites.new
+ - queue per site brozzler.{site_id}.completed_urls
+   * json blob fed to this queue includes urls extracted to schedule
+
+??? brozzler-hq considers site unclaimed if brozzler.{site_id}.crawl_urls has
+not been read in some amount of time ??? or do workers need to explicitly
+disclaim ???
+ 
+brozzler-worker 
+ - decides if it can run a new browser
+ - if so reads site from brozzler.sites.unclaimed
+ - site includes scope definition, crawl job info, ...
+ - starts browser
+ - reads urls from brozzler.{site-id}.crawl_urls
+ - after each(?) (every n?) urls, feeds brozzler.{site_id}.completed_urls
+
+
