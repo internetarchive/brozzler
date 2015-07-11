@@ -105,10 +105,10 @@ class BrozzlerHQDb:
         if row:
             # (id, priority, existing_crawl_url) = row
             new_priority = crawl_url.calc_priority() + row[1]
-            existing_crawl_url = CrawlUrl(**json.loads(row[2]))
+            existing_crawl_url = umbra.CrawlUrl(**json.loads(row[2]))
             existing_crawl_url.hops_from_seed = min(crawl_url.hops_from_seed, existing_crawl_url.hops_from_seed)
 
-            cursor.execute("update brozzler_urls set priority=?, crawl_url_json=? where id=?", (new_priority, existing_crawl_url.to_json(), row["id"]))
+            cursor.execute("update brozzler_urls set priority=?, crawl_url_json=? where id=?", (new_priority, existing_crawl_url.to_json(), row[0]))
             self._conn.commit()
         else:
             raise KeyError("crawl url not in brozzler_urls site_id={} url={}".format(crawl_url.site_id, crawl_url.canonical()))
@@ -176,11 +176,12 @@ class BrozzlerHQ:
                 self.logger.info("adding outlinks from {} outlinks={}".format(completed_url, completed_url.outlinks))
                 if completed_url.outlinks:
                     for url in completed_url.outlinks:
-                        crawl_url = umbra.CrawlUrl(url, site_id=site.id, hops_from_seed=completed_url.hops_from_seed+1)
-                        try:
-                            self._db.update_crawl_url(crawl_url)
-                        except KeyError:
-                            self._db.schedule_url(crawl_url, priority=crawl_url.calc_priority())
+                        if site.is_in_scope(url):
+                            crawl_url = umbra.CrawlUrl(url, site_id=site.id, hops_from_seed=completed_url.hops_from_seed+1)
+                            try:
+                                self._db.update_crawl_url(crawl_url)
+                            except KeyError:
+                                self._db.schedule_url(crawl_url, priority=crawl_url.calc_priority())
             except kombu.simple.Empty:
                 pass
 
