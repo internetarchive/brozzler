@@ -1,5 +1,6 @@
 from umbra.browser import Browser
 from umbra.controller import AmqpBrowserController
+from umbra.url import CrawlUrl
 Umbra = AmqpBrowserController
 
 def _read_version():

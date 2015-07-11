@@ -29,28 +29,6 @@ args = arg_parser.parse_args(args=sys.argv[1:])
 logging.basicConfig(stream=sys.stdout, level=args.log_level,
         format="%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
 
-class CrawlUrl:
-    def __init__(self, url, id=None, site_id=None, hops_from_seed=0):
-        self.id = id
-        self.site_id = site_id
-        self.url = url
-        self.hops_from_seed = hops_from_seed
-        self._canon_hurl = None
-
-    def __repr__(self):
-        return """CrawlUrl(url="{}",site_id={},hops_from_seed={})""".format(
-                self.url, self.site_id, self.hops_from_seed)
-
-    def canonical(self):
-        if self._canon_hurl is None:
-            self._canon_hurl = surt.handyurl.parse(self.url)
-            surt.GoogleURLCanonicalizer.canonicalize(self._canon_hurl)
-        return self._canon_hurl.geturl()
-
-    def to_json(self):
-        d = dict(id=self.id, site_id=self.site_id, url=self.url, hops_from_seed=self.hops_from_seed)
-        return json.dumps(d, separators=(',', ':'))
-
 class BrozzlerHQDb:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
@@ -156,7 +134,7 @@ class BrozzlerHQ:
             pass
 
     def _schedule_seed(self, site_id, seed_url):
-        crawl_url = CrawlUrl(seed_url, site_id=site_id, hops_from_seed=0)
+        crawl_url = umbra.CrawlUrl(seed_url, site_id=site_id, hops_from_seed=0)
         self._db.schedule_url(crawl_url, priority=1000)
 
     def _feed_crawl_urls(self):
@@ -165,6 +143,7 @@ class BrozzlerHQ:
             if len(q) == 0:
                 url = self._db.pop_url(site["id"])
                 if url:
+                    self.logger.info("feeding {} to {}".format(url, q.queue.name))
                     q.put(url)
 
 logging.info("brozzler-hq starting")
