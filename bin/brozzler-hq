@@ -173,15 +173,22 @@ class BrozzlerHQ:
                 completed_url = umbra.CrawlUrl(**msg.payload)
                 msg.ack()
 
-                self.logger.info("adding outlinks from {} outlinks={}".format(completed_url, completed_url.outlinks))
+                counts = {"added":0,"updated":0,"rejected":0}
                 if completed_url.outlinks:
                     for url in completed_url.outlinks:
                         if site.is_in_scope(url):
                             crawl_url = umbra.CrawlUrl(url, site_id=site.id, hops_from_seed=completed_url.hops_from_seed+1)
                             try:
                                 self._db.update_crawl_url(crawl_url)
+                                counts["updated"] += 1
                             except KeyError:
                                 self._db.schedule_url(crawl_url, priority=crawl_url.calc_priority())
+                                counts["added"] += 1
+                        else:
+                            counts["rejected"] += 1
+
+                self.logger.info("{} new links added, {} existing links updated, {} links rejected from {}".format(
+                    counts["added"], counts["updated"], counts["rejected"], completed_url))
             except kombu.simple.Empty:
                 pass
 

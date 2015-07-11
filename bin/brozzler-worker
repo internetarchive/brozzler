@@ -33,6 +33,7 @@ logging.basicConfig(stream=sys.stdout, level=args.log_level,
 
 browsers = set()
 browsers_lock = threading.Lock()
+num_browsers = 0
 
 shutdown_requested = threading.Event()
 
@@ -64,7 +65,7 @@ def brozzle_site(site, chrome_port):
                     crawl_url.outlinks = browser.browse_page(crawl_url.url)
                     completed(site, crawl_url)
                 except kombu.simple.Empty:
-                    # if some timeout reached, raise
+                    # if some timeout reached, re-raise?
                     pass
         # except kombu.simple.Empty:
         #     logging.info("finished {} (queue is empty)".format(site))
@@ -89,13 +90,14 @@ latest_state = None
 chrome_port = 9200
 try:
     while True:
-        if len(browsers) < int(args.max_browsers):
+        if num_browsers < int(args.max_browsers):
             with kombu.Connection(args.amqp_url) as conn:
                 q = conn.SimpleQueue("brozzler.sites.unclaimed")
                 try:
                     msg = q.get(block=True, timeout=0.5)
                     site = hq.Site(**msg.payload)
                     logging.info("browsing site {}".format(site))
+                    num_browsers += 1
                     msg.ack()
                     th = threading.Thread(target=lambda: brozzle_site(site, chrome_port), 
                             name="BrowsingThread-{}".format(site.scope_surt))
