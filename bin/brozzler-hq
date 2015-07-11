@@ -12,6 +12,7 @@ import time
 import kombu
 import kombu.simple
 import json
+import umbra.hq
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description="brozzler-hq - headquarters of distributed brozzler crawl",
@@ -73,10 +74,9 @@ class BrozzlerHQDb:
         else:
             return None
 
-    def new_site(self, site_dict):
-        site_json = json.dumps(site_dict, separators=(',', ':'))
+    def new_site(self, site):
         cursor = self._conn.cursor()
-        cursor.execute("insert into brozzler_sites (site_json) values (?)", (site_json,))
+        cursor.execute("insert into brozzler_sites (site_json) values (?)", (site.to_json(),))
         self._conn.commit()
         return cursor.lastrowid
 
@@ -95,7 +95,23 @@ class BrozzlerHQDb:
                 break
             site_dict = json.loads(row[1])
             site_dict["id"] = row[0]
-            yield site_dict
+            yield umbra.hq.Site(**site_dict)
+
+    def update_crawl_url(self, crawl_url):
+        cursor = self._conn.cursor()
+        # CREATE TABLE brozzler_urls ( id integer primary key, site_id integer, priority integer, in_progress boolean, canon_url varchar(4000), crawl_url_json text 
+        cursor.execute("select id, priority, crawl_url_json from brozzler_urls where site_id=? and canon_url=?", (crawl_url.site_id, crawl_url.canonical()))
+        row = cursor.fetchone()
+        if row:
+            # (id, priority, existing_crawl_url) = row
+            new_priority = crawl_url.calc_priority() + row[1]
+            existing_crawl_url = CrawlUrl(**json.loads(row[2]))
+            existing_crawl_url.hops_from_seed = min(crawl_url.hops_from_seed, existing_crawl_url.hops_from_seed)
+
+            cursor.execute("update brozzler_urls set priority=?, crawl_url_json=? where id=?", (new_priority, existing_crawl_url.to_json(), row["id"]))
+            self._conn.commit()
+        else:
+            raise KeyError("crawl url not in brozzler_urls site_id={} url={}".format(crawl_url.site_id, crawl_url.canonical()))
 
 class BrozzlerHQ:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -114,7 +130,7 @@ class BrozzlerHQ:
         try:
             while True:
                 self._new_site()
-                # self._consume_completed_url()
+                self._consume_completed_url()
                 self._feed_crawl_urls()
                 time.sleep(0.5)
         finally:
@@ -123,13 +139,16 @@ class BrozzlerHQ:
     def _new_site(self):
         try:
             msg = self._new_sites_q.get(block=False)
-            new_site_dict = msg.payload
-            site_id = self._db.new_site(new_site_dict)
-            new_site_dict["id"] = site_id
-            self._schedule_seed(site_id, new_site_dict["seed"])
-            self._unclaimed_sites_q.put(new_site_dict)
+            new_site = umbra.hq.Site(**msg.payload)
             msg.ack()
-            self.logger.info("new site {}".format(new_site_dict))
+
+            site_id = self._db.new_site(new_site)
+            new_site.id = site_id
+
+            self._schedule_seed(site_id, new_site.seed)
+
+            self._unclaimed_sites_q.put(new_site.to_dict())
+            self.logger.info("new site {}".format(new_site))
         except kombu.simple.Empty:
             pass
 
@@ -139,12 +158,32 @@ class BrozzlerHQ:
 
     def _feed_crawl_urls(self):
         for site in self._db.sites():
-            q = self._conn.SimpleQueue("brozzler.sites.{}.crawl_urls".format(site["id"]))
+            q = self._conn.SimpleQueue("brozzler.sites.{}.crawl_urls".format(site.id))
             if len(q) == 0:
-                url = self._db.pop_url(site["id"])
+                url = self._db.pop_url(site.id)
                 if url:
                     self.logger.info("feeding {} to {}".format(url, q.queue.name))
                     q.put(url)
+
+    def _consume_completed_url(self):
+        for site in self._db.sites():
+            q = self._conn.SimpleQueue("brozzler.sites.{}.completed_urls".format(site.id))
+            try:
+                msg = q.get(block=False)
+                completed_url = umbra.CrawlUrl(**msg.payload)
+                msg.ack()
+
+                self.logger.info("adding outlinks from {} outlinks={}".format(completed_url, completed_url.outlinks))
+                if completed_url.outlinks:
+                    for url in completed_url.outlinks:
+                        crawl_url = umbra.CrawlUrl(url, site_id=site.id, hops_from_seed=completed_url.hops_from_seed+1)
+                        try:
+                            self._db.update_crawl_url(crawl_url)
+                        except KeyError:
+                            self._db.schedule_url(crawl_url, priority=crawl_url.calc_priority())
+            except kombu.simple.Empty:
+                pass
+
 
 logging.info("brozzler-hq starting")
 
