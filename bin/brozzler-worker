@@ -40,7 +40,6 @@ class Site:
         surtt = surt.surt(url, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)
         return surtt.startswith(self.scope_surt)
 
-    # should this be a generator function?
     def next_url(self):
         """Raises kombu.simple.Empty if queue is empty"""
         with kombu.Connection(args.amqp_url) as conn:
@@ -51,22 +50,32 @@ class Site:
             msg.ack()
             return crawl_url
 
+    def completed(self, crawl_url):
+        with kombu.Connection(args.amqp_url) as conn:
+            q = conn.SimpleQueue("brozzler.sites.{}.completed_urls".format(self.id))
+            q.put(crawl_url.to_json())
+
 browsers = set()
 browsers_lock = threading.Lock()
 
-# "browse" + "crawl" = "brozzle"
+shutdown_requested = threading.Event()
+
 def brozzle_site(site, chrome_port):
     with umbra.Browser(chrome_port=chrome_port, chrome_exe=args.chrome_exe) as browser:
         with browsers_lock:
             browsers.add(browser)
         try:
-            while True:
-                crawl_url = site.next_url()
-                logging.info("crawling {}".format(crawl_url))
-                outlinks = browser.browse_page(crawl_url.url)
-                # site.submit(outlinks, hops_from_seed=crawl_url.hops_from_seed+1)
-        except kombu.simple.Empty:
-            logging.info("finished {} (queue is empty)".format(site))
+            while not shutdown_requested.is_set():
+                try:
+                    crawl_url = site.next_url()
+                    logging.info("crawling {}".format(crawl_url))
+                    crawl_url.outlinks = browser.browse_page(crawl_url.url)
+                    site.completed(crawl_url)
+                except kombu.simple.Empty:
+                    # if some timeout reached, raise
+                    pass
+        # except kombu.simple.Empty:
+        #     logging.info("finished {} (queue is empty)".format(site))
         except umbra.browser.BrowsingAborted:
             logging.info("{} shut down")
         finally:
@@ -105,6 +114,7 @@ try:
             time.sleep(0.5)
 except ShutdownRequested as e:
     logging.info("shutting down browsers")
+    shutdown_requested.set()
 
     with browsers_lock:
         for browser in browsers:
