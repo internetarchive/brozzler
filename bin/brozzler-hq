@@ -13,6 +13,7 @@ import kombu
 import kombu.simple
 import json
 import umbra.hq
+import signal
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description="brozzler-hq - headquarters of distributed brozzler crawl",
@@ -201,7 +202,22 @@ class BrozzlerHQ:
 
 logging.info("brozzler-hq starting")
 
+class ShutdownRequested(Exception):
+    pass
+
+def sigterm(signum, frame):
+    raise ShutdownRequested("shutdown requested (caught SIGTERM)")
+def sigint(signum, frame):
+    raise ShutdownRequested("shutdown requested (caught SIGINT)")
+
+signal.signal(signal.SIGTERM, sigterm)
+signal.signal(signal.SIGINT, sigint)
+
+
 db = BrozzlerHQDb(db_file=args.db_file)
 hq = BrozzlerHQ(amqp_url=args.amqp_url, db=db)
 
-hq.run()
+try:
+    hq.run()
+except ShutdownRequested as e:
+    logging.info("{}".format(e))
