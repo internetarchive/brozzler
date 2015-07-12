@@ -66,10 +66,12 @@ class Browser:
 
     HARD_TIMEOUT_SECONDS = 20 * 60
 
-    def __init__(self, chrome_port=9222, chrome_exe='chromium-browser'):
+    def __init__(self, chrome_port=9222, chrome_exe='chromium-browser', proxy_server=None, ignore_cert_errors=False):
         self.command_id = itertools.count(1)
         self.chrome_port = chrome_port
         self.chrome_exe = chrome_exe
+        self.proxy_server = proxy_server
+        self.ignore_cert_errors = ignore_cert_errors
         self._behavior = None
         self._websock = None
         self._abort_browse_page = False
@@ -88,8 +90,12 @@ class Browser:
     def start(self):
         # these can raise exceptions
         self._work_dir = tempfile.TemporaryDirectory()
-        self._chrome_instance = Chrome(self.chrome_port, self.chrome_exe,
-                self._work_dir.name, os.sep.join([self._work_dir.name, "chrome-user-data"]))
+        self._chrome_instance = Chrome(port=self.chrome_port,
+                executable=self.chrome_exe,
+                user_home_dir=self._work_dir.name,
+                user_data_dir=os.sep.join([self._work_dir.name, "chrome-user-data"]),
+                proxy_server=self.proxy_server,
+                ignore_cert_errors=self.ignore_cert_errors)
         self._websocket_url = self._chrome_instance.start()
 
     def stop(self):
@@ -243,11 +249,13 @@ class Browser:
 class Chrome:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, port, executable, user_home_dir, user_data_dir):
+    def __init__(self, port, executable, user_home_dir, user_data_dir, proxy_server=None, ignore_cert_errors=False):
         self.port = port
         self.executable = executable
         self.user_home_dir = user_home_dir
         self.user_data_dir = user_data_dir
+        self.proxy_server = proxy_server
+        self.ignore_cert_errors = ignore_cert_errors
 
     # returns websocket url to chrome window with about:blank loaded
     def __enter__(self):
@@ -269,9 +277,13 @@ class Chrome:
                 "--window-size=1100,900", "--no-default-browser-check",
                 "--disable-first-run-ui", "--no-first-run",
                 "--homepage=about:blank", "--disable-direct-npapi-requests",
-                "--disable-web-security",
-                "about:blank"]
-        self.logger.info("running {}".format(chrome_args))
+                "--disable-web-security"]
+        if self.ignore_cert_errors:
+            chrome_args.append("--ignore-certificate-errors")
+        if self.proxy_server:
+            chrome_args.append("--proxy-server={}".format(self.proxy_server))
+        chrome_args.append("about:blank")
+        self.logger.info("running: {}".format(" ".join(chrome_args)))
         self.chrome_process = subprocess.Popen(chrome_args, env=new_env, start_new_session=True)
         self.logger.info("chrome running, pid {}".format(self.chrome_process.pid))
         self._start = time.time()   # member variable just so that kill -QUIT reports it

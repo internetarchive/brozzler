@@ -22,6 +22,10 @@ arg_parser.add_argument('-e', '--executable', dest='chrome_exe', default='chromi
         help='executable to use to invoke chrome')
 arg_parser.add_argument('-n', '--max-browsers', dest='max_browsers', default='1',
         help='max number of chrome instances simultaneously browsing pages')
+arg_parser.add_argument('--proxy-server', dest='proxy_server', default=None,
+        help='configure browser to use specified proxy server')
+arg_parser.add_argument('--ignore-certificate-errors', dest='ignore_cert_errors',
+        action='store_true', help='configure browser to ignore certificate errors')
 arg_parser.add_argument('-v', '--verbose', dest='log_level',
         action="store_const", default=logging.INFO, const=logging.DEBUG)
 arg_parser.add_argument('--version', action='version',
@@ -54,7 +58,8 @@ def completed(site, crawl_url):
         q.put(crawl_url.to_dict())
 
 def brozzle_site(site, chrome_port):
-    with umbra.Browser(chrome_port=chrome_port, chrome_exe=args.chrome_exe) as browser:
+    with umbra.Browser(chrome_port=chrome_port, chrome_exe=args.chrome_exe,
+            proxy_server=args.proxy_server, ignore_cert_errors=args.ignore_cert_errors) as browser:
         with browsers_lock:
             browsers.add(browser)
         try:
