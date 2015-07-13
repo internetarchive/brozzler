@@ -12,6 +12,8 @@ import surt
 import signal
 import kombu
 from umbra import hq
+import pprint
+import traceback
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description='crawl-url - browse urls, follow links',
@@ -89,6 +91,18 @@ def sigterm(signum, frame):
 def sigint(signum, frame):
     raise ShutdownRequested('shutdown requested (caught SIGINT)')
 
+def dump_state(signum, frame):
+    pp = pprint.PrettyPrinter(indent=4)
+    state_strs = []
+
+    for th in threading.enumerate():
+        state_strs.append(str(th))
+        stack = traceback.format_stack(sys._current_frames()[th.ident])
+        state_strs.append("".join(stack))
+
+    logging.warn("dumping state (caught signal {})\n{}".format(signum, "\n".join(state_strs)))
+
+signal.signal(signal.SIGQUIT, dump_state)
 signal.signal(signal.SIGTERM, sigterm)
 signal.signal(signal.SIGINT, sigint)
 
