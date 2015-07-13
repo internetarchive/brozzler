@@ -14,6 +14,7 @@ import kombu
 from umbra import hq
 import pprint
 import traceback
+import youtube_dl
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description='crawl-url - browse urls, follow links',
@@ -62,6 +63,13 @@ def disclaim_site(site):
         logging.info("putting {} on queue {}".format(site, q.queue.name))
         q.put(site.to_dict())
 
+ydl_extractors = youtube_dl.extractor.gen_extractors()
+def ydl_suitable(url):
+    for ie in ydl_extractors:
+        if ie.suitable(url):
+            return True
+    return False
+
 def brozzle_site(site, browser):
     start = time.time()
     try:
@@ -70,6 +78,8 @@ def brozzle_site(site, browser):
                 try:
                     crawl_url = next_url(site)
                     logging.info("crawling {}".format(crawl_url))
+                    if ydl_suitable(crawl_url.url): 
+                        logging.info("youtube-dl suitable for {}".format(crawl_url))
                     crawl_url.outlinks = browser.browse_page(crawl_url.url)
                     completed_url(site, crawl_url)
                 except kombu.simple.Empty:
