@@ -22,12 +22,13 @@ class BrowserPool:
 
     BASE_PORT = 9200
 
-    def __init__(self, size=3, chrome_exe='chromium-browser'):
+    def __init__(self, size=3, **kwargs):
+        """kwargs are passed on to Browser.__init__"""
         self._available = set()
         self._in_use = set()
 
         for i in range(0, size):
-            browser = Browser(BrowserPool.BASE_PORT + i, chrome_exe)
+            browser = Browser(BrowserPool.BASE_PORT + i, **kwargs)
             self._available.add(browser)
 
         self._lock = threading.Lock()
