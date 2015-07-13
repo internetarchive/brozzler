@@ -148,19 +148,18 @@ class BrozzlerHQ:
             new_site = umbra.hq.Site(**msg.payload)
             msg.ack()
 
+            self.logger.info("new site {}".format(new_site))
             site_id = self._db.new_site(new_site)
             new_site.id = site_id
 
-            self._schedule_seed(site_id, new_site.seed)
-
-            self._unclaimed_sites_q.put(new_site.to_dict())
-            self.logger.info("new site {}".format(new_site))
+            if new_site.is_permitted_by_robots(new_site.seed):
+                crawl_url = umbra.CrawlUrl(new_site.seed, site_id=new_site.id, hops_from_seed=0)
+                self._db.schedule_url(crawl_url, priority=1000)
+                self._unclaimed_sites_q.put(new_site.to_dict())
+            else:
+                self.logger.warn("seed url {} is blocked by robots.txt".format(new_site.seed))
         except kombu.simple.Empty:
             pass
-
-    def _schedule_seed(self, site_id, seed_url):
-        crawl_url = umbra.CrawlUrl(seed_url, site_id=site_id, hops_from_seed=0)
-        self._db.schedule_url(crawl_url, priority=1000)
 
     def _feed_crawl_urls(self):
         for site in self._db.sites():
@@ -171,6 +170,27 @@ class BrozzlerHQ:
                     self.logger.info("feeding {} to {}".format(url, q.queue.name))
                     q.put(url)
 
+    def _scope_and_schedule_outlinks(self, site, parent_url):
+        counts = {"added":0,"updated":0,"rejected":0,"blocked":0}
+        if parent_url.outlinks:
+            for url in parent_url.outlinks:
+                if site.is_in_scope(url):
+                    if site.is_permitted_by_robots(url):
+                        crawl_url = umbra.CrawlUrl(url, site_id=site.id, hops_from_seed=parent_url.hops_from_seed+1)
+                        try:
+                            self._db.update_crawl_url(crawl_url)
+                            counts["updated"] += 1
+                        except KeyError:
+                            self._db.schedule_url(crawl_url, priority=crawl_url.calc_priority())
+                            counts["added"] += 1
+                    else:
+                        counts["blocked"] += 1
+                else:
+                    counts["rejected"] += 1
+
+        self.logger.info("{} new links added, {} existing links updated, {} links rejected, {} links blocked by robots from {}".format(
+            counts["added"], counts["updated"], counts["rejected"], counts["blocked"], parent_url))
+
     def _consume_completed_url(self):
         for site in self._db.sites():
             q = self._conn.SimpleQueue("brozzler.sites.{}.completed_urls".format(site.id))
@@ -179,23 +199,7 @@ class BrozzlerHQ:
                 completed_url = umbra.CrawlUrl(**msg.payload)
                 msg.ack()
                 self._db.completed(completed_url)
-
-                counts = {"added":0,"updated":0,"rejected":0}
-                if completed_url.outlinks:
-                    for url in completed_url.outlinks:
-                        if site.is_in_scope(url):
-                            crawl_url = umbra.CrawlUrl(url, site_id=site.id, hops_from_seed=completed_url.hops_from_seed+1)
-                            try:
-                                self._db.update_crawl_url(crawl_url)
-                                counts["updated"] += 1
-                            except KeyError:
-                                self._db.schedule_url(crawl_url, priority=crawl_url.calc_priority())
-                                counts["added"] += 1
-                        else:
-                            counts["rejected"] += 1
-
-                self.logger.info("{} new links added, {} existing links updated, {} links rejected from {}".format(
-                    counts["added"], counts["updated"], counts["rejected"], completed_url))
+                self._scope_and_schedule_outlinks(site, completed_url)
             except kombu.simple.Empty:
                 pass
 
@@ -221,3 +225,4 @@ try:
     hq.run()
 except ShutdownRequested as e:
     logging.info("{}".format(e))
+
