@@ -18,27 +18,27 @@ def full_version_bytes():
         return VERSION_BYTES
 
 version_bytes = full_version_bytes()
-with open('umbra/version.txt', 'wb') as out:
+with open('brozzler/version.txt', 'wb') as out:
     out.write(version_bytes)
     out.write(b'\n');
 
-setuptools.setup(name='umbra',
+setuptools.setup(name='brozzler',
         version=version_bytes.decode('utf-8'),
-        description='Browser automation via chrome debug protocol',
-        url='https://github.com/internetarchive/umbra',
-        author='Eldon Stegall',
-        author_email='eldon@archive.org',
+        description='Distributed web crawling with browsers',
+        url='https://github.com/nlevitt/brozzler',
+        author='Noah Levitt',
+        author_email='nlevitt@archive.org',
         long_description=open('README.md').read(),
         license='Apache License 2.0',
-        packages=['umbra'],
-        package_data={'umbra':['behaviors.d/*.js*', 'behaviors.yaml', 'version.txt']},
+        packages=['brozzler'],
+        package_data={'brozzler':['behaviors.d/*.js*', 'behaviors.yaml', 'version.txt']},
         scripts=glob.glob('bin/*'),
         zip_safe=False,
         classifiers=[
-            'Development Status :: 5 - Production/Stable',
+            'Development Status :: 3 - Alpha',
             'Environment :: Console',
             'License :: OSI Approved :: Apache Software License',
-            'Programming Language :: Python :: 3.3',
             'Programming Language :: Python :: 3.4',
+            'Topic :: Internet :: WWW/HTTP',
             'Topic :: System :: Archiving',
         ])

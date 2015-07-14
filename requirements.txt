@@ -2,6 +2,5 @@ kombu
 websocket-client-py3==0.13.1
 argparse
 PyYAML
-sortedcontainers
 git+https://github.com/ikreymer/surt.git@py3
 youtube_dl

@@ -1,7 +1,5 @@
-from umbra.browser import Browser
-from umbra.controller import AmqpBrowserController
-from umbra.url import CrawlUrl
-Umbra = AmqpBrowserController
+from brozzler.browser import Browser
+from brozzler.url import CrawlUrl
 
 def _read_version():
     import os

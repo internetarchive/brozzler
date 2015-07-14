@@ -5,14 +5,14 @@ import argparse
 import os
 import sys
 import logging
-import umbra
+import brozzler
 import surt
 import sqlite3
 import time
 import kombu
 import kombu.simple
 import json
-import umbra.hq
+import brozzler.hq
 import signal
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
@@ -25,7 +25,7 @@ arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:gu
 arg_parser.add_argument("-v", "--verbose", dest="log_level",
         action="store_const", default=logging.INFO, const=logging.DEBUG)
 arg_parser.add_argument("--version", action="version",
-        version="umbra {} - {}".format(umbra.version, os.path.basename(__file__)))
+        version="brozzler {} - {}".format(brozzler.version, os.path.basename(__file__)))
 args = arg_parser.parse_args(args=sys.argv[1:])
 
 logging.basicConfig(stream=sys.stdout, level=args.log_level,
@@ -101,7 +101,7 @@ class BrozzlerHQDb:
                 break
             site_dict = json.loads(row[1])
             site_dict["id"] = row[0]
-            yield umbra.hq.Site(**site_dict)
+            yield brozzler.hq.Site(**site_dict)
 
     def update_crawl_url(self, crawl_url):
         cursor = self._conn.cursor()
@@ -111,7 +111,7 @@ class BrozzlerHQDb:
         if row:
             # (id, priority, existing_crawl_url) = row
             new_priority = crawl_url.calc_priority() + row[1]
-            existing_crawl_url = umbra.CrawlUrl(**json.loads(row[2]))
+            existing_crawl_url = brozzler.CrawlUrl(**json.loads(row[2]))
             existing_crawl_url.hops_from_seed = min(crawl_url.hops_from_seed, existing_crawl_url.hops_from_seed)
 
             cursor.execute("update brozzler_urls set priority=?, crawl_url_json=? where id=?", (new_priority, existing_crawl_url.to_json(), row[0]))
@@ -145,7 +145,7 @@ class BrozzlerHQ:
     def _new_site(self):
         try:
             msg = self._new_sites_q.get(block=False)
-            new_site = umbra.hq.Site(**msg.payload)
+            new_site = brozzler.hq.Site(**msg.payload)
             msg.ack()
 
             self.logger.info("new site {}".format(new_site))
@@ -153,7 +153,7 @@ class BrozzlerHQ:
             new_site.id = site_id
 
             if new_site.is_permitted_by_robots(new_site.seed):
-                crawl_url = umbra.CrawlUrl(new_site.seed, site_id=new_site.id, hops_from_seed=0)
+                crawl_url = brozzler.CrawlUrl(new_site.seed, site_id=new_site.id, hops_from_seed=0)
                 self._db.schedule_url(crawl_url, priority=1000)
                 self._unclaimed_sites_q.put(new_site.to_dict())
             else:
@@ -176,7 +176,7 @@ class BrozzlerHQ:
             for url in parent_url.outlinks:
                 if site.is_in_scope(url):
                     if site.is_permitted_by_robots(url):
-                        crawl_url = umbra.CrawlUrl(url, site_id=site.id, hops_from_seed=parent_url.hops_from_seed+1)
+                        crawl_url = brozzler.CrawlUrl(url, site_id=site.id, hops_from_seed=parent_url.hops_from_seed+1)
                         try:
                             self._db.update_crawl_url(crawl_url)
                             counts["updated"] += 1
@@ -196,7 +196,7 @@ class BrozzlerHQ:
             q = self._conn.SimpleQueue("brozzler.sites.{}.completed_urls".format(site.id))
             try:
                 msg = q.get(block=False)
-                completed_url = umbra.CrawlUrl(**msg.payload)
+                completed_url = brozzler.CrawlUrl(**msg.payload)
                 msg.ack()
                 self._db.completed(completed_url)
                 self._scope_and_schedule_outlinks(site, completed_url)

@@ -15,7 +15,7 @@ import os
 import socket
 import base64
 import random
-from umbra.behaviors import Behavior
+from brozzler.behaviors import Behavior
 
 class BrowserPool:
     logger = logging.getLogger(__module__ + "." + __qualname__)
