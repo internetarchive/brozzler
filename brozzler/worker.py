@@ -107,6 +107,11 @@ class BrozzlerWorker:
             else:
                 raise
 
+    def _on_screenshot(self, site, crawl_url, screenshot_png):
+        if self._proxy_server and self._enable_warcprox_features:
+            logging.info("sending PUTMETA request to warcprox with screenshot for {}".format(crawl_url))
+            self._putmeta(url=crawl_url.url, content_type="image/png", payload=screenshot_png)
+
     def _brozzle_site(self, browser, site):
         start = time.time()
         crawl_url = None
@@ -117,7 +122,8 @@ class BrozzlerWorker:
                         crawl_url = self._next_url(site)
                         logging.info("crawling {}".format(crawl_url))
                         self._try_youtube_dl(site, crawl_url)
-                        crawl_url.outlinks = browser.browse_page(crawl_url.url)
+                        crawl_url.outlinks = browser.browse_page(crawl_url.url,
+                                on_screenshot=lambda screenshot_png: self._on_screenshot(site, crawl_url, screenshot_png))
                         self._completed_url(site, crawl_url)
                         crawl_url = None
                     except kombu.simple.Empty:

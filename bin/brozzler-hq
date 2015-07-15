@@ -25,9 +25,6 @@ args = arg_parser.parse_args(args=sys.argv[1:])
 logging.basicConfig(stream=sys.stdout, level=args.log_level,
         format="%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
 
-logging.info("brozzler-hq starting")
-
-
 def sigterm(signum, frame):
     raise brozzler.ShutdownRequested("shutdown requested (caught SIGTERM)")
 def sigint(signum, frame):
@@ -35,6 +32,8 @@ def sigint(signum, frame):
 
 signal.signal(signal.SIGTERM, sigterm)
 signal.signal(signal.SIGINT, sigint)
+
+logging.info("brozzler-hq starting")
 
 db = brozzler.hq.BrozzlerHQDb(db_file=args.db_file)
 hq = brozzler.hq.BrozzlerHQ(amqp_url=args.amqp_url, db=db)
