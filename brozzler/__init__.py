@@ -10,4 +10,7 @@ def _read_version():
 
 version = _read_version()
 
+class ShutdownRequested(Exception):
+    pass
+
 # vim: set sw=4 et:
