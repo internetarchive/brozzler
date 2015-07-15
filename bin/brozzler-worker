@@ -69,13 +69,14 @@ def disclaim_site(site):
 
 ydl_opts = {
     "outtmpl": "/dev/null",
-    "verbose": True,
-    "retries": 3,
+    "verbose": False,
+    "retries": 1,
     "logger": logging,
     "nocheckcertificate": True,
     "hls_prefer_native": True,
     "noprogress": True,
     "nopart": True,
+    "no_color": True,
 }
 if args.proxy_server:
     ydl_opts["proxy"] = "http://{}".format(args.proxy_server)
@@ -109,8 +110,11 @@ def try_youtube_dl(site, crawl_url):
             putmeta(url=crawl_url.url, 
                     content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                     payload=info_json.encode("utf-8"))
-    except youtube_dl.utils.UnsupportedError:
-        pass
+    except BaseException as e:
+        if youtube_dl.utils.UnsupportedError in e.exc_info:
+            pass
+        else:
+            raise
 
 def brozzle_site(site, browser):
     start = time.time()
