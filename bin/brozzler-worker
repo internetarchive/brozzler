@@ -15,6 +15,8 @@ from brozzler import hq
 import pprint
 import traceback
 import youtube_dl
+import urllib.request
+import json
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description='crawl-url - browse urls, follow links',
@@ -29,6 +31,8 @@ arg_parser.add_argument('--proxy-server', dest='proxy_server', default=None,
         help='configure browser to use specified proxy server')
 arg_parser.add_argument('--ignore-certificate-errors', dest='ignore_cert_errors',
         action='store_true', help='configure browser to ignore certificate errors')
+arg_parser.add_argument('--enable-warcprox-features', dest='enable_warcprox_features',
+        action='store_true', help='enable special features that assume the configured proxy is warcprox')
 arg_parser.add_argument('-v', '--verbose', dest='log_level',
         action="store_const", default=logging.INFO, const=logging.DEBUG)
 arg_parser.add_argument('--version', action='version',
@@ -63,12 +67,50 @@ def disclaim_site(site):
         logging.info("putting {} on queue {}".format(site, q.queue.name))
         q.put(site.to_dict())
 
-ydl_extractors = youtube_dl.extractor.gen_extractors()
-def ydl_suitable(url):
-    for ie in ydl_extractors:
-        if ie.suitable(url):
-            return True
-    return False
+ydl_opts = {
+    "outtmpl": "/dev/null",
+    "verbose": True,
+    "retries": 3,
+    "logger": logging,
+    "nocheckcertificate": True,
+    "hls_prefer_native": True,
+    "noprogress": True,
+    "nopart": True,
+}
+if args.proxy_server:
+    ydl_opts["proxy"] = "http://{}".format(args.proxy_server)
+    # see https://github.com/rg3/youtube-dl/issues/6087
+    os.environ["http_proxy"] = "http://{}".format(args.proxy_server)
+ydl = youtube_dl.YoutubeDL(ydl_opts)
+
+def putmeta(url, content_type, payload):
+    assert args.enable_warcprox_features
+    request = urllib.request.Request(url, method="PUTMETA", 
+            headers={"Content-Type":content_type}, data=payload)
+
+    # XXX evil hack to keep urllib from trying to tunnel https urls here
+    request.type = "http"
+    request.set_proxy("localhost:8000", "http")
+
+    try:
+        with urllib.request.urlopen(request) as response:
+            if response.status != 204:
+                logging.warn("""got "{} {}" response on warcprox PUTMETA request (expected 204)""".format(response.status, response.reason))
+    except urllib.error.HTTPError as e:
+        logging.warn("""got "{} {}" response on warcprox PUTMETA request (expected 204)""".format(e.getcode(), e.info()))
+
+def try_youtube_dl(site, crawl_url):
+    try:
+        logging.info("trying youtube-dl on {}".format(crawl_url))
+        info = ydl.extract_info(crawl_url.url)
+        if args.proxy_server and args.enable_warcprox_features:
+            info_json = json.dumps(info, sort_keys=True, indent=4)
+            logging.info("sending PUTMETA request to warcprox with youtube-dl json for {}".format(crawl_url))
+            putmeta(url=crawl_url.url, 
+                    content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
+                    payload=info_json.encode("utf-8"))
+    except youtube_dl.utils.UnsupportedError:
+        pass
 
 def brozzle_site(site, browser):
     start = time.time()
@@ -78,8 +120,7 @@ def brozzle_site(site, browser):
                 try:
                     crawl_url = next_url(site)
                     logging.info("crawling {}".format(crawl_url))
-                    if ydl_suitable(crawl_url.url): 
-                        logging.info("youtube-dl suitable for {}".format(crawl_url))
+                    try_youtube_dl(site, crawl_url)
                     crawl_url.outlinks = browser.browse_page(crawl_url.url)
                     completed_url(site, crawl_url)
                 except kombu.simple.Empty:
