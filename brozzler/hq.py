@@ -4,26 +4,12 @@ import surt
 import json
 import logging
 import urllib.robotparser
+import urllib.request
 import brozzler
 import sqlite3
 import time
 import kombu
 import kombu.simple
-
-## XXX move into Site class
-# robots_url : RobotsFileParser
-_robots_cache = {}
-def robots(robots_url):
-    if not robots_url in _robots_cache:
-        robots_txt = urllib.robotparser.RobotFileParser(robots_url)
-        logging.info("fetching {}".format(robots_url))
-        try:
-            robots_txt.read() # XXX should fetch through proxy
-            _robots_cache[robots_url] = robots_txt
-        except BaseException as e:
-            logger.error("problem fetching {}".format(robots_url))
-
-    return _robots_cache[robots_url]
 
 def robots_url(url):
     hurl = surt.handyurl.parse(url)
@@ -32,16 +18,46 @@ def robots_url(url):
     hurl.hash = None
     return hurl.geturl()
 
+class RobotsFileParser(urllib.robotparser.RobotsFileParser):
+    """Adds support  for fetching robots.txt through a proxy to
+    urllib.robotparser.RobotsFileParser."""
+    def __init__(self, proxy):
+        self.proxy = proxy
+
+    def read(self):
+        """Reads the robots.txt URL and feeds it to the parser."""
+        try:
+            request = urllib.request.Request(url)
+            if proxy:
+                request.set_proxy(proxy, request.type)
+            f = urllib.request.urlopen(request)
+        except urllib.error.HTTPError as err:
+            if err.code in (401, 403):
+                self.disallow_all = True
+            elif err.code >= 400:
+                self.allow_all = True
+        else:
+            raw = f.read()
+            self.parse(raw.decode("utf-8").splitlines())
+
 class Site:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, seed, id=None):
+    def __init__(self, seed, id=None, scope_surt=None, proxy=None, ignore_robots=False):
         self.seed = seed
         self.id = id
-        self.scope_surt = surt.surt(seed, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)
+        self.proxy = proxy
+        self.ignore_robots = ignore_robots
+
+        if scope_surt:
+            self.scope_surt = scope_surt
+        else:
+            self.scope_surt = surt.surt(seed, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)
+
+        self._robots_cache = {}  # {robots_url:RobotsFileParser,...}
 
     def is_permitted_by_robots(self, url):
-        return robots(robots_url(url)).can_fetch("*", url)
+        return ignore_robots or self._robots(robots_url(url)).can_fetch("*", url)
 
     def is_in_scope(self, url):
         try:
@@ -52,10 +68,22 @@ class Site:
             return False
 
     def to_dict(self):
-        return dict(id=self.id, seed=self.seed)
+        return dict(id=self.id, seed=self.seed, scope_surt=self.scope_surt)
 
     def to_json(self):
         return json.dumps(self.to_dict(), separators=(',', ':'))
+
+    def _robots(robots_url):
+        if not robots_url in _robots_cache:
+            robots_txt = RobotFileParser(robots_url)
+            logging.info("fetching {}".format(robots_url))
+            try:
+                robots_txt.read()
+                _robots_cache[robots_url] = robots_txt
+            except BaseException as e:
+                logger.error("problem fetching {}".format(robots_url))
+
+        return _robots_cache[robots_url]
 
 class BrozzlerHQDb:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -131,7 +159,7 @@ class BrozzlerHQDb:
 
     def update_crawl_url(self, crawl_url):
         cursor = self._conn.cursor()
-        # CREATE TABLE brozzler_urls ( id integer primary key, site_id integer, priority integer, in_progress boolean, canon_url varchar(4000), crawl_url_json text 
+        # CREATE TABLE brozzler_urls ( id integer primary key, site_id integer, priority integer, in_progress boolean, canon_url varchar(4000), crawl_url_json text
         cursor.execute("select id, priority, crawl_url_json from brozzler_urls where site_id=? and canon_url=?", (crawl_url.site_id, crawl_url.canonical()))
         row = cursor.fetchone()
         if row:
