@@ -44,8 +44,10 @@ class BrozzlerWorker:
         }
         if self._proxy_server:
             ydl_opts["proxy"] = "http://{}".format(self._proxy_server)
-            # see https://github.com/rg3/youtube-dl/issues/6087
-            os.environ["http_proxy"] = "http://{}".format(self._proxy_server)
+            ## XXX (sometimes?) causes chrome debug websocket to go through
+            ## proxy. Maybe not needed thanks to hls_prefer_native.
+            ## # see https://github.com/rg3/youtube-dl/issues/6087
+            ## os.environ["http_proxy"] = "http://{}".format(self._proxy_server)
         self._ydl = youtube_dl.YoutubeDL(ydl_opts)
 
     def _next_url(self, site):
