@@ -150,7 +150,7 @@ class BrozzlerWorker:
                         browser = self._browser_pool.acquire()
                         try:
                             msg = q.get(block=True, timeout=0.5)
-                            site = brozzler.hq.Site(**msg.payload)
+                            site = brozzler.Site(**msg.payload)
                             msg.ack() # XXX ack only after browsing finished? kinda complicated
                             logging.info("browsing site {}".format(site))
                             th = threading.Thread(target=lambda: self._brozzle_site(browser, site), 

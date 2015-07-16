@@ -1,89 +1,12 @@
 # vim: set sw=4 et:
 
-import surt
 import json
 import logging
-import urllib.robotparser
-import urllib.request
 import brozzler
 import sqlite3
 import time
 import kombu
 import kombu.simple
-
-def robots_url(url):
-    hurl = surt.handyurl.parse(url)
-    hurl.path = "/robots.txt"
-    hurl.query = None
-    hurl.hash = None
-    return hurl.geturl()
-
-class RobotsFileParser(urllib.robotparser.RobotsFileParser):
-    """Adds support  for fetching robots.txt through a proxy to
-    urllib.robotparser.RobotsFileParser."""
-    def __init__(self, proxy):
-        self.proxy = proxy
-
-    def read(self):
-        """Reads the robots.txt URL and feeds it to the parser."""
-        try:
-            request = urllib.request.Request(url)
-            if proxy:
-                request.set_proxy(proxy, request.type)
-            f = urllib.request.urlopen(request)
-        except urllib.error.HTTPError as err:
-            if err.code in (401, 403):
-                self.disallow_all = True
-            elif err.code >= 400:
-                self.allow_all = True
-        else:
-            raw = f.read()
-            self.parse(raw.decode("utf-8").splitlines())
-
-class Site:
-    logger = logging.getLogger(__module__ + "." + __qualname__)
-
-    def __init__(self, seed, id=None, scope_surt=None, proxy=None, ignore_robots=False):
-        self.seed = seed
-        self.id = id
-        self.proxy = proxy
-        self.ignore_robots = ignore_robots
-
-        if scope_surt:
-            self.scope_surt = scope_surt
-        else:
-            self.scope_surt = surt.surt(seed, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)
-
-        self._robots_cache = {}  # {robots_url:RobotsFileParser,...}
-
-    def is_permitted_by_robots(self, url):
-        return ignore_robots or self._robots(robots_url(url)).can_fetch("*", url)
-
-    def is_in_scope(self, url):
-        try:
-            surtt = surt.surt(url, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)
-            return surtt.startswith(self.scope_surt)
-        except:
-            self.logger.warn("""problem parsing url "{}" """.format(url))
-            return False
-
-    def to_dict(self):
-        return dict(id=self.id, seed=self.seed, scope_surt=self.scope_surt)
-
-    def to_json(self):
-        return json.dumps(self.to_dict(), separators=(',', ':'))
-
-    def _robots(robots_url):
-        if not robots_url in _robots_cache:
-            robots_txt = RobotFileParser(robots_url)
-            logging.info("fetching {}".format(robots_url))
-            try:
-                robots_txt.read()
-                _robots_cache[robots_url] = robots_txt
-            except BaseException as e:
-                logger.error("problem fetching {}".format(robots_url))
-
-        return _robots_cache[robots_url]
 
 class BrozzlerHQDb:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -155,7 +78,7 @@ class BrozzlerHQDb:
                 break
             site_dict = json.loads(row[1])
             site_dict["id"] = row[0]
-            yield brozzler.hq.Site(**site_dict)
+            yield brozzler.Site(**site_dict)
 
     def update_crawl_url(self, crawl_url):
         cursor = self._conn.cursor()
@@ -199,7 +122,7 @@ class BrozzlerHQ:
     def _new_site(self):
         try:
             msg = self._new_sites_q.get(block=False)
-            new_site = brozzler.hq.Site(**msg.payload)
+            new_site = brozzler.Site(**msg.payload)
             msg.ack()
 
             self.logger.info("new site {}".format(new_site))
