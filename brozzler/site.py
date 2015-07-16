@@ -14,16 +14,18 @@ def robots_url(url):
     return hurl.geturl()
 
 class RobotFileParser(urllib.robotparser.RobotFileParser):
+    """Adds support for fetching robots.txt through a proxy to
+    urllib.robotparser.RobotFileParser."""
+
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    """Adds support  for fetching robots.txt through a proxy to
-    urllib.robotparser.RobotFileParser."""
     def __init__(self, url="", proxy=None):
         super(RobotFileParser, self).__init__(url)
         self.proxy = proxy
 
     def read(self):
-        """Reads the robots.txt URL and feeds it to the parser."""
+        """Reads the robots.txt URL, perhaps through the configured proxy, and
+        feeds it to the parser."""
         try:
             request = urllib.request.Request(self.url)
             if self.proxy:
@@ -46,11 +48,14 @@ class RobotFileParser(urllib.robotparser.RobotFileParser):
 class Site:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, seed, id=None, scope_surt=None, proxy=None, ignore_robots=False):
+    def __init__(self, seed, id=None, scope_surt=None, proxy=None,
+        ignore_robots=False, enable_warcprox_features=False, time_limit=None):
         self.seed = seed
         self.id = id
         self.proxy = proxy
         self.ignore_robots = ignore_robots
+        self.enable_warcprox_features = enable_warcprox_features
+        self.time_limit = time_limit
 
         if scope_surt:
             self.scope_surt = scope_surt
@@ -71,7 +76,11 @@ class Site:
             return False
 
     def to_dict(self):
-        return dict(id=self.id, seed=self.seed, scope_surt=self.scope_surt)
+        d = dict(vars(self))
+        for k in vars(self):
+            if k.startswith("_"):
+                del d[k]
+        return d
 
     def to_json(self):
         return json.dumps(self.to_dict(), separators=(',', ':'))
@@ -111,14 +120,18 @@ class CrawlUrl:
         return self._canon_hurl.geturl()
 
     def to_dict(self):
+        d = dict(vars(self))
+
+        for k in vars(self):
+            if k.startswith("_"):
+                del d[k]
+
         if self.outlinks is not None and not isinstance(self.outlinks, list):
             outlinks = []
             outlinks.extend(self.outlinks)
-        else:
-            outlinks = self.outlinks
+            d["outlinks"] = outlinks
 
-        return dict(id=self.id, site_id=self.site_id, url=self.url,
-                hops_from_seed=self.hops_from_seed, outlinks=outlinks)
+        return d
 
     def to_json(self):
         return json.dumps(self.to_dict(), separators=(',', ':'))
