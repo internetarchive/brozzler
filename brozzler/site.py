@@ -31,11 +31,13 @@ class Site:
         if proxy:
             proxie = "http://{}".format(proxy)
             req_sesh.proxies = {"http":proxie,"https":proxie}
+        if extra_headers:
+            req_sesh.headers.update(extra_headers)
         self._robots_cache = reppy.cache.RobotsCache(session=req_sesh)
 
     def __repr__(self):
-        return """Site(seed="{}",scope_surt="{}",proxy="{}",enable_warcprox_features={},ignore_robots={})""".format(
-                self.seed, self.scope_surt, self.proxy, self.enable_warcprox_features, self.ignore_robots)
+        return """Site(seed="{}",scope_surt="{}",proxy="{}",enable_warcprox_features={},ignore_robots={},extra_headers={})""".format(
+                self.seed, self.scope_surt, self.proxy, self.enable_warcprox_features, self.ignore_robots, self.extra_headers)
 
     def note_seed_redirect(self, url):
         new_scope_surt = surt.surt(url, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)

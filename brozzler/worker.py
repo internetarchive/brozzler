@@ -34,6 +34,7 @@ class BrozzlerWorker:
             "noprogress": True,
             "nopart": True,
             "no_color": True,
+            "http_headers": site.extra_headers,
         }
         if site.proxy:
             ydl_opts["proxy"] = "http://{}".format(site.proxy)
@@ -70,9 +71,12 @@ class BrozzlerWorker:
                 self.logger.info("putting unfinished page {} on queue {}".format(page, q.queue.name))
                 q.put(page.to_dict())
 
-    def _putmeta(self, warcprox_address, url, content_type, payload):
+    def _putmeta(self, warcprox_address, url, content_type, payload, extra_headers=None):
+        headers = {"Content-Type":content_type}
+        if extra_headers:
+            headers.update(extra_headers)
         request = urllib.request.Request(url, method="PUTMETA",
-                headers={"Content-Type":content_type}, data=payload)
+                headers=headers, data=payload)
 
         # XXX setting request.type="http" is a hack to stop urllib from trying
         # to tunnel if url is https
@@ -95,7 +99,8 @@ class BrozzlerWorker:
                 self.logger.info("sending PUTMETA request to warcprox with youtube-dl json for {}".format(page))
                 self._putmeta(warcprox_address=site.proxy, url=page.url,
                         content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
-                        payload=info_json.encode("utf-8"))
+                        payload=info_json.encode("utf-8"),
+                        extra_headers=site.extra_headers)
         except BaseException as e:
             if youtube_dl.utils.UnsupportedError in e.exc_info:
                 pass
@@ -107,7 +112,8 @@ class BrozzlerWorker:
             if site.proxy and site.enable_warcprox_features:
                 self.logger.info("sending PUTMETA request to warcprox with screenshot for {}".format(page))
                 self._putmeta(warcprox_address=site.proxy, url=page.url,
-                        content_type="image/png", payload=screenshot_png)
+                        content_type="image/png", payload=screenshot_png,
+                        extra_headers=site.extra_headers)
 
         self.logger.info("brozzling {}".format(page))
         self._try_youtube_dl(ydl, site, page)
@@ -153,7 +159,7 @@ class BrozzlerWorker:
                             msg = q.get(block=True, timeout=0.5)
                             site = brozzler.Site(**msg.payload)
                             msg.ack() # XXX ack only after browsing finished? kinda complicated
-                            self.logger.info("browsing site {}".format(site))
+                            self.logger.info("brozzling site {}".format(site))
                             ydl = self._youtube_dl(site)
                             th = threading.Thread(target=lambda: self._brozzle_site(browser, ydl, site),
                                     name="BrowsingThread-{}".format(site.scope_surt))
