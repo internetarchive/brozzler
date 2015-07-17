@@ -22,12 +22,6 @@ arg_parser.add_argument('-e', '--executable', dest='chrome_exe', default='chromi
         help='executable to use to invoke chrome')
 arg_parser.add_argument('-n', '--max-browsers', dest='max_browsers', default='1',
         help='max number of chrome instances simultaneously browsing pages')
-arg_parser.add_argument('--proxy-server', dest='proxy_server', default=None,
-        help='configure browser to use specified proxy server')
-arg_parser.add_argument('--ignore-certificate-errors', dest='ignore_cert_errors',
-        action='store_true', help='configure browser to ignore certificate errors')
-arg_parser.add_argument('--enable-warcprox-features', dest='enable_warcprox_features',
-        action='store_true', help='enable special features that assume the configured proxy is warcprox')
 arg_parser.add_argument('-v', '--verbose', dest='log_level',
         action="store_const", default=logging.INFO, const=logging.DEBUG)
 arg_parser.add_argument('--version', action='version',
@@ -58,10 +52,7 @@ signal.signal(signal.SIGTERM, sigterm)
 signal.signal(signal.SIGINT, sigint)
 
 worker = brozzler.worker.BrozzlerWorker(amqp_url=args.amqp_url,
-        max_browsers=int(args.max_browsers), chrome_exe=args.chrome_exe,
-        proxy_server=args.proxy_server,
-        ignore_cert_errors=args.ignore_cert_errors,
-        enable_warcprox_features=args.enable_warcprox_features)
+        max_browsers=int(args.max_browsers), chrome_exe=args.chrome_exe)
 
 worker.start()
 
@@ -70,9 +61,9 @@ try:
         time.sleep(0.5)
 except brozzler.ShutdownRequested as e:
     worker.shutdown_now()
-        
+
     for th in threading.enumerate():
         if th != threading.current_thread():
             th.join()
-            
+
 logging.info("all done, exiting")

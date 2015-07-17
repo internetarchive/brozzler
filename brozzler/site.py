@@ -4,46 +4,8 @@ import surt
 import json
 import logging
 import urllib.robotparser
-import urllib.request
-
-def robots_url(url):
-    hurl = surt.handyurl.parse(url)
-    hurl.path = "/robots.txt"
-    hurl.query = None
-    hurl.hash = None
-    return hurl.geturl()
-
-class RobotFileParser(urllib.robotparser.RobotFileParser):
-    """Adds support for fetching robots.txt through a proxy to
-    urllib.robotparser.RobotFileParser."""
-
-    logger = logging.getLogger(__module__ + "." + __qualname__)
-
-    def __init__(self, url="", proxy=None):
-        super(RobotFileParser, self).__init__(url)
-        self.proxy = proxy
-
-    def read(self):
-        """Reads the robots.txt URL, perhaps through the configured proxy, and
-        feeds it to the parser."""
-        try:
-            request = urllib.request.Request(self.url)
-            if self.proxy:
-                request.set_proxy(self.proxy, request.type)
-            f = urllib.request.urlopen(request)
-        except urllib.error.HTTPError as err:
-            if err.code in (401, 403):
-                self.logger.info("{} returned {}, disallowing all".format(self.url, err.code))
-                self.disallow_all = True
-            elif err.code >= 400:
-                self.logger.info("{} returned {}, allowing all".format(self.url, err.code))
-                self.allow_all = True
-        except BaseException as err:
-            self.logger.error("problem fetching {}, disallowing all".format(self.url), exc_info=True)
-            self.disallow_all = True
-        else:
-            raw = f.read()
-            self.parse(raw.decode("utf-8").splitlines())
+import requests
+import reppy.cache
 
 class Site:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -62,10 +24,15 @@ class Site:
         else:
             self.scope_surt = surt.surt(seed, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)
 
-        self._robots_cache = {}  # {robots_url:RobotFileParser,...}
+        req_sesh = requests.Session()
+        req_sesh.verify = False   # ignore cert errors
+        if proxy:
+            proxie = "http://{}".format(proxy)
+            req_sesh.proxies = {"http":proxie,"https":proxie}
+        self._robots_cache = reppy.cache.RobotsCache(session=req_sesh)
 
     def is_permitted_by_robots(self, url):
-        return self.ignore_robots or self._robots(robots_url(url)).can_fetch("*", url)
+        return self.ignore_robots or self._robots_cache.allowed(url, "brozzler")
 
     def is_in_scope(self, url):
         try:
@@ -84,15 +51,6 @@ class Site:
 
     def to_json(self):
         return json.dumps(self.to_dict(), separators=(',', ':'))
-
-    def _robots(self, robots_url):
-        if not robots_url in self._robots_cache:
-            robots_txt = RobotFileParser(robots_url, self.proxy)
-            self.logger.info("fetching {}".format(robots_url))
-            robots_txt.read()
-            self._robots_cache[robots_url] = robots_txt
-
-        return self._robots_cache[robots_url]
 
 class CrawlUrl:
     def __init__(self, url, id=None, site_id=None, hops_from_seed=0, outlinks=None):

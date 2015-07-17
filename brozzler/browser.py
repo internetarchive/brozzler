@@ -67,11 +67,11 @@ class Browser:
 
     HARD_TIMEOUT_SECONDS = 20 * 60
 
-    def __init__(self, chrome_port=9222, chrome_exe='chromium-browser', proxy_server=None, ignore_cert_errors=False):
+    def __init__(self, chrome_port=9222, chrome_exe='chromium-browser', proxy=None, ignore_cert_errors=False):
         self.command_id = itertools.count(1)
         self.chrome_port = chrome_port
         self.chrome_exe = chrome_exe
-        self.proxy_server = proxy_server
+        self.proxy = proxy
         self.ignore_cert_errors = ignore_cert_errors
         self._behavior = None
         self._websock = None
@@ -88,26 +88,30 @@ class Browser:
     def __exit__(self, *args):
         self.stop()
 
-    def start(self):
+    def start(self, proxy=None):
         # these can raise exceptions
         self._work_dir = tempfile.TemporaryDirectory()
         self._chrome_instance = Chrome(port=self.chrome_port,
                 executable=self.chrome_exe,
                 user_home_dir=self._work_dir.name,
                 user_data_dir=os.sep.join([self._work_dir.name, "chrome-user-data"]),
-                proxy_server=self.proxy_server,
-                ignore_cert_errors=self.ignore_cert_errors)
+                ignore_cert_errors=self.ignore_cert_errors,
+                proxy=proxy or self.proxy)
         self._websocket_url = self._chrome_instance.start()
 
     def stop(self):
-        self._chrome_instance.stop()
-        self._work_dir.cleanup()
+        if self._chrome_instance:
+            self._chrome_instance.stop()
+            self._chrome_instance = None
+        if self._work_dir:
+            self._work_dir.cleanup()
+            self._work_dir = None
 
     def abort_browse_page(self):
         self._abort_browse_page = True
 
     def browse_page(self, url, on_request=None, on_screenshot=None):
-        """Synchronously loads a page, takes a screenshot, and runs behaviors. 
+        """Synchronously loads a page, takes a screenshot, and runs behaviors.
 
         Raises BrowsingException if browsing the page fails in a non-critical
         way.
@@ -165,7 +169,7 @@ class Browser:
                 return True
             elif not self._waiting_on_outlinks_msg_id:
                 self.logger.info("finished browsing page according to behavior, retrieving outlinks url={}".format(self.url))
-                self._waiting_on_outlinks_msg_id = self.send_to_chrome(method="Runtime.evaluate", 
+                self._waiting_on_outlinks_msg_id = self.send_to_chrome(method="Runtime.evaluate",
                         params={"expression":"Array.prototype.slice.call(document.querySelectorAll('a[href]')).join(' ')"})
                 return False
         elif time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
@@ -250,12 +254,12 @@ class Browser:
 class Chrome:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, port, executable, user_home_dir, user_data_dir, proxy_server=None, ignore_cert_errors=False):
+    def __init__(self, port, executable, user_home_dir, user_data_dir, proxy=None, ignore_cert_errors=False):
         self.port = port
         self.executable = executable
         self.user_home_dir = user_home_dir
         self.user_data_dir = user_data_dir
-        self.proxy_server = proxy_server
+        self.proxy = proxy
         self.ignore_cert_errors = ignore_cert_errors
 
     # returns websocket url to chrome window with about:blank loaded
@@ -281,8 +285,8 @@ class Chrome:
                 "--disable-web-security"]
         if self.ignore_cert_errors:
             chrome_args.append("--ignore-certificate-errors")
-        if self.proxy_server:
-            chrome_args.append("--proxy-server={}".format(self.proxy_server))
+        if self.proxy:
+            chrome_args.append("--proxy-server={}".format(self.proxy))
         chrome_args.append("about:blank")
         self.logger.info("running: {}".format(" ".join(chrome_args)))
         self.chrome_process = subprocess.Popen(chrome_args, env=new_env, start_new_session=True)
