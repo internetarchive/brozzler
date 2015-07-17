@@ -63,6 +63,11 @@ class BrozzlerHQDb:
         self._conn.commit()
         return cursor.lastrowid
 
+    def update_site(self, site):
+        cursor = self._conn.cursor()
+        cursor.execute("update brozzler_sites set site_json=? where id=?", (site.to_json(), site.id))
+        self._conn.commit()
+
     def schedule_url(self, crawl_url, priority=0):
         cursor = self._conn.cursor()
         cursor.execute("insert into brozzler_urls (site_id, priority, canon_url, crawl_url_json, in_progress) values (?, ?, ?, ?, 0)",
@@ -176,6 +181,9 @@ class BrozzlerHQ:
                 completed_url = brozzler.CrawlUrl(**msg.payload)
                 msg.ack()
                 self._db.completed(completed_url)
+                if completed_url.redirect_url and completed_url.hops_from_seed == 0:
+                    site.note_seed_redirect(completed_url.redirect_url)
+                    self._db.update_site(site)
                 self._scope_and_schedule_outlinks(site, completed_url)
             except kombu.simple.Empty:
                 pass

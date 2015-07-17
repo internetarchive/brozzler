@@ -28,7 +28,7 @@ class BrozzlerWorker:
             "outtmpl": "/dev/null",
             "verbose": False,
             "retries": 1,
-            "logger": logging,
+            "logger": self.logger,
             "nocheckcertificate": True,
             "hls_prefer_native": True,
             "noprogress": True,
@@ -56,18 +56,18 @@ class BrozzlerWorker:
     def _completed_url(self, site, crawl_url):
         with kombu.Connection(self._amqp_url) as conn:
             q = conn.SimpleQueue("brozzler.sites.{}.completed_urls".format(site.id))
-            logging.info("putting {} on queue {}".format(crawl_url, q.queue.name))
+            self.logger.info("putting {} on queue {}".format(crawl_url, q.queue.name))
             q.put(crawl_url.to_dict())
 
     def _disclaim_site(self, site, crawl_url=None):
         # XXX maybe should put on "disclaimed" queue and hq should put back on "unclaimed"
         with kombu.Connection(self._amqp_url) as conn:
             q = conn.SimpleQueue("brozzler.sites.unclaimed".format(site.id))
-            logging.info("putting {} on queue {}".format(site, q.queue.name))
+            self.logger.info("putting {} on queue {}".format(site, q.queue.name))
             q.put(site.to_dict())
             if crawl_url:
                 q = conn.SimpleQueue("brozzler.sites.{}.crawl_urls".format(site.id))
-                logging.info("putting unfinished url {} on queue {}".format(crawl_url, q.queue.name))
+                self.logger.info("putting unfinished url {} on queue {}".format(crawl_url, q.queue.name))
                 q.put(crawl_url.to_dict())
 
     def _putmeta(self, warcprox_address, url, content_type, payload):
@@ -82,17 +82,17 @@ class BrozzlerWorker:
         try:
             with urllib.request.urlopen(request) as response:
                 if response.status != 204:
-                    logging.warn("""got "{} {}" response on warcprox PUTMETA request (expected 204)""".format(response.status, response.reason))
+                    self.logger.warn("""got "{} {}" response on warcprox PUTMETA request (expected 204)""".format(response.status, response.reason))
         except urllib.error.HTTPError as e:
-            logging.warn("""got "{} {}" response on warcprox PUTMETA request (expected 204)""".format(e.getcode(), e.info()))
+            self.logger.warn("""got "{} {}" response on warcprox PUTMETA request (expected 204)""".format(e.getcode(), e.info()))
 
     def _try_youtube_dl(self, ydl, site, crawl_url):
         try:
-            logging.info("trying youtube-dl on {}".format(crawl_url))
+            self.logger.info("trying youtube-dl on {}".format(crawl_url))
             info = ydl.extract_info(crawl_url.url)
             if site.proxy and site.enable_warcprox_features:
                 info_json = json.dumps(info, sort_keys=True, indent=4)
-                logging.info("sending PUTMETA request to warcprox with youtube-dl json for {}".format(crawl_url))
+                self.logger.info("sending PUTMETA request to warcprox with youtube-dl json for {}".format(crawl_url))
                 self._putmeta(warcprox_address, site.proxy, url=crawl_url.url,
                         content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                         payload=info_json.encode("utf-8"))
@@ -102,11 +102,19 @@ class BrozzlerWorker:
             else:
                 raise
 
-    def _on_screenshot(self, site, crawl_url, screenshot_png):
-        if site.proxy and site.enable_warcprox_features:
-            logging.info("sending PUTMETA request to warcprox with screenshot for {}".format(crawl_url))
-            self._putmeta(warcprox_address=site.proxy, url=crawl_url.url,
-                    content_type="image/png", payload=screenshot_png)
+    def _brozzle_page(self, browser, ydl, site, crawl_url):
+        def on_screenshot(screenshot_png):
+            if site.proxy and site.enable_warcprox_features:
+                self.logger.info("sending PUTMETA request to warcprox with screenshot for {}".format(crawl_url))
+                self._putmeta(warcprox_address=site.proxy, url=crawl_url.url,
+                        content_type="image/png", payload=screenshot_png)
+
+        self.logger.info("brozzling {}".format(crawl_url))
+        self._try_youtube_dl(ydl, site, crawl_url)
+
+        crawl_url.outlinks = browser.browse_page(crawl_url.url,
+                on_screenshot=on_screenshot,
+                on_url_change=crawl_url.note_redirect)
 
     def _brozzle_site(self, browser, ydl, site):
         start = time.time()
@@ -116,19 +124,16 @@ class BrozzlerWorker:
             while not self._shutdown_requested.is_set() and time.time() - start < 60:
                 try:
                     crawl_url = self._next_url(site)
-                    logging.info("crawling {}".format(crawl_url))
-                    self._try_youtube_dl(ydl, site, crawl_url)
-                    crawl_url.outlinks = browser.browse_page(crawl_url.url,
-                            on_screenshot=lambda screenshot_png: self._on_screenshot(site, crawl_url, screenshot_png))
+                    self._brozzle_page(browser, ydl, site, crawl_url)
                     self._completed_url(site, crawl_url)
                     crawl_url = None
                 except kombu.simple.Empty:
                     # if some timeout reached, re-raise?
                     pass
         # except kombu.simple.Empty:
-        #     logging.info("finished {} (queue is empty)".format(site))
+        #     self.logger.info("finished {} (queue is empty)".format(site))
         except brozzler.browser.BrowsingAborted:
-            logging.info("{} shut down".format(browser))
+            self.logger.info("{} shut down".format(browser))
         finally:
             browser.stop()
             self._disclaim_site(site, crawl_url)
@@ -147,7 +152,7 @@ class BrozzlerWorker:
                             msg = q.get(block=True, timeout=0.5)
                             site = brozzler.Site(**msg.payload)
                             msg.ack() # XXX ack only after browsing finished? kinda complicated
-                            logging.info("browsing site {}".format(site))
+                            self.logger.info("browsing site {}".format(site))
                             ydl = self._youtube_dl(site)
                             th = threading.Thread(target=lambda: self._brozzle_site(browser, ydl, site),
                                     name="BrowsingThread-{}".format(site.scope_surt))
@@ -156,14 +161,14 @@ class BrozzlerWorker:
                             q_empty = True
                     except KeyError:
                         if latest_state != "browsers-busy":
-                            logging.info("all {} browsers are busy".format(self._max_browsers))
+                            self.logger.info("all {} browsers are busy".format(self._max_browsers))
                             latest_state = "browsers-busy"
                 else:
                     q_empty = True
 
                 if q_empty:
                     if latest_state != "no-unclaimed-sites":
-                        logging.info("no unclaimed sites to browse")
+                        self.logger.info("no unclaimed sites to browse")
                         latest_state = "no-unclaimed-sites"
             time.sleep(0.5)
 
@@ -172,7 +177,7 @@ class BrozzlerWorker:
         th.start()
 
     def shutdown_now(self):
-        logging.info("brozzler worker shutting down")
+        self.logger.info("brozzler worker shutting down")
         self._shutdown_requested.set()
         self._browser_pool.shutdown_now()
 

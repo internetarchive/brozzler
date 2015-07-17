@@ -31,6 +31,16 @@ class Site:
             req_sesh.proxies = {"http":proxie,"https":proxie}
         self._robots_cache = reppy.cache.RobotsCache(session=req_sesh)
 
+    def __repr__(self):
+        return """Site(seed="{}",scope_surt="{}",proxy="{}",enable_warcprox_features={},ignore_robots={})""".format(
+                self.seed, self.scope_surt, self.proxy, self.enable_warcprox_features, self.ignore_robots)
+
+    def note_seed_redirect(self, url):
+        new_scope_surt = surt.surt(url, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)
+        if not new_scope_surt.startswith(self.scope_surt):
+            self.logger.info("changing site scope surt from {} to {}".format(self.scope_surt, new_scope_surt))
+            self.scope_surt = new_scope_surt
+
     def is_permitted_by_robots(self, url):
         return self.ignore_robots or self._robots_cache.allowed(url, "brozzler")
 
@@ -53,17 +63,21 @@ class Site:
         return json.dumps(self.to_dict(), separators=(',', ':'))
 
 class CrawlUrl:
-    def __init__(self, url, id=None, site_id=None, hops_from_seed=0, outlinks=None):
+    def __init__(self, url, id=None, site_id=None, hops_from_seed=0, outlinks=None, redirect_url=None):
         self.id = id
         self.site_id = site_id
         self.url = url
         self.hops_from_seed = hops_from_seed
         self._canon_hurl = None
         self.outlinks = outlinks
+        self.redirect_url = redirect_url
 
     def __repr__(self):
         return """CrawlUrl(url="{}",site_id={},hops_from_seed={})""".format(
                 self.url, self.site_id, self.hops_from_seed)
+
+    def note_redirect(self, url):
+        self.redirect_url = url
 
     def calc_priority(self):
         priority = 0

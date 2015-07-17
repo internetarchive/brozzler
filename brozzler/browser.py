@@ -110,7 +110,7 @@ class Browser:
     def abort_browse_page(self):
         self._abort_browse_page = True
 
-    def browse_page(self, url, on_request=None, on_screenshot=None):
+    def browse_page(self, url, on_request=None, on_screenshot=None, on_url_change=None):
         """Synchronously loads a page, takes a screenshot, and runs behaviors.
 
         Raises BrowsingException if browsing the page fails in a non-critical
@@ -126,6 +126,9 @@ class Browser:
 
         self._waiting_on_outlinks_msg_id = None
         self._outlinks = None
+
+        self.on_url_change = on_url_change
+        self._waiting_on_document_url_msg_id = None
 
         self._websock = websocket.WebSocketApp(self._websocket_url,
                 on_open=self._visit_page, on_message=self._handle_message)
@@ -214,6 +217,7 @@ class Browser:
         elif "method" in message and message["method"] == "Page.loadEventFired":
             self.logger.info("Page.loadEventFired, requesting screenshot url={} message={}".format(self.url, message))
             self._waiting_on_screenshot_msg_id = self.send_to_chrome(method="Page.captureScreenshot")
+            self._waiting_on_document_url_msg_id = self.send_to_chrome(method="Runtime.evaluate", params={"expression":"document.URL"})
         elif "method" in message and message["method"] == "Console.messageAdded":
             self.logger.debug("{} console.{} {}".format(websock.url,
                 message["params"]["message"]["level"],
@@ -242,6 +246,11 @@ class Browser:
                 self.logger.debug("got outlinks message={}".format(message))
                 # {'result': {'wasThrown': False, 'result': {'value': 'https://archive-it.org/cgi-bin/dedup-test/change_every_second https://archive-it.org/cgi-bin/dedup-test/change_every_minute https://archive-it.org/cgi-bin/dedup-test/change_every_10minutes https://archive-it.org/cgi-bin/dedup-test/change_every_hour https://archive-it.org/cgi-bin/dedup-test/change_every_day https://archive-it.org/cgi-bin/dedup-test/change_every_month https://archive-it.org/cgi-bin/dedup-test/change_every_year https://archive-it.org/cgi-bin/dedup-test/change_never http://validator.w3.org/check?uri=referer', 'type': 'string'}}, 'id': 32}
                 self._outlinks = frozenset(message["result"]["result"]["value"].split(" "))
+            elif message["id"] == self._waiting_on_document_url_msg_id:
+                if message["result"]["result"]["value"] != self.url:
+                    if self.on_url_change:
+                        self.on_url_change(message["result"]["result"]["value"])
+                self._waiting_on_document_url_msg_id = None
             elif self._behavior and self._behavior.is_waiting_on_result(message["id"]):
                 self._behavior.notify_of_result(message)
         # elif "method" in message and message["method"] in ("Network.dataReceived", "Network.responseReceived", "Network.loadingFinished"):
