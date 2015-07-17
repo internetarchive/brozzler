@@ -110,7 +110,8 @@ class Browser:
     def abort_browse_page(self):
         self._abort_browse_page = True
 
-    def browse_page(self, url, on_request=None, on_screenshot=None, on_url_change=None):
+    def browse_page(self, url, extra_headers=None, on_request=None,
+        on_screenshot=None, on_url_change=None):
         """Synchronously loads a page, takes a screenshot, and runs behaviors.
 
         Raises BrowsingException if browsing the page fails in a non-critical
@@ -119,16 +120,15 @@ class Browser:
         Returns extracted outlinks.
         """
         self.url = url
+        self.extra_headers = extra_headers
         self.on_request = on_request
-
         self.on_screenshot = on_screenshot
-        self._waiting_on_screenshot_msg_id = None
+        self.on_url_change = on_url_change
 
+        self._waiting_on_screenshot_msg_id = None
+        self._waiting_on_document_url_msg_id = None
         self._waiting_on_outlinks_msg_id = None
         self._outlinks = None
-
-        self.on_url_change = on_url_change
-        self._waiting_on_document_url_msg_id = None
 
         self._websock = websocket.WebSocketApp(self._websocket_url,
                 on_open=self._visit_page, on_message=self._handle_message)
@@ -196,6 +196,9 @@ class Browser:
         self.send_to_chrome(method="Console.enable")
         self.send_to_chrome(method="Debugger.enable")
         self.send_to_chrome(method="Runtime.enable")
+
+        if self.extra_headers:
+            self.send_to_chrome(method="Network.setExtraHTTPHeaders", params={"headers":self.extra_headers})
 
         # disable google analytics, see _handle_message() where breakpoint is caught "Debugger.paused"
         self.send_to_chrome(method="Debugger.setBreakpointByUrl", params={"lineNumber": 1, "urlRegex":"https?://www.google-analytics.com/analytics.js"})

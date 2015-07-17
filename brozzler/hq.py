@@ -71,7 +71,7 @@ class BrozzlerHQDb:
     def schedule_page(self, page, priority=0):
         cursor = self._conn.cursor()
         cursor.execute("insert into brozzler_pages (site_id, priority, canon_url, page_json, in_progress) values (?, ?, ?, ?, 0)",
-                (page.site_id, priority, page.canonical(), page.to_json()))
+                (page.site_id, priority, page.canon_url(), page.to_json()))
         self._conn.commit()
 
     def sites(self):
@@ -88,7 +88,7 @@ class BrozzlerHQDb:
     def update_page(self, page):
         cursor = self._conn.cursor()
         # CREATE TABLE brozzler_pages ( id integer primary key, site_id integer, priority integer, in_progress boolean, canon_url varchar(4000), page_json text
-        cursor.execute("select id, priority, page_json from brozzler_pages where site_id=? and canon_url=?", (page.site_id, page.canonical()))
+        cursor.execute("select id, priority, page_json from brozzler_pages where site_id=? and canon_url=?", (page.site_id, page.canon_url()))
         row = cursor.fetchone()
         if row:
             # (id, priority, existing_page) = row
@@ -99,7 +99,7 @@ class BrozzlerHQDb:
             cursor.execute("update brozzler_pages set priority=?, page_json=? where id=?", (new_priority, existing_page.to_json(), row[0]))
             self._conn.commit()
         else:
-            raise KeyError("page not in brozzler_pages site_id={} canon_url={}".format(page.site_id, page.canonical()))
+            raise KeyError("page not in brozzler_pages site_id={} canon_url={}".format(page.site_id, page.canon_url()))
 
 class BrozzlerHQ:
     logger = logging.getLogger(__module__ + "." + __qualname__)

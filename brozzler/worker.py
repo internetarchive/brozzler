@@ -113,6 +113,7 @@ class BrozzlerWorker:
         self._try_youtube_dl(ydl, site, page)
 
         page.outlinks = browser.browse_page(page.url,
+                extra_headers=site.extra_headers,
                 on_screenshot=on_screenshot,
                 on_url_change=page.note_redirect)
 

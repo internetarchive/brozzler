@@ -1,5 +1,5 @@
 kombu
-websocket-client-py3==0.13.1
+websocket-client
 argparse
 PyYAML
 git+https://github.com/ikreymer/surt.git@py3

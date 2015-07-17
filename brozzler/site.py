@@ -11,13 +11,15 @@ class Site:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
     def __init__(self, seed, id=None, scope_surt=None, proxy=None,
-        ignore_robots=False, enable_warcprox_features=False, time_limit=None):
+        ignore_robots=False, time_limit=None, extra_headers=None,
+        enable_warcprox_features=False):
         self.seed = seed
         self.id = id
         self.proxy = proxy
         self.ignore_robots = ignore_robots
         self.enable_warcprox_features = enable_warcprox_features
         self.time_limit = time_limit
+        self.extra_headers = extra_headers
 
         if scope_surt:
             self.scope_surt = scope_surt
@@ -82,10 +84,10 @@ class Page:
     def calc_priority(self):
         priority = 0
         priority += max(0, 10 - self.hops_from_seed)
-        priority += max(0, 6 - self.canonical().count("/"))
+        priority += max(0, 6 - self.canon_url().count("/"))
         return priority
 
-    def canonical(self):
+    def canon_url(self):
         if self._canon_hurl is None:
             self._canon_hurl = surt.handyurl.parse(self.url)
             surt.GoogleURLCanonicalizer.canonicalize(self._canon_hurl)
