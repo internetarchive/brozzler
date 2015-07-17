@@ -23,38 +23,38 @@ class BrozzlerHQDb:
                 site_json text
             );
 
-            create table if not exists brozzler_urls (
+            create table if not exists brozzler_pages (
                 id integer primary key,
                 site_id integer,
                 priority integer,
                 in_progress boolean,
                 canon_url varchar(4000),
-                crawl_url_json text
+                page_json text
             );
-            create index if not exists brozzler_urls_priority on brozzler_urls (priority desc);
-            create index if not exists brozzler_urls_site_id on brozzler_urls (site_id);
+            create index if not exists brozzler_pages_priority on brozzler_pages (priority desc);
+            create index if not exists brozzler_pages_site_id on brozzler_pages (site_id);
         """)
         self._conn.commit()
 
-    def pop_url(self, site_id):
+    def pop_page(self, site_id):
         cursor = self._conn.cursor()
-        cursor.execute("select id, priority, crawl_url_json from brozzler_urls where site_id = ? and not in_progress order by priority desc limit 1", (site_id,))
+        cursor.execute("select id, priority, page_json from brozzler_pages where site_id = ? and not in_progress order by priority desc limit 1", (site_id,))
         row = cursor.fetchone()
         if row:
-            (id, priority, crawl_url_json) = row
+            (id, priority, page_json) = row
             new_priority = priority - 2000
-            cursor.execute("update brozzler_urls set priority=?, in_progress=1 where id=?", (new_priority, id))
+            cursor.execute("update brozzler_pages set priority=?, in_progress=1 where id=?", (new_priority, id))
             self._conn.commit()
 
-            d = json.loads(crawl_url_json)
+            d = json.loads(page_json)
             d["id"] = id
             return d
         else:
             return None
 
-    def completed(self, crawl_url):
+    def completed(self, page):
         cursor = self._conn.cursor()
-        cursor.execute("update brozzler_urls set in_progress=0 where id=?", (crawl_url.id,))
+        cursor.execute("update brozzler_pages set in_progress=0 where id=?", (page.id,))
         self._conn.commit()
 
     def new_site(self, site):
@@ -68,10 +68,10 @@ class BrozzlerHQDb:
         cursor.execute("update brozzler_sites set site_json=? where id=?", (site.to_json(), site.id))
         self._conn.commit()
 
-    def schedule_url(self, crawl_url, priority=0):
+    def schedule_page(self, page, priority=0):
         cursor = self._conn.cursor()
-        cursor.execute("insert into brozzler_urls (site_id, priority, canon_url, crawl_url_json, in_progress) values (?, ?, ?, ?, 0)",
-                (crawl_url.site_id, priority, crawl_url.canonical(), crawl_url.to_json()))
+        cursor.execute("insert into brozzler_pages (site_id, priority, canon_url, page_json, in_progress) values (?, ?, ?, ?, 0)",
+                (page.site_id, priority, page.canonical(), page.to_json()))
         self._conn.commit()
 
     def sites(self):
@@ -85,21 +85,21 @@ class BrozzlerHQDb:
             site_dict["id"] = row[0]
             yield brozzler.Site(**site_dict)
 
-    def update_crawl_url(self, crawl_url):
+    def update_page(self, page):
         cursor = self._conn.cursor()
-        # CREATE TABLE brozzler_urls ( id integer primary key, site_id integer, priority integer, in_progress boolean, canon_url varchar(4000), crawl_url_json text
-        cursor.execute("select id, priority, crawl_url_json from brozzler_urls where site_id=? and canon_url=?", (crawl_url.site_id, crawl_url.canonical()))
+        # CREATE TABLE brozzler_pages ( id integer primary key, site_id integer, priority integer, in_progress boolean, canon_url varchar(4000), page_json text
+        cursor.execute("select id, priority, page_json from brozzler_pages where site_id=? and canon_url=?", (page.site_id, page.canonical()))
         row = cursor.fetchone()
         if row:
-            # (id, priority, existing_crawl_url) = row
-            new_priority = crawl_url.calc_priority() + row[1]
-            existing_crawl_url = brozzler.CrawlUrl(**json.loads(row[2]))
-            existing_crawl_url.hops_from_seed = min(crawl_url.hops_from_seed, existing_crawl_url.hops_from_seed)
+            # (id, priority, existing_page) = row
+            new_priority = page.calc_priority() + row[1]
+            existing_page = brozzler.Page(**json.loads(row[2]))
+            existing_page.hops_from_seed = min(page.hops_from_seed, existing_page.hops_from_seed)
 
-            cursor.execute("update brozzler_urls set priority=?, crawl_url_json=? where id=?", (new_priority, existing_crawl_url.to_json(), row[0]))
+            cursor.execute("update brozzler_pages set priority=?, page_json=? where id=?", (new_priority, existing_page.to_json(), row[0]))
             self._conn.commit()
         else:
-            raise KeyError("crawl url not in brozzler_urls site_id={} url={}".format(crawl_url.site_id, crawl_url.canonical()))
+            raise KeyError("page not in brozzler_pages site_id={} canon_url={}".format(page.site_id, page.canonical()))
 
 class BrozzlerHQ:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -118,8 +118,8 @@ class BrozzlerHQ:
         try:
             while True:
                 self._new_site()
-                self._consume_completed_url()
-                self._feed_crawl_urls()
+                self._consume_completed_page()
+                self._feed_pages()
                 time.sleep(0.5)
         finally:
             self._conn.close()
@@ -135,35 +135,35 @@ class BrozzlerHQ:
             new_site.id = site_id
 
             if new_site.is_permitted_by_robots(new_site.seed):
-                crawl_url = brozzler.CrawlUrl(new_site.seed, site_id=new_site.id, hops_from_seed=0)
-                self._db.schedule_url(crawl_url, priority=1000)
+                page = brozzler.Page(new_site.seed, site_id=new_site.id, hops_from_seed=0)
+                self._db.schedule_page(page, priority=1000)
                 self._unclaimed_sites_q.put(new_site.to_dict())
             else:
                 self.logger.warn("seed url {} is blocked by robots.txt".format(new_site.seed))
         except kombu.simple.Empty:
             pass
 
-    def _feed_crawl_urls(self):
+    def _feed_pages(self):
         for site in self._db.sites():
-            q = self._conn.SimpleQueue("brozzler.sites.{}.crawl_urls".format(site.id))
+            q = self._conn.SimpleQueue("brozzler.sites.{}.pages".format(site.id))
             if len(q) == 0:
-                url = self._db.pop_url(site.id)
-                if url:
-                    self.logger.info("feeding {} to {}".format(url, q.queue.name))
-                    q.put(url)
+                page = self._db.pop_page(site.id)
+                if page:
+                    self.logger.info("feeding {} to {}".format(page, q.queue.name))
+                    q.put(page)
 
-    def _scope_and_schedule_outlinks(self, site, parent_url):
+    def _scope_and_schedule_outlinks(self, site, parent_page):
         counts = {"added":0,"updated":0,"rejected":0,"blocked":0}
-        if parent_url.outlinks:
-            for url in parent_url.outlinks:
+        if parent_page.outlinks:
+            for url in parent_page.outlinks:
                 if site.is_in_scope(url):
                     if site.is_permitted_by_robots(url):
-                        crawl_url = brozzler.CrawlUrl(url, site_id=site.id, hops_from_seed=parent_url.hops_from_seed+1)
+                        child_page = brozzler.Page(url, site_id=site.id, hops_from_seed=page.hops_from_seed+1)
                         try:
-                            self._db.update_crawl_url(crawl_url)
+                            self._db.update_page(child_page)
                             counts["updated"] += 1
                         except KeyError:
-                            self._db.schedule_url(crawl_url, priority=crawl_url.calc_priority())
+                            self._db.schedule_page(child_page, priority=child_page.calc_priority())
                             counts["added"] += 1
                     else:
                         counts["blocked"] += 1
@@ -171,20 +171,20 @@ class BrozzlerHQ:
                     counts["rejected"] += 1
 
         self.logger.info("{} new links added, {} existing links updated, {} links rejected, {} links blocked by robots from {}".format(
-            counts["added"], counts["updated"], counts["rejected"], counts["blocked"], parent_url))
+            counts["added"], counts["updated"], counts["rejected"], counts["blocked"], parent_page))
 
-    def _consume_completed_url(self):
+    def _consume_completed_page(self):
         for site in self._db.sites():
-            q = self._conn.SimpleQueue("brozzler.sites.{}.completed_urls".format(site.id))
+            q = self._conn.SimpleQueue("brozzler.sites.{}.completed_pages".format(site.id))
             try:
                 msg = q.get(block=False)
-                completed_url = brozzler.CrawlUrl(**msg.payload)
+                completed_page = brozzler.Page(**msg.payload)
                 msg.ack()
-                self._db.completed(completed_url)
-                if completed_url.redirect_url and completed_url.hops_from_seed == 0:
-                    site.note_seed_redirect(completed_url.redirect_url)
+                self._db.completed(completed_page)
+                if completed_page.redirect_url and completed_page.hops_from_seed == 0:
+                    site.note_seed_redirect(completed_page.redirect_url)
                     self._db.update_site(site)
-                self._scope_and_schedule_outlinks(site, completed_url)
+                self._scope_and_schedule_outlinks(site, completed_page)
             except kombu.simple.Empty:
                 pass
 

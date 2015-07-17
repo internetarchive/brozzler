@@ -43,32 +43,32 @@ class BrozzlerWorker:
             ## os.environ["http_proxy"] = "http://{}".format(site.proxy)
         return youtube_dl.YoutubeDL(ydl_opts)
 
-    def _next_url(self, site):
+    def _next_page(self, site):
         """Raises kombu.simple.Empty if queue is empty"""
         with kombu.Connection(self._amqp_url) as conn:
-            q = conn.SimpleQueue("brozzler.sites.{}.crawl_urls".format(site.id))
+            q = conn.SimpleQueue("brozzler.sites.{}.pages".format(site.id))
             msg = q.get(block=True, timeout=0.5)
-            crawl_url_dict = msg.payload
-            crawl_url = brozzler.CrawlUrl(**crawl_url_dict)
+            page_dict = msg.payload
+            page = brozzler.Page(**page_dict)
             msg.ack()
-            return crawl_url
+            return page
 
-    def _completed_url(self, site, crawl_url):
+    def _completed_page(self, site, page):
         with kombu.Connection(self._amqp_url) as conn:
-            q = conn.SimpleQueue("brozzler.sites.{}.completed_urls".format(site.id))
-            self.logger.info("putting {} on queue {}".format(crawl_url, q.queue.name))
-            q.put(crawl_url.to_dict())
+            q = conn.SimpleQueue("brozzler.sites.{}.completed_pages".format(site.id))
+            self.logger.info("putting {} on queue {}".format(page, q.queue.name))
+            q.put(page.to_dict())
 
-    def _disclaim_site(self, site, crawl_url=None):
+    def _disclaim_site(self, site, page=None):
         # XXX maybe should put on "disclaimed" queue and hq should put back on "unclaimed"
         with kombu.Connection(self._amqp_url) as conn:
             q = conn.SimpleQueue("brozzler.sites.unclaimed".format(site.id))
             self.logger.info("putting {} on queue {}".format(site, q.queue.name))
             q.put(site.to_dict())
-            if crawl_url:
-                q = conn.SimpleQueue("brozzler.sites.{}.crawl_urls".format(site.id))
-                self.logger.info("putting unfinished url {} on queue {}".format(crawl_url, q.queue.name))
-                q.put(crawl_url.to_dict())
+            if page:
+                q = conn.SimpleQueue("brozzler.sites.{}.pages".format(site.id))
+                self.logger.info("putting unfinished page {} on queue {}".format(page, q.queue.name))
+                q.put(page.to_dict())
 
     def _putmeta(self, warcprox_address, url, content_type, payload):
         request = urllib.request.Request(url, method="PUTMETA",
@@ -86,14 +86,14 @@ class BrozzlerWorker:
         except urllib.error.HTTPError as e:
             self.logger.warn("""got "{} {}" response on warcprox PUTMETA request (expected 204)""".format(e.getcode(), e.info()))
 
-    def _try_youtube_dl(self, ydl, site, crawl_url):
+    def _try_youtube_dl(self, ydl, site, page):
         try:
-            self.logger.info("trying youtube-dl on {}".format(crawl_url))
-            info = ydl.extract_info(crawl_url.url)
+            self.logger.info("trying youtube-dl on {}".format(page))
+            info = ydl.extract_info(page.url)
             if site.proxy and site.enable_warcprox_features:
                 info_json = json.dumps(info, sort_keys=True, indent=4)
-                self.logger.info("sending PUTMETA request to warcprox with youtube-dl json for {}".format(crawl_url))
-                self._putmeta(warcprox_address, site.proxy, url=crawl_url.url,
+                self.logger.info("sending PUTMETA request to warcprox with youtube-dl json for {}".format(page))
+                self._putmeta(warcprox_address=site.proxy, url=page.url,
                         content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                         payload=info_json.encode("utf-8"))
         except BaseException as e:
@@ -102,31 +102,31 @@ class BrozzlerWorker:
             else:
                 raise
 
-    def _brozzle_page(self, browser, ydl, site, crawl_url):
+    def _brozzle_page(self, browser, ydl, site, page):
         def on_screenshot(screenshot_png):
             if site.proxy and site.enable_warcprox_features:
-                self.logger.info("sending PUTMETA request to warcprox with screenshot for {}".format(crawl_url))
-                self._putmeta(warcprox_address=site.proxy, url=crawl_url.url,
+                self.logger.info("sending PUTMETA request to warcprox with screenshot for {}".format(page))
+                self._putmeta(warcprox_address=site.proxy, url=page.url,
                         content_type="image/png", payload=screenshot_png)
 
-        self.logger.info("brozzling {}".format(crawl_url))
-        self._try_youtube_dl(ydl, site, crawl_url)
+        self.logger.info("brozzling {}".format(page))
+        self._try_youtube_dl(ydl, site, page)
 
-        crawl_url.outlinks = browser.browse_page(crawl_url.url,
+        page.outlinks = browser.browse_page(page.url,
                 on_screenshot=on_screenshot,
-                on_url_change=crawl_url.note_redirect)
+                on_url_change=page.note_redirect)
 
     def _brozzle_site(self, browser, ydl, site):
         start = time.time()
-        crawl_url = None
+        page = None
         try:
             browser.start(proxy=site.proxy)
             while not self._shutdown_requested.is_set() and time.time() - start < 60:
                 try:
-                    crawl_url = self._next_url(site)
-                    self._brozzle_page(browser, ydl, site, crawl_url)
-                    self._completed_url(site, crawl_url)
-                    crawl_url = None
+                    page = self._next_page(site)
+                    self._brozzle_page(browser, ydl, site, page)
+                    self._completed_page(site, page)
+                    page = None
                 except kombu.simple.Empty:
                     # if some timeout reached, re-raise?
                     pass
@@ -136,7 +136,7 @@ class BrozzlerWorker:
             self.logger.info("{} shut down".format(browser))
         finally:
             browser.stop()
-            self._disclaim_site(site, crawl_url)
+            self._disclaim_site(site, page)
             self._browser_pool.release(browser)
 
     def run(self):

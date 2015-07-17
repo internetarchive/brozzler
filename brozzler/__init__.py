@@ -1,5 +1,5 @@
 from brozzler.browser import Browser, BrowserPool
-from brozzler.site import CrawlUrl, Site
+from brozzler.site import Page, Site
 from brozzler.hq import BrozzlerHQ
 
 def _read_version():

@@ -62,7 +62,7 @@ class Site:
     def to_json(self):
         return json.dumps(self.to_dict(), separators=(',', ':'))
 
-class CrawlUrl:
+class Page:
     def __init__(self, url, id=None, site_id=None, hops_from_seed=0, outlinks=None, redirect_url=None):
         self.id = id
         self.site_id = site_id
@@ -73,7 +73,7 @@ class CrawlUrl:
         self.redirect_url = redirect_url
 
     def __repr__(self):
-        return """CrawlUrl(url="{}",site_id={},hops_from_seed={})""".format(
+        return """Page(url="{}",site_id={},hops_from_seed={})""".format(
                 self.url, self.site_id, self.hops_from_seed)
 
     def note_redirect(self, url):
