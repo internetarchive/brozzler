@@ -158,7 +158,7 @@ class BrozzlerHQ:
             for url in parent_page.outlinks:
                 if site.is_in_scope(url):
                     if site.is_permitted_by_robots(url):
-                        child_page = brozzler.Page(url, site_id=site.id, hops_from_seed=page.hops_from_seed+1)
+                        child_page = brozzler.Page(url, site_id=site.id, hops_from_seed=parent_page.hops_from_seed+1)
                         try:
                             self._db.update_page(child_page)
                             counts["updated"] += 1
