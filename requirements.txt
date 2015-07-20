@@ -1,7 +1,8 @@
 kombu
-websocket-client
 argparse
 PyYAML
 git+https://github.com/ikreymer/surt.git@py3
 youtube_dl
 git+https://github.com/seomoz/reppy.git
+# websocket-client
+git+https://github.com/nlevitt/websocket-client.git@tweaks
