@@ -36,8 +36,8 @@ class Site:
         self._robots_cache = reppy.cache.RobotsCache(session=req_sesh)
 
     def __repr__(self):
-        return """Site(seed="{}",scope_surt="{}",proxy="{}",enable_warcprox_features={},ignore_robots={},extra_headers={})""".format(
-                self.seed, self.scope_surt, self.proxy, self.enable_warcprox_features, self.ignore_robots, self.extra_headers)
+        return """Site(seed={},scope_surt={},proxy={},enable_warcprox_features={},ignore_robots={},extra_headers={})""".format(
+                repr(self.seed), repr(self.scope_surt), repr(self.proxy), self.enable_warcprox_features, self.ignore_robots, self.extra_headers)
 
     def note_seed_redirect(self, url):
         new_scope_surt = surt.surt(url, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)
@@ -77,8 +77,8 @@ class Page:
         self.redirect_url = redirect_url
 
     def __repr__(self):
-        return """Page(url="{}",site_id={},hops_from_seed={})""".format(
-                self.url, self.site_id, self.hops_from_seed)
+        return """Page(url={},site_id={},hops_from_seed={})""".format(
+                repr(self.url), self.site_id, self.hops_from_seed)
 
     def note_redirect(self, url):
         self.redirect_url = url

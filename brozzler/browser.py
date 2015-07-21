@@ -131,7 +131,7 @@ class Browser:
         self._outlinks = None
 
         self._websock = websocket.WebSocketApp(self._websocket_url,
-                on_open=self._visit_page, on_message=self._handle_message)
+                on_open=self._visit_page, on_message=self._wrap_handle_message)
 
         threadName = "WebsockThread{}-{}".format(self.chrome_port,
                 ''.join((random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(6))))
@@ -205,6 +205,12 @@ class Browser:
 
         # navigate to the page!
         self.send_to_chrome(method="Page.navigate", params={"url": self.url})
+
+    def _wrap_handle_message(self, websock, message):
+        try:
+            self._handle_message(websock, message)
+        except:
+            self.logger.error("uncaught exception in _handle_message", exc_info=True)
 
     def _handle_message(self, websock, message):
         # self.logger.debug("message from {} - {}".format(websock.url, message[:95]))

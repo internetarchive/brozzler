@@ -12,7 +12,7 @@ import signal
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description="brozzler-hq - headquarters of distributed brozzler crawl",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-arg_parser.add_argument("-d", "--db", dest="db_file", default="./brozzler-hq-0.db",
+arg_parser.add_argument("-d", "--db", dest="db_file", default="./brozzler-hq.db",
         help="sqlite3 database filename; if the file does not exist, it will be created")
 arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
         help='URL identifying the amqp server to talk to')

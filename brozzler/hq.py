@@ -11,7 +11,7 @@ import kombu.simple
 class BrozzlerHQDb:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, db_file="./brozzler-hq-0.db"):
+    def __init__(self, db_file="./brozzler-hq.db"):
         self._conn = sqlite3.connect(db_file)
         self._create_tables()
 

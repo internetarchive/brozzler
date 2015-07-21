@@ -26,9 +26,9 @@ class BrozzlerWorker:
     def _youtube_dl(self, site):
         ydl_opts = {
             "outtmpl": "/dev/null",
-            "verbose": False,
+            "verbose": True,
             "retries": 1,
-            "logger": self.logger,
+            "logger": logging.getLogger("youtube_dl"),
             "nocheckcertificate": True,
             "hls_prefer_native": True,
             "noprogress": True,
@@ -102,7 +102,7 @@ class BrozzlerWorker:
                         payload=info_json.encode("utf-8"),
                         extra_headers=site.extra_headers)
         except BaseException as e:
-            if youtube_dl.utils.UnsupportedError in e.exc_info:
+            if e.exc_info and youtube_dl.utils.UnsupportedError in e.exc_info:
                 pass
             else:
                 raise
@@ -116,7 +116,10 @@ class BrozzlerWorker:
                         extra_headers=site.extra_headers)
 
         self.logger.info("brozzling {}".format(page))
-        self._try_youtube_dl(ydl, site, page)
+        try:
+            self._try_youtube_dl(ydl, site, page)
+        except:
+            self.logger.error("youtube_dl raised unexpected exception on {}".format(page), exc_info=True)
 
         page.outlinks = browser.browse_page(page.url,
                 extra_headers=site.extra_headers,
