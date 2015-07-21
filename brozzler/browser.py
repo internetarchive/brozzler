@@ -191,6 +191,11 @@ class Browser:
         return msg_id
 
     def _visit_page(self, websock):
+        # navigate to about:blank here to avoid situation where we navigate to
+        # the same page that we're currently on, perhaps with a different
+        # #fragment, which prevents Page.loadEventFired from happening
+        self.send_to_chrome(method="Page.navigate", params={"url": "about:blank"})
+
         self.send_to_chrome(method="Network.enable")
         self.send_to_chrome(method="Page.enable")
         self.send_to_chrome(method="Console.enable")
