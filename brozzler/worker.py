@@ -34,7 +34,7 @@ class BrozzlerWorker:
             "noprogress": True,
             "nopart": True,
             "no_color": True,
-            "http_headers": site.extra_headers,
+            "extra_http_headers": site.extra_headers,
         }
         if site.proxy:
             ydl_opts["proxy"] = "http://{}".format(site.proxy)

@@ -1,6 +1,7 @@
 from brozzler.browser import Browser, BrowserPool
 from brozzler.site import Page, Site
 from brozzler.hq import BrozzlerHQ
+from brozzler.worker import BrozzlerWorker
 
 def _read_version():
     import os
