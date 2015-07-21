@@ -33,9 +33,10 @@ logging.basicConfig(stream=sys.stdout, level=args.log_level,
         format="%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
 
 extra_headers = {}
-for hh in args.extra_headers:
-    [k,v] = re.split(r":\s*", hh, 1)
-    extra_headers[k] = v
+if args.extra_headers:
+    for hh in args.extra_headers:
+        [k,v] = re.split(r":\s*", hh, 1)
+        extra_headers[k] = v
 
 site = brozzler.Site(seed=args.seed, proxy=args.proxy,
         time_limit=int(args.time_limit) if args.time_limit else None,
