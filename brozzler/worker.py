@@ -102,7 +102,7 @@ class BrozzlerWorker:
                         payload=info_json.encode("utf-8"),
                         extra_headers=site.extra_headers)
         except BaseException as e:
-            if e.exc_info and youtube_dl.utils.UnsupportedError in e.exc_info:
+            if hasattr(e, exc_info) and youtube_dl.utils.UnsupportedError in e.exc_info:
                 pass
             else:
                 raise
