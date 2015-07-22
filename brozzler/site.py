@@ -46,7 +46,11 @@ class Site:
             self.scope_surt = new_scope_surt
 
     def is_permitted_by_robots(self, url):
-        return self.ignore_robots or self._robots_cache.allowed(url, "brozzler")
+        try:
+            return self.ignore_robots or self._robots_cache.allowed(url, "brozzler")
+        except BaseException as e:
+            self.logger.error("problem with robots.txt for {}: {}".format(url, e))
+            return False
 
     def is_in_scope(self, url):
         try:
