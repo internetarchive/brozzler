@@ -14,9 +14,8 @@ import traceback
 import brozzler.worker
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
-        description='crawl-url - browse urls, follow links',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
+arg_parser.add_argument('-u', '--amqp-url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
         help='URL identifying the amqp server to talk to')
 arg_parser.add_argument('-e', '--executable', dest='chrome_exe', default='chromium-browser',
         help='executable to use to invoke chrome')

@@ -14,7 +14,7 @@ arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 arg_parser.add_argument("-d", "--db", dest="db_file", default="./brozzler-hq.db",
         help="sqlite3 database filename; if the file does not exist, it will be created")
-arg_parser.add_argument('-u', '--url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
+arg_parser.add_argument('-u', '--amqp-url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
         help='URL identifying the amqp server to talk to')
 arg_parser.add_argument("-v", "--verbose", dest="log_level",
         action="store_const", default=logging.INFO, const=logging.DEBUG)
