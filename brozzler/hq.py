@@ -20,6 +20,7 @@ class BrozzlerHQDb:
         cursor.executescript("""
             create table if not exists brozzler_sites (
                 id integer primary key,
+                status varchar(100) default 'ACTIVE',
                 site_json text
             );
 
@@ -27,6 +28,7 @@ class BrozzlerHQDb:
                 id integer primary key,
                 site_id integer,
                 priority integer,
+                brozzle_count integer default 0,
                 in_progress boolean,
                 canon_url varchar(4000),
                 page_json text
@@ -38,7 +40,7 @@ class BrozzlerHQDb:
 
     def pop_page(self, site_id):
         cursor = self._conn.cursor()
-        cursor.execute("select id, priority, page_json from brozzler_pages where site_id = ? and not in_progress order by priority desc limit 1", (site_id,))
+        cursor.execute("select id, priority, page_json from brozzler_pages where site_id=? and not in_progress and brozzle_count=0 order by priority desc limit 1", (site_id,))
         row = cursor.fetchone()
         if row:
             (id, priority, page_json) = row
@@ -54,7 +56,7 @@ class BrozzlerHQDb:
 
     def completed(self, page):
         cursor = self._conn.cursor()
-        cursor.execute("update brozzler_pages set in_progress=0 where id=?", (page.id,))
+        cursor.execute("update brozzler_pages set in_progress=0, brozzle_count=brozzle_count+1 where id=?", (page.id,))
         self._conn.commit()
 
     def new_site(self, site):
@@ -76,7 +78,7 @@ class BrozzlerHQDb:
 
     def sites(self):
         cursor = self._conn.cursor()
-        cursor.execute("select id, site_json from brozzler_sites")
+        cursor.execute("select id, site_json from brozzler_sites where status != 'FINISHED'")
         while True:
             row = cursor.fetchone()
             if row is None:
@@ -100,6 +102,27 @@ class BrozzlerHQDb:
             self._conn.commit()
         else:
             raise KeyError("page not in brozzler_pages site_id={} canon_url={}".format(page.site_id, page.canon_url()))
+
+    def in_progress_pages(self, site):
+        cursor = self._conn.cursor()
+        cursor.execute("select id, page_json from brozzler_pages where site_id = ? and in_progress", (site.id,))
+
+        pages = []
+        for row in cursor.fetchall():
+            (id, page_json) = row
+            page = brozzler.Page(**json.loads(page_json))
+            page.id = id
+            pages.append(page)
+
+        if len(pages) > 1:
+            self.logger.error("more than one page in progress for site?! shouldn't happen, violates politeness policy... site={}: pages={}".format(site, pages))
+
+        return pages
+
+    def set_status(self, site, status):
+        cursor = self._conn.cursor()
+        cursor.execute("update brozzler_sites set status=? where id=?", (status, site.id,))
+        self._conn.commit()
 
 class BrozzlerHQ:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -143,6 +166,10 @@ class BrozzlerHQ:
         except kombu.simple.Empty:
             pass
 
+    def _finished(self, site):
+        self.logger.info("site FINISHED! {}".format(site))
+        self._db.set_status(site, "FINISHED")
+
     def _feed_pages(self):
         for site in self._db.sites():
             q = self._conn.SimpleQueue("brozzler.sites.{}.pages".format(site.id))
@@ -151,6 +178,8 @@ class BrozzlerHQ:
                 if page:
                     self.logger.info("feeding {} to {}".format(page, q.queue.name))
                     q.put(page)
+                elif not self._db.in_progress_pages(site):
+                    self._finished(site)
 
     def _scope_and_schedule_outlinks(self, site, parent_page):
         counts = {"added":0,"updated":0,"rejected":0,"blocked":0}
