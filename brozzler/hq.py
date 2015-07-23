@@ -7,6 +7,8 @@ import sqlite3
 import time
 import kombu
 import kombu.simple
+import reppy.cache
+import requests
 
 class BrozzlerHQDb:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -146,6 +148,29 @@ class BrozzlerHQ:
             self._db = db
         else:
             self._db = BrozzlerHQDb()
+        self._robots_caches = {}  # {site_id:reppy.cache.RobotsCache}
+
+    def _robots_cache(self, site):
+        if not site.id in self._robots_caches:
+            req_sesh = requests.Session()
+            req_sesh.verify = False   # ignore cert errors
+            if site.proxy:
+                proxie = "http://{}".format(site.proxy)
+                req_sesh.proxies = {"http":proxie,"https":proxie}
+            if site.extra_headers:
+                req_sesh.headers.update(site.extra_headers)
+            self._robots_caches[site.id] = reppy.cache.RobotsCache(session=req_sesh)
+
+        return self._robots_caches[site.id]
+
+    def is_permitted_by_robots(self, site, url):
+        if site.ignore_robots:
+            return True
+        try:
+            return self._robots_cache(site).allowed(url, "brozzler")
+        except BaseException as e:
+            self.logger.error("problem with robots.txt for {}: {}".format(url, e))
+            return False
 
     def run(self):
         try:
@@ -184,7 +209,7 @@ class BrozzlerHQ:
             site_id = self._db.new_site(new_site)
             new_site.id = site_id
 
-            if new_site.is_permitted_by_robots(new_site.seed):
+            if self.is_permitted_by_robots(new_site, new_site.seed):
                 page = brozzler.Page(new_site.seed, site_id=new_site.id, hops_from_seed=0)
                 self._db.schedule_page(page, priority=1000)
                 self._unclaimed_sites_q.put(new_site.to_dict())
@@ -213,7 +238,7 @@ class BrozzlerHQ:
         if parent_page.outlinks:
             for url in parent_page.outlinks:
                 if site.is_in_scope(url):
-                    if site.is_permitted_by_robots(url):
+                    if self.is_permitted_by_robots(site, url):
                         child_page = brozzler.Page(url, site_id=site.id, hops_from_seed=parent_page.hops_from_seed+1)
                         try:
                             self._db.update_page(child_page)

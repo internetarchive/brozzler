@@ -3,8 +3,6 @@
 import surt
 import json
 import logging
-import requests
-import reppy.cache
 
 class Site:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -25,15 +23,6 @@ class Site:
         else:
             self.scope_surt = surt.surt(seed, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)
 
-        req_sesh = requests.Session()
-        req_sesh.verify = False   # ignore cert errors
-        if proxy:
-            proxie = "http://{}".format(proxy)
-            req_sesh.proxies = {"http":proxie,"https":proxie}
-        if extra_headers:
-            req_sesh.headers.update(extra_headers)
-        self._robots_cache = reppy.cache.RobotsCache(session=req_sesh)
-
     def __repr__(self):
         return """Site(seed={},scope_surt={},proxy={},enable_warcprox_features={},ignore_robots={},extra_headers={})""".format(
                 repr(self.seed), repr(self.scope_surt), repr(self.proxy), self.enable_warcprox_features, self.ignore_robots, self.extra_headers)
@@ -43,13 +32,6 @@ class Site:
         if not new_scope_surt.startswith(self.scope_surt):
             self.logger.info("changing site scope surt from {} to {}".format(self.scope_surt, new_scope_surt))
             self.scope_surt = new_scope_surt
-
-    def is_permitted_by_robots(self, url):
-        try:
-            return self.ignore_robots or self._robots_cache.allowed(url, "brozzler")
-        except BaseException as e:
-            self.logger.error("problem with robots.txt for {}: {}".format(url, e))
-            return False
 
     def is_in_scope(self, url):
         try:
