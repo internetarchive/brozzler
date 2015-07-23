@@ -57,18 +57,17 @@ class BrozzlerWorker:
     def _completed_page(self, site, page):
         with kombu.Connection(self._amqp_url) as conn:
             q = conn.SimpleQueue("brozzler.sites.{}.completed_pages".format(site.id))
-            self.logger.info("putting {} on queue {}".format(page, q.queue.name))
+            self.logger.info("feeding {} to {}".format(page, q.queue.name))
             q.put(page.to_dict())
 
     def _disclaim_site(self, site, page=None):
-        # XXX maybe should put on "disclaimed" queue and hq should put back on "unclaimed"
         with kombu.Connection(self._amqp_url) as conn:
-            q = conn.SimpleQueue("brozzler.sites.unclaimed".format(site.id))
-            self.logger.info("putting {} on queue {}".format(site, q.queue.name))
+            q = conn.SimpleQueue("brozzler.sites.disclaimed".format(site.id))
+            self.logger.info("feeding {} to {}".format(site, q.queue.name))
             q.put(site.to_dict())
             if page:
                 q = conn.SimpleQueue("brozzler.sites.{}.pages".format(site.id))
-                self.logger.info("putting unfinished page {} on queue {}".format(page, q.queue.name))
+                self.logger.info("feeding unfinished page {} to {}".format(page, q.queue.name))
                 q.put(page.to_dict())
 
     def _putmeta(self, warcprox_address, url, content_type, payload, extra_headers=None):

@@ -3,7 +3,6 @@
 import surt
 import json
 import logging
-import urllib.robotparser
 import requests
 import reppy.cache
 

@@ -124,6 +124,15 @@ class BrozzlerHQDb:
         cursor.execute("update brozzler_sites set status=? where id=?", (status, site.id,))
         self._conn.commit()
 
+    def get_status(self, site):
+        cursor = self._conn.cursor()
+        cursor.execute("select status from brozzler_sites where id=?", (site.id,))
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+        else:
+            raise KeyError("site not in brozzler_sites id={}".format(site.id,))
+
 class BrozzlerHQ:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
@@ -132,6 +141,7 @@ class BrozzlerHQ:
         self._conn = kombu.Connection(amqp_url)
         self._new_sites_q = self._conn.SimpleQueue("brozzler.sites.new")
         self._unclaimed_sites_q = self._conn.SimpleQueue("brozzler.sites.unclaimed")
+        self._disclaimed_sites_q = self._conn.SimpleQueue("brozzler.sites.disclaimed")
         if db != None:
             self._db = db
         else:
@@ -143,9 +153,26 @@ class BrozzlerHQ:
                 self._new_site()
                 self._consume_completed_page()
                 self._feed_pages()
+                self._disclaimed_site()
                 time.sleep(0.5)
         finally:
             self._conn.close()
+
+    def _disclaimed_site(self):
+        try:
+            msg = self._disclaimed_sites_q.get(block=False)
+            site = brozzler.Site(**msg.payload)
+            msg.ack()
+            self.logger.info("received disclaimed site {}".format(site))
+
+            status = self._db.get_status(site)
+            if status != "FINISHED":
+                self.logger.info("feeding disclaimed site {} back to {}".format(site, self._unclaimed_sites_q.queue.name))
+                self._unclaimed_sites_q.put(site.to_dict())
+            else:
+                self.logger.info("disclaimed site is FINISHED {}".format(site))
+        except kombu.simple.Empty:
+            pass
 
     def _new_site(self):
         try:
