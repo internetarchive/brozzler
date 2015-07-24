@@ -34,8 +34,9 @@ class BrozzlerWorker:
             "noprogress": True,
             "nopart": True,
             "no_color": True,
-            "extra_http_headers": site.extra_headers,
         }
+        if site.extra_headers:
+            ydl_opts["extra_http_headers"] = site.extra_headers
         if site.proxy:
             ydl_opts["proxy"] = "http://{}".format(site.proxy)
             ## XXX (sometimes?) causes chrome debug websocket to go through
