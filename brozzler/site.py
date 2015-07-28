@@ -21,21 +21,27 @@ class Site:
         if scope_surt:
             self.scope_surt = scope_surt
         else:
-            self.scope_surt = surt.surt(seed, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)
+            self.scope_surt = surt.GoogleURLCanonicalizer.canonicalize(surt.handyurl.parse(seed)).getURLString(surt=True, trailing_comma=True)
 
     def __repr__(self):
         return """Site(seed={},scope_surt={},proxy={},enable_warcprox_features={},ignore_robots={},extra_headers={})""".format(
                 repr(self.seed), repr(self.scope_surt), repr(self.proxy), self.enable_warcprox_features, self.ignore_robots, self.extra_headers)
 
     def note_seed_redirect(self, url):
-        new_scope_surt = surt.surt(url, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)
+        new_scope_surt = surt.GoogleURLCanonicalizer.canonicalize(surt.handyurl.parse(url)).getURLString(surt=True, trailing_comma=True)
         if not new_scope_surt.startswith(self.scope_surt):
             self.logger.info("changing site scope surt from {} to {}".format(self.scope_surt, new_scope_surt))
             self.scope_surt = new_scope_surt
 
     def is_in_scope(self, url):
         try:
-            surtt = surt.surt(url, canonicalizer=surt.GoogleURLCanonicalizer, trailing_comma=True)
+            hurl = surt.handyurl.parse(url)
+
+            # XXX doesn't belong here probably (where? worker ignores unknown schemes?)
+            if hurl.scheme != "http" and hurl.scheme != "https":
+                return False
+
+            surtt = surt.GoogleURLCanonicalizer.canonicalize(hurl).getURLString(surt=True, trailing_comma=True)
             return surtt.startswith(self.scope_surt)
         except:
             self.logger.warn("""problem parsing url "{}" """.format(url))
