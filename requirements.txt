@@ -3,7 +3,7 @@ argparse
 PyYAML
 git+https://github.com/ikreymer/surt.git@py3
 # youtube_dl
-git+https://github.com/nlevitt/youtube-dl.git@extra-http-headers
+git+https://github.com/nlevitt/youtube-dl.git@brozzler
 git+https://github.com/seomoz/reppy.git
 # websocket-client
 git+https://github.com/nlevitt/websocket-client.git@tweaks
