@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+# vim: set sw=4 et:
+
+import argparse
+import os
+import sys
+import logging
+import brozzler
+import kombu
+import re
+
+arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
+        description="brozzle-page - brozzle a single page",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+arg_parser.add_argument('url', metavar='URL', help='page url')
+arg_parser.add_argument('-e', '--executable', dest='chrome_exe', default='chromium-browser',
+        help='executable to use to invoke chrome')
+arg_parser.add_argument("--proxy", dest="proxy", default=None, help="http proxy for this site")
+arg_parser.add_argument("-H", "--extra-header", action="append",
+        dest="extra_headers", default=None, help="extra http header to send with every request for this site (may be used multiple times)")
+arg_parser.add_argument('--enable-warcprox-features', dest='enable_warcprox_features',
+                action='store_true', help='enable special features for this site that assume the configured proxy is warcprox')
+arg_parser.add_argument("-v", "--verbose", dest="log_level",
+        action="store_const", default=logging.INFO, const=logging.DEBUG)
+arg_parser.add_argument("--version", action="version",
+        version="brozzler {} - {}".format(brozzler.version, os.path.basename(__file__)))
+args = arg_parser.parse_args(args=sys.argv[1:])
+
+logging.basicConfig(stream=sys.stdout, level=args.log_level,
+        format="%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
+
+extra_headers = {}
+if args.extra_headers:
+    for hh in args.extra_headers:
+        [k,v] = re.split(r":\s*", hh, 1)
+        extra_headers[k] = v
+
+site = brozzler.Site(id=-1, seed=args.url, proxy=args.proxy,
+        enable_warcprox_features=args.enable_warcprox_features,
+        extra_headers=extra_headers)
+page = brozzler.Page(url=args.url, site_id=site.id)
+worker = brozzler.BrozzlerWorker()
+ydl = worker._youtube_dl(site)
+
+with brozzler.Browser(chrome_exe=args.chrome_exe) as browser:
+    worker.brozzle_page(browser, ydl, site, page)

@@ -142,7 +142,11 @@ class Browser:
 
         try:
             while True:
+                before_sleep = time.time()
                 time.sleep(0.5)
+                after_sleep = time.time()
+                if after_sleep - before_sleep > 1:
+                    self.logger.warn("slept for %d seconds?!?!?! (should have been ~0.5)", (after_sleep - before_sleep))
                 if self._browse_interval_func():
                     return self._outlinks
         finally:
@@ -320,7 +324,7 @@ class Chrome:
 
         while True:
             try:
-                raw_json = urllib.request.urlopen(json_url).read()
+                raw_json = urllib.request.urlopen(json_url, timeout=30).read()
                 all_debug_info = json.loads(raw_json.decode('utf-8'))
                 debug_info = [x for x in all_debug_info if x['url'] == 'about:blank']
 
@@ -329,7 +333,8 @@ class Chrome:
                     url = debug_info[0]['webSocketDebuggerUrl']
                     self.logger.info('got chrome window websocket debug url {} from {}'.format(url, json_url))
                     return url
-            except:
+            except BaseException as e:
+                self.logger.warn("problem with %s (will keep trying until timeout of %d seconds): %s", json_url, timeout_sec, e)
                 pass
             finally:
                 if time.time() - self._start > timeout_sec:

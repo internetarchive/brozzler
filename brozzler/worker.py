@@ -104,10 +104,11 @@ class BrozzlerWorker:
         except BaseException as e:
             if hasattr(e, "exc_info") and youtube_dl.utils.UnsupportedError in e.exc_info:
                 pass
+            # elif hasattr(e, "exc_info") and youtube_dl.utils.UnsupportedError in e.exc_info:
             else:
                 raise
 
-    def _brozzle_page(self, browser, ydl, site, page):
+    def brozzle_page(self, browser, ydl, site, page):
         def on_screenshot(screenshot_png):
             if site.proxy and site.enable_warcprox_features:
                 self.logger.info("sending PUTMETA request to warcprox with screenshot for {}".format(page))
@@ -134,7 +135,7 @@ class BrozzlerWorker:
             while not self._shutdown_requested.is_set() and time.time() - start < 60:
                 try:
                     page = self._next_page(site)
-                    self._brozzle_page(browser, ydl, site, page)
+                    self.brozzle_page(browser, ydl, site, page)
                     self._completed_page(site, page)
                     page = None
                 except kombu.simple.Empty:
