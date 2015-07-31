@@ -46,10 +46,11 @@ class AmqpBrowserController:
 
     def __init__(self, amqp_url='amqp://guest:guest@localhost:5672/%2f',
             chrome_exe='chromium-browser', max_active_browsers=1, 
-            queue_name='urls', exchange_name='umbra'):
+            queue_name='urls', exchange_name='umbra', routing_key='urls'):
         self.amqp_url = amqp_url
         self.queue_name = queue_name
         self.exchange_name = exchange_name
+        self.routing_key = routing_key
         self.max_active_browsers = max_active_browsers
 
         self._browser_pool = BrowserPool(size=max_active_browsers, chrome_exe=chrome_exe)
@@ -153,7 +154,7 @@ class AmqpBrowserController:
         # reopen the connection every 2.5 hours
         RECONNECT_AFTER_SECONDS = 150 * 60
 
-        url_queue = kombu.Queue(self.queue_name, exchange=self._exchange)
+        url_queue = kombu.Queue(self.queue_name, exchange=self._exchange, routing_key=self.routing_key)
 
         while not self._consumer_stop.is_set():
             try:

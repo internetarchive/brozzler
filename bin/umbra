@@ -26,6 +26,8 @@ if __name__ == "__main__":
             help='AMQP exchange name')
     arg_parser.add_argument('--queue', dest='amqp_queue', default='urls',
             help='AMQP queue to consume urls from')
+    arg_parser.add_argument('--routing-key', dest='amqp_routing_key', default='urls',
+            help='AMQP routing key to assign to AMQP queue of urls')
     arg_parser.add_argument('-n', '--max-browsers', dest='max_browsers', default='1',
             help='Max number of chrome instances simultaneously browsing pages')
     arg_parser.add_argument('-v', '--verbose', dest='log_level',
@@ -41,7 +43,8 @@ if __name__ == "__main__":
 
     controller = umbra.Umbra(args.amqp_url, args.chrome_exe, 
             max_active_browsers=int(args.max_browsers),
-            exchange_name=args.amqp_exchange, queue_name=args.amqp_queue)
+            exchange_name=args.amqp_exchange, queue_name=args.amqp_queue,
+            routing_key=args.amqp_routing_key)
 
     def browserdump_str(pp, b):
         x = []
