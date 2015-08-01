@@ -155,8 +155,16 @@ class BrozzlerHQ:
         self._robots_caches = {}  # {site_id:reppy.cache.RobotsCache}
 
     def _robots_cache(self, site):
+        class SessionRaiseOn420(requests.Session):
+            def get(self, url, **kwargs):
+                res = super().get(url, **kwargs)
+                if res.status_code == 420 and 'warcprox-meta' in res.headers:
+                    raise brozzler.ReachedLimit(warcprox_meta=json.loads(res.headers['warcprox-meta']), http_payload=res.text)
+                else:
+                    return response
+
         if not site.id in self._robots_caches:
-            req_sesh = requests.Session()
+            req_sesh = SessionRaiseOn420()
             req_sesh.verify = False   # ignore cert errors
             if site.proxy:
                 proxie = "http://{}".format(site.proxy)
@@ -171,10 +179,16 @@ class BrozzlerHQ:
         if site.ignore_robots:
             return True
         try:
-            return self._robots_cache(site).allowed(url, "brozzler")
+            self.logger.info("checking robots for %s", url)
+            result = self._robots_cache(site).allowed(url, "brozzler")
+            self.logger.info("robots allowed=%s for %s", result, url)
+            return result
         except BaseException as e:
-            self.logger.error("problem with robots.txt for {}: {}".format(url, e))
-            return False
+            if isinstance(e, reppy.exceptions.ServerError) and isinstance(e.args[0], brozzler.ReachedLimit):
+                raise e.args[0]
+            else:
+                self.logger.error("problem with robots.txt for {}: {}".format(url, e))
+                return False
 
     def run(self):
         try:
@@ -209,19 +223,23 @@ class BrozzlerHQ:
     def _new_site(self):
         try:
             msg = self._new_sites_q.get(block=False)
-            new_site = brozzler.Site(**msg.payload)
+            site = brozzler.Site(**msg.payload)
             msg.ack()
 
-            self.logger.info("new site {}".format(new_site))
-            site_id = self._db.new_site(new_site)
-            new_site.id = site_id
+            self.logger.info("new site {}".format(site))
+            site_id = self._db.new_site(site)
+            site.id = site_id
 
-            if self.is_permitted_by_robots(new_site, new_site.seed):
-                page = brozzler.Page(new_site.seed, site_id=new_site.id, hops_from_seed=0)
-                self._db.schedule_page(page, priority=1000)
-                self._unclaimed_sites_q.put(new_site.to_dict())
-            else:
-                self.logger.warn("seed url {} is blocked by robots.txt".format(new_site.seed))
+            try:
+                if self.is_permitted_by_robots(site, site.seed):
+                    page = brozzler.Page(site.seed, site_id=site.id, hops_from_seed=0)
+                    self._db.schedule_page(page, priority=1000)
+                    self._unclaimed_sites_q.put(site.to_dict())
+                else:
+                    self.logger.warn("seed url {} is blocked by robots.txt".format(site.seed))
+            except brozzler.ReachedLimit as e:
+                site.note_limit_reached(e)
+                self._db.update_site(site)
         except kombu.simple.Empty:
             pass
 

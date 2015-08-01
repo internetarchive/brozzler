@@ -238,7 +238,7 @@ class Browser:
         if (not self._reached_limit
                 and message["params"]["response"]["status"] == 420
                 and "Warcprox-Meta" in CaseInsensitiveDict(message["params"]["response"]["headers"])):
-            warcprox_meta = json.loads(message["params"]["response"]["headers"]["Warcprox-Meta"])
+            warcprox_meta = json.loads(CaseInsensitiveDict(message["params"]["response"]["headers"])["Warcprox-Meta"])
             self._reached_limit = brozzler.ReachedLimit(warcprox_meta=warcprox_meta)
             self.logger.info("reached limit %s", self._reached_limit)
 

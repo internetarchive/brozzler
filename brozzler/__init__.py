@@ -17,7 +17,7 @@ class ShutdownRequested(Exception):
     pass
 
 class ReachedLimit(Exception):
-    def __init__(self, http_error=None, warcprox_meta=None):
+    def __init__(self, http_error=None, warcprox_meta=None, http_payload=None):
         if http_error:
             if "warcprox-meta" in http_error.headers:
                 self.warcprox_meta = _json.loads(http_error.headers["warcprox-meta"])
@@ -26,7 +26,7 @@ class ReachedLimit(Exception):
             self.http_payload = http_error.read()
         elif warcprox_meta:
             self.warcprox_meta = warcprox_meta
-            self.http_payload = None
+            self.http_payload = http_payload
 
     def __repr__(self):
         return "ReachedLimit(warcprox_meta={},http_payload={})".format(repr(self.warcprox_meta), repr(self.http_payload))
