@@ -69,7 +69,11 @@ class BrozzlerHQDb:
 
     def update_site(self, site):
         cursor = self._conn.cursor()
-        cursor.execute("update brozzler_sites set site_json=? where id=?", (site.to_json(), site.id))
+        if site.reached_limit:
+            self.logger.info("setting status=FINISHED_REACHED_LIMIT because site.reached_limit=%s", site.reached_limit)
+            cursor.execute("update brozzler_sites set status=?, site_json=? where id=?", ("FINISHED_REACHED_LIMIT", site.to_json(), site.id))
+        else:
+            cursor.execute("update brozzler_sites set site_json=? where id=?", (site.to_json(), site.id))
         self._conn.commit()
 
     def schedule_page(self, page, priority=0):
@@ -80,7 +84,7 @@ class BrozzlerHQDb:
 
     def sites(self):
         cursor = self._conn.cursor()
-        cursor.execute("select id, site_json from brozzler_sites where status != 'FINISHED'")
+        cursor.execute("select id, site_json from brozzler_sites where status not like 'FINISHED%'")
         while True:
             row = cursor.fetchone()
             if row is None:
@@ -186,16 +190,19 @@ class BrozzlerHQ:
     def _disclaimed_site(self):
         try:
             msg = self._disclaimed_sites_q.get(block=False)
+            self.logger.info("msg.payload=%s", msg.payload)
             site = brozzler.Site(**msg.payload)
+            self.logger.info("site=%s", site)
+            self._db.update_site(site)
             msg.ack()
             self.logger.info("received disclaimed site {}".format(site))
 
             status = self._db.get_status(site)
-            if status != "FINISHED":
+            if not status.startswith("FINISHED"):
                 self.logger.info("feeding disclaimed site {} back to {}".format(site, self._unclaimed_sites_q.queue.name))
                 self._unclaimed_sites_q.put(site.to_dict())
             else:
-                self.logger.info("disclaimed site is FINISHED {}".format(site))
+                self.logger.info("disclaimed site is %s %s", status, site)
         except kombu.simple.Empty:
             pass
 

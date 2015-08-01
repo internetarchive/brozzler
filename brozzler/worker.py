@@ -7,7 +7,6 @@ import threading
 import time
 import signal
 import kombu
-import brozzler.hq
 import youtube_dl
 import urllib.request
 import json
@@ -102,9 +101,12 @@ class BrozzlerWorker:
                         payload=info_json.encode("utf-8"),
                         extra_headers=site.extra_headers)
         except BaseException as e:
-            if hasattr(e, "exc_info") and youtube_dl.utils.UnsupportedError in e.exc_info:
+            if hasattr(e, "exc_info") and e.exc_info[0] == youtube_dl.utils.UnsupportedError:
                 pass
-            # elif hasattr(e, "exc_info") and youtube_dl.utils.UnsupportedError in e.exc_info:
+            elif (hasattr(e, "exc_info") and e.exc_info[0] ==
+                    urllib.error.HTTPError and hasattr(e.exc_info[1], "code")
+                    and e.exc_info[1].code == 420):
+                raise brozzler.ReachedLimit(e.exc_info[1])
             else:
                 raise
 
@@ -119,8 +121,10 @@ class BrozzlerWorker:
         self.logger.info("brozzling {}".format(page))
         try:
             self._try_youtube_dl(ydl, site, page)
+        except brozzler.ReachedLimit as e:
+            raise
         except:
-            self.logger.error("youtube_dl raised unexpected exception on {}".format(page), exc_info=True)
+            self.logger.error("youtube_dl raised exception on {}".format(page), exc_info=True)
 
         page.outlinks = browser.browse_page(page.url,
                 extra_headers=site.extra_headers,
@@ -143,6 +147,8 @@ class BrozzlerWorker:
                     pass
         # except kombu.simple.Empty:
         #     self.logger.info("finished {} (queue is empty)".format(site))
+        except brozzler.ReachedLimit as e:
+            site.note_limit_reached(e)
         except brozzler.browser.BrowsingAborted:
             self.logger.info("{} shut down".format(browser))
         finally:

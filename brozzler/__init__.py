@@ -1,3 +1,4 @@
+import json as _json
 from brozzler.browser import Browser, BrowserPool
 from brozzler.site import Page, Site
 from brozzler.hq import BrozzlerHQ
@@ -14,5 +15,19 @@ version = _read_version()
 
 class ShutdownRequested(Exception):
     pass
+
+class ReachedLimit(Exception):
+    def __init__(self, http_error):
+        if "warcprox-meta" in http_error.headers:
+            self.warcprox_meta = _json.loads(http_error.headers["warcprox-meta"])
+        else:
+            self.warcprox_meta = None
+        self.http_payload = http_error.read()
+
+    def __repr__(self):
+        return "ReachedLimit(warcprox_meta={},http_payload={})".format(repr(self.warcprox_meta), repr(self.http_payload))
+
+    def __str__(self):
+        return self.__repr__()
 
 # vim: set sw=4 et:
