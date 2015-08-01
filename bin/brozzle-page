@@ -42,8 +42,11 @@ page = brozzler.Page(url=args.url, site_id=site.id)
 worker = brozzler.BrozzlerWorker()
 ydl = worker._youtube_dl(site)
 
-with brozzler.Browser(chrome_exe=args.chrome_exe) as browser:
-    try:
-        worker.brozzle_page(browser, ydl, site, page)
-    except brozzler.ReachedLimit as e:
-        logging.error("reached limit %s", e)
+browser = brozzler.Browser(chrome_exe=args.chrome_exe)
+browser.start(proxy=site.proxy)
+try:
+    worker.brozzle_page(browser, ydl, site, page)
+except brozzler.ReachedLimit as e:
+    logging.error("reached limit %s", e)
+finally:
+    browser.stop()

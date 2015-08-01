@@ -15,7 +15,9 @@ import os
 import socket
 import base64
 import random
+import brozzler
 from brozzler.behaviors import Behavior
+from requests.structures import CaseInsensitiveDict
 
 class BrowserPool:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -129,6 +131,7 @@ class Browser:
         self._waiting_on_document_url_msg_id = None
         self._waiting_on_outlinks_msg_id = None
         self._outlinks = None
+        self._reached_limit = None
 
         self._websock = websocket.WebSocketApp(self._websocket_url,
                 on_open=self._visit_page, on_message=self._wrap_handle_message)
@@ -182,6 +185,8 @@ class Browser:
         elif time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
             self.logger.info("finished browsing page, reached hard timeout of {} seconds url={}".format(Browser.HARD_TIMEOUT_SECONDS, self.url))
             return True
+        elif self._reached_limit:
+            raise self._reached_limit
         elif self._abort_browse_page:
             raise BrowsingAborted("browsing page aborted")
 
@@ -221,56 +226,80 @@ class Browser:
         except:
             self.logger.error("uncaught exception in _handle_message", exc_info=True)
 
+    def _network_request_will_be_sent(self, message):
+        if self._behavior:
+            self._behavior.notify_of_activity()
+        if message["params"]["request"]["url"].lower().startswith("data:"):
+            self.logger.debug("ignoring data url {}".format(message["params"]["request"]["url"][:80]))
+        elif self.on_request:
+            self.on_request(message)
+
+    def _network_response_received(self, message):
+        if (not self._reached_limit
+                and message["params"]["response"]["status"] == 420
+                and "Warcprox-Meta" in CaseInsensitiveDict(message["params"]["response"]["headers"])):
+            warcprox_meta = json.loads(message["params"]["response"]["headers"]["Warcprox-Meta"])
+            self._reached_limit = brozzler.ReachedLimit(warcprox_meta=warcprox_meta)
+            self.logger.info("reached limit %s", self._reached_limit)
+
+    def _page_load_event_fired(self, message):
+        self.logger.info("Page.loadEventFired, requesting screenshot url={} message={}".format(self.url, message))
+        self._waiting_on_screenshot_msg_id = self.send_to_chrome(method="Page.captureScreenshot")
+        self._waiting_on_document_url_msg_id = self.send_to_chrome(method="Runtime.evaluate", params={"expression":"document.URL"})
+
+    def _console_message_added(self, message):
+        self.logger.debug("%s console.%s %s", self._websock.url,
+                message["params"]["message"]["level"],
+                message["params"]["message"]["text"])
+
+    def _debugger_paused(self, message):
+        # We hit the breakpoint set in visit_page. Get rid of google
+        # analytics script!
+        self.logger.debug("debugger paused! message={}".format(message))
+        scriptId = message['params']['callFrames'][0]['location']['scriptId']
+
+        # replace script
+        self.send_to_chrome(method="Debugger.setScriptSource", params={"scriptId": scriptId, "scriptSource":"console.log('google analytics is no more!');"})
+
+        # resume execution
+        self.send_to_chrome(method="Debugger.resume")
+
+    def _handle_result_message(self, message):
+        if message["id"] == self._waiting_on_screenshot_msg_id:
+            if self.on_screenshot:
+                self.on_screenshot(base64.b64decode(message["result"]["data"]))
+            self._waiting_on_screenshot_msg_id = None
+
+            self.logger.info("got screenshot, moving on to starting behaviors url={}".format(self.url))
+            self._behavior = Behavior(self.url, self)
+            self._behavior.start()
+        elif message["id"] == self._waiting_on_outlinks_msg_id:
+            self.logger.debug("got outlinks message=%s", message)
+            self._outlinks = frozenset(message["result"]["result"]["value"].split(" "))
+        elif message["id"] == self._waiting_on_document_url_msg_id:
+            if message["result"]["result"]["value"] != self.url:
+                if self.on_url_change:
+                    self.on_url_change(message["result"]["result"]["value"])
+            self._waiting_on_document_url_msg_id = None
+        elif self._behavior and self._behavior.is_waiting_on_result(message["id"]):
+            self._behavior.notify_of_result(message)
+
     def _handle_message(self, websock, message):
         # self.logger.debug("message from {} - {}".format(websock.url, message[:95]))
         # self.logger.debug("message from {} - {}".format(websock.url, message))
         message = json.loads(message)
         if "method" in message and message["method"] == "Network.requestWillBeSent":
-            if self._behavior:
-                self._behavior.notify_of_activity()
-            if message["params"]["request"]["url"].lower().startswith("data:"):
-                self.logger.debug("ignoring data url {}".format(message["params"]["request"]["url"][:80]))
-            elif self.on_request:
-                self.on_request(message)
+            self._network_request_will_be_sent(message)
+        elif "method" in message and message["method"] == "Network.responseReceived":
+            self._network_response_received(message)
         elif "method" in message and message["method"] == "Page.loadEventFired":
-            self.logger.info("Page.loadEventFired, requesting screenshot url={} message={}".format(self.url, message))
-            self._waiting_on_screenshot_msg_id = self.send_to_chrome(method="Page.captureScreenshot")
-            self._waiting_on_document_url_msg_id = self.send_to_chrome(method="Runtime.evaluate", params={"expression":"document.URL"})
+            self._page_load_event_fired(message)
         elif "method" in message and message["method"] == "Console.messageAdded":
-            self.logger.debug("{} console.{} {}".format(websock.url,
-                message["params"]["message"]["level"],
-                message["params"]["message"]["text"]))
+            self._console_message_added(message)
         elif "method" in message and message["method"] == "Debugger.paused":
-            # We hit the breakpoint set in visit_page. Get rid of google
-            # analytics script!
-            self.logger.debug("debugger paused! message={}".format(message))
-            scriptId = message['params']['callFrames'][0]['location']['scriptId']
-
-            # replace script
-            self.send_to_chrome(method="Debugger.setScriptSource", params={"scriptId": scriptId, "scriptSource":"console.log('google analytics is no more!');"})
-
-            # resume execution
-            self.send_to_chrome(method="Debugger.resume")
+            self._debugger_paused(message)
         elif "result" in message:
-            if message["id"] == self._waiting_on_screenshot_msg_id:
-                if self.on_screenshot:
-                    self.on_screenshot(base64.b64decode(message["result"]["data"]))
-                self._waiting_on_screenshot_msg_id = None
-
-                self.logger.info("got screenshot, moving on to starting behaviors url={}".format(self.url))
-                self._behavior = Behavior(self.url, self)
-                self._behavior.start()
-            elif message["id"] == self._waiting_on_outlinks_msg_id:
-                self.logger.debug("got outlinks message={}".format(message))
-                # {'result': {'wasThrown': False, 'result': {'value': 'https://archive-it.org/cgi-bin/dedup-test/change_every_second https://archive-it.org/cgi-bin/dedup-test/change_every_minute https://archive-it.org/cgi-bin/dedup-test/change_every_10minutes https://archive-it.org/cgi-bin/dedup-test/change_every_hour https://archive-it.org/cgi-bin/dedup-test/change_every_day https://archive-it.org/cgi-bin/dedup-test/change_every_month https://archive-it.org/cgi-bin/dedup-test/change_every_year https://archive-it.org/cgi-bin/dedup-test/change_never http://validator.w3.org/check?uri=referer', 'type': 'string'}}, 'id': 32}
-                self._outlinks = frozenset(message["result"]["result"]["value"].split(" "))
-            elif message["id"] == self._waiting_on_document_url_msg_id:
-                if message["result"]["result"]["value"] != self.url:
-                    if self.on_url_change:
-                        self.on_url_change(message["result"]["result"]["value"])
-                self._waiting_on_document_url_msg_id = None
-            elif self._behavior and self._behavior.is_waiting_on_result(message["id"]):
-                self._behavior.notify_of_result(message)
+            self._handle_result_message(message)
         # elif "method" in message and message["method"] in ("Network.dataReceived", "Network.responseReceived", "Network.loadingFinished"):
         #     pass
         # elif "method" in message:
