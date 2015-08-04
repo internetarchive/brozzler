@@ -8,34 +8,32 @@ import brozzler
 class Site:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, seed, id=None, scope_surt=None, proxy=None,
-        ignore_robots=False, time_limit=None, extra_headers=None,
+    def __init__(self, seed, id=None, scope=None, proxy=None,
+        ignore_robots=False, extra_headers=None,
         enable_warcprox_features=False, reached_limit=None):
         self.seed = seed
         self.id = id
         self.proxy = proxy
         self.ignore_robots = ignore_robots
-        self.enable_warcprox_features = enable_warcprox_features
-        self.time_limit = time_limit
+        self.enable_warcprox_features = bool(enable_warcprox_features)
         self.extra_headers = extra_headers
         self.reached_limit = reached_limit
 
-        if scope_surt:
-            self.scope_surt = scope_surt
-        else:
-            self.scope_surt = surt.GoogleURLCanonicalizer.canonicalize(surt.handyurl.parse(seed)).getURLString(surt=True, trailing_comma=True)
+        self.scope = scope or {}
+        if not "surt" in scope:
+            self.scope["surt"] = surt.GoogleURLCanonicalizer.canonicalize(surt.handyurl.parse(seed)).getURLString(surt=True, trailing_comma=True)
 
     def __repr__(self):
-        return """Site(id={},seed={},scope_surt={},proxy={},enable_warcprox_features={},ignore_robots={},extra_headers={},reached_limit={})""".format(
-                self.id, repr(self.seed), repr(self.scope_surt),
+        return """Site(id={},seed={},scope={},proxy={},enable_warcprox_features={},ignore_robots={},extra_headers={},reached_limit={})""".format(
+                self.id, repr(self.seed), repr(self.scope),
                 repr(self.proxy), self.enable_warcprox_features,
                 self.ignore_robots, self.extra_headers, self.reached_limit)
 
     def note_seed_redirect(self, url):
         new_scope_surt = surt.GoogleURLCanonicalizer.canonicalize(surt.handyurl.parse(url)).getURLString(surt=True, trailing_comma=True)
-        if not new_scope_surt.startswith(self.scope_surt):
-            self.logger.info("changing site scope surt from {} to {}".format(self.scope_surt, new_scope_surt))
-            self.scope_surt = new_scope_surt
+        if not new_scope_surt.startswith(self.scope["surt"]):
+            self.logger.info("changing site scope surt from {} to {}".format(self.scope["surt"], new_scope_surt))
+            self.scope["surt"] = new_scope_surt
 
     def note_limit_reached(self, e):
         self.logger.info("reached_limit e=%s", e)
@@ -55,7 +53,7 @@ class Site:
                 return False
 
             surtt = surt.GoogleURLCanonicalizer.canonicalize(hurl).getURLString(surt=True, trailing_comma=True)
-            return surtt.startswith(self.scope_surt)
+            return surtt.startswith(self.scope["surt"])
         except:
             self.logger.warn("""problem parsing url "{}" """.format(url))
             return False

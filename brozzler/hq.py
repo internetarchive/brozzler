@@ -161,7 +161,7 @@ class BrozzlerHQ:
                 if res.status_code == 420 and 'warcprox-meta' in res.headers:
                     raise brozzler.ReachedLimit(warcprox_meta=json.loads(res.headers['warcprox-meta']), http_payload=res.text)
                 else:
-                    return response
+                    return res
 
         if not site.id in self._robots_caches:
             req_sesh = SessionRaiseOn420()
