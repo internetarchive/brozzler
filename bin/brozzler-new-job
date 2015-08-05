@@ -62,6 +62,7 @@ for seed_conf in seeds:
         extra_headers = {"Warcprox-Meta":warcprox_meta}
     site = brozzler.Site(seed=merged_conf["url"],
             scope=merged_conf.get("scope"),
+            time_limit=merged_conf.get("time_limit"),
             proxy=merged_conf.get("proxy"),
             ignore_robots=merged_conf.get("ignore_robots"),
             enable_warcprox_features=merged_conf.get("enable_warcprox_features"),

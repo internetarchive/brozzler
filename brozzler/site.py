@@ -9,7 +9,7 @@ class Site:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
     def __init__(self, seed, id=None, scope=None, proxy=None,
-        ignore_robots=False, extra_headers=None,
+        ignore_robots=False, time_limit=None, extra_headers=None,
         enable_warcprox_features=False, reached_limit=None):
         self.seed = seed
         self.id = id
@@ -17,6 +17,7 @@ class Site:
         self.ignore_robots = ignore_robots
         self.enable_warcprox_features = bool(enable_warcprox_features)
         self.extra_headers = extra_headers
+        self.time_limit = time_limit
         self.reached_limit = reached_limit
 
         self.scope = scope or {}

@@ -168,7 +168,7 @@ class BrozzlerWorker:
             self.logger.info("brozzling site {}".format(site))
             ydl = self._youtube_dl(site)
             th = threading.Thread(target=lambda: self._brozzle_site(browser, ydl, site),
-                    name="BrowsingThread-{}".format(site.scope_surt))
+                    name="BrowsingThread-{}".format(site.seed))
             th.start()
         except:
             self._browser_pool.release(browser)
@@ -196,7 +196,7 @@ class BrozzlerWorker:
 
                     if q_empty:
                         if latest_state != "no-unclaimed-sites":
-                            self.logger.info("no unclaimed sites to browse")
+                            # self.logger.info("no unclaimed sites to browse")
                             latest_state = "no-unclaimed-sites"
                 time.sleep(0.5)
             except OSError as e:
