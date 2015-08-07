@@ -18,6 +18,8 @@ import random
 import brozzler
 from brozzler.behaviors import Behavior
 from requests.structures import CaseInsensitiveDict
+import select
+import re
 
 class BrowserPool:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -317,6 +319,7 @@ class Chrome:
         self.user_data_dir = user_data_dir
         self.proxy = proxy
         self.ignore_cert_errors = ignore_cert_errors
+        self._shutdown = threading.Event()
 
     # returns websocket url to chrome window with about:blank loaded
     def __enter__(self):
@@ -345,7 +348,12 @@ class Chrome:
             chrome_args.append("--proxy-server={}".format(self.proxy))
         chrome_args.append("about:blank")
         self.logger.info("running: {}".format(" ".join(chrome_args)))
-        self.chrome_process = subprocess.Popen(chrome_args, env=new_env, start_new_session=True)
+        self.chrome_process = subprocess.Popen(chrome_args, env=new_env,
+                start_new_session=True, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, bufsize=0)
+        self._out_reader_thread = threading.Thread(target=self._read_stderr_stdout,
+                name="ChromeOutReaderThread(pid={})".format(self.chrome_process.pid))
+        self._out_reader_thread.start()
         self.logger.info("chrome running, pid {}".format(self.chrome_process.pid))
         self._start = time.time()   # member variable just so that kill -QUIT reports it
 
@@ -363,16 +371,46 @@ class Chrome:
                     self.logger.info('got chrome window websocket debug url {} from {}'.format(url, json_url))
                     return url
             except BaseException as e:
-                self.logger.warn("problem with %s (will keep trying until timeout of %d seconds): %s", json_url, timeout_sec, e)
+                if int(time.time() - self._start) % 10 == 5:
+                    self.logger.warn("problem with %s (will keep trying until timeout of %d seconds): %s", json_url, timeout_sec, e)
                 pass
             finally:
                 if time.time() - self._start > timeout_sec:
-                    raise Exception("failed to retrieve {} after {} seconds".format(json_url, time.time() - self._start))
+                    self.logger.error("killing chrome, failed to retrieve %s after %s seconds", json_url, time.time() - self._start)
+                    self.stop()
+                    raise Exception("killed chrome, failed to retrieve {} after {} seconds".format(json_url, time.time() - self._start))
                 else:
                     time.sleep(0.5)
 
+    def _read_stderr_stdout(self):
+        # XXX select doesn't work on windows
+        def readline_nonblock(f):
+            buf = b""
+            while (len(buf) == 0 or buf[-1] != 0xa) and select.select([f],[],[],0.1)[0]:
+                buf += f.read(1)
+            return buf
+
+        try:
+            while not self._shutdown.is_set():
+                buf = readline_nonblock(self.chrome_process.stdout)
+                if buf:
+                    if re.search(b"Xlib:  extension|CERT_PKIXVerifyCert for [^ ]* failed|^ALSA lib|ERROR:gl_surface_glx.cc|ERROR:gpu_child_thread.cc", buf):
+                        logging.debug("chrome pid %s STDERR %s", self.chrome_process.pid, buf)
+                    else:
+                        logging.warn("chrome pid %s STDERR %s", self.chrome_process.pid, buf)
+
+                buf = readline_nonblock(self.chrome_process.stderr)
+                if buf:
+                    if re.search(b"Xlib:  extension|CERT_PKIXVerifyCert for [^ ]* failed|^ALSA lib|ERROR:gl_surface_glx.cc|ERROR:gpu_child_thread.cc", buf):
+                        logging.debug("chrome pid %s STDERR %s", self.chrome_process.pid, buf)
+                    else:
+                        logging.warn("chrome pid %s STDERR %s", self.chrome_process.pid, buf)
+        except:
+            logging.error("unexpected exception", exc_info=True)
+
     def stop(self):
         timeout_sec = 300
+        self._shutdown.set()
         self.logger.info("terminating chrome pid {}".format(self.chrome_process.pid))
 
         self.chrome_process.terminate()
@@ -396,5 +434,7 @@ class Chrome:
 
         self.logger.warn("chrome pid {} still alive {} seconds after sending SIGTERM, sending SIGKILL".format(self.chrome_process.pid, timeout_sec))
         self.chrome_process.kill()
+        self._out_reader_thread.join()
         status = self.chrome_process.wait()
         self.logger.warn("chrome pid {} reaped (status={}) after killing with SIGKILL".format(self.chrome_process.pid, status))
+
