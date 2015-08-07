@@ -21,7 +21,7 @@ class Site:
         self.reached_limit = reached_limit
 
         self.scope = scope or {}
-        if not "surt" in scope:
+        if not "surt" in self.scope:
             self.scope["surt"] = surt.GoogleURLCanonicalizer.canonicalize(surt.handyurl.parse(seed)).getURLString(surt=True, trailing_comma=True)
 
     def __repr__(self):
@@ -45,7 +45,10 @@ class Site:
         else:
             self.reached_limit = e.warcprox_meta["reached-limit"]
 
-    def is_in_scope(self, url):
+    def is_in_scope(self, url, parent_page=None):
+        if parent_page and "max_hops" in self.scope and parent_page.hops_from_seed >= self.scope["max_hops"]:
+            return False
+
         try:
             hurl = surt.handyurl.parse(url)
 

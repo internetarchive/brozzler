@@ -179,15 +179,13 @@ class BrozzlerHQ:
         if site.ignore_robots:
             return True
         try:
-            self.logger.info("checking robots for %s", url)
             result = self._robots_cache(site).allowed(url, "brozzler")
-            self.logger.info("robots allowed=%s for %s", result, url)
             return result
         except BaseException as e:
             if isinstance(e, reppy.exceptions.ServerError) and isinstance(e.args[0], brozzler.ReachedLimit):
                 raise e.args[0]
             else:
-                self.logger.error("problem with robots.txt for {}: {}".format(url, e))
+                self.logger.error("problem with robots.txt for %s: %s", url, repr(e))
                 return False
 
     def run(self):
@@ -262,7 +260,7 @@ class BrozzlerHQ:
         counts = {"added":0,"updated":0,"rejected":0,"blocked":0}
         if parent_page.outlinks:
             for url in parent_page.outlinks:
-                if site.is_in_scope(url):
+                if site.is_in_scope(url, parent_page):
                     if self.is_permitted_by_robots(site, url):
                         child_page = brozzler.Page(url, site_id=site.id, hops_from_seed=parent_page.hops_from_seed+1)
                         try:
