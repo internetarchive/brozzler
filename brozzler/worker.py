@@ -152,6 +152,7 @@ class BrozzlerWorker:
         except brozzler.browser.BrowsingAborted:
             self.logger.info("{} shut down".format(browser))
         finally:
+            self.logger.info("finished session brozzling site, stopping browser and disclaiming site")
             browser.stop()
             self._disclaim_site(site, page)
             self._browser_pool.release(browser)

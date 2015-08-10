@@ -104,12 +104,15 @@ class Browser:
         self._websocket_url = self._chrome_instance.start()
 
     def stop(self):
-        if self._chrome_instance:
-            self._chrome_instance.stop()
-            self._chrome_instance = None
-        if self._work_dir:
-            self._work_dir.cleanup()
-            self._work_dir = None
+        try:
+            if self._chrome_instance:
+                self._chrome_instance.stop()
+                self._chrome_instance = None
+            if self._work_dir:
+                self._work_dir.cleanup()
+                self._work_dir = None
+        except:
+            self.logger.error("problem stopping", exc_info=True)
 
     def abort_browse_page(self):
         self._abort_browse_page = True
@@ -183,6 +186,11 @@ class Browser:
                 self.logger.info("finished browsing page according to behavior, retrieving outlinks url={}".format(self.url))
                 self._waiting_on_outlinks_msg_id = self.send_to_chrome(method="Runtime.evaluate",
                         params={"expression":"Array.prototype.slice.call(document.querySelectorAll('a[href]')).join(' ')"})
+                self._waiting_on_outlinks_start = time.time()
+                return False
+            elif time.time() - self._waiting_on_outlinks_start > 300:
+                raise BrowsingException("timed out after waiting {} seconds for outlinks", time.time() - self._waiting_on_outlinks_start)
+            else:
                 return False
         elif time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
             self.logger.info("finished browsing page, reached hard timeout of {} seconds url={}".format(Browser.HARD_TIMEOUT_SECONDS, self.url))
@@ -386,7 +394,7 @@ class Chrome:
         # XXX select doesn't work on windows
         def readline_nonblock(f):
             buf = b""
-            while (len(buf) == 0 or buf[-1] != 0xa) and select.select([f],[],[],0.1)[0]:
+            while (len(buf) == 0 or buf[-1] != 0xa) and select.select([f],[],[],0.5)[0]:
                 buf += f.read(1)
             return buf
 
@@ -409,6 +417,8 @@ class Chrome:
             logging.error("unexpected exception", exc_info=True)
 
     def stop(self):
+        if self._shutdown.is_set():
+            return
         timeout_sec = 300
         self._shutdown.set()
         self.logger.info("terminating chrome pid {}".format(self.chrome_process.pid))
