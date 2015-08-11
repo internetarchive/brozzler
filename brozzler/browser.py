@@ -81,6 +81,7 @@ class Browser:
         self._websock = None
         self._abort_browse_page = False
         self._chrome_instance = None
+        self._aw_snap_hes_dead_jim = None
 
     def __repr__(self):
         return "{}.{}:{}".format(Browser.__module__, Browser.__qualname__, self.chrome_port)
@@ -137,6 +138,8 @@ class Browser:
         self._waiting_on_outlinks_msg_id = None
         self._outlinks = None
         self._reached_limit = None
+        self._aw_snap_hes_dead_jim = None
+        self._abort_browse_page = False
 
         self._websock = websocket.WebSocketApp(self._websocket_url,
                 on_open=self._visit_page, on_message=self._wrap_handle_message)
@@ -178,6 +181,8 @@ class Browser:
         """Returns True when finished browsing."""
         if not self._websock or not self._websock.sock or not self._websock.sock.connected:
             raise BrowsingException("websocket closed, did chrome die? {}".format(self._websocket_url))
+        elif self._aw_snap_hes_dead_jim:
+            raise BrowsingException("""chrome tab went "aw snap" or "he's dead jim"!""")
         elif self._behavior != None and self._behavior.is_finished():
             if self._outlinks:
                 self.logger.info("got outlinks, finished url={}".format(self.url))
@@ -279,7 +284,6 @@ class Browser:
             if self.on_screenshot:
                 self.on_screenshot(base64.b64decode(message["result"]["data"]))
             self._waiting_on_screenshot_msg_id = None
-
             self.logger.info("got screenshot, moving on to starting behaviors url={}".format(self.url))
             self._behavior = Behavior(self.url, self)
             self._behavior.start()
@@ -308,6 +312,8 @@ class Browser:
             self._console_message_added(message)
         elif "method" in message and message["method"] == "Debugger.paused":
             self._debugger_paused(message)
+        elif "method" in message and message["method"] == "Inspector.targetCrashed":
+            self._aw_snap_hes_dead_jim = message
         elif "result" in message:
             self._handle_result_message(message)
         # elif "method" in message and message["method"] in ("Network.dataReceived", "Network.responseReceived", "Network.loadingFinished"):
