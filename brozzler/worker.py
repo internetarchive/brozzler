@@ -136,7 +136,7 @@ class BrozzlerWorker:
         page = None
         try:
             browser.start(proxy=site.proxy)
-            while not self._shutdown_requested.is_set() and time.time() - start < 60:
+            while not self._shutdown_requested.is_set() and time.time() - start < 300:
                 try:
                     page = self._next_page(site)
                     self.brozzle_page(browser, ydl, site, page)
