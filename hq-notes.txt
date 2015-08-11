@@ -50,4 +50,10 @@ brozzler-worker
  - reads urls from brozzler.{site-id}.crawl_urls
  - after each(?) (every n?) urls, feeds brozzler.{site_id}.completed_urls
 
-
+=== considering distributed database ===
+preferred database requirements:
+- secondary index (so we can look up by url or priority)
+- good performance on updates since we will be doing many updates
+- good performance of secondary index on updates that change the value of secondarily indexed field
+- ideally strong consistency, for multiple instances of brozzler-hq will
+- redundancy, fault tolerance
