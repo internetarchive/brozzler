@@ -55,5 +55,65 @@ preferred database requirements:
 - secondary index (so we can look up by url or priority)
 - good performance on updates since we will be doing many updates
 - good performance of secondary index on updates that change the value of secondarily indexed field
-- ideally strong consistency, for multiple instances of brozzler-hq will
+- ideally strong consistency to support multiple instances of brozzler-hq (but we can probably tolerate eventual consistency)
 - redundancy, fault tolerance
+
+alternative to distrubuted database: each brozzler-hq instance has its own local db (sqlite?) and distribution is handled at application level
+but implementing redundancy, fault tolerance, etc sounds daunting
+
+cassandra:
+ - pluses
+   - easy to set up cluster, add nodes, administer (all nodes are basically the same)
+   - sharding, replication, fault tolerance are native, default features
+   - seems more reliable than others?
+ - minuses
+   - not so good for looking up pages by both url and priority because 
+     - secondary indexes are bad for columns with high cardinality (url), and also bad for columns that get updated frequently (priority)
+     - other approach with second table by "priority_key" also not great because you can't update the value of a primary key, have to delete it and add a new row, and deletion in cassandra seems kind of heavy ("tombstones")
+     - cqlsh:brozzler> select * from priorities order by priority_key desc limit 1;
+     - InvalidRequest: code=2200 [Invalid query] message="ORDER BY is only supported when the partition key is restricted by an EQ or an IN."
+     - cqlsh:brozzler> select * from priorities where priority_key >= 999900000000;
+     - InvalidRequest: code=2200 [Invalid query] message="Only EQ and IN relation are supported on the partition key (unless you use the token() function)"
+   - possible solution: finite set of possible priorities, e.g. 0-1000, then secondary-indexable etc
+redis:
+ - pluses
+   - fast, reliable, already known at ia
+   - perhaps can use the data structures
+ - minuses
+   - no experience with cluster at ia nor ilya
+   - all data being in memory limits amount of data
+   - Sam says sync to disk is slow
+   - no real namespaces
+hbase:
+ - pluses
+   - already deployed, known, dedup data is already in there
+ - minuses
+   - no secondary indexes
+   - has not been very reliable for us, lots of moving parts
+mongodb:
+ - pluses
+   - very popular according to http://db-engines.com/en/ranking
+   - secondary indexes
+   - some institutional knowledge (kenji)
+ - minuses
+   - according to kenji (https://webarchive.jira.com/wiki/display/~nlevitt/2015/08/10/Kenji%27s+thoughts+on+MongoDB)
+     - cluster is very cumbersome to setup & manage
+     - cluster member names are hard-wired
+     - each shard must be configured with master-slave pair if you want high availability.
+     - you cannot easily replace one shard with different VM
+     - mongodb is known to be slow on writes
+couchdb:
+ - pluses
+   - mature, more reliable?
+ - minuses
+   - doesn't support sharding natively
+   - sharded implementations seem stale (bigcouch, lounge, ...)
+multi-master rdbms (postgres-xl, mysql-cluster):
+ - pluses
+   - yes secondary indexes
+ - minuses:
+   - more difficult to deploy, administer?
+   - seem to be less uses than other distributed dbs, smaller community, less knowledge and experience available
+   - fault tolerance not so great? see http://www.slideshare.net/mason_s/postgres-xl-scaling slide 9
+
+
