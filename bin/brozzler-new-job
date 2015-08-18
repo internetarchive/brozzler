@@ -6,7 +6,6 @@ import os
 import sys
 import logging
 import brozzler
-import kombu
 import yaml
 import json
 
@@ -14,8 +13,8 @@ arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description="brozzler-new-job - queue new job with brozzler",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 arg_parser.add_argument('job_conf_file', metavar='JOB_CONF_FILE', help='brozzler job configuration file in yaml')
-arg_parser.add_argument('-u', '--amqp-url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
-        help='URL identifying the amqp server to talk to')
+arg_parser.add_argument("--db", dest="db", default="localhost", 
+        help="comma-separated list of RethinkDB server addresses, e.g. db0.example.com,db0.example.com:39015,db1.example.com")
 arg_parser.add_argument("-v", "--verbose", dest="log_level",
         action="store_const", default=logging.INFO, const=logging.DEBUG)
 arg_parser.add_argument("--version", action="version",
@@ -60,6 +59,7 @@ for seed_conf in seeds:
     if "warcprox_meta" in merged_conf:
         warcprox_meta = json.dumps(merged_conf["warcprox_meta"], separators=(',', ':'))
         extra_headers = {"Warcprox-Meta":warcprox_meta}
+
     site = brozzler.Site(seed=merged_conf["url"],
             scope=merged_conf.get("scope"),
             time_limit=merged_conf.get("time_limit"),
@@ -69,10 +69,7 @@ for seed_conf in seeds:
             extra_headers=extra_headers)
     sites.append(site)
 
-with kombu.Connection(args.amqp_url) as conn:
-    q = conn.SimpleQueue("brozzler.sites.new")
-    for site in sites:
-        d = site.to_dict()
-        logging.info("feeding amqp queue %s with %s", repr(q.queue.name), repr(d))
-        q.put(d)
+db = brozzler.BrozzlerRethinkDb(args.db.split(","))
+for site in sites:
+    brozzler.new_site(db, site)
 

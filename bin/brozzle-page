@@ -6,7 +6,6 @@ import os
 import sys
 import logging
 import brozzler
-import kombu
 import re
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),

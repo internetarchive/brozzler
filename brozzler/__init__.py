@@ -1,8 +1,10 @@
 import json as _json
-from brozzler.browser import Browser, BrowserPool
+import logging as _logging
 from brozzler.site import Page, Site
-from brozzler.hq import BrozzlerHQ
 from brozzler.worker import BrozzlerWorker
+from brozzler.robots import is_permitted_by_robots
+from brozzler.db import BrozzlerRethinkDb
+from brozzler.browser import Browser, BrowserPool
 
 def _read_version():
     import os
@@ -13,7 +15,15 @@ def _read_version():
 
 version = _read_version()
 
+# XXX don't know if these should be restricted; right now, only needed for
+# rethinkdb "between" query
+MAX_PRIORITY = 1000000000
+MIN_PRIORITY = -1000000000
+
 class ShutdownRequested(Exception):
+    pass
+
+class NothingToClaim(Exception):
     pass
 
 class ReachedLimit(Exception):
@@ -33,5 +43,18 @@ class ReachedLimit(Exception):
 
     def __str__(self):
         return self.__repr__()
+
+def new_site(db, site):
+    _logging.info("new site {}".format(site))
+    db.new_site(site)
+    try:
+        if is_permitted_by_robots(site, site.seed):
+            page = Page(site.seed, site_id=site.id, hops_from_seed=0, priority=1000)
+            db.new_page(page)
+        else:
+            _logging.warn("seed url {} is blocked by robots.txt".format(site.seed))
+    except ReachedLimit as e:
+        site.note_limit_reached(e)
+        db.update_site(site)
 
 # vim: set sw=4 et:

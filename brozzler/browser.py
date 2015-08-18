@@ -40,9 +40,12 @@ class BrowserPool:
         self.logger.info("browser ports: {}".format([browser.chrome_port for browser in self._available]))
 
     def acquire(self):
-        """Returns browser from pool if available, raises KeyError otherwise."""
+        """Returns browser from pool if available, raises NoBrowsersAvailable otherwise."""
         with self._lock:
-            browser = self._available.pop()
+            try:
+                browser = self._available.pop()
+            except KeyError:
+                raise NoBrowsersAvailable()
             self._in_use.add(browser)
             return browser
 
@@ -54,6 +57,9 @@ class BrowserPool:
     def shutdown_now(self):
         for browser in self._in_use:
             browser.abort_browse_page()
+
+class NoBrowsersAvailable(Exception):
+    pass
 
 class BrowsingException(Exception):
     pass
@@ -400,7 +406,7 @@ class Chrome:
         # XXX select doesn't work on windows
         def readline_nonblock(f):
             buf = b""
-            while (len(buf) == 0 or buf[-1] != 0xa) and select.select([f],[],[],0.5)[0]:
+            while not self._shutdown.is_set() and (len(buf) == 0 or buf[-1] != 0xa) and select.select([f],[],[],0.5)[0]:
                 buf += f.read(1)
             return buf
 
@@ -432,25 +438,28 @@ class Chrome:
         self.chrome_process.terminate()
         first_sigterm = last_sigterm = time.time()
 
-        while time.time() - first_sigterm < timeout_sec:
-            time.sleep(0.5)
+        try:
+            while time.time() - first_sigterm < timeout_sec:
+                time.sleep(0.5)
 
-            status = self.chrome_process.poll()
-            if status is not None:
-                if status == 0:
-                    self.logger.info("chrome pid {} exited normally".format(self.chrome_process.pid, status))
-                else:
-                    self.logger.warn("chrome pid {} exited with nonzero status {}".format(self.chrome_process.pid, status))
-                return
+                status = self.chrome_process.poll()
+                if status is not None:
+                    if status == 0:
+                        self.logger.info("chrome pid {} exited normally".format(self.chrome_process.pid, status))
+                    else:
+                        self.logger.warn("chrome pid {} exited with nonzero status {}".format(self.chrome_process.pid, status))
+                    return
 
-            # sometimes a hung chrome process will terminate on repeated sigterms
-            if time.time() - last_sigterm > 10:
-                self.chrome_process.terminate()
-                last_sigterm = time.time()
+                # sometimes a hung chrome process will terminate on repeated sigterms
+                if time.time() - last_sigterm > 10:
+                    self.chrome_process.terminate()
+                    last_sigterm = time.time()
 
-        self.logger.warn("chrome pid {} still alive {} seconds after sending SIGTERM, sending SIGKILL".format(self.chrome_process.pid, timeout_sec))
-        self.chrome_process.kill()
-        self._out_reader_thread.join()
-        status = self.chrome_process.wait()
-        self.logger.warn("chrome pid {} reaped (status={}) after killing with SIGKILL".format(self.chrome_process.pid, status))
+            self.logger.warn("chrome pid {} still alive {} seconds after sending SIGTERM, sending SIGKILL".format(self.chrome_process.pid, timeout_sec))
+            self.chrome_process.kill()
+            status = self.chrome_process.wait()
+            self.logger.warn("chrome pid {} reaped (status={}) after killing with SIGKILL".format(self.chrome_process.pid, status))
+        finally:
+            self._out_reader_thread.join()
+            self.chrome_process = None
 

@@ -4,13 +4,26 @@ import surt
 import json
 import logging
 import brozzler
+import hashlib
 
-class Site:
+class BaseDictable:
+    def to_dict(self):
+        d = dict(vars(self))
+        for k in vars(self):
+            if k.startswith("_") or d[k] is None:
+                del d[k]
+        return d
+
+    def to_json(self):
+        return json.dumps(self.to_dict(), separators=(',', ':'))
+
+class Site(BaseDictable):
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
     def __init__(self, seed, id=None, scope=None, proxy=None,
         ignore_robots=False, time_limit=None, extra_headers=None,
-        enable_warcprox_features=False, reached_limit=None):
+        enable_warcprox_features=False, reached_limit=None, status="ACTIVE",
+        claimed=False):
         self.seed = seed
         self.id = id
         self.proxy = proxy
@@ -19,6 +32,8 @@ class Site:
         self.extra_headers = extra_headers
         self.time_limit = time_limit
         self.reached_limit = reached_limit
+        self.status = status
+        self.claimed = bool(claimed)
 
         self.scope = scope or {}
         if not "surt" in self.scope:
@@ -44,6 +59,7 @@ class Site:
                     e.warcprox_meta["reached-limit"], self.reached_limit)
         else:
             self.reached_limit = e.warcprox_meta["reached-limit"]
+            self.status = "FINISHED_REACHED_LIMIT"
 
     def is_in_scope(self, url, parent_page=None):
         if parent_page and "max_hops" in self.scope and parent_page.hops_from_seed >= self.scope["max_hops"]:
@@ -62,25 +78,26 @@ class Site:
             self.logger.warn("""problem parsing url "{}" """.format(url))
             return False
 
-    def to_dict(self):
-        d = dict(vars(self))
-        for k in vars(self):
-            if k.startswith("_"):
-                del d[k]
-        return d
-
-    def to_json(self):
-        return json.dumps(self.to_dict(), separators=(',', ':'))
-
-class Page:
-    def __init__(self, url, id=None, site_id=None, hops_from_seed=0, outlinks=None, redirect_url=None):
-        self.id = id
+class Page(BaseDictable):
+    def __init__(self, url, id=None, site_id=None, hops_from_seed=0, redirect_url=None, priority=None, claimed=False, brozzle_count=0):
         self.site_id = site_id
         self.url = url
         self.hops_from_seed = hops_from_seed
-        self._canon_hurl = None
-        self.outlinks = outlinks
         self.redirect_url = redirect_url
+        self.claimed = bool(claimed)
+        self.brozzle_count = brozzle_count
+        self._canon_hurl = None
+
+        if priority is not None:
+            self.priority = priority
+        else:
+            self.priority = self._calc_priority()
+
+        if id is not None:
+            self.id = id
+        else:
+            digest_this = "site_id:{},canon_url:{}".format(self.site_id, self.canon_url())
+            self.id = hashlib.sha1(digest_this.encode("utf-8")).hexdigest()
 
     def __repr__(self):
         return """Page(url={},site_id={},hops_from_seed={})""".format(
@@ -89,10 +106,12 @@ class Page:
     def note_redirect(self, url):
         self.redirect_url = url
 
-    def calc_priority(self):
+    def _calc_priority(self):
         priority = 0
         priority += max(0, 10 - self.hops_from_seed)
         priority += max(0, 6 - self.canon_url().count("/"))
+        priority = max(priority, brozzler.MIN_PRIORITY)
+        priority = min(priority, brozzler.MAX_PRIORITY)
         return priority
 
     def canon_url(self):
@@ -100,21 +119,4 @@ class Page:
             self._canon_hurl = surt.handyurl.parse(self.url)
             surt.GoogleURLCanonicalizer.canonicalize(self._canon_hurl)
         return self._canon_hurl.geturl()
-
-    def to_dict(self):
-        d = dict(vars(self))
-
-        for k in vars(self):
-            if k.startswith("_"):
-                del d[k]
-
-        if self.outlinks is not None and not isinstance(self.outlinks, list):
-            outlinks = []
-            outlinks.extend(self.outlinks)
-            d["outlinks"] = outlinks
-
-        return d
-
-    def to_json(self):
-        return json.dumps(self.to_dict(), separators=(',', ':'))
 

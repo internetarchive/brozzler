@@ -6,15 +6,14 @@ import os
 import sys
 import logging
 import brozzler
-import kombu
 import re
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
-        description="brozzler-add-site - register site to crawl with brozzler-hq",
+        description="brozzler-new-site - register site to brozzle",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 arg_parser.add_argument('seed', metavar='SEED', help='seed url')
-arg_parser.add_argument('-u', '--amqp-url', dest='amqp_url', default='amqp://guest:guest@localhost:5672/%2f',
-        help='URL identifying the amqp server to talk to')
+arg_parser.add_argument("--db", dest="db", default="localhost", 
+        help="comma-separated list of RethinkDB server addresses, e.g. db0.example.com,db0.example.com:39015,db1.example.com")
 arg_parser.add_argument("--proxy", dest="proxy", default=None, help="http proxy for this site")
 arg_parser.add_argument("--time-limit", dest="time_limit", default=None, help="time limit in seconds for this site")
 arg_parser.add_argument("-H", "--extra-header", action="append",
@@ -44,11 +43,6 @@ site = brozzler.Site(seed=args.seed, proxy=args.proxy,
         enable_warcprox_features=args.enable_warcprox_features,
         extra_headers=extra_headers)
 
-with kombu.Connection(args.amqp_url) as conn:
-    q = conn.SimpleQueue("brozzler.sites.new")
-    # XXX check url syntax?
-    d = site.to_dict()
-    logging.info("""feeding amqp queue "{}" with {}""".format(q.queue.name, d))
-    q.put(d)
-
+db = brozzler.BrozzlerRethinkDb(args.db.split(","))
+brozzler.new_site(db, site)
 

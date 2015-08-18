@@ -2,8 +2,8 @@ brozzler
 ========
 "browser" | "crawler" = "brozzler"
 
-Brozzler is a distributed web crawler that uses a real browser (chrome or
-chromium) to fetch pages and embedded urls and to extract links. It also
+Brozzler is a distributed web crawler (爬虫) that uses a real browser (chrome
+or chromium) to fetch pages and embedded urls and to extract links. It also
 uses [youtube-dl](https://github.com/rg3/youtube-dl) to enhance media capture
 capabilities.
 
