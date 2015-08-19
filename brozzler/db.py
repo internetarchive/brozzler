@@ -42,7 +42,7 @@ class BrozzlerRethinkDb:
                 # r.db("test").table_create("jobs", shards=self.shards, replicas=self.replicas).run(conn)
                 r.db(self.db).table_create("sites", shards=self.shards, replicas=self.replicas).run(conn)
                 r.db(self.db).table_create("pages", shards=self.shards, replicas=self.replicas).run(conn)
-                r.db(self.db).table("pages").index_create("priority_by_site", [r.row["site_id"], r.row["claimed"], r.row["brozzle_count"], r.row["priority"]]).run(conn)
+                r.db(self.db).table("pages").index_create("priority_by_site", [r.row["site_id"], r.row["brozzle_count"], r.row["claimed"], r.row["priority"]]).run(conn)
                 self.logger.info("created database %s with tables 'sites' and 'pages'", self.db)
 
     def _vet_result(self, result, **kwargs):
@@ -98,7 +98,7 @@ class BrozzlerRethinkDb:
     def claim_page(self, site):
         with self._random_server_connection() as conn:
             result = (r.db(self.db).table("pages")
-                    .between([site.id,False,0,brozzler.MIN_PRIORITY], [site.id,False,0,brozzler.MAX_PRIORITY], index="priority_by_site")
+                    .between([site.id,0,False,brozzler.MIN_PRIORITY], [site.id,0,False,brozzler.MAX_PRIORITY], index="priority_by_site")
                     .order_by(index=r.desc("priority_by_site")).limit(1)
                     .update({"claimed":True},return_changes=True).run(conn))
             self._vet_result(result, replaced=[0,1])
@@ -109,7 +109,7 @@ class BrozzlerRethinkDb:
 
     def has_outstanding_pages(self, site):
         with self._random_server_connection() as conn:
-            cursor = r.db(self.db).table("pages").between([site.id,False,0,brozzler.MIN_PRIORITY], [site.id,True,0,brozzler.MAX_PRIORITY], index="priority_by_site").limit(1).run(conn)
+            cursor = r.db(self.db).table("pages").between([site.id,0,False,brozzler.MIN_PRIORITY], [site.id,0,True,brozzler.MAX_PRIORITY], index="priority_by_site").limit(1).run(conn)
             return len(list(cursor)) > 0
 
     def get_page(self, page):
