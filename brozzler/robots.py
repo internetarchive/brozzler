@@ -6,6 +6,8 @@ import brozzler
 import reppy.cache
 import requests
 
+__all__ = ["is_permitted_by_robots"]
+
 _robots_caches = {}  # {site_id:reppy.cache.RobotsCache}
 def _robots_cache(site):
     class SessionRaiseOn420(requests.Session):

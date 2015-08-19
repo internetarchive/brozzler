@@ -10,6 +10,8 @@ import youtube_dl
 import urllib.request
 import json
 
+__all__ = ["BrozzlerWorker"]
+
 class BrozzlerWorker:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 

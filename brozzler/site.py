@@ -6,6 +6,8 @@ import logging
 import brozzler
 import hashlib
 
+__all__ = ["Site", "Page"]
+
 class BaseDictable:
     def to_dict(self):
         d = dict(vars(self))

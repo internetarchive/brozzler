@@ -1,5 +1,7 @@
 # vim: set sw=4 et:
 
+__all__ = ["UnexpectedDbResult", "RethinkDbFrontier"]
+
 import logging
 import brozzler
 import rethinkdb

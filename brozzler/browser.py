@@ -9,17 +9,16 @@ import websocket
 import time
 import threading
 import subprocess
-import signal
 import tempfile
 import os
-import socket
-import base64
 import random
 import brozzler
 from brozzler.behaviors import Behavior
 from requests.structures import CaseInsensitiveDict
 import select
 import re
+
+__all__ = ["BrowserPool", "Browser"]
 
 class BrowserPool:
     logger = logging.getLogger(__module__ + "." + __qualname__)

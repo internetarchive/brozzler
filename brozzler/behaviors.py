@@ -10,6 +10,8 @@ import sys
 import yaml
 import string
 
+__all__ = ["Behavior"]
+
 class Behavior:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
