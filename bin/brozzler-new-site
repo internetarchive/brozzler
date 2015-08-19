@@ -43,6 +43,6 @@ site = brozzler.Site(seed=args.seed, proxy=args.proxy,
         enable_warcprox_features=args.enable_warcprox_features,
         extra_headers=extra_headers)
 
-db = brozzler.BrozzlerRethinkDb(args.db.split(","))
-brozzler.new_site(db, site)
+frontier = brozzler.RethinkDbFrontier(args.db.split(","))
+brozzler.new_site(frontier, site)
 

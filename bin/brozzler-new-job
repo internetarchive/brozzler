@@ -14,7 +14,7 @@ arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 arg_parser.add_argument('job_conf_file', metavar='JOB_CONF_FILE', help='brozzler job configuration file in yaml')
 arg_parser.add_argument("--db", dest="db", default="localhost", 
-        help="comma-separated list of RethinkDB server addresses, e.g. db0.example.com,db0.example.com:39015,db1.example.com")
+        help="comma-separated list of RethinkDB server addresses, e.g. db0.foo.org,db0.foo.org:38015,db1.foo.org")
 arg_parser.add_argument("-v", "--verbose", dest="log_level",
         action="store_const", default=logging.INFO, const=logging.DEBUG)
 arg_parser.add_argument("--version", action="version",
@@ -69,7 +69,7 @@ for seed_conf in seeds:
             extra_headers=extra_headers)
     sites.append(site)
 
-db = brozzler.BrozzlerRethinkDb(args.db.split(","))
+frontier = brozzler.RethinkDbFrontier(args.db.split(","))
 for site in sites:
-    brozzler.new_site(db, site)
+    brozzler.new_site(frontier, site)
 

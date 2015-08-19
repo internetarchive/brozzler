@@ -13,8 +13,8 @@ import json
 class BrozzlerWorker:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, db, max_browsers=1, chrome_exe="chromium-browser"):
-        self._db = db
+    def __init__(self, frontier, max_browsers=1, chrome_exe="chromium-browser"):
+        self._frontier = frontier
         self._max_browsers = max_browsers
         self._browser_pool = brozzler.browser.BrowserPool(max_browsers,
                 chrome_exe=chrome_exe, ignore_cert_errors=True)
@@ -46,21 +46,21 @@ class BrozzlerWorker:
         page.brozzle_count += 1
         page.claimed = False
         # XXX set priority?
-        self._db.update_page(page)
+        self._frontier.update_page(page)
         if page.redirect_url and page.hops_from_seed == 0:
             site.note_seed_redirect(page.redirect_url)
-            self._db.update_site(site)
+            self._frontier.update_site(site)
 
     def _disclaim_site(self, site, page=None):
         self.logger.info("disclaiming %s", site)
         site.claimed = False
-        if not page and not self._db.has_outstanding_pages(site):
+        if not page and not self._frontier.has_outstanding_pages(site):
             self.logger.info("site FINISHED! %s", site)
             site.status = "FINISHED"
-        self._db.update_site(site)
+        self._frontier.update_site(site)
         if page:
             page.claimed = False
-            self._db.update_page(page)
+            self._frontier.update_page(page)
 
     def _putmeta(self, warcprox_address, url, content_type, payload, extra_headers=None):
         headers = {"Content-Type":content_type}
@@ -109,13 +109,13 @@ class BrozzlerWorker:
                 if site.is_in_scope(url, parent_page):
                     if brozzler.is_permitted_by_robots(site, url):
                         new_child_page = brozzler.Page(url, site_id=site.id, hops_from_seed=parent_page.hops_from_seed+1)
-                        existing_child_page = self._db.get_page(new_child_page)
+                        existing_child_page = self._frontier.get_page(new_child_page)
                         if existing_child_page:
                             existing_child_page.priority += new_child_page.priority
-                            self._db.update_page(existing_child_page)
+                            self._frontier.update_page(existing_child_page)
                             counts["updated"] += 1
                         else:
-                            self._db.new_page(new_child_page)
+                            self._frontier.new_page(new_child_page)
                             counts["added"] += 1
                     else:
                         counts["blocked"] += 1
@@ -152,7 +152,7 @@ class BrozzlerWorker:
         try:
             browser.start(proxy=site.proxy)
             while not self._shutdown_requested.is_set() and time.time() - start < 300:
-                page = self._db.claim_page(site)
+                page = self._frontier.claim_page(site)
                 self.brozzle_page(browser, ydl, site, page)
                 self._completed_page(site, page)
                 page = None
@@ -176,7 +176,7 @@ class BrozzlerWorker:
             try:
                 browser = self._browser_pool.acquire()
                 try:
-                    site = self._db.claim_site()
+                    site = self._frontier.claim_site()
                     self.logger.info("brozzling site %s", site)
                     ydl = self._youtube_dl(site)
                     th = threading.Thread(target=lambda: self._brozzle_site(browser, ydl, site),

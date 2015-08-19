@@ -3,7 +3,7 @@ import logging as _logging
 from brozzler.site import Page, Site
 from brozzler.worker import BrozzlerWorker
 from brozzler.robots import is_permitted_by_robots
-from brozzler.db import BrozzlerRethinkDb
+from brozzler.frontier import RethinkDbFrontier
 from brozzler.browser import Browser, BrowserPool
 
 def _read_version():

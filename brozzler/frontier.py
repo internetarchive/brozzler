@@ -9,7 +9,7 @@ import random
 class UnexpectedDbResult(Exception):
     pass
 
-class BrozzlerRethinkDb:
+class RethinkDbFrontier:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
     def __init__(self, servers=["localhost"], db="brozzler", shards=3, replicas=3):
