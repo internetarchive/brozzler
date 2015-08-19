@@ -91,15 +91,33 @@ class RethinkDbFrontier:
 
     def claim_site(self):
         # XXX keep track of aggregate priority and prioritize sites accordingly?
-        with self._random_server_connection() as conn:
-            result = (r.db(self.db).table("sites")
-                    .between(["ACTIVE",False,0], ["ACTIVE",False,250000000000], index="sites_last_disclaimed")
-                    .order_by(index="sites_last_disclaimed").limit(1).update({"claimed":True},return_changes=True).run(conn))
-            self._vet_result(result, replaced=[0,1])
-            if result["replaced"] == 1:
-                return brozzler.Site(**result["changes"][0]["new_val"])
-            else:
-                raise brozzler.NothingToClaim
+        while True:
+            with self._random_server_connection() as conn:
+                result = (r.db(self.db).table("sites")
+                        .between(["ACTIVE",False,0], ["ACTIVE",False,250000000000], index="sites_last_disclaimed")
+                        .order_by(index="sites_last_disclaimed").limit(1).update({"claimed":True},return_changes=True).run(conn))
+                self._vet_result(result, replaced=[0,1])
+                if result["replaced"] == 1:
+                    site = brozzler.Site(**result["changes"][0]["new_val"])
+                else:
+                    raise brozzler.NothingToClaim
+            # XXX This is the only place we enforce time limit for now. Worker
+            # loop should probably check time limit. Maybe frontier needs a
+            # housekeeping thread to ensure that time limits get enforced in a
+            # timely fashion.
+            if not self._enforce_time_limit(site):
+                return site
+
+    def _enforce_time_limit(self, site):
+        if (site.time_limit and site.time_limit > 0
+                and time.time() - site.start_time > site.time_limit):
+            self.logger.info("site FINISHED_TIME_LIMIT! time_limit=%s start_time=%s elapsed=%s %s",
+                    site.time_limit, site.start_time, time.time() - site.start_time, site)
+            site.status = "FINISHED_TIME_LIMIT"
+            self.update_site(site)
+            return True
+        else:
+            return False
 
     def claim_page(self, site):
         with self._random_server_connection() as conn:
@@ -146,4 +164,27 @@ class RethinkDbFrontier:
         if page:
             page.claimed = False
             self.update_page(page)
+
+    def scope_and_schedule_outlinks(self, site, parent_page, outlinks):
+        counts = {"added":0,"updated":0,"rejected":0,"blocked":0}
+        if outlinks:
+            for url in outlinks:
+                if site.is_in_scope(url, parent_page):
+                    if brozzler.is_permitted_by_robots(site, url):
+                        new_child_page = brozzler.Page(url, site_id=site.id, hops_from_seed=parent_page.hops_from_seed+1)
+                        existing_child_page = self.get_page(new_child_page)
+                        if existing_child_page:
+                            existing_child_page.priority += new_child_page.priority
+                            self.update_page(existing_child_page)
+                            counts["updated"] += 1
+                        else:
+                            self.new_page(new_child_page)
+                            counts["added"] += 1
+                    else:
+                        counts["blocked"] += 1
+                else:
+                    counts["rejected"] += 1
+
+        self.logger.info("%s new links added, %s existing links updated, %s links rejected, %s links blocked by robots from %s",
+            counts["added"], counts["updated"], counts["rejected"], counts["blocked"], parent_page)
 

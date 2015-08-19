@@ -84,29 +84,6 @@ class BrozzlerWorker:
             else:
                 raise
 
-    def _scope_and_schedule_outlinks(self, site, parent_page, outlinks):
-        counts = {"added":0,"updated":0,"rejected":0,"blocked":0}
-        if outlinks:
-            for url in outlinks:
-                if site.is_in_scope(url, parent_page):
-                    if brozzler.is_permitted_by_robots(site, url):
-                        new_child_page = brozzler.Page(url, site_id=site.id, hops_from_seed=parent_page.hops_from_seed+1)
-                        existing_child_page = self._frontier.get_page(new_child_page)
-                        if existing_child_page:
-                            existing_child_page.priority += new_child_page.priority
-                            self._frontier.update_page(existing_child_page)
-                            counts["updated"] += 1
-                        else:
-                            self._frontier.new_page(new_child_page)
-                            counts["added"] += 1
-                    else:
-                        counts["blocked"] += 1
-                else:
-                    counts["rejected"] += 1
-
-        self.logger.info("%s new links added, %s existing links updated, %s links rejected, %s links blocked by robots from %s", 
-            counts["added"], counts["updated"], counts["rejected"], counts["blocked"], parent_page)
-
     def brozzle_page(self, browser, ydl, site, page):
         def on_screenshot(screenshot_png):
             if site.proxy and site.enable_warcprox_features:
@@ -126,17 +103,18 @@ class BrozzlerWorker:
         outlinks = browser.browse_page(page.url,
                 extra_headers=site.extra_headers, on_screenshot=on_screenshot,
                 on_url_change=page.note_redirect)
-        self._scope_and_schedule_outlinks(site, page, outlinks)
+        return outlinks
 
     def _brozzle_site(self, browser, ydl, site):
         start = time.time()
         page = None
         try:
             browser.start(proxy=site.proxy)
-            while not self._shutdown_requested.is_set() and time.time() - start < 300:
+            while not self._shutdown_requested.is_set() and time.time() - start < 60:
                 page = self._frontier.claim_page(site)
-                self.brozzle_page(browser, ydl, site, page)
+                outlinks = self.brozzle_page(browser, ydl, site, page)
                 self._frontier.completed_page(site, page)
+                self._frontier.scope_and_schedule_outlinks(site, page, outlinks)
                 page = None
         except brozzler.NothingToClaim:
             self.logger.info("no pages left for site %s", site)

@@ -5,6 +5,7 @@ import json
 import logging
 import brozzler
 import hashlib
+import time
 
 __all__ = ["Site", "Page"]
 
@@ -25,7 +26,8 @@ class Site(BaseDictable):
     def __init__(self, seed, id=None, scope=None, proxy=None,
         ignore_robots=False, time_limit=None, extra_headers=None,
         enable_warcprox_features=False, reached_limit=None, status="ACTIVE",
-        claimed=False, last_disclaimed=0):
+        claimed=False, start_time=time.time(), last_disclaimed=0):
+
         self.seed = seed
         self.id = id
         self.proxy = proxy
@@ -36,11 +38,13 @@ class Site(BaseDictable):
         self.reached_limit = reached_limit
         self.status = status
         self.claimed = bool(claimed)
-        self.last_disclaimed = last_disclaimed  # time as seconds since epoch
+        # times as seconds since epoch
+        self.start_time = start_time
+        self.last_disclaimed = last_disclaimed
 
         self.scope = scope or {}
         if not "surt" in self.scope:
-            self.scope["surt"] = surt.GoogleURLCanonicalizer.canonicalize(surt.handyurl.parse(seed)).getURLString(surt=True, trailing_comma=True)
+            self.scope["surt"] = self._to_surt(seed)
 
     def __repr__(self):
         return """Site(id={},seed={},scope={},proxy={},enable_warcprox_features={},ignore_robots={},extra_headers={},reached_limit={})""".format(
@@ -48,8 +52,16 @@ class Site(BaseDictable):
                 repr(self.proxy), self.enable_warcprox_features,
                 self.ignore_robots, self.extra_headers, self.reached_limit)
 
+    def _to_surt(self, url):
+        hurl = surt.handyurl.parse(url)
+        surt.GoogleURLCanonicalizer.canonicalize(hurl)
+        hurl.query = None
+        hurl.hash = None
+        # XXX chop off path after last slash??
+        return hurl.getURLString(surt=True, trailing_comma=True)
+
     def note_seed_redirect(self, url):
-        new_scope_surt = surt.GoogleURLCanonicalizer.canonicalize(surt.handyurl.parse(url)).getURLString(surt=True, trailing_comma=True)
+        new_scope_surt = self._to_surt(url)
         if not new_scope_surt.startswith(self.scope["surt"]):
             self.logger.info("changing site scope surt from {} to {}".format(self.scope["surt"], new_scope_surt))
             self.scope["surt"] = new_scope_surt
@@ -78,7 +90,7 @@ class Site(BaseDictable):
             surtt = surt.GoogleURLCanonicalizer.canonicalize(hurl).getURLString(surt=True, trailing_comma=True)
             return surtt.startswith(self.scope["surt"])
         except:
-            self.logger.warn("""problem parsing url "{}" """.format(url))
+            self.logger.warn("problem parsing url %s", repr(url))
             return False
 
 class Page(BaseDictable):
