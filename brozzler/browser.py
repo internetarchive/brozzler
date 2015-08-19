@@ -17,6 +17,7 @@ from brozzler.behaviors import Behavior
 from requests.structures import CaseInsensitiveDict
 import select
 import re
+import base64
 
 __all__ = ["BrowserPool", "Browser"]
 
@@ -245,6 +246,7 @@ class Browser:
             self._handle_message(websock, message)
         except:
             self.logger.error("uncaught exception in _handle_message", exc_info=True)
+            self.abort_browse_page()
 
     def _network_request_will_be_sent(self, message):
         if self._behavior:
