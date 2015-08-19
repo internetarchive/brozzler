@@ -12,7 +12,7 @@ def _robots_cache(site):
         def get(self, url, *args, **kwargs):
             res = super().get(url, *args, **kwargs)
             if res.status_code == 420 and 'warcprox-meta' in res.headers:
-                raise ReachedLimit(warcprox_meta=json.loads(res.headers['warcprox-meta']), http_payload=res.text)
+                raise brozzler.ReachedLimit(warcprox_meta=json.loads(res.headers['warcprox-meta']), http_payload=res.text)
             else:
                 return res
 

@@ -23,7 +23,7 @@ class Site(BaseDictable):
     def __init__(self, seed, id=None, scope=None, proxy=None,
         ignore_robots=False, time_limit=None, extra_headers=None,
         enable_warcprox_features=False, reached_limit=None, status="ACTIVE",
-        claimed=False):
+        claimed=False, last_disclaimed=0):
         self.seed = seed
         self.id = id
         self.proxy = proxy
@@ -34,6 +34,7 @@ class Site(BaseDictable):
         self.reached_limit = reached_limit
         self.status = status
         self.claimed = bool(claimed)
+        self.last_disclaimed = last_disclaimed  # time as seconds since epoch
 
         self.scope = scope or {}
         if not "surt" in self.scope:

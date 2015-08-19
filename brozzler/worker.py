@@ -42,26 +42,6 @@ class BrozzlerWorker:
             ## os.environ["http_proxy"] = "http://{}".format(site.proxy)
         return youtube_dl.YoutubeDL(ydl_opts)
 
-    def _completed_page(self, site, page):
-        page.brozzle_count += 1
-        page.claimed = False
-        # XXX set priority?
-        self._frontier.update_page(page)
-        if page.redirect_url and page.hops_from_seed == 0:
-            site.note_seed_redirect(page.redirect_url)
-            self._frontier.update_site(site)
-
-    def _disclaim_site(self, site, page=None):
-        self.logger.info("disclaiming %s", site)
-        site.claimed = False
-        if not page and not self._frontier.has_outstanding_pages(site):
-            self.logger.info("site FINISHED! %s", site)
-            site.status = "FINISHED"
-        self._frontier.update_site(site)
-        if page:
-            page.claimed = False
-            self._frontier.update_page(page)
-
     def _putmeta(self, warcprox_address, url, content_type, payload, extra_headers=None):
         headers = {"Content-Type":content_type}
         if extra_headers:
@@ -154,7 +134,7 @@ class BrozzlerWorker:
             while not self._shutdown_requested.is_set() and time.time() - start < 300:
                 page = self._frontier.claim_page(site)
                 self.brozzle_page(browser, ydl, site, page)
-                self._completed_page(site, page)
+                self._frontier.completed_page(site, page)
                 page = None
         except brozzler.NothingToClaim:
             self.logger.info("no pages left for site %s", site)
@@ -167,7 +147,7 @@ class BrozzlerWorker:
         finally:
             self.logger.info("finished session brozzling site, stopping browser and disclaiming site")
             browser.stop()
-            self._disclaim_site(site, page)
+            self._frontier.disclaim_site(site, page)
             self._browser_pool.release(browser)
 
     def run(self):
