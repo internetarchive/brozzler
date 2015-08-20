@@ -34,20 +34,21 @@ class RethinkDbFrontier:
 
     def _ensure_db(self):
         with self._random_server_connection() as conn:
-            try:
-                tables = r.db(self.db).table_list().run(conn)
-                for tbl in "sites", "pages":
-                    if not tbl in tables:
-                        raise Exception("rethinkdb database {} exists but does not have table {}".format(repr(self.db), repr(tbl)))
-            except rethinkdb.errors.ReqlOpFailedError as e:
-                self.logger.info("rethinkdb database %s does not exist, initializing", repr(self.db))
+            dbs = r.db_list().run(conn)
+            if not self.db in dbs:
+                self.logger.info("creating rethinkdb database %s", repr(self.db))
                 r.db_create(self.db).run(conn)
-                # r.db("test").table_create("jobs", shards=self.shards, replicas=self.replicas).run(conn)
+            tables = r.db(self.db).table_list().run(conn)
+            if not "sites" in tables:
+                self.logger.info("creating rethinkdb table 'sites' in database %s", repr(self.db))
                 r.db(self.db).table_create("sites", shards=self.shards, replicas=self.replicas).run(conn)
                 r.db(self.db).table("sites").index_create("sites_last_disclaimed", [r.row["status"], r.row["claimed"], r.row["last_disclaimed"]]).run(conn)
+            if not "pages" in tables:
+                self.logger.info("creating rethinkdb table 'pages' in database %s", repr(self.db))
                 r.db(self.db).table_create("pages", shards=self.shards, replicas=self.replicas).run(conn)
                 r.db(self.db).table("pages").index_create("priority_by_site", [r.row["site_id"], r.row["brozzle_count"], r.row["claimed"], r.row["priority"]]).run(conn)
-                self.logger.info("created database %s with tables 'sites' and 'pages'", self.db)
+            # if not "jobs" in tables:
+            #    r.db("test").table_create("jobs", shards=self.shards, replicas=self.replicas).run(conn)
 
     def _vet_result(self, result, **kwargs):
         self.logger.debug("vetting expected=%s result=%s", kwargs, result)
