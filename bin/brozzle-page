@@ -38,13 +38,14 @@ site = brozzler.Site(id=-1, seed=args.url, proxy=args.proxy,
         enable_warcprox_features=args.enable_warcprox_features,
         extra_headers=extra_headers)
 page = brozzler.Page(url=args.url, site_id=site.id)
-worker = brozzler.BrozzlerWorker()
+worker = brozzler.BrozzlerWorker(frontier=None)
 ydl = worker._youtube_dl(site)
 
 browser = brozzler.Browser(chrome_exe=args.chrome_exe)
 browser.start(proxy=site.proxy)
 try:
-    worker.brozzle_page(browser, ydl, site, page)
+    outlinks = worker.brozzle_page(browser, ydl, site, page)
+    logging.info("outlinks: \n\t%s", "\n\t".join(sorted(outlinks)))
 except brozzler.ReachedLimit as e:
     logging.error("reached limit %s", e)
 finally:
