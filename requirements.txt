@@ -1,6 +1,6 @@
 argparse
 PyYAML
-git+https://github.com/ikreymer/surt.git@py3
+git+https://github.com/nlevitt/surt.git@py3
 # youtube_dl
 git+https://github.com/nlevitt/youtube-dl.git@brozzler
 git+https://github.com/seomoz/reppy.git
