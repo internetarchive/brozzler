@@ -20,7 +20,7 @@ cd brozzler
 # set up virtualenv if desired
 pip install -r requirements.txt .
 ```
-Brozzler also requires a rabbitmq server.
+Brozzler also requires rethinkdb.
 
 Fonts for good screenshots
 --------------------------

@@ -5,6 +5,7 @@ from brozzler.worker import BrozzlerWorker
 from brozzler.robots import is_permitted_by_robots
 from brozzler.frontier import RethinkDbFrontier
 from brozzler.browser import Browser, BrowserPool
+from brozzler.job import new_job, new_site
 
 def _read_version():
     import os
@@ -43,18 +44,5 @@ class ReachedLimit(Exception):
 
     def __str__(self):
         return self.__repr__()
-
-def new_site(db, site):
-    _logging.info("new site {}".format(site))
-    db.new_site(site)
-    try:
-        if is_permitted_by_robots(site, site.seed):
-            page = Page(site.seed, site_id=site.id, hops_from_seed=0, priority=1000)
-            db.new_page(page)
-        else:
-            _logging.warn("seed url {} is blocked by robots.txt".format(site.seed))
-    except ReachedLimit as e:
-        site.note_limit_reached(e)
-        db.update_site(site)
 
 # vim: set sw=4 et:
