@@ -33,6 +33,13 @@ setuptools.setup(name='brozzler',
         packages=['brozzler'],
         package_data={'brozzler':['behaviors.d/*.js*', 'behaviors.yaml', 'version.txt']},
         scripts=glob.glob('bin/*'),
+        install_requires=["argparse","PyYAML","surt==HEAD","youtube-dl==HEAD","reppy==HEAD","requests","websocket-client==HEAD","rethinkdb"],
+        dependency_links=[
+            "git+https://github.com/nlevitt/youtube-dl.git@brozzler#egg=youtube-dl-HEAD",
+            "git+https://github.com/seomoz/reppy.git#egg=reppy-HEAD",
+            "git+https://github.com/nlevitt/websocket-client.git@tweaks#egg=websocket-client-HEAD",
+            "git+https://github.com/nlevitt/surt.git@py3#egg=surt-HEAD",
+        ],
         zip_safe=False,
         classifiers=[
             'Development Status :: 3 - Alpha',
