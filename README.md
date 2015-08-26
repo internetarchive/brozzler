@@ -15,16 +15,19 @@ Brozzler is designed to work in conjunction with
 Installation
 ------------
 ```
+git clone https://github.com/nlevitt/brozzler
+cd brozzler
 # set up virtualenv if desired
-pip install --process-dependency-links git+https://github.com/nlevitt/brozzler.git
+pip install -r requirements.txt .
 ```
-Brozzler also requires a rethinkdb deployment.
+Brozzler also requires rethinkdb.
 
 Fonts for good screenshots
 --------------------------
 On ubuntu 14.04 trusty I installed these packages:
 
-xfonts-base ttf-mscorefonts-installer fonts-arphic-bkai00mp fonts-arphic-bsmi00lp fonts-arphic-gbsn00lp fonts-arphic-gkai00mp fonts-arphic-ukai fonts-farsiweb fonts-nafees fonts-sil-abyssinica fonts-sil-ezra fonts-sil-padauk fonts-unfonts-extra fonts-unfonts-core ttf-indic-fonts fonts-thai-tlwg fonts-lklug-sinhala
+xfonts-base ttf-mscorefonts-installer fonts-arphic-bkai00mp fonts-arphic-bsmi00lp fonts-arphic-gbsn00lp fonts-arphic-gkai00mp fonts-arphic-ukai fonts-farsiweb fonts-nafees fonts-sil-abyssinica fonts-sil-ezra fonts-sil-padauk fonts-unfonts-
+extra fonts-unfonts-core ttf-indic-fonts fonts-thai-tlwg fonts-lklug-sinhala
 
 License
 -------
