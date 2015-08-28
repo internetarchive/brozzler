@@ -61,12 +61,12 @@ def new_site(frontier, site):
     logging.info("new site {}".format(site))
     frontier.new_site(site)
     try:
-        if is_permitted_by_robots(site, site.seed):
-            page = Page(site.seed, site_id=site.id, hops_from_seed=0, priority=1000)
+        if brozzler.is_permitted_by_robots(site, site.seed):
+            page = brozzler.Page(site.seed, site_id=site.id, hops_from_seed=0, priority=1000)
             frontier.new_page(page)
         else:
             logging.warn("seed url {} is blocked by robots.txt".format(site.seed))
-    except ReachedLimit as e:
+    except brozzler.ReachedLimit as e:
         site.note_limit_reached(e)
         frontier.update_site(site)
 

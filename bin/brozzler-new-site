@@ -12,8 +12,10 @@ arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description="brozzler-new-site - register site to brozzle",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 arg_parser.add_argument('seed', metavar='SEED', help='seed url')
-arg_parser.add_argument("--db", dest="db", default="localhost", 
-        help="comma-separated list of RethinkDB server addresses, e.g. db0.foo.org,db0.foo.org:38015,db1.foo.org")
+arg_parser.add_argument('--rethinkdb-servers', dest='rethinkdb_servers', default="localhost",
+        help='rethinkdb servers, e.g. db0.foo.org,db0.foo.org:38015,db1.foo.org')
+arg_parser.add_argument('--rethinkdb-db', dest='rethinkdb_db', default="brozzler",
+        help='rethinkdb database name')
 arg_parser.add_argument("--proxy", dest="proxy", default=None, help="http proxy for this site")
 arg_parser.add_argument("--time-limit", dest="time_limit", default=None, help="time limit in seconds for this site")
 arg_parser.add_argument("-H", "--extra-header", action="append",
@@ -43,6 +45,6 @@ site = brozzler.Site(seed=args.seed, proxy=args.proxy,
         enable_warcprox_features=args.enable_warcprox_features,
         extra_headers=extra_headers)
 
-frontier = brozzler.RethinkDbFrontier(args.db.split(","))
+frontier = brozzler.RethinkDbFrontier(args.rethinkdb_servers.split(","), args.rethinkdb_db)
 brozzler.new_site(frontier, site)
 

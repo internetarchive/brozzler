@@ -14,8 +14,10 @@ import traceback
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-arg_parser.add_argument("--db", dest="db", default="localhost", 
-        help="comma-separated list of RethinkDB server addresses, e.g. db0.foo.org,db0.foo.org:38015,db1.foo.org")
+arg_parser.add_argument('--rethinkdb-servers', dest='rethinkdb_servers', default="localhost",
+        help='rethinkdb servers, e.g. db0.foo.org,db0.foo.org:38015,db1.foo.org')
+arg_parser.add_argument('--rethinkdb-db', dest='rethinkdb_db', default="brozzler",
+        help='rethinkdb database name')
 arg_parser.add_argument('-e', '--executable', dest='chrome_exe', default='chromium-browser',
         help='executable to use to invoke chrome')
 arg_parser.add_argument('-n', '--max-browsers', dest='max_browsers', default='1',
@@ -49,7 +51,7 @@ signal.signal(signal.SIGQUIT, dump_state)
 signal.signal(signal.SIGTERM, sigterm)
 signal.signal(signal.SIGINT, sigint)
 
-frontier = brozzler.RethinkDbFrontier(args.db.split(","))
+frontier = brozzler.RethinkDbFrontier(args.rethinkdb_servers.split(","), args.rethinkdb_db)
 worker = brozzler.BrozzlerWorker(frontier, max_browsers=int(args.max_browsers), chrome_exe=args.chrome_exe)
 
 worker.start()

@@ -1,10 +1,7 @@
-argparse
 PyYAML
 git+https://github.com/nlevitt/surt.git@py3
-# youtube_dl
 git+https://github.com/nlevitt/youtube-dl.git@brozzler
-git+https://github.com/seomoz/reppy.git
+git+https://github.com/seomoz/reppy.git   # https://github.com/seomoz/reppy/commit/7661606c not in pypi package
 requests
-# websocket-client
 git+https://github.com/nlevitt/websocket-client.git@tweaks
 rethinkdb
