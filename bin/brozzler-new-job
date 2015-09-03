@@ -27,5 +27,5 @@ logging.basicConfig(stream=sys.stdout, level=args.log_level,
         format="%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
 
 frontier = brozzler.RethinkDbFrontier(args.rethinkdb_servers.split(","), args.rethinkdb_db)
-brozzler.job.new_job_file(frontier, job_conf_file)
+brozzler.job.new_job_file(frontier, args.job_conf_file)
 

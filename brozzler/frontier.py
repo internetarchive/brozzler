@@ -1,7 +1,3 @@
-# vim: set sw=4 et:
-
-__all__ = ["UnexpectedDbResult", "RethinkDbFrontier"]
-
 import logging
 import brozzler
 import rethinkdb
@@ -35,8 +31,9 @@ class RethinkDbFrontier:
             self.logger.info("creating rethinkdb table 'pages' in database %s", repr(self.r.db))
             self.r.run(r.table_create("pages", shards=self.shards, replicas=self.replicas))
             self.r.run(r.table("pages").index_create("priority_by_site", [r.row["site_id"], r.row["brozzle_count"], r.row["claimed"], r.row["priority"]]))
-        # if not "jobs" in tables:
-        #    r.db("test").table_create("jobs", shards=self.shards, replicas=self.replicas).run(conn)
+        if not "jobs" in tables:
+            self.logger.info("creating rethinkdb table 'jobs' in database %s", repr(self.r.db))
+            self.r.run(r.table_create("jobs", shards=self.shards, replicas=self.replicas))
 
     def _vet_result(self, result, **kwargs):
         self.logger.debug("vetting expected=%s result=%s", kwargs, result)
@@ -52,6 +49,14 @@ class RethinkDbFrontier:
             else:
                 if result.get(k) != expected:
                     raise UnexpectedDbResult("expected {} to be {} in {}".format(repr(k), expected, result))
+
+    def new_job(self, job):
+        self.logger.info("inserting into 'jobs' table %s", repr(job))
+        result = self.r.run(r.table("jobs").insert(job.to_dict()))
+        self._vet_result(result, inserted=1)
+        if not job.id:
+            # only if "id" has not already been set
+            job.id = result["generated_keys"][0]
 
     def new_site(self, site):
         self.logger.info("inserting into 'sites' table %s", site)

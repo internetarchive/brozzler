@@ -1,9 +1,8 @@
-# vim: set sw=4 et:
-
 import logging
 import brozzler
 import yaml
 import json
+import datetime
 
 def merge(a, b):
     if isinstance(a, dict) and isinstance(b, dict):
@@ -19,32 +18,27 @@ def merge(a, b):
         return a
 
 def new_job_file(frontier, job_conf_file):
-    logging.info("loading %s", args.job_conf_file)
-    with open(args.job_conf_file) as f:
+    logging.info("loading %s", job_conf_file)
+    with open(job_conf_file) as f:
         job_conf = yaml.load(f)
         new_job(frontier, job_conf)
 
 def new_job(frontier, job_conf):
-    # logging.info("job_conf=%s", job_conf)
-    seeds = job_conf.pop("seeds")
-    # logging.info("=== global settings ===\n%s", yaml.dump(job_conf))
-    
+    job = Job(id=job_conf.get("id"), conf=job_conf, status="ACTIVE", started=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
+    frontier.new_job(job)
+
     sites = []
-    for seed_conf in seeds:
-        if "id" in seed_conf:
-            seed_conf.pop("id")
+    for seed_conf in job_conf["seeds"]:
         merged_conf = merge(seed_conf, job_conf)
         # XXX check for unknown settings, invalid url, etc
-        # logging.info("merge(%s, %s) = %s", seed_conf, global_conf, merged_conf)
-        # logging.info("=== seed_conf ===\n%s", yaml.dump(seed_conf))
-        # logging.info("=== merged_conf ===\n%s", yaml.dump(merged_conf))
     
         extra_headers = None
         if "warcprox_meta" in merged_conf:
             warcprox_meta = json.dumps(merged_conf["warcprox_meta"], separators=(',', ':'))
             extra_headers = {"Warcprox-Meta":warcprox_meta}
     
-        site = brozzler.Site(seed=merged_conf["url"],
+        site = brozzler.Site(job_id=job.id,
+                seed=merged_conf["url"],
                 scope=merged_conf.get("scope"),
                 time_limit=merged_conf.get("time_limit"),
                 proxy=merged_conf.get("proxy"),
@@ -52,8 +46,7 @@ def new_job(frontier, job_conf):
                 enable_warcprox_features=merged_conf.get("enable_warcprox_features"),
                 extra_headers=extra_headers)
         sites.append(site)
-    
-    # frontier = brozzler.RethinkDbFrontier(args.db.split(","))
+
     for site in sites:
         new_site(frontier, site)
 
@@ -70,4 +63,13 @@ def new_site(frontier, site):
         site.note_limit_reached(e)
         frontier.update_site(site)
 
+class Job(brozzler.BaseDictable):
+    logger = logging.getLogger(__module__ + "." + __qualname__)
+
+    def __init__(self, id=None, conf=None, status="ACTIVE", started=None, finished=None):
+        self.id = id
+        self.conf = conf
+        self.status = status
+        self.started = started
+        self.finished = finished
 

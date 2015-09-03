@@ -7,23 +7,10 @@ import brozzler
 import hashlib
 import time
 
-__all__ = ["Site", "Page"]
-
-class BaseDictable:
-    def to_dict(self):
-        d = dict(vars(self))
-        for k in vars(self):
-            if k.startswith("_") or d[k] is None:
-                del d[k]
-        return d
-
-    def to_json(self):
-        return json.dumps(self.to_dict(), separators=(',', ':'))
-
-class Site(BaseDictable):
+class Site(brozzler.BaseDictable):
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, seed, id=None, scope=None, proxy=None,
+    def __init__(self, seed, id=None, job_id=None, scope=None, proxy=None,
         ignore_robots=False, time_limit=None, extra_headers=None,
         enable_warcprox_features=False, reached_limit=None, status="ACTIVE",
         claimed=False, start_time=time.time(), last_disclaimed=0):
@@ -93,7 +80,7 @@ class Site(BaseDictable):
             self.logger.warn("problem parsing url %s", repr(url))
             return False
 
-class Page(BaseDictable):
+class Page(brozzler.BaseDictable):
     def __init__(self, url, id=None, site_id=None, hops_from_seed=0, redirect_url=None, priority=None, claimed=False, brozzle_count=0):
         self.site_id = site_id
         self.url = url

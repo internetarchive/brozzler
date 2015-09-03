@@ -1,11 +1,5 @@
 import json as _json
 import logging as _logging
-from brozzler.site import Page, Site
-from brozzler.worker import BrozzlerWorker
-from brozzler.robots import is_permitted_by_robots
-from brozzler.frontier import RethinkDbFrontier
-from brozzler.browser import Browser, BrowserPool
-from brozzler.job import new_job, new_site
 
 def _read_version():
     import os
@@ -79,5 +73,24 @@ class Rethinker:
                 except (r.ReqlAvailabilityError, r.ReqlTimeoutError) as e:
                     self.logger.error("will retry rethinkdb query/operation %s which failed like so:", exc_info=True)
 
+class BaseDictable:
+    def to_dict(self):
+        d = dict(vars(self))
+        for k in vars(self):
+            if k.startswith("_") or d[k] is None:
+                del d[k]
+        return d
 
-# vim: set sw=4 et:
+    def to_json(self):
+        return json.dumps(self.to_dict(), separators=(',', ':'))
+
+    def __repr__(self):
+        return "{}(**{})".format(self.__class__.__name__, self.to_dict())
+
+from brozzler.site import Page, Site
+from brozzler.worker import BrozzlerWorker
+from brozzler.robots import is_permitted_by_robots
+from brozzler.frontier import RethinkDbFrontier
+from brozzler.browser import Browser, BrowserPool
+from brozzler.job import new_job, new_site, Job
+
