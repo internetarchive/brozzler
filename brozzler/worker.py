@@ -131,29 +131,32 @@ class BrozzlerWorker:
             self._browser_pool.release(browser)
 
     def run(self):
-        latest_state = None
-        while not self._shutdown_requested.is_set():
-            try:
-                browser = self._browser_pool.acquire()
+        try:
+            latest_state = None
+            while not self._shutdown_requested.is_set():
                 try:
-                    site = self._frontier.claim_site()
-                    self.logger.info("brozzling site %s", site)
-                    ydl = self._youtube_dl(site)
-                    th = threading.Thread(target=lambda: self._brozzle_site(browser, ydl, site),
-                        name="BrowsingThread-{}".format(site.seed))
-                    th.start()
-                except:
-                    self._browser_pool.release(browser)
-                    raise
-            except brozzler.browser.NoBrowsersAvailable:
-                if latest_state != "browsers-busy":
-                    self.logger.info("all %s browsers are busy", self._max_browsers)
-                    latest_state = "browsers-busy"
-            except brozzler.NothingToClaim:
-                if latest_state != "no-unclaimed-sites":
-                    self.logger.info("no unclaimed sites to browse")
-                    latest_state = "no-unclaimed-sites"
-            time.sleep(0.5)
+                    browser = self._browser_pool.acquire()
+                    try:
+                        site = self._frontier.claim_site()
+                        self.logger.info("brozzling site %s", site)
+                        ydl = self._youtube_dl(site)
+                        th = threading.Thread(target=lambda: self._brozzle_site(browser, ydl, site),
+                            name="BrowsingThread-{}".format(site.seed))
+                        th.start()
+                    except:
+                        self._browser_pool.release(browser)
+                        raise
+                except brozzler.browser.NoBrowsersAvailable:
+                    if latest_state != "browsers-busy":
+                        self.logger.info("all %s browsers are busy", self._max_browsers)
+                        latest_state = "browsers-busy"
+                except brozzler.NothingToClaim:
+                    if latest_state != "no-unclaimed-sites":
+                        self.logger.info("no unclaimed sites to browse")
+                        latest_state = "no-unclaimed-sites"
+                time.sleep(0.5)
+        except:
+            self.logger.critical("thread exiting due to unexpected exception", exc_info=True)
 
     def start(self):
         th = threading.Thread(target=self.run, name="BrozzlerWorker")
