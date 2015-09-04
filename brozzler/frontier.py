@@ -85,7 +85,7 @@ class RethinkDbFrontier:
             result = self.r.run(r.table("sites")
                     .between(["ACTIVE",False,0], ["ACTIVE",False,250000000000], index="sites_last_disclaimed")
                     .order_by(index="sites_last_disclaimed").limit(1).update({"claimed":True},return_changes=True))
-            self._vet_result(result, replaced=[0,1])
+            self._vet_result(result, replaced=[0,1], unchanged=[0,1])
             if result["replaced"] == 1:
                 site = brozzler.Site(**result["changes"][0]["new_val"])
             else:
@@ -157,7 +157,7 @@ class RethinkDbFrontier:
             for url in outlinks:
                 if site.is_in_scope(url, parent_page):
                     if brozzler.is_permitted_by_robots(site, url):
-                        new_child_page = brozzler.Page(url, site_id=site.id, hops_from_seed=parent_page.hops_from_seed+1)
+                        new_child_page = brozzler.Page(url, site_id=site.id, hops_from_seed=parent_page.hops_from_seed+1, via_page_id=parent_page.id)
                         existing_child_page = self.get_page(new_child_page)
                         if existing_child_page:
                             existing_child_page.priority += new_child_page.priority

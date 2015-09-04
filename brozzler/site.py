@@ -81,13 +81,14 @@ class Site(brozzler.BaseDictable):
             return False
 
 class Page(brozzler.BaseDictable):
-    def __init__(self, url, id=None, site_id=None, hops_from_seed=0, redirect_url=None, priority=None, claimed=False, brozzle_count=0):
+    def __init__(self, url, id=None, site_id=None, hops_from_seed=0, redirect_url=None, priority=None, claimed=False, brozzle_count=0, via_page_id=None):
         self.site_id = site_id
         self.url = url
         self.hops_from_seed = hops_from_seed
         self.redirect_url = redirect_url
         self.claimed = bool(claimed)
         self.brozzle_count = brozzle_count
+        self.via_page_id = via_page_id
         self._canon_hurl = None
 
         if priority is not None:

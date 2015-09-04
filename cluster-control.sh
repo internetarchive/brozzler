@@ -91,7 +91,7 @@ _reset() {
 
 	tstamp=$(date +"%Y%m%d%H%M%S") 
 	echo "renaming rethinkdb database archiveit_brozzler to archiveit_brozzler_$tstamp"
-	python3.4 <<EOF
+	PYTHONPATH=/home/nlevitt/tmp/brozzler-venv/lib/python3.4/site-packages python3.4 <<EOF
 import rethinkdb as r
 with r.connect("wbgrp-svc035") as conn:
     r.db("archiveit_brozzler").config().update({"name":"archiveit_brozzler_$tstamp"}).run(conn)
@@ -111,11 +111,11 @@ _start() {
 	set -e
 	set -x 
 
-	/home/nlevitt/tmp/brozzler-venv/bin/warcprox --dir=/1/brzl/warcs --rethinkdb-servers=wbgrp-svc020,wbgrp-svc035,wbgrp-svc036 --rethinkdb-db=archiveit_brozzler --rethinkdb-big-table --cacert=/1/brzl/warcprox-ca.pem --certs-dir=/1/brzl/certs --address=0.0.0.0 --base32 --gzip --rollover-idle-time=180 &>/1/brzl/logs/warcprox.out &
+	PYTHONPATH=/home/nlevitt/tmp/brozzler-venv/lib/python3.4/site-packages:/home/nlevitt/workspace/brozzler:/home/nlevitt/workspace/warcprox:/home/nlevitt/workspace/ait5 /home/nlevitt/tmp/brozzler-venv/bin/warcprox --dir=/1/brzl/warcs --rethinkdb-servers=wbgrp-svc020,wbgrp-svc035,wbgrp-svc036 --rethinkdb-db=archiveit_brozzler --rethinkdb-big-table --cacert=/1/brzl/warcprox-ca.pem --certs-dir=/1/brzl/certs --address=0.0.0.0 --base32 --gzip --rollover-idle-time=180 --kafka-broker-list=qa-archive-it.org:6092 --kafka-capture-feed-topic=ait-brozzler-captures &>/1/brzl/logs/warcprox.out &
 
 	sleep 5
 
-	/home/nlevitt/workspace/ait5/scripts/brozzler-job-starter.py &> /1/brzl/logs/ait-job-starter.out &
+        PYTHONPATH=/home/nlevitt/tmp/brozzler-venv/lib/python3.4/site-packages:/home/nlevitt/workspace/brozzler:/home/nlevitt/workspace/warcprox:/home/nlevitt/workspace/ait5 /home/nlevitt/workspace/ait5/scripts/brozzler-job-starter.py &> /1/brzl/logs/ait-job-starter.out &
 
 	sleep 5
 

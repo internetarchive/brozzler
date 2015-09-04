@@ -41,6 +41,7 @@ class ReachedLimit(Exception):
 
 class Rethinker:
     import logging
+
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
     def __init__(self, servers=["localhost"], db=None):
@@ -50,8 +51,8 @@ class Rethinker:
     # https://github.com/rethinkdb/rethinkdb-example-webpy-blog/blob/master/model.py
     # "Best practices: Managing connections: a connection per request"
     def _random_server_connection(self):
-        import rethinkdb as r
         import random
+        import rethinkdb as r
         while True:
             server = random.choice(self.servers)
             try:
@@ -66,6 +67,7 @@ class Rethinker:
                 time.sleep(0.5)
 
     def run(self, query):
+        import rethinkdb as r
         while True:
             with self._random_server_connection() as conn:
                 try:
