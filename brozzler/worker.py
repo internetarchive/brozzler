@@ -44,11 +44,11 @@ class BrozzlerWorker:
             ## os.environ["http_proxy"] = "http://{}".format(site.proxy)
         return youtube_dl.YoutubeDL(ydl_opts)
 
-    def _putmeta(self, warcprox_address, url, content_type, payload, extra_headers=None):
-        headers = {"Content-Type":content_type}
+    def _warcprox_write_record(self, warcprox_address, url, warc_type, content_type, payload, extra_headers=None):
+        headers = {"Content-Type":content_type,"WARC-Type":warc_type,"Host":"N/A"}
         if extra_headers:
             headers.update(extra_headers)
-        request = urllib.request.Request(url, method="PUTMETA",
+        request = urllib.request.Request(url, method="WARCPROX_WRITE_RECORD",
                 headers=headers, data=payload)
 
         # XXX setting request.type="http" is a hack to stop urllib from trying
@@ -59,9 +59,9 @@ class BrozzlerWorker:
         try:
             with urllib.request.urlopen(request) as response:
                 if response.status != 204:
-                    self.logger.warn("""got "{} {}" response on warcprox PUTMETA request (expected 204)""".format(response.status, response.reason))
+                    self.logger.warn("""got "{} {}" response on warcprox WARCPROX_WRITE_RECORD request (expected 204)""".format(response.status, response.reason))
         except urllib.error.HTTPError as e:
-            self.logger.warn("""got "{} {}" response on warcprox PUTMETA request (expected 204)""".format(e.getcode(), e.info()))
+            self.logger.warn("""got "{} {}" response on warcprox WARCPROX_WRITE_RECORD request (expected 204)""".format(e.getcode(), e.info()))
 
     def _try_youtube_dl(self, ydl, site, page):
         try:
@@ -69,8 +69,9 @@ class BrozzlerWorker:
             info = ydl.extract_info(page.url)
             if site.proxy and site.enable_warcprox_features:
                 info_json = json.dumps(info, sort_keys=True, indent=4)
-                self.logger.info("sending PUTMETA request to warcprox with youtube-dl json for {}".format(page))
-                self._putmeta(warcprox_address=site.proxy, url=page.url,
+                self.logger.info("sending WARCPROX_WRITE_RECORD request to warcprox with youtube-dl json for %s", page)
+                self._warcprox_write_record(warcprox_address=site.proxy,
+                        url=page.url, warc_type="metadata",
                         content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                         payload=info_json.encode("utf-8"),
                         extra_headers=site.extra_headers)
@@ -87,10 +88,13 @@ class BrozzlerWorker:
     def brozzle_page(self, browser, ydl, site, page):
         def on_screenshot(screenshot_png):
             if site.proxy and site.enable_warcprox_features:
-                self.logger.info("sending PUTMETA request to warcprox with screenshot for {}".format(page))
-                self._putmeta(warcprox_address=site.proxy, url=page.url,
-                        content_type="image/png", payload=screenshot_png,
+                self.logger.info("sending WARCPROX_WRITE_RECORD request to warcprox with screenshot for %s", page)
+                self._warcprox_write_record(warcprox_address=site.proxy,
+                        url="screenshot:{}".format(page.url),
+                        warc_type="resource", content_type="image/png",
+                        payload=screenshot_png,
                         extra_headers=site.extra_headers)
+                # XXX thumbnail
 
         self.logger.info("brozzling {}".format(page))
         try:
