@@ -9,8 +9,8 @@ import signal
 import youtube_dl
 import urllib.request
 import json
-
-__all__ = ["BrozzlerWorker"]
+import PIL.Image
+import io
 
 class BrozzlerWorker:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -85,6 +85,15 @@ class BrozzlerWorker:
             else:
                 raise
 
+    def make_thumbnail(self, large_png):
+        img = PIL.Image.open(io.BytesIO(large_png))
+        thumb_width = 300
+        thumb_height = (thumb_width / img.size[0]) * img.size[1]
+        img.thumbnail((thumb_width, thumb_height))
+        out = io.BytesIO()
+        img.save(out, "jpeg", quality=95)
+        return out.getbuffer()
+
     def brozzle_page(self, browser, ydl, site, page):
         def on_screenshot(screenshot_png):
             if site.proxy and site.enable_warcprox_features:
@@ -94,7 +103,12 @@ class BrozzlerWorker:
                         warc_type="resource", content_type="image/png",
                         payload=screenshot_png,
                         extra_headers=site.extra_headers)
-                # XXX thumbnail
+                thumbnail_jpg = self.make_thumbnail(screenshot_png)
+                self._warcprox_write_record(warcprox_address=site.proxy,
+                        url="thumbnail:{}".format(page.url),
+                        warc_type="resource", content_type="image/jpeg",
+                        payload=thumbnail_jpg,
+                        extra_headers=site.extra_headers)
 
         self.logger.info("brozzling {}".format(page))
         try:
