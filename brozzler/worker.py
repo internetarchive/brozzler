@@ -85,29 +85,36 @@ class BrozzlerWorker:
             else:
                 raise
 
-    def make_thumbnail(self, large_png):
+    def full_and_thumb_jpegs(self, large_png):
         img = PIL.Image.open(io.BytesIO(large_png))
+
+        out = io.BytesIO()
+        img.save(out, "jpeg", quality=95)
+        full_jpeg = out.getbuffer()
+
         thumb_width = 300
         thumb_height = (thumb_width / img.size[0]) * img.size[1]
         img.thumbnail((thumb_width, thumb_height))
         out = io.BytesIO()
         img.save(out, "jpeg", quality=95)
-        return out.getbuffer()
+        thumb_jpeg = out.getbuffer()
+
+        return full_jpeg, thumb_jpeg
 
     def brozzle_page(self, browser, ydl, site, page):
         def on_screenshot(screenshot_png):
             if site.proxy and site.enable_warcprox_features:
                 self.logger.info("sending WARCPROX_WRITE_RECORD request to warcprox with screenshot for %s", page)
+                screenshot_jpeg, thumbnail_jpeg = self.full_and_thumb_jpegs(screenshot_png)
                 self._warcprox_write_record(warcprox_address=site.proxy,
                         url="screenshot:{}".format(page.url),
-                        warc_type="resource", content_type="image/png",
-                        payload=screenshot_png,
+                        warc_type="resource", content_type="image/jpeg",
+                        payload=screenshot_jpeg,
                         extra_headers=site.extra_headers)
-                thumbnail_jpg = self.make_thumbnail(screenshot_png)
                 self._warcprox_write_record(warcprox_address=site.proxy,
                         url="thumbnail:{}".format(page.url),
                         warc_type="resource", content_type="image/jpeg",
-                        payload=thumbnail_jpg,
+                        payload=thumbnail_jpeg,
                         extra_headers=site.extra_headers)
 
         self.logger.info("brozzling {}".format(page))
