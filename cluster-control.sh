@@ -66,10 +66,11 @@ import rethinkdb as r
 with r.connect("wbgrp-svc035") as conn:
     r.db("archiveit_brozzler").config().update({"name":"archiveit_brozzler_$tstamp"}).run(conn)
 EOF
+	mysql -hwbgrp-svc107 -P6306 -uarchiveit -parchiveit archiveit3 -e "update CrawlJob set status='FINISHED_ABNORMAL', endDate=now() where status='ACTIVE'"
 
 	set -e
 	mv -v /1/brzl /tmp/brzl.$tstamp
-	mkdir -vp /1/brzl/logs
+	mkdir -vp /1/brzl/{warcs,logs}
 }
 
 _start() {
