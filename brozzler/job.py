@@ -55,13 +55,13 @@ def new_site(frontier, site):
     frontier.new_site(site)
     try:
         if brozzler.is_permitted_by_robots(site, site.seed):
-            page = brozzler.Page(site.seed, site_id=site.id, hops_from_seed=0, priority=1000)
+            page = brozzler.Page(site.seed, site_id=site.id, job_id=site.job_id, hops_from_seed=0, priority=1000)
             frontier.new_page(page)
+            logging.info("queued page %s", page)
         else:
             logging.warn("seed url {} is blocked by robots.txt".format(site.seed))
     except brozzler.ReachedLimit as e:
-        site.note_limit_reached(e)
-        frontier.update_site(site)
+        frontier.reached_limit(site, e)
 
 class Job(brozzler.BaseDictable):
     logger = logging.getLogger(__module__ + "." + __qualname__)

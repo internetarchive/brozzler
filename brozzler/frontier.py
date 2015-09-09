@@ -27,6 +27,7 @@ class RethinkDbFrontier:
             self.logger.info("creating rethinkdb table 'sites' in database %s", repr(self.r.db))
             self.r.run(r.table_create("sites", shards=self.shards, replicas=self.replicas))
             self.r.run(r.table("sites").index_create("sites_last_disclaimed", [r.row["status"], r.row["claimed"], r.row["last_disclaimed"]]))
+            self.r.run(r.table("sites").index_create("job_id"))
         if not "pages" in tables:
             self.logger.info("creating rethinkdb table 'pages' in database %s", repr(self.r.db))
             self.r.run(r.table_create("pages", shards=self.shards, replicas=self.replicas))
@@ -64,6 +65,11 @@ class RethinkDbFrontier:
         self._vet_result(result, inserted=1)
         site.id = result["generated_keys"][0]
 
+    def update_job(self, job):
+        self.logger.debug("updating 'jobs' table entry %s", job)
+        result = self.r.run(r.table("jobs").get(job.id).replace(job.to_dict()))
+        self._vet_result(result, replaced=[0,1], unchanged=[0,1])
+
     def update_site(self, site):
         self.logger.debug("updating 'sites' table entry %s", site)
         result = self.r.run(r.table("sites").get(site.id).replace(site.to_dict()))
@@ -100,10 +106,9 @@ class RethinkDbFrontier:
     def _enforce_time_limit(self, site):
         if (site.time_limit and site.time_limit > 0
                 and time.time() - site.start_time > site.time_limit):
-            self.logger.info("site FINISHED_TIME_LIMIT! time_limit=%s start_time=%s elapsed=%s %s",
+            self.logger.debug("site FINISHED_TIME_LIMIT! time_limit=%s start_time=%s elapsed=%s %s",
                     site.time_limit, site.start_time, time.time() - site.start_time, site)
-            site.status = "FINISHED_TIME_LIMIT"
-            self.update_site(site)
+            self.finished(site, "FINISHED_TIME_LIMIT")
             return True
         else:
             return False
@@ -113,6 +118,7 @@ class RethinkDbFrontier:
                 .between([site.id,0,False,brozzler.MIN_PRIORITY], [site.id,0,False,brozzler.MAX_PRIORITY], index="priority_by_site")
                 .order_by(index=r.desc("priority_by_site")).limit(1)
                 .update({"claimed":True},return_changes=True))
+        self.logger.info("query returned %s", result)
         self._vet_result(result, replaced=[0,1])
         if result["replaced"] == 1:
             return brozzler.Page(**result["changes"][0]["new_val"])
@@ -123,8 +129,8 @@ class RethinkDbFrontier:
         cursor = self.r.run(r.table("pages").between([site.id,0,False,brozzler.MIN_PRIORITY], [site.id,0,True,brozzler.MAX_PRIORITY], index="priority_by_site").limit(1))
         return len(list(cursor)) > 0
 
-    def get_page(self, page):
-        result = self.r.run(r.table("pages").get(page.id))
+    def page(self, id):
+        result = self.r.run(r.table("pages").get(id))
         if result:
             return brozzler.Page(**result)
         else:
@@ -139,14 +145,48 @@ class RethinkDbFrontier:
             site.note_seed_redirect(page.redirect_url)
             self.update_site(site)
 
+    def active_jobs(self):
+        results = self.r.run(r.table("jobs").filter({"status":"ACTIVE"}))
+        for result in results:
+            yield brozzler.Job(**result)
+
+    def job(self, id):
+        result = self.r.run(r.table("jobs").get(id))
+        if result:
+            return brozzler.Job(**result)
+        else:
+            return None
+
+    def _maybe_finish_job(self, job_id):
+        """Returns True if job is finished."""
+        job = self.job(job_id)
+        if job.status.startswith("FINISH"):
+            self.logger.warn("%s is already %s", job, job.status)
+            return True
+
+        results = self.r.run(r.table("sites").get_all(job_id, index="job_id"))
+        for result in results:
+            site = brozzler.Site(**result)
+            if not site.status.startswith("FINISH"):
+                return False
+
+        job.status = "FINISHED"
+        job.finished = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.update_job(job)
+        return True
+
+    def finished(self, site, status):
+        self.logger.info("%s %s", site, status)
+        site.status = status
+        self.update_site(site)
+        self._maybe_finish_job(site.job_id)
+
     def disclaim_site(self, site, page=None):
         self.logger.info("disclaiming %s", site)
         site.claimed = False
         site.last_disclaimed = time.time()
         if not page and not self.has_outstanding_pages(site):
-            self.logger.info("site FINISHED! %s", site)
-            site.status = "FINISHED"
-        self.update_site(site)
+            self.finished(site, "FINISHED")
         if page:
             page.claimed = False
             self.update_page(page)
@@ -157,8 +197,8 @@ class RethinkDbFrontier:
             for url in outlinks:
                 if site.is_in_scope(url, parent_page):
                     if brozzler.is_permitted_by_robots(site, url):
-                        new_child_page = brozzler.Page(url, site_id=site.id, hops_from_seed=parent_page.hops_from_seed+1, via_page_id=parent_page.id)
-                        existing_child_page = self.get_page(new_child_page)
+                        new_child_page = brozzler.Page(url, site_id=site.id, job_id=site.job_id, hops_from_seed=parent_page.hops_from_seed+1, via_page_id=parent_page.id)
+                        existing_child_page = self.page(new_child_page.id)
                         if existing_child_page:
                             existing_child_page.priority += new_child_page.priority
                             self.update_page(existing_child_page)
@@ -174,3 +214,12 @@ class RethinkDbFrontier:
         self.logger.info("%s new links added, %s existing links updated, %s links rejected, %s links blocked by robots from %s",
             counts["added"], counts["updated"], counts["rejected"], counts["blocked"], parent_page)
 
+    def reached_limit(self, site, e):
+        self.logger.info("reached_limit site=%s e=%s", site, e)
+        assert isinstance(e, brozzler.ReachedLimit)
+        if site.reached_limit and site.reached_limit != e.warcprox_meta["reached-limit"]:
+            self.logger.warn("reached limit %s but site had already reached limit %s",
+                    e.warcprox_meta["reached-limit"], self.reached_limit)
+        else:
+            site.reached_limit = e.warcprox_meta["reached-limit"]
+            self.finished(site, "FINISHED_REACHED_LIMIT")

@@ -17,6 +17,7 @@ class Site(brozzler.BaseDictable):
 
         self.seed = seed
         self.id = id
+        self.job_id = job_id
         self.proxy = proxy
         self.ignore_robots = ignore_robots
         self.enable_warcprox_features = bool(enable_warcprox_features)
@@ -53,16 +54,6 @@ class Site(brozzler.BaseDictable):
             self.logger.info("changing site scope surt from {} to {}".format(self.scope["surt"], new_scope_surt))
             self.scope["surt"] = new_scope_surt
 
-    def note_limit_reached(self, e):
-        self.logger.info("reached_limit e=%s", e)
-        assert isinstance(e, brozzler.ReachedLimit)
-        if self.reached_limit and self.reached_limit != e.warcprox_meta["reached-limit"]:
-            self.logger.warn("reached limit %s but site had already reached limit %s",
-                    e.warcprox_meta["reached-limit"], self.reached_limit)
-        else:
-            self.reached_limit = e.warcprox_meta["reached-limit"]
-            self.status = "FINISHED_REACHED_LIMIT"
-
     def is_in_scope(self, url, parent_page=None):
         if parent_page and "max_hops" in self.scope and parent_page.hops_from_seed >= self.scope["max_hops"]:
             return False
@@ -81,8 +72,9 @@ class Site(brozzler.BaseDictable):
             return False
 
 class Page(brozzler.BaseDictable):
-    def __init__(self, url, id=None, site_id=None, hops_from_seed=0, redirect_url=None, priority=None, claimed=False, brozzle_count=0, via_page_id=None):
+    def __init__(self, url, id=None, site_id=None, job_id=None, hops_from_seed=0, redirect_url=None, priority=None, claimed=False, brozzle_count=0, via_page_id=None):
         self.site_id = site_id
+        self.job_id = job_id
         self.url = url
         self.hops_from_seed = hops_from_seed
         self.redirect_url = redirect_url
@@ -103,8 +95,8 @@ class Page(brozzler.BaseDictable):
             self.id = hashlib.sha1(digest_this.encode("utf-8")).hexdigest()
 
     def __repr__(self):
-        return """Page(url={},site_id={},hops_from_seed={})""".format(
-                repr(self.url), self.site_id, self.hops_from_seed)
+        return """Page(url={},job_id={},site_id={},hops_from_seed={})""".format(
+                repr(self.url), self.job_id, self.site_id, self.hops_from_seed)
 
     def note_redirect(self, url):
         self.redirect_url = url

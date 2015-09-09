@@ -3,6 +3,7 @@
 import os
 import logging
 import brozzler
+import brozzler.browser
 import threading
 import time
 import signal
@@ -144,7 +145,7 @@ class BrozzlerWorker:
         except brozzler.NothingToClaim:
             self.logger.info("no pages left for site %s", site)
         except brozzler.ReachedLimit as e:
-            site.note_limit_reached(e)
+            self._frontier.reached_limit(site, e)
         except brozzler.browser.BrowsingAborted:
             self.logger.info("{} shut down".format(browser))
         except:

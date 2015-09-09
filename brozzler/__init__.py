@@ -41,7 +41,6 @@ class ReachedLimit(Exception):
 
 class Rethinker:
     import logging
-
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
     def __init__(self, servers=["localhost"], db=None):
@@ -74,6 +73,7 @@ class Rethinker:
                     return query.run(conn, db=self.db)
                 except (r.ReqlAvailabilityError, r.ReqlTimeoutError) as e:
                     self.logger.error("will retry rethinkdb query/operation %s which failed like so:", exc_info=True)
+            time.sleep(0.5)
 
 class BaseDictable:
     def to_dict(self):
@@ -90,9 +90,9 @@ class BaseDictable:
         return "{}(**{})".format(self.__class__.__name__, self.to_dict())
 
 from brozzler.site import Page, Site
-from brozzler.worker import BrozzlerWorker
+# from brozzler.worker import BrozzlerWorker
 from brozzler.robots import is_permitted_by_robots
 from brozzler.frontier import RethinkDbFrontier
-from brozzler.browser import Browser, BrowserPool
+# from brozzler.browser import Browser, BrowserPool
 from brozzler.job import new_job, new_site, Job
 
