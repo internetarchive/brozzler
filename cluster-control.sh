@@ -11,10 +11,10 @@ _status() {
 	warcprox_pids=( $(pgrep -f /home/nlevitt/tmp/brozzler-venv/bin/warcprox) )
 	worker_pids=( $(pgrep -f /home/nlevitt/tmp/brozzler-venv/bin/brozzler-worker) )
 	pywayback_pids=( $(pgrep -f /home/nlevitt/workspace/pygwb/pygwb-ve27/bin/gunicorn) )
-	job_starter_pids=( $(pgrep -f /home/nlevitt/workspace/ait5/scripts/brozzler-job-starter.py) )
+	ait_brozzler_boss=( $(pgrep -f /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py) )
 	ait5_pids=( $(pgrep -f 0.0.0.0:8888) )
 
-	pids="${warcprox_pids[*]} ${worker_pids[*]} ${pywayback_pids[*]} ${job_starter_pids[*]} ${ait5_pids[*]}"
+	pids="${warcprox_pids[*]} ${worker_pids[*]} ${pywayback_pids[*]} ${ait_brozzler_boss[*]} ${ait5_pids[*]}"
 	if [ "$pids" != "    " ] ; then
 		PS_FORMAT=user,pid,tid,ppid,pgid,sid,pri,nice,psr,%cpu,%mem,tty,stat,stime,time,args ps ww -H $pids
 		echo
@@ -24,7 +24,7 @@ _status() {
 	[ -z "${warcprox_pids[*]}" ] && echo "$0: warcprox is not running"
 	[ -z "${worker_pids[*]}" ] && echo "$0: brozzler-workers are not running"
 	[ -z "${pywayback_pids[*]}" ] && echo "$0: pywayback is not running"
-	[ -z "${job_starter_pids[*]}" ] && echo "$0: brozzler-job-starter.py is not running"
+	[ -z "${ait_brozzler_boss[*]}" ] && echo "$0: ait-brozzler-boss.py is not running"
 	[ -z "${ait5_pids[*]}" ] && echo "$0: ait5 is not running"
 
 	return $something_running
@@ -33,7 +33,7 @@ _status() {
 _stop() {
 	if _status ; then
 		pkill -f /home/nlevitt/workspace/pygwb/pygwb-ve27/bin/gunicorn
-		pkill -f /home/nlevitt/workspace/ait5/scripts/brozzler-job-starter.py
+		pkill -f /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py
 		pkill -f /home/nlevitt/tmp/brozzler-venv/bin/warcprox
 		pkill -f 0.0.0.0:8888
 		# pkill -f /home/nlevitt/tmp/brozzler-venv/bin/brozzler-worker
@@ -86,8 +86,8 @@ _start() {
 
 	sleep 5
 
-	echo $0: starting ait5 brozzler-job-starter.py
-        PYTHONPATH=/home/nlevitt/tmp/brozzler-venv/lib/python3.4/site-packages:/home/nlevitt/workspace/brozzler:/home/nlevitt/workspace/warcprox:/home/nlevitt/workspace/ait5 /home/nlevitt/workspace/ait5/scripts/brozzler-job-starter.py &>> /1/brzl/logs/ait-job-starter.out &
+	echo $0: starting ait-brozzler-boss.py
+	PYTHONPATH=/home/nlevitt/tmp/brozzler-venv/lib/python3.4/site-packages:/home/nlevitt/workspace/brozzler:/home/nlevitt/workspace/warcprox:/home/nlevitt/workspace/ait5 /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py &>> /1/brzl/logs/ait-brozzler-boss.out &
 
 	sleep 5
 
