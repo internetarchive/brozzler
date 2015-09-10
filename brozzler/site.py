@@ -13,7 +13,8 @@ class Site(brozzler.BaseDictable):
     def __init__(self, seed, id=None, job_id=None, scope=None, proxy=None,
         ignore_robots=False, time_limit=None, extra_headers=None,
         enable_warcprox_features=False, reached_limit=None, status="ACTIVE",
-        claimed=False, start_time=time.time(), last_disclaimed=0):
+        claimed=False, start_time=time.time(), last_disclaimed=0,
+        last_claimed_by=None):
 
         self.seed = seed
         self.id = id
@@ -26,6 +27,7 @@ class Site(brozzler.BaseDictable):
         self.reached_limit = reached_limit
         self.status = status
         self.claimed = bool(claimed)
+        self.last_claimed_by = last_claimed_by
         # times as seconds since epoch
         self.start_time = start_time
         self.last_disclaimed = last_disclaimed
@@ -72,13 +74,16 @@ class Site(brozzler.BaseDictable):
             return False
 
 class Page(brozzler.BaseDictable):
-    def __init__(self, url, id=None, site_id=None, job_id=None, hops_from_seed=0, redirect_url=None, priority=None, claimed=False, brozzle_count=0, via_page_id=None):
+    def __init__(self, url, id=None, site_id=None, job_id=None,
+            hops_from_seed=0, redirect_url=None, priority=None, claimed=False,
+            brozzle_count=0, via_page_id=None, last_claimed_by=None):
         self.site_id = site_id
         self.job_id = job_id
         self.url = url
         self.hops_from_seed = hops_from_seed
         self.redirect_url = redirect_url
         self.claimed = bool(claimed)
+        self.last_claimed_by = last_claimed_by
         self.brozzle_count = brozzle_count
         self.via_page_id = via_page_id
         self._canon_hurl = None

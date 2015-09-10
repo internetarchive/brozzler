@@ -4,6 +4,7 @@ import rethinkdb
 r = rethinkdb
 import random
 import time
+import datetime
 
 class UnexpectedDbResult(Exception):
     pass
@@ -85,12 +86,12 @@ class RethinkDbFrontier:
         result = self.r.run(r.table("pages").insert(page.to_dict()))
         self._vet_result(result, inserted=1)
 
-    def claim_site(self):
+    def claim_site(self, worker_id):
         # XXX keep track of aggregate priority and prioritize sites accordingly?
         while True:
             result = self.r.run(r.table("sites")
                     .between(["ACTIVE",False,0], ["ACTIVE",False,250000000000], index="sites_last_disclaimed")
-                    .order_by(index="sites_last_disclaimed").limit(1).update({"claimed":True},return_changes=True))
+                    .order_by(index="sites_last_disclaimed").limit(1).update({"claimed":True,"last_claimed_by":worker_id},return_changes=True))
             self._vet_result(result, replaced=[0,1], unchanged=[0,1])
             if result["replaced"] == 1:
                 site = brozzler.Site(**result["changes"][0]["new_val"])
@@ -113,11 +114,11 @@ class RethinkDbFrontier:
         else:
             return False
 
-    def claim_page(self, site):
+    def claim_page(self, site, worker_id):
         result = self.r.run(r.table("pages")
                 .between([site.id,0,False,brozzler.MIN_PRIORITY], [site.id,0,False,brozzler.MAX_PRIORITY], index="priority_by_site")
                 .order_by(index=r.desc("priority_by_site")).limit(1)
-                .update({"claimed":True},return_changes=True))
+                .update({"claimed":True,"last_claimed_by":worker_id},return_changes=True))
         self.logger.info("query returned %s", result)
         self._vet_result(result, replaced=[0,1])
         if result["replaced"] == 1:
@@ -165,11 +166,14 @@ class RethinkDbFrontier:
             return True
 
         results = self.r.run(r.table("sites").get_all(job_id, index="job_id"))
+        n = 0
         for result in results:
             site = brozzler.Site(**result)
             if not site.status.startswith("FINISH"):
                 return False
+            n += 1
 
+        self.logger.info("all %s sites finished, job %s is FINISHED!", n, job.id)
         job.status = "FINISHED"
         job.finished = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
         self.update_job(job)
@@ -187,6 +191,8 @@ class RethinkDbFrontier:
         site.last_disclaimed = time.time()
         if not page and not self.has_outstanding_pages(site):
             self.finished(site, "FINISHED")
+        else:
+            self.update_site(site)
         if page:
             page.claimed = False
             self.update_page(page)
