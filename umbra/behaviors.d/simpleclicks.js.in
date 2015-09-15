@@ -1,41 +1,58 @@
 var umbraSimpleClicksBehavior = {
-        IDLE_TIMEOUT_SEC: 10,
-        idleSince: null,
-        alreadyClicked: {},
+	IDLE_TIMEOUT_SEC: 10,
+	idleSince: null,
+	alreadyClicked: {},
 
-        intervalFunc: function() {
-                var clickTargets = document.querySelectorAll("${click_css_selector}");
+	intervalFunc: function() {
+		var iframes = document.querySelectorAll("iframe");
+		var documents = Array(iframes.length + 1);
+		documents[0] = document;
+		for (var i = 0; i < iframes.length; i++) {
+			documents[i+1] = iframes[i].contentWindow.document;
+		}
 
-                for (var i = 0; i < clickTargets.length; i++) {
-                        var key = clickTargets[i].outerHTML;
-                        if (!this.alreadyClicked[key]) {
-                                console.log("clicking on " + key);
-                                clickTargets[i].click();
-                                this.alreadyClicked[key] = true;
-                                this.idleSince = null;
-                                return;
-                        }
-                }
+		for (var j = 0; j < documents.length; j++) {
+			var clickTargets = documents[j].querySelectorAll("${click_css_selector}");
+			for (var i = 0; i < clickTargets.length; i++) {
+				var key = clickTargets[i].outerHTML;
+				if (!this.alreadyClicked[key]) {
+					console.log("clicking on " + key);
 
-                if (!this.idleSince) {
-                        this.idleSince = Date.now();
-                }
-        },
+					// do mouse over event on click target
+					// since some urls are requsted only on
+					// this event - see
+					// https://webarchive.jira.com/browse/AITFIVE-451
+					var mouseOverEvent = document.createEvent('Events');
+					mouseOverEvent.initEvent("mouseover", true, false);
+					clickTargets[i].dispatchEvent(mouseOverEvent);
 
-        start: function() {
-                var that = this;
-                this.intervalId = setInterval(function(){ that.intervalFunc() }, 250);
-        },
+					clickTargets[i].click();
+					this.alreadyClicked[key] = true;
+					this.idleSince = null;
+					return;
+				}
+			}
+		}
 
-        isFinished: function() {
-                if (this.idleSince != null) {
-                        var idleTimeMs = Date.now() - this.idleSince;
-                        if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
-                                return true;
-                        }
-                }
-                return false;
-        },
+		if (!this.idleSince) {
+			this.idleSince = Date.now();
+		}
+	},
+
+	start: function() {
+		var that = this;
+		this.intervalId = setInterval(function(){ that.intervalFunc() }, 250);
+	},
+
+	isFinished: function() {
+		if (this.idleSince != null) {
+			var idleTimeMs = Date.now() - this.idleSince;
+			if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
+				return true;
+			}
+		}
+		return false;
+	},
 };
 
 // Called from outside of this script.
