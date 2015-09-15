@@ -1,36 +1,91 @@
-var umbraSimpleClicksBehavior = {
-	IDLE_TIMEOUT_SEC: 10,
-	idleSince: null,
-	alreadyClicked: {},
+var umbraAboveBelowOrOnScreen = function(e) {
+	var eTop = e.getBoundingClientRect().top;
+	if (eTop < window.scrollY) {
+		return -1; // above
+	} else if (eTop > window.scrollY + window.innerHeight) {
+		return 1; // below
+	} else {
+		return 0; // on screen
+	}
+}
 
-	intervalFunc: function() {
+var umbraSimpleScrollsAndClicksBehavior = {
+	IDLE_TIMEOUT_SEC : 10,
+	idleSince : null,
+	alreadyClicked : {},
+
+	intervalFunc : function() {
+		var clickedSomething = false;
+		var somethingLeftBelow = false;
+		var somethingLeftAbove = false;
+		var cssSelector = "${click_css_selector}";
+
 		var iframes = document.querySelectorAll("iframe");
 		var documents = Array(iframes.length + 1);
 		documents[0] = document;
+		
 		for (var i = 0; i < iframes.length; i++) {
 			documents[i+1] = iframes[i].contentWindow.document;
 		}
 
 		for (var j = 0; j < documents.length; j++) {
-			var clickTargets = documents[j].querySelectorAll("${click_css_selector}");
-			for (var i = 0; i < clickTargets.length; i++) {
-				var key = clickTargets[i].outerHTML;
-				if (!this.alreadyClicked[key]) {
-					console.log("clicking on " + key);
 
-					// do mouse over event on click target
-					// since some urls are requsted only on
-					// this event - see
-					// https://webarchive.jira.com/browse/AITFIVE-451
-					var mouseOverEvent = document.createEvent('Events');
-					mouseOverEvent.initEvent("mouseover", true, false);
-					clickTargets[i].dispatchEvent(mouseOverEvent);
+			var clickTargets = documents[j].querySelectorAll("button.sc-button-play, button.playButton");
 
-					clickTargets[i].click();
-					this.alreadyClicked[key] = true;
-					this.idleSince = null;
-					return;
+			for ( var i = 0; i < clickTargets.length; i++) {
+				if (clickTargets[i].umbraClicked) {
+					//has already been clicked so no need to check again. if we did check
+					// and element was above screen, we would go back up and never reach the bottom
+					continue;
 				}
+
+				var where = umbraAboveBelowOrOnScreen(clickTargets[i]);
+
+				if (where == 0) {
+					if (!clickTargets[i].umbraClicked) {
+						console.log("clicking on " + clickTargets[i].outerHTML);
+						// do mouse over event on click target
+						// since some urls are requsted only on
+						// this event - see
+						// https://webarchive.jira.com/browse/AITFIVE-451
+						var mouseOverEvent = document.createEvent('Events');
+						mouseOverEvent.initEvent("mouseover",true, false);
+						clickTargets[i].dispatchEvent(mouseOverEvent);
+						clickTargets[i].click();
+						clickedSomething = true;
+						this.idleSince = null;
+						clickTargets[i].umbraClicked = true;
+
+						break;
+					}
+				} else if (where > 0) {
+					somethingLeftBelow = true;
+				} else if (where < 0) {
+					somethingLeftAbove = true;
+				}
+			}
+		}
+
+		if (!clickedSomething) {
+			if (somethingLeftAbove) {
+				console
+						.log("scrolling UP because everything on this screen has been clicked but we missed something above");
+				window.scrollBy(0, -500);
+				this.idleSince = null;
+			} else if (somethingLeftBelow) {
+				console
+						.log("scrolling because everything on this screen has been clicked but there's more below document.body.clientHeight="
+								+ document.body.clientHeight);
+				window.scrollBy(0, 200);
+				this.idleSince = null;
+			} else if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
+				console
+						.log("scrolling because we're not to the bottom yet document.body.clientHeight="
+								+ document.body.clientHeight);
+				window.scrollBy(0, 200);
+				this.idleSince = null;
+			} else if (this.idleSince == null) {
+				this.idleSince = Date.now();
 			}
 		}
 
@@ -39,12 +94,14 @@ var umbraSimpleClicksBehavior = {
 		}
 	},
 
-	start: function() {
+	start : function() {
 		var that = this;
-		this.intervalId = setInterval(function(){ that.intervalFunc() }, 250);
+		this.intervalId = setInterval(function() {
+			that.intervalFunc()
+		}, 250);
 	},
 
-	isFinished: function() {
+	isFinished : function() {
 		if (this.idleSince != null) {
 			var idleTimeMs = Date.now() - this.idleSince;
 			if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
@@ -56,6 +113,8 @@ var umbraSimpleClicksBehavior = {
 };
 
 // Called from outside of this script.
-var umbraBehaviorFinished = function() { return umbraSimpleClicksBehavior.isFinished() };
+var umbraBehaviorFinished = function() {
+	return umbraSimpleScrollsAndClicksBehavior.isFinished()
+};
 
-umbraSimpleClicksBehavior.start();
+umbraSimpleScrollsAndClicksBehavior.start();
