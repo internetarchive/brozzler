@@ -31,6 +31,8 @@ behaviors:
    # https://webarchive.jira.com/browse/ARI-4128
    url_regex: '^https?://(?:www\.)?psu24.psu.edu/.*$'
    click_css_selector: a[id='load-more']
+   click_css_selector_end_condition: a[id='load-more'][class='disabled']
+   click_css_selector_computed_style_end_condition: visibility=='hidden'
  - # https://webarchive.jira.com/browse/AITFIVE-451
    url_regex: '^https?://(?:www\.)?soundcloud.com/.*$'
    click_css_selector: button.sc-button-play, button.playButton
