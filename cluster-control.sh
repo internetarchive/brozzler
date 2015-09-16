@@ -8,8 +8,8 @@ fi
 _status() {
 	something_running=1
 
-	warcprox_pids=( $(pgrep -f /home/nlevitt/tmp/brozzler-venv/bin/warcprox) )
-	worker_pids=( $(pgrep -f /home/nlevitt/tmp/brozzler-venv/bin/brozzler-worker) )
+	warcprox_pids=( $(pgrep -f /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox) )
+	worker_pids=( $(pgrep -f /home/nlevitt/workspace/brozzler/brozzler-ve34/bin/brozzler-worker) )
 	pywayback_pids=( $(pgrep -f /home/nlevitt/workspace/pygwb/pygwb-ve27/bin/gunicorn) )
 	ait_brozzler_boss=( $(pgrep -f /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py) )
 	ait5_pids=( $(pgrep -f 0.0.0.0:8888) )
@@ -34,11 +34,11 @@ _stop() {
 	if _status ; then
 		pkill -f /home/nlevitt/workspace/pygwb/pygwb-ve27/bin/gunicorn
 		pkill -f /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py
-		pkill -f /home/nlevitt/tmp/brozzler-venv/bin/warcprox
+		pkill -f /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox
 		pkill -f 0.0.0.0:8888
-		# pkill -f /home/nlevitt/tmp/brozzler-venv/bin/brozzler-worker
+		# pkill -f /home/nlevitt/workspace/brozzler/brozzler-ve34/bin/brozzler-worker
 		for node in aidata{400,400-bu,401-bu} ; do
-			ssh $node pkill -f /home/nlevitt/tmp/brozzler-venv/bin/brozzler-worker
+			ssh $node pkill -f /home/nlevitt/workspace/brozzler/brozzler-ve34/bin/brozzler-worker
 		done
 		sleep 3
 		for node in aidata{400,400-bu,401-bu} ; do
@@ -61,7 +61,7 @@ _reset() {
 
 	tstamp=$(date +"%Y%m%d%H%M%S") 
 	echo "renaming rethinkdb database archiveit_brozzler to archiveit_brozzler_$tstamp"
-	PYTHONPATH=/home/nlevitt/tmp/brozzler-venv/lib/python3.4/site-packages python3.4 <<EOF
+	PYTHONPATH=/home/nlevitt/workspace/brozzler/brozzler-ve34/lib/python3.4/site-packages python3.4 <<EOF
 import rethinkdb as r
 with r.connect("wbgrp-svc035") as conn:
     r.db("archiveit_brozzler").config().update({"name":"archiveit_brozzler_$tstamp"}).run(conn)
@@ -82,25 +82,25 @@ _start() {
 	set -e
 
 	echo $0: starting warcprox
-	PYTHONPATH=/home/nlevitt/tmp/brozzler-venv/lib/python3.4/site-packages:/home/nlevitt/workspace/brozzler:/home/nlevitt/workspace/warcprox:/home/nlevitt/workspace/ait5 /home/nlevitt/tmp/brozzler-venv/bin/warcprox --dir=/1/brzl/warcs --rethinkdb-servers=wbgrp-svc020,wbgrp-svc035,wbgrp-svc036 --rethinkdb-db=archiveit_brozzler --rethinkdb-big-table --cacert=/1/brzl/warcprox-ca.pem --certs-dir=/1/brzl/certs --address=0.0.0.0 --base32 --gzip --rollover-idle-time=180 --kafka-broker-list=qa-archive-it.org:6092 --kafka-capture-feed-topic=ait-brozzler-captures &>>/1/brzl/logs/warcprox.out &
+	PYTHONPATH=/home/nlevitt/workspace/warcprox/warcprox-ve34/lib/python3.4/site-packages /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox --dir=/1/brzl/warcs --rethinkdb-servers=wbgrp-svc020,wbgrp-svc035,wbgrp-svc036 --rethinkdb-db=archiveit_brozzler --rethinkdb-big-table --cacert=/1/brzl/warcprox-ca.pem --certs-dir=/1/brzl/certs --address=0.0.0.0 --base32 --gzip --rollover-idle-time=180 --kafka-broker-list=qa-archive-it.org:6092 --kafka-capture-feed-topic=ait-brozzler-captures &>>/1/brzl/logs/warcprox.out &
 
 	sleep 5
 
 	echo $0: starting ait-brozzler-boss.py
-	PYTHONPATH=/home/nlevitt/tmp/brozzler-venv/lib/python3.4/site-packages:/home/nlevitt/workspace/brozzler:/home/nlevitt/workspace/warcprox:/home/nlevitt/workspace/ait5 /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py &>> /1/brzl/logs/ait-brozzler-boss.out &
+	PYTHONPATH=/home/nlevitt/workspace/ait5/ait5-ve34/lib/python3.4/site-packages /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py &>> /1/brzl/logs/ait-brozzler-boss.out &
 
 	sleep 5
 
 	echo $0: starting brozzler-workers
 	for node in aidata{400,400-bu,401-bu} ; do
-	    ssh -fn $node 'PYTHONPATH=/home/nlevitt/tmp/brozzler-venv/lib/python3.4/site-packages XAUTHORITY=/tmp/Xauthority.nlevitt DISPLAY=:1 /home/nlevitt/tmp/brozzler-venv/bin/brozzler-worker --rethinkdb-servers=wbgrp-svc036,wbgrp-svc020,wbgrp-svc035 --rethinkdb-db=archiveit_brozzler --max-browsers=10' &>> /1/brzl/logs/brozzler-worker-$node.out
+	    ssh -fn $node 'PYTHONPATH=/home/nlevitt/workspace/brozzler/brozzler-ve34/lib/python3.4/site-packages XAUTHORITY=/tmp/Xauthority.nlevitt DISPLAY=:1 /home/nlevitt/workspace/brozzler/brozzler-ve34/bin/brozzler-worker --rethinkdb-servers=wbgrp-svc036,wbgrp-svc020,wbgrp-svc035 --rethinkdb-db=archiveit_brozzler --max-browsers=10' &>> /1/brzl/logs/brozzler-worker-$node.out
 	done
 
 	echo $0: starting pywayback
 	PYTHONPATH=/home/nlevitt/workspace/pygwb/pygwb-ve27/lib/python2.7/site-packages:/home/nlevitt/workspace/pygwb WAYBACK_CONFIG=/home/nlevitt/workspace/pygwb/gwb.yaml PATH=/home/nlevitt/workspace/pygwb/pygwb-ve27/bin:/usr/bin:/bin /home/nlevitt/workspace/pygwb/start-gwb.sh &>> /1/brzl/logs/pywayback.out &
 
 	echo $0: starting ait5 partner webapp
-	PYTHONPATH=/home/nlevitt/workspace/ait5:/home/nlevitt/workspace/ait5/ait5-ve34/lib/python3.4/site-packages python3.4 /home/nlevitt/workspace/ait5/manage.py runserver_plus 0.0.0.0:8888 &>> /1/brzl/logs/ait5.out &
+	PYTHONPATH=/home/nlevitt/workspace/ait5/ait5-ve34/lib/python3.4/site-packages python3.4 /home/nlevitt/workspace/ait5/manage.py runserver_plus 0.0.0.0:8888 &>> /1/brzl/logs/ait5.out &
 
 	echo $0: logs are in /1/brzl/logs
 	echo $0: warcs are in /1/brzl/warcs
