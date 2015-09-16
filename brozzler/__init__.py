@@ -39,42 +39,6 @@ class ReachedLimit(Exception):
     def __str__(self):
         return self.__repr__()
 
-class Rethinker:
-    import logging
-    logger = logging.getLogger(__module__ + "." + __qualname__)
-
-    def __init__(self, servers=["localhost"], db=None):
-        self.servers = servers
-        self.db = db
-
-    # https://github.com/rethinkdb/rethinkdb-example-webpy-blog/blob/master/model.py
-    # "Best practices: Managing connections: a connection per request"
-    def _random_server_connection(self):
-        import random
-        import rethinkdb as r
-        while True:
-            server = random.choice(self.servers)
-            try:
-                try:
-                    host, port = server.split(":")
-                    return r.connect(host=host, port=port)
-                except ValueError:
-                    return r.connect(host=server)
-            except Exception as e:
-                self.logger.error("will keep trying to get a connection after failure connecting to %s", server, exc_info=True)
-                import time
-                time.sleep(0.5)
-
-    def run(self, query):
-        import rethinkdb as r
-        while True:
-            with self._random_server_connection() as conn:
-                try:
-                    return query.run(conn, db=self.db)
-                except (r.ReqlAvailabilityError, r.ReqlTimeoutError) as e:
-                    self.logger.error("will retry rethinkdb query/operation %s which failed like so:", exc_info=True)
-            time.sleep(0.5)
-
 class BaseDictable:
     def to_dict(self):
         d = dict(vars(self))
