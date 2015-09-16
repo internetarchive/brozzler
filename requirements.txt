@@ -7,7 +7,7 @@ rethinkdb
 pillow
 
 git+https://github.com/nlevitt/surt.git@py3
-https://github.com/nlevitt/pyrethink.git
+git+https://github.com/nlevitt/pyrethink.git
 .
 
 # -e /home/nlevitt/workspace/surt
