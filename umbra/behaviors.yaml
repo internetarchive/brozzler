@@ -41,10 +41,6 @@ behaviors:
    url_regex: '^https?://(?:www\.)?christophercerrone.com/.*$'
    click_css_selector: button.playButton.medium
    request_idle_timeout_sec: 10
- - # https://webarchive.jira.com/browse/ARI-4518
-   url_regex: '^https?://(?:www\.)?pitkincounty.com/.*$'
-   click_css_selector: a[onclick^='window.open(\\'http://pitkincounty.granicus.com/MediaPlayer.php']
-   request_idle_timeout_sec: 10
  - # default fallback brhavior
    url_regex: '^.*$'
    request_idle_timeout_sec: 10
