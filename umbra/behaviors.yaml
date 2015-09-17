@@ -17,6 +17,10 @@ behaviors:
    behavior_js: vimeo.js
    request_idle_timeout_sec: 10
  -
+   url_regex: '^https?://(?:www\.)?psu24.psu.edu/.*$'
+   behavior_js: psu.js
+   request_idle_timeout_sec: 10
+ -
    url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
    behavior_js: instagram.js
    request_idle_timeout_sec: 10
@@ -28,11 +32,6 @@ behaviors:
    url_regex: '^https?://(?:www\.)?usask.ca/.*$'
    click_css_selector: a[id='feature-next']
    request_idle_timeout_sec: 10
-   # https://webarchive.jira.com/browse/ARI-4128
-   url_regex: '^https?://(?:www\.)?psu24.psu.edu/.*$'
-   click_css_selector: a[id='load-more']
-   click_css_selector_end_condition: a[id='load-more'][class='disabled']
-   click_css_selector_computed_style_end_condition: visibility=='hidden'
  - # https://webarchive.jira.com/browse/AITFIVE-451
    url_regex: '^https?://(?:www\.)?soundcloud.com/.*$'
    click_css_selector: button.sc-button-play, button.playButton

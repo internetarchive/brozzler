@@ -32,13 +32,7 @@ class Behavior:
                     behavior_js = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ["behaviors.d"] + [behavior["behavior_js"]])
                     behavior["script"] = open(behavior_js, encoding="utf-8").read()
                 elif "click_css_selector" in behavior:
-                        if "click_css_selector_end_condition" not in behavior:
-                            behavior["click_css_selector_end_condition"] = "";   
-                            
-                        if "click_css_selector_computed_style_end_condition" not in behavior:
-                            behavior["click_css_selector_computed_style_end_condition"] = "";                            
-                                             
-                        behavior["script"] = simpleclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"], click_css_selector_end_condition=behavior["click_css_selector_end_condition"], click_css_selector_computed_style_end_condition=behavior["click_css_selector_computed_style_end_condition"])
+                    behavior["script"] = simpleclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"])
 
         return Behavior._behaviors
 

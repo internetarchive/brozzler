@@ -1,5 +1,3 @@
-var umbraEndConditionTarget;
-
 var umbraAboveBelowOrOnScreen = function(e) {
 	var eTop = e.getBoundingClientRect().top;
 	if (eTop < window.scrollY) {
@@ -20,7 +18,6 @@ var umbraSimpleScrollsAndClicksBehavior = {
 		var clickedSomething = false;
 		var somethingLeftBelow = false;
 		var somethingLeftAbove = false;
-		var cssSelector = "${click_css_selector}";
 
 		var iframes = document.querySelectorAll("iframe");
 		var documents = Array(iframes.length + 1);
@@ -32,8 +29,12 @@ var umbraSimpleScrollsAndClicksBehavior = {
 
 		for (var j = 0; j < documents.length; j++) {
 
-			var clickTargets = documents[j].querySelectorAll(cssSelector);
-
+			var clickTargets = documents[j].querySelectorAll("a[id='load-more']");
+			
+			if (umbraCheckAtEndOfScrollingContent(documents[j])) {
+				return;
+			}
+			
 			for ( var i = 0; i < clickTargets.length; i++) {
 				if (clickTargets[i].umbraClicked) {
 					continue;
@@ -106,6 +107,21 @@ var umbraSimpleScrollsAndClicksBehavior = {
 		return false;
 	},
 };
+
+
+var umbraCheckAtEndOfScrollingContent = function(document) {	
+	var elementToCheck = document.querySelector("a[id='load-more'][class='disabled']");
+	
+	if (elementToCheck) {
+		var computedStyle = window.getComputedStyle(elementToCheck);
+		
+		if (computedStyle) {
+			return computerStyle.visibility=='hidden';
+		}
+	}
+
+	return false;	
+}
 
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
