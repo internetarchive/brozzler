@@ -242,7 +242,7 @@ class Chrome:
                 "--window-size=1100,900", "--no-default-browser-check",
                 "--disable-first-run-ui", "--no-first-run",
                 "--homepage=about:blank", "--disable-direct-npapi-requests",
-                "--disable-web-security",
+                "--disable-web-security", "--disable-popup-blocking",
                 "about:blank"]
         self.logger.info("running {}".format(chrome_args))
         self.chrome_process = subprocess.Popen(chrome_args, env=new_env, start_new_session=True)
