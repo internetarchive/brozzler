@@ -3,6 +3,7 @@ import brozzler
 import random
 import time
 import datetime
+import rethinkdb
 
 class UnexpectedDbResult(Exception):
     pass
@@ -25,12 +26,12 @@ class RethinkDbFrontier:
         if not "sites" in tables:
             self.logger.info("creating rethinkdb table 'sites' in database %s", repr(self.r.dbname))
             self.r.table_create("sites", shards=self.shards, replicas=self.replicas).run()
-            self.r.table("sites").index_create("sites_last_disclaimed", [r.row["status"], r.row["claimed"], r.row["last_disclaimed"]]).run()
+            self.r.table("sites").index_create("sites_last_disclaimed", [self.r.row["status"], self.r.row["claimed"], self.r.row["last_disclaimed"]]).run()
             self.r.table("sites").index_create("job_id").run()
         if not "pages" in tables:
             self.logger.info("creating rethinkdb table 'pages' in database %s", repr(self.r.dbname))
             self.r.table_create("pages", shards=self.shards, replicas=self.replicas).run()
-            self.r.table("pages").index_create("priority_by_site", [r.row["site_id"], r.row["brozzle_count"], r.row["claimed"], r.row["priority"]]).run()
+            self.r.table("pages").index_create("priority_by_site", [self.r.row["site_id"], self.r.row["brozzle_count"], self.r.row["claimed"], self.r.row["priority"]]).run()
         if not "jobs" in tables:
             self.logger.info("creating rethinkdb table 'jobs' in database %s", repr(self.r.dbname))
             self.r.table_create("jobs", shards=self.shards, replicas=self.replicas).run()
@@ -114,9 +115,10 @@ class RethinkDbFrontier:
             return False
 
     def claim_page(self, site, worker_id):
+        # import pdb; pdb.set_trace()
         result = (self.r.table("pages")
-                .between([site.id,0,False,brozzler.MIN_PRIORITY], [site.id,0,False,brozzler.MAX_PRIORITY], index="priority_by_site")
-                .order_by(index=r.desc("priority_by_site")).limit(1)
+                .between([site.id, 0, False, self.r.minval], [site.id, 0, False, self.r.maxval], index="priority_by_site")
+                .order_by(index=rethinkdb.desc("priority_by_site")).limit(1)
                 .update({"claimed":True,"last_claimed_by":worker_id},return_changes=True)).run()
         self.logger.info("query returned %s", result)
         self._vet_result(result, replaced=[0,1])
@@ -126,7 +128,7 @@ class RethinkDbFrontier:
             raise brozzler.NothingToClaim
 
     def has_outstanding_pages(self, site):
-        results_iter = self.r.table("pages").between([site.id,0,False,brozzler.MIN_PRIORITY], [site.id,0,True,brozzler.MAX_PRIORITY], index="priority_by_site").limit(1).run()
+        results_iter = self.r.table("pages").between([site.id, 0, False, self.r.minval], [site.id, 0, True, self.r.maxval], index="priority_by_site").limit(1).run()
         return len(list(results_iter)) > 0
 
     def page(self, id):

@@ -110,8 +110,6 @@ class Page(brozzler.BaseDictable):
         priority = 0
         priority += max(0, 10 - self.hops_from_seed)
         priority += max(0, 6 - self.canon_url().count("/"))
-        priority = max(priority, brozzler.MIN_PRIORITY)
-        priority = min(priority, brozzler.MAX_PRIORITY)
         return priority
 
     def canon_url(self):

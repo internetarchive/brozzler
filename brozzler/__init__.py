@@ -10,11 +10,6 @@ def _read_version():
 
 version = _read_version()
 
-# XXX don't know if these should be restricted; right now, only needed for
-# rethinkdb "between" query
-MAX_PRIORITY = 1000000000
-MIN_PRIORITY = -1000000000
-
 class ShutdownRequested(Exception):
     pass
 
