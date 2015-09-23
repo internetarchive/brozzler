@@ -7,6 +7,7 @@ import sys
 import logging
 import brozzler
 import re
+import rethinkstuff
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description="brozzler-new-site - register site to brozzle",
@@ -45,6 +46,7 @@ site = brozzler.Site(seed=args.seed, proxy=args.proxy,
         enable_warcprox_features=args.enable_warcprox_features,
         extra_headers=extra_headers)
 
-frontier = brozzler.RethinkDbFrontier(args.rethinkdb_servers.split(","), args.rethinkdb_db)
+r = rethinkstuff.Rethinker(args.rethinkdb_servers.split(","), args.rethinkdb_db)
+frontier = brozzler.RethinkDbFrontier(r)
 brozzler.new_site(frontier, site)
 

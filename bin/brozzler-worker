@@ -12,6 +12,7 @@ import time
 import signal
 import pprint
 import traceback
+import rethinkstuff
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -52,7 +53,8 @@ signal.signal(signal.SIGQUIT, dump_state)
 signal.signal(signal.SIGTERM, sigterm)
 signal.signal(signal.SIGINT, sigint)
 
-frontier = brozzler.RethinkDbFrontier(args.rethinkdb_servers.split(","), args.rethinkdb_db)
+r = rethinkstuff.Rethinker(args.rethinkdb_servers.split(","), args.rethinkdb_db)
+frontier = brozzler.RethinkDbFrontier(r)
 worker = brozzler.worker.BrozzlerWorker(frontier, max_browsers=int(args.max_browsers), chrome_exe=args.chrome_exe)
 
 worker.start()
