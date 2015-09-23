@@ -82,12 +82,13 @@ _start() {
 	set -e
 
 	echo $0: starting warcprox
-	PYTHONPATH=/home/nlevitt/workspace/warcprox/warcprox-ve34/lib/python3.4/site-packages /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox --dir=/1/brzl/warcs --rethinkdb-servers=wbgrp-svc020,wbgrp-svc035,wbgrp-svc036 --rethinkdb-db=archiveit_brozzler --rethinkdb-big-table --cacert=/1/brzl/warcprox-ca.pem --certs-dir=/1/brzl/certs --address=0.0.0.0 --base32 --gzip --rollover-idle-time=180 --kafka-broker-list=qa-archive-it.org:6092 --kafka-capture-feed-topic=ait-brozzler-captures &>>/1/brzl/logs/warcprox.out &
+	PYTHONPATH=/home/nlevitt/workspace/warcprox/warcprox-ve34/lib/python3.4/site-packages nice /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox --dir=/1/brzl/warcs --rethinkdb-servers=wbgrp-svc020,wbgrp-svc035,wbgrp-svc036 --rethinkdb-db=archiveit_brozzler --rethinkdb-big-table --cacert=/1/brzl/warcprox-ca.pem --certs-dir=/1/brzl/certs --address=0.0.0.0 --base32 --gzip --rollover-idle-time=180 --kafka-broker-list=qa-archive-it.org:6092 --kafka-capture-feed-topic=ait-brozzler-captures &>>/1/brzl/logs/warcprox.out &
 
 	sleep 5
 
 	echo $0: starting ait-brozzler-boss.py
-	PYTHONPATH=/home/nlevitt/workspace/ait5/ait5-ve34/lib/python3.4/site-packages /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py &>> /1/brzl/logs/ait-brozzler-boss.out &
+	venv=/home/nlevitt/workspace/ait5/ait5-ve34
+	PYTHONPATH=$venv/lib/python3.4/site-packages $venv/bin/python /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py &>> /1/brzl/logs/ait-brozzler-boss.out &
 
 	sleep 5
 
@@ -97,7 +98,7 @@ _start() {
 	done
 
 	echo $0: starting pywayback
-	PYTHONPATH=/home/nlevitt/workspace/pygwb/pygwb-ve27/lib/python2.7/site-packages:/home/nlevitt/workspace/pygwb WAYBACK_CONFIG=/home/nlevitt/workspace/pygwb/gwb.yaml PATH=/home/nlevitt/workspace/pygwb/pygwb-ve27/bin:/usr/bin:/bin /home/nlevitt/workspace/pygwb/start-gwb.sh &>> /1/brzl/logs/pywayback.out &
+	PYTHONPATH=/home/nlevitt/workspace/pygwb/pygwb-ve27/lib/python2.7/site-packages WAYBACK_CONFIG=/home/nlevitt/workspace/pygwb/gwb.yaml PATH=/home/nlevitt/workspace/pygwb/pygwb-ve27/bin:/usr/bin:/bin /home/nlevitt/workspace/pygwb/start-gwb.sh &>> /1/brzl/logs/pywayback.out &
 
 	echo $0: starting ait5 partner webapp
 	PYTHONPATH=/home/nlevitt/workspace/ait5/ait5-ve34/lib/python3.4/site-packages python3.4 /home/nlevitt/workspace/ait5/manage.py runserver_plus 0.0.0.0:8888 &>> /1/brzl/logs/ait5.out &
