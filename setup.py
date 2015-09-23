@@ -1,5 +1,3 @@
-# vim: set sw=4 et:
-
 import setuptools
 import glob
 
@@ -9,7 +7,7 @@ def full_version_bytes():
     import subprocess, time
     try:
         commit_num_bytes = subprocess.check_output(['git', 'rev-list', '--count', 'HEAD'])
-        return VERSION_BYTES + b'.dev' + commit_num_bytes.strip()
+        return VERSION_BYTES + b'.' + commit_num_bytes.strip()
     except subprocess.CalledProcessError:
         return VERSION_BYTES
 
@@ -24,10 +22,10 @@ setuptools.setup(name='brozzler',
         url='https://github.com/nlevitt/brozzler',
         author='Noah Levitt',
         author_email='nlevitt@archive.org',
-        long_description=open('README.md').read(),
+        long_description=open('README.rst').read(),
         license='Apache License 2.0',
         packages=['brozzler'],
-        package_data={'brozzler':['behaviors.d/*.js*', 'behaviors.yaml', 'version.txt']},
+        package_data={'brozzler': ['behaviors.d/*.js*', 'behaviors.yaml', 'version.txt']},
         scripts=glob.glob('bin/*'),
         install_requires=[
             'PyYAML',
