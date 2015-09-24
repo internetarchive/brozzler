@@ -1,20 +1,10 @@
-var umbraAboveBelowOrOnScreen = function(e) {
-	var eTop = e.getBoundingClientRect().top;
-	if (eTop < window.scrollY) {
-		return -1; // above
-	} else if (eTop > window.scrollY + window.innerHeight) {
-		return 1; // below
-	} else {
-		return 0; // on screen
-	}
-}
 
-var umbraSimpleScrollsAndClicksBehavior = {
+var umbraBehavior = {
 	IDLE_TIMEOUT_SEC : 10,
 	idleSince : null,
 	alreadyClicked : {},
 
-	intervalFunc : function() {
+	intervalFunc: function() {
 		var clickedSomething = false;
 		var somethingLeftBelow = false;
 		var somethingLeftAbove = false;
@@ -28,20 +18,13 @@ var umbraSimpleScrollsAndClicksBehavior = {
 		}
 
 		for (var j = 0; j < documents.length; j++) {
-
 			var clickTargets = documents[j].querySelectorAll("a[id='load-more']");
-			
-			if (umbraCheckAtEndOfScrollingContent(documents[j])) {
-				return;
-			}
-			
-			for ( var i = 0; i < clickTargets.length; i++) {
-				if (clickTargets[i].umbraClicked) {
+			for (var i = 0; i < clickTargets.length; i++) {
+				if (clickTargets[i].className === "disabled") {
 					continue;
 				}
 
-				var where = umbraAboveBelowOrOnScreen(clickTargets[i]);
-
+				var where = this.aboveBelowOrOnScreen(clickTargets[i]);
 				if (where == 0) {
 					console.log("clicking on " + clickTargets[i].outerHTML);
 					// do mouse over event on click target
@@ -54,7 +37,6 @@ var umbraSimpleScrollsAndClicksBehavior = {
 					clickTargets[i].click();
 					clickedSomething = true;
 					this.idleSince = null;
-					clickTargets[i].umbraClicked = true;
 
 					break; //break from clickTargets loop, but not from iframe loop
 				} else if (where > 0) {
@@ -90,14 +72,25 @@ var umbraSimpleScrollsAndClicksBehavior = {
 		}
 	},
 
-	start : function() {
+	aboveBelowOrOnScreen: function(e) {
+		var eTop = e.getBoundingClientRect().top;
+		if (eTop < window.scrollY) {
+			return -1; // above
+		} else if (eTop > window.scrollY + window.innerHeight) {
+			return 1; // below
+		} else {
+			return 0; // on screen
+		}
+	},
+
+	start: function() {
 		var that = this;
 		this.intervalId = setInterval(function() {
 			that.intervalFunc()
 		}, 250);
 	},
 
-	isFinished : function() {
+	isFinished: function() {
 		if (this.idleSince != null) {
 			var idleTimeMs = Date.now() - this.idleSince;
 			if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
@@ -108,24 +101,10 @@ var umbraSimpleScrollsAndClicksBehavior = {
 	},
 };
 
-
-var umbraCheckAtEndOfScrollingContent = function(document) {	
-	var elementToCheck = document.querySelector("a[id='load-more'][class='disabled']");
-	
-	if (elementToCheck) {
-		var computedStyle = window.getComputedStyle(elementToCheck);
-		
-		if (computedStyle) {
-			return computerStyle.visibility=='hidden';
-		}
-	}
-
-	return false;	
-}
-
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
-	return umbraSimpleScrollsAndClicksBehavior.isFinished()
+	return umbraBehavior.isFinished()
 };
 
-umbraSimpleScrollsAndClicksBehavior.start();
+umbraBehavior.start();
+

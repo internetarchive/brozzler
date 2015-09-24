@@ -18,7 +18,7 @@ behaviors:
    request_idle_timeout_sec: 10
  -
    url_regex: '^https?://(?:www\.)?psu24.psu.edu/.*$'
-   behavior_js: psu.js
+   behavior_js: psu24.js
    request_idle_timeout_sec: 10
  -
    url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
