@@ -1,0 +1,30 @@
+<div>
+  <div class="page-header">
+    <h1>Jobs</h1>
+  </div>
+
+  <div class="row">
+    <div class="col-sm-12">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>id</th>
+            <th>status</th>
+            <th>started</th>
+            <th>finished</th>
+            <th># of seeds</th>
+          </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="job in jobs">
+          <td><a href="#/jobs/{{job.id}}">{{job.id}}</a></td>
+          <td>{{job.status}}</td>
+          <td>{{job.started}}</td>
+          <td>{{job.finished}}</td>
+          <td>{{job.conf.seeds.length}}</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

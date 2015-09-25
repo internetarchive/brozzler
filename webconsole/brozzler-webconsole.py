@@ -12,14 +12,24 @@ app = flask.Flask(__name__, static_url_path="")
 r = rethinkstuff.Rethinker(["wbgrp-svc020", "wbgrp-svc035", "wbgrp-svc036"],
                            db="archiveit_brozzler")
 
+@app.route("/api/jobs/<int:job_id>/sites")
+def sites(job_id):
+    sites_ = r.table("sites").get_all(job_id, index="job_id").run()
+    return flask.jsonify(sites=sites_)
+
+@app.route("/api/jobs/<int:job_id>")
+def job(job_id):
+    job_ = r.table("jobs").get(job_id).run()
+    return flask.jsonify(job_)
+
 @app.route("/api/jobs")
 def jobs():
-    return flask.jsonify(jobs=list(r.table("jobs").run()))
+    jobs_ = list(r.table("jobs").run())
+    return flask.jsonify(jobs=jobs_)
 
 @app.route("/")
 def root():
     return app.send_static_file("index.html")
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8081, debug=True)
