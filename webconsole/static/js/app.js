@@ -5,18 +5,24 @@ var brozzlerConsoleApp = angular.module("brozzlerConsoleApp", [
   "brozzlerControllers",
 ]);
 
-brozzlerConsoleApp.config(["$routeProvider",
-  function($routeProvider) {
+brozzlerConsoleApp.config(["$routeProvider", "$locationProvider",
+  function($routeProvider, $locationProvider) {
     $routeProvider.
       when("/jobs", {
-        templateUrl: "partials/jobs.html",
+        templateUrl: "/static/partials/jobs.html",
         controller: "JobsListController"
       }).
       when("/jobs/:id", {
-        templateUrl: "partials/job.html",
+        templateUrl: "/static/partials/job.html",
         controller: "JobController"
-      }).
-      otherwise({
-        redirectTo: "/jobs"
       });
+      // .
+      // otherwise({
+      //   redirectTo: "/jobs"
+      // });
+
+    $locationProvider.html5Mode({
+      enabled: true,
+      requireBase: false,
+    });
   }]);
