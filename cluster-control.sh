@@ -34,7 +34,6 @@ _stop() {
 	if _status ; then
 		pkill -f /home/nlevitt/workspace/pygwb/pygwb-ve27/bin/gunicorn
 		pkill -f /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py
-		pkill -f /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox
 		pkill -f 0.0.0.0:8888
 		# pkill -f /home/nlevitt/workspace/brozzler/brozzler-ve34/bin/brozzler-worker
 		for node in aidata{400,400-bu,401-bu} ; do
@@ -46,6 +45,8 @@ _stop() {
 		done
 	fi
 	
+	ssh wbgrp-svc111 pkill -f /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox
+
 	if _status > /dev/null ; then
 		while _status > /dev/null ; do sleep 0.5 ; done
 	fi
@@ -82,7 +83,7 @@ _start() {
 	set -e
 
 	echo $0: starting warcprox
-	PYTHONPATH=/home/nlevitt/workspace/warcprox/warcprox-ve34/lib/python3.4/site-packages nice /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox --dir=/1/brzl/warcs --rethinkdb-servers=wbgrp-svc020,wbgrp-svc035,wbgrp-svc036 --rethinkdb-db=archiveit_brozzler --rethinkdb-big-table --cacert=/1/brzl/warcprox-ca.pem --certs-dir=/1/brzl/certs --address=0.0.0.0 --base32 --gzip --rollover-idle-time=180 --kafka-broker-list=qa-archive-it.org:6092 --kafka-capture-feed-topic=ait-brozzler-captures &>>/1/brzl/logs/warcprox.out &
+	ssh -fn wbgrp-svc111 'PYTHONPATH=/home/nlevitt/workspace/warcprox/warcprox-ve34/lib/python3.4/site-packages nice /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox --dir=/1/brzl/warcs --rethinkdb-servers=wbgrp-svc020,wbgrp-svc035,wbgrp-svc036 --rethinkdb-db=archiveit_brozzler --rethinkdb-big-table --cacert=/1/brzl/warcprox-ca.pem --certs-dir=/1/brzl/certs --address=0.0.0.0 --base32 --gzip --rollover-idle-time=180 --kafka-broker-list=qa-archive-it.org:6092 --kafka-capture-feed-topic=ait-brozzler-captures' &>>/1/brzl/logs/warcprox.out &
 
 	sleep 5
 
