@@ -5,7 +5,38 @@
 
   <div class="row">
     <div class="col-sm-12">
-      Job {{job.id}}
+      <ul>
+        <li> started {{job.started}} </li>
+        <li> finished {{job.finished}} </li>
+        <li> status {{job.status}} </li>
+        <li> sites={{sites}} </li>
+      </ul>
+      <ul>
+        <li ng-repeat="site in sites">
+          {{site}}
+        </li>
+      </ul>
+
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>id</th>
+            <th>seed</th>
+            <!-- <th>pages</th> -->
+            <th>urls</th>
+            <th>new data</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="site in sites">
+            <td><a href="/sites/{{site.id}}">{{site.id}}</a></td>
+            <td>{{site.seed}}</td>
+            <td>{{site.stats.total.urls}}</td>
+            <td>{{site.stats.new.wire_bytes | byteformat}}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
+

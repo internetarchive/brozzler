@@ -16,13 +16,13 @@
           </tr>
         </thead>
         <tbody>
-        <tr ng-repeat="job in jobs">
-          <td><a href="/jobs/{{job.id}}">{{job.id}}</a></td>
-          <td>{{job.status}}</td>
-          <td>{{job.started}}</td>
-          <td>{{job.finished}}</td>
-          <td>{{job.conf.seeds.length}}</td>
-        </tr>
+          <tr ng-repeat="job in jobs">
+            <td><a href="/jobs/{{job.id}}">{{job.id}}</a></td>
+            <td>{{job.status}}</td>
+            <td>{{job.started}}</td>
+            <td>{{job.finished}}</td>
+            <td>{{job.conf.seeds.length}}</td>
+          </tr>
         </tbody>
       </table>
     </div>

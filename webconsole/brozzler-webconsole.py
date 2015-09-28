@@ -12,12 +12,25 @@ app = flask.Flask(__name__)
 r = rethinkstuff.Rethinker(["wbgrp-svc020", "wbgrp-svc035", "wbgrp-svc036"],
                            db="archiveit_brozzler")
 
+@app.route("/api/sites/<site_id>")
+@app.route("/api/site/<site_id>")
+def site(site_id):
+    site_ = r.table("sites").get(site_id).run()
+    return flask.jsonify(site_)
+
+@app.route("/api/stats/<bucket>")
+def stats(bucket):
+    stats_ = r.table("stats").get(bucket).run()
+    return flask.jsonify(stats_)
+
 @app.route("/api/jobs/<int:job_id>/sites")
+@app.route("/api/job/<int:job_id>/sites")
 def sites(job_id):
     sites_ = r.table("sites").get_all(job_id, index="job_id").run()
-    return flask.jsonify(sites=sites_)
+    return flask.jsonify(sites=list(sites_))
 
 @app.route("/api/jobs/<int:job_id>")
+@app.route("/api/job/<int:job_id>")
 def job(job_id):
     job_ = r.table("jobs").get(job_id).run()
     return flask.jsonify(job_)
@@ -31,7 +44,6 @@ def jobs():
 @app.route('/<path:path>')
 def root(path):
     return app.send_static_file("index.html")
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8081, debug=True)
