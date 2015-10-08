@@ -13,9 +13,10 @@ _status() {
 	pywayback_pids=( $(pgrep -f /home/nlevitt/workspace/pygwb/pygwb-ve27/bin/gunicorn) )
 	ait_brozzler_boss=( $(pgrep -f /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py) )
 	ait5_pids=( $(pgrep -f 0.0.0.0:8888) )
+	console_pids=( $(pgrep -f app=.*brozzler-webconsole.py) )
 
-	pids="${warcprox_pids[*]} ${worker_pids[*]} ${pywayback_pids[*]} ${ait_brozzler_boss[*]} ${ait5_pids[*]}"
-	if [ "$pids" != "    " ] ; then
+	pids="${warcprox_pids[*]} ${worker_pids[*]} ${pywayback_pids[*]} ${ait_brozzler_boss[*]} ${ait5_pids[*]} ${console_pids[*]}"
+	if [ "$pids" != "     " ] ; then
 		PS_FORMAT=user,pid,tid,ppid,pgid,sid,pri,nice,psr,%cpu,%mem,tty,stat,stime,time,args ps ww -H $pids
 		echo
 		something_running=0
@@ -26,6 +27,7 @@ _status() {
 	[ -z "${pywayback_pids[*]}" ] && echo "$0: pywayback is not running"
 	[ -z "${ait_brozzler_boss[*]}" ] && echo "$0: ait-brozzler-boss.py is not running"
 	[ -z "${ait5_pids[*]}" ] && echo "$0: ait5 is not running"
+	[ -z "${console_pids[*]}" ] && echo "$0: brozzler-webconsole.py is not running"
 
 	return $something_running
 }
@@ -38,8 +40,9 @@ _stop() {
 		# pkill -f /home/nlevitt/workspace/brozzler/brozzler-ve34/bin/brozzler-worker
 		for node in aidata{400,400-bu,401-bu} ; do
 			container_id=$(ssh $node docker ps --filter=image=internetarchive/brozzler-worker --filter=status=running --format='{{.ID}}')
-			ssh $node docker stop --time=60 $container_id
+                        [ -n "$container_id" ] && (set -x ; ssh $node docker stop --time=60 $container_id )
 		done
+		pkill -f app=.*brozzler-webconsole.py
 	fi
 	
 	ssh wbgrp-svc111 pkill -f /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox
@@ -85,22 +88,22 @@ _start() {
 	echo $0: starting warcprox
 	ssh -fn wbgrp-svc111 'PYTHONPATH=/home/nlevitt/workspace/warcprox/warcprox-ve34/lib/python3.4/site-packages nice /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox --dir=/1/brzl/warcs --rethinkdb-servers=wbgrp-svc020,wbgrp-svc035,wbgrp-svc036 --rethinkdb-db=archiveit_brozzler --rethinkdb-big-table --cacert=/1/brzl/warcprox-ca.pem --certs-dir=/1/brzl/certs --address=0.0.0.0 --base32 --gzip --rollover-idle-time=180 --kafka-broker-list=qa-archive-it.org:6092 --kafka-capture-feed-topic=ait-brozzler-captures' &>>/1/brzl/logs/warcprox.out &
 
-	sleep 3
+	sleep 5
 
 	echo $0: starting ait-brozzler-boss.py
 	venv=/home/nlevitt/workspace/ait5/ait5-ve34
 	PYTHONPATH=$venv/lib/python3.4/site-packages $venv/bin/python /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py &>> /1/brzl/logs/ait-brozzler-boss.out &
 
-	sleep 3
+	sleep 5
 
 	echo $0: starting brozzler-workers
-	for node in aidata{400,400-bu,401-bu} ; do
+	for node in aidata{400,400-bu,401,401-bu} ; do
 		(
 		set -x
 		ssh $node "docker --version || curl -sSL https://get.docker.com/ | sh && sudo usermod -aG docker $USER"
 		ssh $node 'docker build -t internetarchive/brozzler-worker /home/nlevitt/workspace/brozzler/docker'
 		ssh -fn $node 'docker run --rm internetarchive/brozzler-worker /sbin/my_init -- setuser brozzler bash -c "DISPLAY=:1 brozzler-worker --rethinkdb-servers=wbgrp-svc036,wbgrp-svc020,wbgrp-svc035 --rethinkdb-db=archiveit_brozzler --max-browsers=10"'  &>> /1/brzl/logs/brozzler-worker-$node.out
-		sleep 3
+		sleep 5
 		)
 	done
 
@@ -109,6 +112,9 @@ _start() {
 
 	echo $0: starting ait5 partner webapp
 	PYTHONPATH=/home/nlevitt/workspace/ait5/ait5-ve34/lib/python3.4/site-packages python3.4 /home/nlevitt/workspace/ait5/manage.py runserver_plus 0.0.0.0:8888 &>> /1/brzl/logs/ait5.out &
+
+	echo $0: starting brozzler web console
+	PYTHONPATH=/home/nlevitt/workspace/brozzler/webconsole/brozzler-webconsole-ve34/lib/python3.4/site-packages /home/nlevitt/workspace/brozzler/webconsole/brozzler-webconsole-ve34/bin/flask --debug --app=/home/nlevitt/workspace/brozzler/webconsole/brozzler-webconsole.py run --host=0.0.0.0 --port=8081 &>> /1/brzl/logs/brozzler-console.out &
 
 	echo $0: logs are in /1/brzl/logs
 	echo $0: warcs are in /1/brzl/warcs
