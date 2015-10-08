@@ -20,6 +20,9 @@ brozzlerConsoleApp.config(["$routeProvider", "$locationProvider",
         templateUrl: "/static/partials/site.html",
         controller: "SiteController"
       }).
+      when("/", {
+        redirectTo: "/jobs"
+      }).
       otherwise({
         template: '<div> <div class="page-header"> <h1>Not Found</h1> </div> <div class="row"> <div class="col-sm-12"> How the heck did you get here? </div> </div> </div> ',
       });

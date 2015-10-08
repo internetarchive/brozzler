@@ -1,41 +1,41 @@
+<ol class="breadcrumb">
+  <li><a href="/jobs">Jobs</a></li>
+  <li class="active">{{job.id}}</li>
+</ol>
+
+<div class="page-header">
+  <h1>Brozzler
+    <a href="/"><img src="/static/brozzler.svg" style="height:1.5em;float:right"></a>
+  </h1>
+</div>
+
 <div>
-  <div class="page-header">
-    <h1>Job {{job.id}}</h1>
-  </div>
+  <h2>Job {{job.id}}</h2>
 
   <div class="row">
     <div class="col-sm-12">
-      <ul>
-        <li> started {{job.started}} </li>
-        <li> finished {{job.finished}} </li>
-        <li> status {{job.status}} </li>
-        <li> sites={{sites}} </li>
-      </ul>
-      <ul>
-        <li ng-repeat="site in sites">
-          {{site}}
-        </li>
-      </ul>
+      <h3>Sites</h3>
+      <div class="col-sm-6 col-md-4" ng-repeat="site in sites">
+        <a class="thumbnail" href="/sites/{{site.id}}">
+          <img style="width:300px;height:190px" src="http://wbgrp-svc107.us.archive.org:8091/web/3/thumbnail:{{site.seed}}" alt="thumb">
+          <div class="caption">
+            <h5>{{site.seed}}</h5>
+	    <!--
+            <div><span class="glyphicon glyphicon-file"></span> <strong>{{site.page_count}}</strong> pages crawled</div>
+            <div><span class="glyphicon glyphicon-duplicate"></span> <strong>{{site.stats.total.urls}}</strong> urls crawled</div>
+            <div><span class="glyphicon glyphicon-oil"></span> <strong>{{site.stats.total.wire_bytes | byteformat}}</strong> crawled</div>
+            <div><span class="glyphicon glyphicon-menu-hamburger"></span> <strong>{{site.queued_count}}</strong> pages queued</div>
+	    -->
 
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>id</th>
-            <th>seed</th>
-            <!-- <th>pages</th> -->
-            <th>urls</th>
-            <th>new data</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr ng-repeat="site in sites">
-            <td><a href="/sites/{{site.id}}">{{site.id}}</a></td>
-            <td>{{site.seed}}</td>
-            <td>{{site.stats.total.urls}}</td>
-            <td>{{site.stats.new.wire_bytes | byteformat}}</td>
-          </tr>
-        </tbody>
-      </table>
+            <ul class="fa-ul">
+              <li><span class="fa fa-li fa-file-text"></span> <strong>{{site.page_count}}</strong> pages crawled</li>
+              <li><span class="fa fa-li fa-clone"></span> <strong>{{site.stats.total.urls}}</strong> urls crawled</li>
+              <li><span class="fa fa-li fa-archive"></span> <strong>{{site.stats.total.wire_bytes | byteformat}}</strong> crawled</li>
+              <li><span class="fa fa-li fa-ellipsis-h"></span> <strong>{{site.queued_count}}</strong> pages queued</li>
+            </ul>
+          </div>
+        </a>
+      </div>
     </div>
   </div>
 </div>

@@ -12,6 +12,39 @@ app = flask.Flask(__name__)
 r = rethinkstuff.Rethinker(["wbgrp-svc020", "wbgrp-svc035", "wbgrp-svc036"],
                            db="archiveit_brozzler")
 
+@app.route("/api/sites/<site_id>/queued_count")
+@app.route("/api/site/<site_id>/queued_count")
+def queued_count(site_id):
+    count = r.table("pages").between([site_id, 0, False, r.minval], [site_id, 0, False, r.maxval], index="priority_by_site").count().run()
+    return flask.jsonify(count=count)
+
+@app.route("/api/sites/<site_id>/queue")
+@app.route("/api/site/<site_id>/queue")
+def queue(site_id):
+    logging.info("flask.request.args=%s", flask.request.args)
+    start = flask.request.args.get("start", 0)
+    end = flask.request.args.get("end", start + 90)
+    queue_ = r.table("pages").between([site_id, 0, False, r.minval], [site_id, 0, False, r.maxval], index="priority_by_site")[start:end].run()
+    return flask.jsonify(queue_=list(queue_))
+
+@app.route("/api/sites/<site_id>/pages_count")
+@app.route("/api/site/<site_id>/pages_count")
+@app.route("/api/sites/<site_id>/page_count")
+@app.route("/api/site/<site_id>/page_count")
+def page_count(site_id):
+    count = r.table("pages").between([site_id, 1, False, r.minval], [site_id, r.maxval, False, r.maxval], index="priority_by_site").count().run()
+    return flask.jsonify(count=count)
+
+@app.route("/api/sites/<site_id>/pages")
+@app.route("/api/site/<site_id>/pages")
+def pages(site_id):
+    """Pages already crawled."""
+    logging.info("flask.request.args=%s", flask.request.args)
+    start = flask.request.args.get("start", 0)
+    end = flask.request.args.get("end", start + 90)
+    pages_ = r.table("pages").between([site_id, 1, False, r.minval], [site_id, r.maxval, False, r.maxval], index="priority_by_site")[start:end].run()
+    return flask.jsonify(pages=list(pages_))
+
 @app.route("/api/sites/<site_id>")
 @app.route("/api/site/<site_id>")
 def site(site_id):

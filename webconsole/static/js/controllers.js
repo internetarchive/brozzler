@@ -14,23 +14,47 @@ brozzlerControllers.controller("JobController", ["$scope", "$routeParams", "$htt
     $scope.phoneId = $routeParams.phoneId;
     $http.get("/api/jobs/" + $routeParams.id).success(function(data) {
       $scope.job = data;
-      console.log("job=", $scope.job);
+      // console.log("job=", $scope.job);
     });
+
+    function statsSuccessCallback(site, bucket) {
+      return function(data) {
+        // console.log("site = ", site);
+        // console.log("/api/stats/" + bucket + " = ", data);
+        site.stats = data;
+      }
+    }
+
+    function pageCountSuccessCallback(site, bucket) {
+      return function(data) {
+        // console.log("site = ", site);
+        // console.log("/api/sites/" + site.id + "/page_count = ", data);
+        site.page_count = data.count;
+      }
+    }
+
+    function queuedCountSuccessCallback(site, bucket) {
+      return function(data) {
+        console.log("site = ", site);
+        console.log("/api/sites/" + site.id + "/queued_count = ", data);
+        site.queued_count = data.count;
+      }
+    }
 
     $http.get("/api/jobs/" + $routeParams.id + "/sites").success(function(data) {
       $scope.sites = data.sites;
-      console.log("sites=", $scope.sites);
+      // console.log("sites=", $scope.sites);
       for (var i = 0; i < $scope.sites.length; i++) {
         var site = $scope.sites[i]; // parse Warcprox-Meta to find stats bucket
+        $http.get("/api/sites/" + site.id + "/page_count").success(pageCountSuccessCallback(site, bucket));
+        $http.get("/api/sites/" + site.id + "/queued_count").success(queuedCountSuccessCallback(site, bucket));
+
         var warcprox_meta = angular.fromJson(site.extra_headers["Warcprox-Meta"]);
         for (var j = 0; j < warcprox_meta.stats.buckets.length; j++) {
           if (warcprox_meta.stats.buckets[j].indexOf("seed") >= 0) {
-            console.log("warcprox_meta.stats.buckets[" + j + "]=" + warcprox_meta.stats.buckets[j]);
             var bucket = warcprox_meta.stats.buckets[j];
-            $http.get("/api/stats/" + warcprox_meta.stats.buckets[j]).success(function(data) {
-              console.log("/api/stats/" + bucket + "=", data);
-              site.stats = data;
-            });
+            // console.log("warcprox_meta.stats.buckets[" + j + "]=" + bucket);
+            $http.get("/api/stats/" + bucket).success(statsSuccessCallback(site, bucket));
           }
         }
       }
@@ -41,16 +65,22 @@ brozzlerControllers.controller("SiteController", ["$scope", "$routeParams", "$ht
   function($scope, $routeParams, $http) {
     $http.get("/api/site/" + $routeParams.id).success(function(data) {
       $scope.site = data;
+      // console.log("site = ", $scope.site);
+    });
+    
+    $http.get("/api/site/" + $routeParams.id + "/pages?start=0&end=99").success(function(data) {
+      $scope.pages = data.pages;
+      // console.log("pages = ", $scope.pages);
     });
   }]);
 
 /*
-$http.get(...)
-    .then(function(response){ 
-      // successHandler
-      // do some stuff
-      return $http.get('/somethingelse') // get more data
-    })
-    .then(anotherSuccessHandler)
-    .catch(errorHandler)
+$http.get("/api/site/" + $routeParams.id).then(function(response) {
+  console.log("/api/site/" + $routeParams.id + " returned", response);
+  $scope.site = response.data;
+  return $http.get("/api/site/" + $routeParams.id + "/pages");
+}).then(function(response) {
+  console.log("/api/site/" + $routeParams.id + "/pages returned", response);
+  $scope.site.pages = response.data.pages;
+});
 */

@@ -1,7 +1,15 @@
+<ol class="breadcrumb">
+  <li class="active">Jobs</li>
+</ol>
+
+<div class="page-header">
+  <h1>Brozzler
+    <a href="/"><img src="/static/brozzler.svg" style="height:1.5em;float:right"></a>
+  </h1>
+</div>
+
 <div>
-  <div class="page-header">
-    <h1>Jobs</h1>
-  </div>
+  <h2>Jobs</h2>
 
   <div class="row">
     <div class="col-sm-12">
@@ -16,13 +24,13 @@
           </tr>
         </thead>
         <tbody>
-          <tr ng-repeat="job in jobs">
-            <td><a href="/jobs/{{job.id}}">{{job.id}}</a></td>
-            <td>{{job.status}}</td>
-            <td>{{job.started}}</td>
-            <td>{{job.finished}}</td>
-            <td>{{job.conf.seeds.length}}</td>
-          </tr>
+        <tr ng-repeat="job in jobs">
+          <td><a href="/jobs/{{job.id}}">{{job.id}}</a></td>
+          <td>{{job.status}}</td>
+          <td>{{job.started}}</td>
+          <td>{{job.finished}}</td>
+          <td>{{job.conf.seeds.length}}</td>
+        </tr>
         </tbody>
       </table>
     </div>
