@@ -1,5 +1,8 @@
-brozzler
-========
+.. |logo| image:: https://cdn.rawgit.com/nlevitt/brozzler/d1158ab2242815b28fe7bb066042b5b5982e4627/webconsole/static/brozzler.svg
+   :width: 7%
+
+brozzler |logo|
+===============
 
 "browser" \| "crawler" = "brozzler"
 
