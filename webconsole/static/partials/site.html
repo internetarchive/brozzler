@@ -1,17 +1,17 @@
 <ol class="breadcrumb">
-  <li><a href="/jobs">Jobs</a></li>
-  <li><a href="/jobs/{{site.job_id}}">{{site.job_id}}</a></li>
-  <li class="active">{{site.seed}}</li>
+    <li><a href="/jobs">Jobs</a></li>
+    <li><a href="/jobs/{{site.job_id}}">{{site.job_id}}</a></li>
+    <li class="active">{{site.seed}}</li>
 </ol>
 
 <div class="page-header">
-  <h1>Brozzler
-    <a href="/"><img src="/static/brozzler.svg" style="height:1.5em;float:right"></a>
-  </h1>
+    <h1>Brozzler
+        <a href="/"><img src="/static/brozzler.svg" style="height:1.5em;float:right"></a>
+    </h1>
 </div>
 
 <div>
-  <h2>Site {{site.seed}} (Job <a href="/jobs/{{site.job_id}}">{{site.job_id}}</a>)</h2>
+    <h2>Site {{site.seed}} (Job <a href="/jobs/{{site.job_id}}">{{site.job_id}}</a>)</h2>
 
     <div class="row bigstats">
         <div class="col-sm-6 col-md-3">
@@ -36,19 +36,19 @@
         </div>
     </div>
 
-  <div class="row">
-    <div class="col-sm-12">
-      <h2>Pages</h2>
-      <div class="col-sm-6 col-md-4" ng-repeat="page in pages">
-        <div class="thumbnail">
-          <img width="300" height="190" src="http://wbgrp-svc107.us.archive.org:8091/web/3/thumbnail:{{page.url}}" alt="thumb">
-          <div class="caption">
-            <h3>Thumbnail label</h3>
-            {{page}}
-          </div>
+    <div class="row">
+        <div class="col-sm-12">
+            <h2>Pages</h2>
+            <div class="col-sm-6 col-md-4" ng-repeat="page in pages">
+                <div class="thumbnail">
+                    <img width="300" height="190" src="http://wbgrp-svc107.us.archive.org:8091/web/3/thumbnail:{{page.url}}" alt="thumb">
+                    <div class="caption">
+                        <h3>Thumbnail label</h3>
+                        {{page}}
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 
 </div>
