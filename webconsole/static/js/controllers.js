@@ -11,10 +11,14 @@ brozzlerControllers.controller("JobsListController", ["$scope", "$http",
 
 brozzlerControllers.controller("JobController", ["$scope", "$routeParams", "$http",
   function($scope, $routeParams, $http) {
-    $scope.phoneId = $routeParams.phoneId;
     $http.get("/api/jobs/" + $routeParams.id).success(function(data) {
       $scope.job = data;
-      // console.log("job=", $scope.job);
+      $scope.job.page_count = $scope.job.queued_count = 0;
+      console.log("job=", $scope.job);
+      $http.get("/api/stats/" + $scope.job.conf.warcprox_meta.stats.buckets[0]).success(function(data) {
+        $scope.job.stats = data;
+        // console.log("job stats=", $scope.job.stats);
+      });
     });
 
     function statsSuccessCallback(site, bucket) {
@@ -30,14 +34,16 @@ brozzlerControllers.controller("JobController", ["$scope", "$routeParams", "$htt
         // console.log("site = ", site);
         // console.log("/api/sites/" + site.id + "/page_count = ", data);
         site.page_count = data.count;
+        $scope.job.page_count += data.count;
       }
     }
 
     function queuedCountSuccessCallback(site, bucket) {
       return function(data) {
-        console.log("site = ", site);
-        console.log("/api/sites/" + site.id + "/queued_count = ", data);
+        // console.log("site = ", site);
+        // console.log("/api/sites/" + site.id + "/queued_count = ", data);
         site.queued_count = data.count;
+        $scope.job.queued_count += data.count;
       }
     }
 
@@ -45,10 +51,11 @@ brozzlerControllers.controller("JobController", ["$scope", "$routeParams", "$htt
       $scope.sites = data.sites;
       // console.log("sites=", $scope.sites);
       for (var i = 0; i < $scope.sites.length; i++) {
-        var site = $scope.sites[i]; // parse Warcprox-Meta to find stats bucket
+        var site = $scope.sites[i]; 
         $http.get("/api/sites/" + site.id + "/page_count").success(pageCountSuccessCallback(site, bucket));
         $http.get("/api/sites/" + site.id + "/queued_count").success(queuedCountSuccessCallback(site, bucket));
 
+        // parse Warcprox-Meta to find stats bucket
         var warcprox_meta = angular.fromJson(site.extra_headers["Warcprox-Meta"]);
         for (var j = 0; j < warcprox_meta.stats.buckets.length; j++) {
           if (warcprox_meta.stats.buckets[j].indexOf("seed") >= 0) {

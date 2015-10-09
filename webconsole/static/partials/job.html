@@ -10,7 +10,30 @@
 </div>
 
 <div>
-  <h2>Job {{job.id}}</h2>
+    <h2>Job {{job.id}} <small>{{job.started}}-{{job.finished}} {{job.status}}</small></h2>
+
+    <div class="row bigstats">
+        <div class="col-sm-6 col-md-3">
+            <div class="stat">
+                <span class="fa fa-file-text"></span> <strong>{{job.page_count}}</strong> pages crawled
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <div class="stat">
+                <span class="fa fa-clone"></span> <strong>{{job.stats.total.urls}}</strong> urls crawled
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <div class="stat">
+                <span class="fa fa-archive"></span> <strong>{{job.stats.total.wire_bytes | byteformat}}</strong> crawled
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <div class="stat">
+                <span class="fa fa-ellipsis-h"></span> <strong>{{job.queued_count}}</strong> pages queued
+            </div>
+        </div>
+    </div>
 
   <div class="row">
     <div class="col-sm-12">

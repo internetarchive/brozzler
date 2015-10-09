@@ -73,8 +73,13 @@ def jobs():
     jobs_ = list(r.table("jobs").run())
     return flask.jsonify(jobs=jobs_)
 
+@app.route("/api/<path:path>")
+@app.route("/api", defaults={"path":""})
+def api404(path):
+    flask.abort(404)
+
 @app.route("/", defaults={"path": ""})
-@app.route('/<path:path>')
+@app.route("/<path:path>")
 def root(path):
     return app.send_static_file("index.html")
 

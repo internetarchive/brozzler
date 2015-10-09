@@ -13,11 +13,28 @@
 <div>
   <h2>Site {{site.seed}} (Job <a href="/jobs/{{site.job_id}}">{{site.job_id}}</a>)</h2>
 
-  <div class="row">
-    <div class="col-sm-12">
-      site={{site}}
+    <div class="row bigstats">
+        <div class="col-sm-6 col-md-3">
+            <div class="stat">
+                <span class="fa fa-file-text"></span> <strong>{{site.page_count}}</strong> pages crawled
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <div class="stat">
+                <span class="fa fa-clone"></span> <strong>{{site.stats.total.urls}}</strong> urls crawled
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <div class="stat">
+                <span class="fa fa-archive"></span> <strong>{{site.stats.total.wire_bytes | byteformat}}</strong> crawled
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <div class="stat">
+                <span class="fa fa-ellipsis-h"></span> <strong>{{site.queued_count}}</strong> pages queued
+            </div>
+        </div>
     </div>
-  </div>
 
   <div class="row">
     <div class="col-sm-12">
