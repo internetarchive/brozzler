@@ -40,8 +40,8 @@ def page_count(site_id):
 def pages(site_id):
     """Pages already crawled."""
     logging.info("flask.request.args=%s", flask.request.args)
-    start = flask.request.args.get("start", 0)
-    end = flask.request.args.get("end", start + 90)
+    start = int(flask.request.args.get("start", 0))
+    end = int(flask.request.args.get("end", start + 90))
     pages_ = r.table("pages").between([site_id, 1, False, r.minval], [site_id, r.maxval, False, r.maxval], index="priority_by_site")[start:end].run()
     return flask.jsonify(pages=list(pages_))
 

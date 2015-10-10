@@ -40,13 +40,12 @@
         <div class="col-sm-12">
             <h2>Pages</h2>
             <div class="col-sm-6 col-md-4" ng-repeat="page in pages">
-                <div class="thumbnail">
-                    <img width="300" height="190" src="http://wbgrp-svc107.us.archive.org:8091/web/3/thumbnail:{{page.url}}" alt="thumb">
+                <a class="thumbnail" href="http://wbgrp-svc107.us.archive.org:8091/web/3/{{page.url}}">
+                    <img style="width:300px;height:190px" src="http://wbgrp-svc107.us.archive.org:8091/web/3/thumbnail:{{page.url}}" alt="thumb">
                     <div class="caption">
-                        <h3>Thumbnail label</h3>
-                        {{page}}
+                        <h5>{{page.url}}</h5>
                     </div>
-                </div>
+                </a>
             </div>
         </div>
     </div>
