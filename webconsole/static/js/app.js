@@ -46,4 +46,3 @@ brozzlerConsoleApp.filter("byteformat", function() {
         return result;
     }
 });
-

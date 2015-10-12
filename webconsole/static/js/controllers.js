@@ -59,7 +59,7 @@ brozzlerControllers.controller("JobController", ["$scope", "$routeParams", "$htt
         $http.get("/api/jobs/" + $routeParams.id).success(function(data) {
             $scope.job = data;
             $scope.job.page_count = $scope.job.queued_count = 0;
-            console.log("job=", $scope.job);
+            // console.log("job=", $scope.job);
             $http.get("/api/stats/" + $scope.job.conf.warcprox_meta.stats.buckets[0]).success(function(data) {
                 $scope.job.stats = data;
                 // console.log("job stats=", $scope.job.stats);
@@ -76,28 +76,41 @@ brozzlerControllers.controller("JobController", ["$scope", "$routeParams", "$htt
 
     }]);
 
-brozzlerControllers.controller("SiteController", ["$scope", "$routeParams", "$http",
-    function($scope, $routeParams, $http) {
+brozzlerControllers.controller("SiteController", ["$scope", "$routeParams", "$http", "$window",
+    function($scope, $routeParams, $http, $window) {
+        var start = 0;
+        $scope.loading = false;
+        $scope.pages = [];
+        $window.addEventListener("scroll", function() {
+            // console.log("window.scrollTop=" + window.scrollTop + " window.offsetHeight=" + window.offsetHeight + " window.scrollHeight=" + window.scrollHeight);
+            if ($window.innerHeight + $window.scrollY + 50 >= window.document.documentElement.scrollHeight) {
+                loadMorePages();
+            }
+        });
+
+        var loadMorePages = function() {
+            if ($scope.loading)
+                return;
+            $scope.loading = true;
+
+            // console.log("load more! start=" + start);
+            $http.get("/api/site/" + $routeParams.id + "/pages?start=" + start + "&end=" + (start+90)).then(function(response) {
+                $scope.pages = $scope.pages.concat(response.data.pages);
+                // console.log("pages = ", $scope.pages);
+                start += response.data.pages.length;
+                $scope.loading = false;
+            }, function(reason) {
+                $scope.loading = false;
+            });
+
+        };
+
         $http.get("/api/site/" + $routeParams.id).success(function(data) {
             $scope.site = data;
             loadSiteStats($http, $scope.site);
             // console.log("site = ", $scope.site);
         });
 
-        $http.get("/api/site/" + $routeParams.id + "/pages?start=0&end=99").success(function(data) {
-            $scope.pages = data.pages;
-            console.log("pages = ", $scope.pages);
-        });
-
+        loadMorePages();
     }]);
 
-/*
-   $http.get("/api/site/" + $routeParams.id).then(function(response) {
-   console.log("/api/site/" + $routeParams.id + " returned", response);
-   $scope.site = response.data;
-   return $http.get("/api/site/" + $routeParams.id + "/pages");
-   }).then(function(response) {
-   console.log("/api/site/" + $routeParams.id + "/pages returned", response);
-   $scope.site.pages = response.data.pages;
-   });
-   */
