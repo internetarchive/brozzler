@@ -63,10 +63,10 @@ _reset() {
     tstamp=$(date +"%Y%m%d%H%M%S") 
     echo "renaming rethinkdb database archiveit_brozzler to archiveit_brozzler_$tstamp"
     PYTHONPATH=/home/nlevitt/workspace/brozzler/brozzler-ve34/lib/python3.4/site-packages python3.4 <<EOF
-    import rethinkdb as r
-    with r.connect("wbgrp-svc035") as conn:
+import rethinkdb as r
+with r.connect("wbgrp-svc035") as conn:
     r.db("archiveit_brozzler").config().update({"name":"archiveit_brozzler_$tstamp"}).run(conn)
-    EOF
+EOF
     mysql -hwbgrp-svc107 -P6306 -uarchiveit -parchiveit archiveit3 -e "update CrawlJob set status='FINISHED_ABNORMAL', endDate=now() where status='ACTIVE'"
 
     set -e
