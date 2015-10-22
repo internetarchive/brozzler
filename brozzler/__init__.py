@@ -43,9 +43,9 @@ class BaseDictable:
         return "{}(**{})".format(self.__class__.__name__, self.to_dict())
 
 from brozzler.site import Page, Site
-# from brozzler.worker import BrozzlerWorker
+from brozzler.worker import BrozzlerWorker
 from brozzler.robots import is_permitted_by_robots
 from brozzler.frontier import RethinkDbFrontier
-# from brozzler.browser import Browser, BrowserPool
+from brozzler.browser import Browser, BrowserPool
 from brozzler.job import new_job, new_site, Job
 
