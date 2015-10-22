@@ -11,10 +11,10 @@ class UnexpectedDbResult(Exception):
 class RethinkDbFrontier:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, r, shards=3, replicas=3):
+    def __init__(self, r, shards=None, replicas=None):
         self.r = r
-        self.shards = shards
-        self.replicas = replicas
+        self.shards = shards or len(r.servers)
+        self.replicas = replicas or min(len(r.servers), 3)
         self._ensure_db()
 
     def _ensure_db(self):
@@ -185,7 +185,8 @@ class RethinkDbFrontier:
         self.logger.info("%s %s", site, status)
         site.status = status
         self.update_site(site)
-        self._maybe_finish_job(site.job_id)
+        if site.job_id: 
+            self._maybe_finish_job(site.job_id)
 
     def disclaim_site(self, site, page=None):
         self.logger.info("disclaiming %s", site)
