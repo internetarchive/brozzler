@@ -68,6 +68,11 @@ def job(job_id):
     job_ = r.table("jobs").get(job_id).run()
     return flask.jsonify(job_)
 
+@app.route("/api/workers")
+def workers():
+    workers_ = [{"host":host,"vnc_websocket_port":8901} for host in ["aidata400", "aidata401", "aidata400-bu", "aidata401-bu"]]
+    return flask.jsonify(workers=workers_)
+
 @app.route("/api/jobs")
 def jobs():
     jobs_ = list(r.table("jobs").run())

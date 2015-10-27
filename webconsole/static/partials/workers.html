@@ -1,0 +1,24 @@
+<ol class="breadcrumb">
+    <li class="active">Workers</li>
+</ol>
+
+<div class="page-header">
+    <h1>Brozzler
+        <a href="/"><img src="/static/brozzler.svg" style="height:1.5em;float:right"></a>
+    </h1>
+</div>
+
+<div>
+    <h2>Workers</h2>
+
+    <div class="row">
+        <div class="col-sm-12" ng-repeat="worker in workers">
+		<!--
+            <iframe style="width:800px;height:550px" 
+		    ng-src="{{'/static/noVNC/vnc.html?host=' + worker.host + '&port=' + worker.vnc_websocket_port + '&autoconnect=1&resize=downscale'}}">
+                {{worker}}
+            </iframe>
+-->
+        </div>
+    </div>
+</div>

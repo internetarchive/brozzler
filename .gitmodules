@@ -1,0 +1,3 @@
+[submodule "webconsole/static/noVNC"]
+	path = webconsole/static/noVNC
+	url = git@github.com:kanaka/noVNC.git

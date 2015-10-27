@@ -34,18 +34,21 @@ _status() {
 
 _stop() {
     if _status ; then
+        set -x
         pkill -f /home/nlevitt/workspace/pygwb/pygwb-ve27/bin/gunicorn
         pkill -f /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py
         pkill -f 0.0.0.0:8888
-        # pkill -f /home/nlevitt/workspace/brozzler/brozzler-ve34/bin/brozzler-worker
-        for node in aidata{400,400-bu,401-bu} ; do
+        pkill -f app=.*brozzler-webconsole.py
+        set +x
+        for node in aidata{400,401}{,-bu} ; do
             container_id=$(ssh $node docker ps --filter=image=internetarchive/brozzler-worker --filter=status=running --format='{{.ID}}')
             [ -n "$container_id" ] && (set -x ; ssh $node docker stop --time=60 $container_id )
         done
-        pkill -f app=.*brozzler-webconsole.py
     fi
 
+    set -x
     ssh wbgrp-svc111 pkill -f /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox
+    set +x
 
     if _status > /dev/null ; then
         while _status > /dev/null ; do sleep 0.5 ; done
@@ -72,7 +75,8 @@ EOF
     set -e
     sudo umount /1/brzl/warcs
     mv -v /1/brzl /tmp/brzl.$tstamp
-    mkdir -vp /1/brzl/{warcs,logs}
+    mkdir -vp /1/brzl/{logs,warcs}
+    sudo chown -v archiveit /1/brzl/warcs
     # chgrp -v archiveit /1/brzl/warcs/ && chmod g+w /1/brzl/warcs
     ssh wbgrp-svc111 mv -v "/1/brzl/warcs /tmp/brzl-warcs.$tstamp && mkdir -vp /1/brzl/warcs"
     sudo -H -u archiveit sshfs wbgrp-svc111:/1/brzl/warcs /1/brzl/warcs -o nonempty,ro,allow_other
@@ -91,12 +95,12 @@ start_brozzler_boss() {
 
 start_brozzler_workers() {
     echo $0: starting brozzler-workers
-    for node in aidata{400,400-bu,401,401-bu} ; do
+    for node in aidata{400,401}{,-bu} ; do
         (
         set -x
         ssh $node "docker --version || curl -sSL https://get.docker.com/ | sh && sudo usermod -aG docker $USER"
         ssh $node 'docker build -t internetarchive/brozzler-worker /home/nlevitt/workspace/brozzler/docker'
-        ssh -fn $node 'docker run --rm internetarchive/brozzler-worker /sbin/my_init -- setuser brozzler bash -c "DISPLAY=:1 brozzler-worker --rethinkdb-servers=wbgrp-svc036,wbgrp-svc020,wbgrp-svc035 --rethinkdb-db=archiveit_brozzler --max-browsers=10"'  &>> /1/brzl/logs/brozzler-worker-$node.out
+        ssh -fn $node 'docker run -t --rm -p 8901:8901 -p 5901:5901 internetarchive/brozzler-worker /sbin/my_init -- setuser brozzler bash -c "DISPLAY=:1 brozzler-worker --rethinkdb-servers=wbgrp-svc036,wbgrp-svc020,wbgrp-svc035 --rethinkdb-db=archiveit_brozzler --max-browsers=10"'  &>> /1/brzl/logs/brozzler-worker-$node.out
         sleep 5
         )
     done
