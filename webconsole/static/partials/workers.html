@@ -12,13 +12,11 @@
     <h2>Workers</h2>
 
     <div class="row">
-        <div class="col-sm-12" ng-repeat="worker in workers">
-		<!--
-            <iframe style="width:800px;height:550px" 
+        <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6" ng-repeat="worker in workers">
+            {{worker.host}}
+            <iframe style="width:45rem;height:32rem;" 
 		    ng-src="{{'/static/noVNC/vnc.html?host=' + worker.host + '&port=' + worker.vnc_websocket_port + '&autoconnect=1&resize=downscale'}}">
-                {{worker}}
             </iframe>
--->
         </div>
     </div>
 </div>
