@@ -1,13 +1,13 @@
+
 var umbraBehavior = {
 	IDLE_TIMEOUT_SEC : 10,
 	idleSince : null,
 	alreadyClicked : {},
 
-	intervalFunc : function() {
+	intervalFunc: function() {
 		var clickedSomething = false;
 		var somethingLeftBelow = false;
 		var somethingLeftAbove = false;
-		var cssSelector = "${click_css_selector}";
 
 		var iframes = document.querySelectorAll("iframe");
 		var documents = Array(iframes.length + 1);
@@ -18,16 +18,13 @@ var umbraBehavior = {
 		}
 
 		for (var j = 0; j < documents.length; j++) {
-
-			var clickTargets = documents[j].querySelectorAll(cssSelector);
-
-			for ( var i = 0; i < clickTargets.length; i++) {
-				if (clickTargets[i].umbraClicked) {
+			var clickTargets = documents[j].querySelectorAll("a[id='load-more']");
+			for (var i = 0; i < clickTargets.length; i++) {
+				if (clickTargets[i].className === "disabled") {
 					continue;
 				}
 
 				var where = this.aboveBelowOrOnScreen(clickTargets[i]);
-
 				if (where == 0) {
 					console.log("clicking on " + clickTargets[i].outerHTML);
 					// do mouse over event on click target
@@ -40,7 +37,6 @@ var umbraBehavior = {
 					clickTargets[i].click();
 					clickedSomething = true;
 					this.idleSince = null;
-					clickTargets[i].umbraClicked = true;
 
 					break; //break from clickTargets loop, but not from iframe loop
 				} else if (where > 0) {
@@ -53,17 +49,17 @@ var umbraBehavior = {
 
 		if (!clickedSomething) {
 			if (somethingLeftAbove) {
-				// console.log("scrolling UP because everything on this screen has been clicked but we missed something above");
+				console.log("scrolling UP because everything on this screen has been clicked but we missed something above");
 				window.scrollBy(0, -500);
 				this.idleSince = null;
 			} else if (somethingLeftBelow) {
-				// console.log("scrolling because everything on this screen has been clicked but there's more below document.body.clientHeight="
-				// 				+ document.body.clientHeight);
+				console.log("scrolling because everything on this screen has been clicked but there's more below document.body.clientHeight="
+								+ document.body.clientHeight);
 				window.scrollBy(0, 200);
 				this.idleSince = null;
 			} else if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
-				// console.log("scrolling because we're not to the bottom yet document.body.clientHeight="
-				// 				+ document.body.clientHeight);
+				console.log("scrolling because we're not to the bottom yet document.body.clientHeight="
+								+ document.body.clientHeight);
 				window.scrollBy(0, 200);
 				this.idleSince = null;
 			} else if (this.idleSince == null) {
@@ -76,24 +72,7 @@ var umbraBehavior = {
 		}
 	},
 
-	start : function() {
-		var that = this;
-		this.intervalId = setInterval(function() {
-			that.intervalFunc()
-		}, 250);
-	},
-
-	isFinished : function() {
-		if (this.idleSince != null) {
-			var idleTimeMs = Date.now() - this.idleSince;
-			if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
-				return true;
-			}
-		}
-		return false;
-	},
-
-	aboveBelowOrOnScreen : function(e) {
+	aboveBelowOrOnScreen: function(e) {
 		var eTop = e.getBoundingClientRect().top;
 		if (eTop < window.scrollY) {
 			return -1; // above
@@ -103,6 +82,23 @@ var umbraBehavior = {
 			return 0; // on screen
 		}
 	},
+
+	start: function() {
+		var that = this;
+		this.intervalId = setInterval(function() {
+			that.intervalFunc()
+		}, 250);
+	},
+
+	isFinished: function() {
+		if (this.idleSince != null) {
+			var idleTimeMs = Date.now() - this.idleSince;
+			if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
+				return true;
+			}
+		}
+		return false;
+	},
 };
 
 // Called from outside of this script.
@@ -111,3 +107,4 @@ var umbraBehaviorFinished = function() {
 };
 
 umbraBehavior.start();
+
