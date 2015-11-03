@@ -80,7 +80,7 @@ var umbraIntervalFunc = function() {
 			return;
 		}
 	
-        var closeButtons = document.querySelectorAll('a[title="Close"], a.closeTheater');
+	var closeButtons = document.querySelectorAll('a[title="Close"], a.closeTheater, a[aria-label="Press Esc to close"]');
         for (var i = 0; i < closeButtons.length; i++) {
                 // XXX closeTheater buttons stick around in the dom after closing, clientWidth>0 is one way to check if they're visible
                 if (closeButtons[i].clientWidth > 0) {  
