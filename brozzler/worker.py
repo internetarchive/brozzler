@@ -1,5 +1,3 @@
-# vim: set sw=4 et:
-
 import os
 import logging
 import brozzler
@@ -13,12 +11,16 @@ import json
 import PIL.Image
 import io
 import socket
+import datetime
 
 class BrozzlerWorker:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, frontier, max_browsers=1, chrome_exe="chromium-browser"):
+    HEARTBEAT_INTERVAL = 20.0
+
+    def __init__(self, frontier, service_registry=None, max_browsers=1, chrome_exe="chromium-browser"):
         self._frontier = frontier
+        self._service_registry = service_registry
         self._max_browsers = max_browsers
         self._browser_pool = brozzler.browser.BrowserPool(max_browsers,
                 chrome_exe=chrome_exe, ignore_cert_errors=True)
@@ -74,7 +76,7 @@ class BrozzlerWorker:
                 info_json = json.dumps(info, sort_keys=True, indent=4)
                 self.logger.info("sending WARCPROX_WRITE_RECORD request to warcprox with youtube-dl json for %s", page)
                 self._warcprox_write_record(warcprox_address=site.proxy,
-                        url=page.url, warc_type="metadata",
+                        url="youtube-dl:%s" % page.url, warc_type="metadata",
                         content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                         payload=info_json.encode("utf-8"),
                         extra_headers=site.extra_headers)
@@ -128,6 +130,8 @@ class BrozzlerWorker:
         except:
             self.logger.error("youtube_dl raised exception on {}".format(page), exc_info=True)
 
+        if not browser.is_running():
+            browser.start(proxy=site.proxy)
         outlinks = browser.browse_page(page.url,
                 extra_headers=site.extra_headers, on_screenshot=on_screenshot,
                 on_url_change=page.note_redirect)
@@ -137,8 +141,7 @@ class BrozzlerWorker:
         start = time.time()
         page = None
         try:
-            browser.start(proxy=site.proxy)
-            while not self._shutdown_requested.is_set() and time.time() - start < 60:
+            while not self._shutdown_requested.is_set() and time.time() - start < 7 * 60:
                 page = self._frontier.claim_page(site, self._id)
                 outlinks = self.brozzle_page(browser, ydl, site, page)
                 self._frontier.completed_page(site, page)
@@ -158,10 +161,28 @@ class BrozzlerWorker:
             self._frontier.disclaim_site(site, page)
             self._browser_pool.release(browser)
 
+    def _service_heartbeat(self):
+        if hasattr(self, "status_info"):
+            status_info = self.status_info
+        else:
+            status_info = {
+                "role": "brozzler-worker",
+                "heartbeat_interval": self.HEARTBEAT_INTERVAL,
+            }
+        status_info["load"] = 1.0 * self._browser_pool.num_in_use() / self._browser_pool.size
+        status_info["browser_pool_size"] = self._browser_pool.size
+        status_info["browsers_in_use"] = self._browser_pool.num_in_use()
+
+        self.status_info = self._service_registry.heartbeat(status_info)
+        self.logger.debug("status in service registry: %s", self.status_info)
+
     def run(self):
         try:
             latest_state = None
             while not self._shutdown_requested.is_set():
+                if self._service_registry and (not hasattr(self, "status_info") or (datetime.datetime.now(datetime.timezone.utc) - self.status_info["last_heartbeat"]).total_seconds() > self.HEARTBEAT_INTERVAL):
+                    self._service_heartbeat()
+
                 try:
                     browser = self._browser_pool.acquire()
                     try:
@@ -185,6 +206,9 @@ class BrozzlerWorker:
                 time.sleep(0.5)
         except:
             self.logger.critical("thread exiting due to unexpected exception", exc_info=True)
+        finally:
+            if self._service_registry and hasattr(self, "status_info"):
+                self._service_registry.unregister(self.status_info["id"])
 
     def start(self):
         th = threading.Thread(target=self.run, name="BrozzlerWorker")

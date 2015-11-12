@@ -70,8 +70,13 @@ def job(job_id):
 
 @app.route("/api/workers")
 def workers():
-    workers_ = [{"host":host,"vnc_websocket_port":8901} for host in ["aidata400", "aidata401", "aidata400-bu", "aidata401-bu"]]
-    return flask.jsonify(workers=workers_)
+    workers_ = r.table("services").filter({"role":"brozzler-worker"}).run()
+    return flask.jsonify(workers=list(workers_))
+
+@app.route("/api/services")
+def services():
+    services_ = r.table("services").run()
+    return flask.jsonify(services=list(services_))
 
 @app.route("/api/jobs")
 def jobs():

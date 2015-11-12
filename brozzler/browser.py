@@ -28,6 +28,7 @@ class BrowserPool:
 
     def __init__(self, size=3, **kwargs):
         """kwargs are passed on to Browser.__init__"""
+        self.size = size
         self._available = set()
         self._in_use = set()
 
@@ -58,6 +59,12 @@ class BrowserPool:
         for browser in self._in_use:
             browser.abort_browse_page()
 
+    def num_available(self):
+        return len(self._available)
+
+    def num_in_use(self):
+        return len(self._in_use)
+
 class NoBrowsersAvailable(Exception):
     pass
 
@@ -68,10 +75,10 @@ class BrowsingAborted(BrowsingException):
     pass
 
 class Browser:
-    """Runs chrome/chromium to synchronously browse one page at a time using
-    worker.browse_page(). Currently the implementation starts up a new instance
-    of chrome for each page browsed, always on the same debug port. (In the
-    future, it may keep the browser running indefinitely.)"""
+    """
+    Runs chrome/chromium to synchronously browse one page at a time using
+    worker.browse_page(). Should not be accessed from multiple threads.
+    """
 
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
@@ -88,6 +95,8 @@ class Browser:
         self._abort_browse_page = False
         self._chrome_instance = None
         self._aw_snap_hes_dead_jim = None
+        self._work_dir = None
+        self._websocket_url = None
 
     def __repr__(self):
         return "{}.{}:{}".format(Browser.__module__, Browser.__qualname__, self.chrome_port)
@@ -100,26 +109,30 @@ class Browser:
         self.stop()
 
     def start(self, proxy=None):
-        # these can raise exceptions
-        self._work_dir = tempfile.TemporaryDirectory()
-        self._chrome_instance = Chrome(port=self.chrome_port,
-                executable=self.chrome_exe,
-                user_home_dir=self._work_dir.name,
-                user_data_dir=os.sep.join([self._work_dir.name, "chrome-user-data"]),
-                ignore_cert_errors=self.ignore_cert_errors,
-                proxy=proxy or self.proxy)
-        self._websocket_url = self._chrome_instance.start()
+        if not self._chrome_instance:
+            # these can raise exceptions
+            self._work_dir = tempfile.TemporaryDirectory()
+            self._chrome_instance = Chrome(port=self.chrome_port,
+                    executable=self.chrome_exe,
+                    user_home_dir=self._work_dir.name,
+                    user_data_dir=os.sep.join([self._work_dir.name, "chrome-user-data"]),
+                    ignore_cert_errors=self.ignore_cert_errors,
+                    proxy=proxy or self.proxy)
+            self._websocket_url = self._chrome_instance.start()
 
     def stop(self):
         try:
-            if self._chrome_instance:
+            if self.is_running():
                 self._chrome_instance.stop()
                 self._chrome_instance = None
-            if self._work_dir:
                 self._work_dir.cleanup()
                 self._work_dir = None
+                self._websocket_url = None
         except:
             self.logger.error("problem stopping", exc_info=True)
+
+    def is_running(self):
+        return bool(self._websocket_url)
 
     def abort_browse_page(self):
         self._abort_browse_page = True
@@ -133,6 +146,8 @@ class Browser:
 
         Returns extracted outlinks.
         """
+        if not self.is_running():
+            raise BrowsingException("browser has not been started")
         self.url = url
         self.extra_headers = extra_headers
         self.on_request = on_request
@@ -430,8 +445,9 @@ class Chrome:
             logging.error("unexpected exception", exc_info=True)
 
     def stop(self):
-        if self._shutdown.is_set():
+        if not self.chrome_process or self._shutdown.is_set():
             return
+
         timeout_sec = 300
         self._shutdown.set()
         self.logger.info("terminating chrome pid {}".format(self.chrome_process.pid))
