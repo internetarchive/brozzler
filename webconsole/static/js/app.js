@@ -12,10 +12,6 @@ brozzlerConsoleApp.config(["$routeProvider", "$locationProvider",
                 templateUrl: "/static/partials/workers.html",
                 controller: "WorkersListController"
             }).
-            when("/jobs", {
-                templateUrl: "/static/partials/jobs.html",
-                controller: "JobsListController"
-            }).
             when("/jobs/:id", {
                 templateUrl: "/static/partials/job.html",
                 controller: "JobController"
@@ -25,7 +21,8 @@ brozzlerConsoleApp.config(["$routeProvider", "$locationProvider",
                 controller: "SiteController"
             }).
             when("/", {
-                redirectTo: "/jobs"
+                templateUrl: "/static/partials/home.html",
+                controller: "HomeController"
             }).
             otherwise({
                 template: '<div> <div class="page-header"> <h1>Not Found</h1> </div> <div class="row"> <div class="col-sm-12"> How the heck did you get here? </div> </div> </div> ',
@@ -53,10 +50,13 @@ brozzlerConsoleApp.filter("byteformat", function() {
 
 var brozzlerControllers = angular.module("brozzlerControllers", []);
 
-brozzlerControllers.controller("JobsListController", ["$scope", "$http",
+brozzlerControllers.controller("HomeController", ["$scope", "$http",
    function($scope, $http) {
        $http.get("/api/jobs").success(function(data) {
            $scope.jobs = data.jobs;
+       });
+       $http.get("/api/services").success(function(data) {
+           $scope.services = data.services;
        });
    }]);
 

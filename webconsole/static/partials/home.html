@@ -1,5 +1,5 @@
 <ol class="breadcrumb">
-    <li class="active">Jobs</li>
+    <li class="active">Home</li>
 </ol>
 
 <div class="page-header">
@@ -9,6 +9,37 @@
 </div>
 
 <div>
+    <h2>Services</h2>
+
+    <p><a href="/workers">Brozzler Workers</a></p>
+
+    <div class="row">
+        <div class="col-sm-12">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>role</th>
+                        <th>host</th>
+                        <th>pid</th>
+                        <th>load</th>
+                        <th>first heartbeat</th>
+                        <th>last heartbeat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="service in services">
+                    <td>{{service.role}}</td>
+                    <td>{{service.host}}</td>
+                    <td>{{service.pid}}</td>
+                    <td>{{service.load}}</td>
+                    <td>{{service.first_heartbeat}}</td>
+                    <td>{{service.last_heartbeat}}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <h2>Jobs</h2>
 
     <div class="row">
