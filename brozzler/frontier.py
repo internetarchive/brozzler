@@ -37,7 +37,7 @@ class RethinkDbFrontier:
             self.r.table_create("jobs", shards=self.shards, replicas=self.replicas).run()
 
     def _vet_result(self, result, **kwargs):
-        self.logger.debug("vetting expected=%s result=%s", kwargs, result)
+        # self.logger.debug("vetting expected=%s result=%s", kwargs, result)
         # {'replaced': 0, 'errors': 0, 'skipped': 0, 'inserted': 1, 'deleted': 0, 'generated_keys': ['292859c1-4926-4b27-9d87-b2c367667058'], 'unchanged': 0}
         for k in ["replaced", "errors", "skipped", "inserted", "deleted", "unchanged"]:
             if k in kwargs:
@@ -115,12 +115,10 @@ class RethinkDbFrontier:
             return False
 
     def claim_page(self, site, worker_id):
-        # import pdb; pdb.set_trace()
         result = (self.r.table("pages")
                 .between([site.id, 0, False, self.r.minval], [site.id, 0, False, self.r.maxval], index="priority_by_site")
                 .order_by(index=rethinkdb.desc("priority_by_site")).limit(1)
                 .update({"claimed":True,"last_claimed_by":worker_id},return_changes=True)).run()
-        self.logger.info("query returned %s", result)
         self._vet_result(result, replaced=[0,1])
         if result["replaced"] == 1:
             return brozzler.Page(**result["changes"][0]["new_val"])
