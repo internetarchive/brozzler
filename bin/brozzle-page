@@ -7,6 +7,8 @@ import sys
 import logging
 import brozzler
 import re
+import warnings
+import requests
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description="brozzle-page - brozzle a single page",
@@ -27,6 +29,9 @@ args = arg_parser.parse_args(args=sys.argv[1:])
 
 logging.basicConfig(stream=sys.stdout, level=args.log_level,
         format="%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
+logging.getLogger("requests.packages.urllib3").setLevel(logging.WARN)
+warnings.simplefilter("ignore", category=requests.packages.urllib3.exceptions.InsecureRequestWarning)
+warnings.simplefilter("ignore", category=requests.packages.urllib3.exceptions.InsecurePlatformWarning)
 
 extra_headers = {}
 if args.extra_headers:
