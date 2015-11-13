@@ -3,6 +3,7 @@ import brozzler
 import yaml
 import json
 import datetime
+import uuid
 
 def merge(a, b):
     if isinstance(a, dict) and isinstance(b, dict):
@@ -51,15 +52,23 @@ def new_job(frontier, job_conf):
         new_site(frontier, site)
 
 def new_site(frontier, site):
+    site.id = str(uuid.uuid4())
     logging.info("new site {}".format(site))
-    frontier.new_site(site)
     try:
-        if brozzler.is_permitted_by_robots(site, site.seed):
-            page = brozzler.Page(site.seed, site_id=site.id, job_id=site.job_id, hops_from_seed=0, priority=1000)
-            frontier.new_page(page)
-            logging.info("queued page %s", page)
-        else:
-            logging.warn("seed url {} is blocked by robots.txt".format(site.seed))
+        # insert the Page into the database before the Site, to avoid situation
+        # where a brozzler worker immediately claims the site, finds no pages
+        # to crawl, and decides the site is finished
+        try:
+            if brozzler.is_permitted_by_robots(site, site.seed):
+                page = brozzler.Page(site.seed, site_id=site.id,
+                    job_id=site.job_id, hops_from_seed=0, priority=1000)
+                frontier.new_page(page)
+                logging.info("queued page %s", page)
+            else:
+                logging.warn("seed url {} is blocked by robots.txt".format(site.seed))
+        finally:
+            # finally block because we want to insert the Site no matter what
+            frontier.new_site(site)
     except brozzler.ReachedLimit as e:
         frontier.reached_limit(site, e)
 
