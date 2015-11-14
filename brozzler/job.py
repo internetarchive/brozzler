@@ -25,8 +25,8 @@ def new_job_file(frontier, job_conf_file):
         new_job(frontier, job_conf)
 
 def new_job(frontier, job_conf):
-    job = Job(id=job_conf.get("id"), conf=job_conf, status="ACTIVE", started=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
-    frontier.new_job(job)
+    job = Job(id=job_conf.get("id"), conf=job_conf, status="ACTIVE",
+        started=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
 
     sites = []
     for seed_conf in job_conf["seeds"]:
@@ -48,8 +48,11 @@ def new_job(frontier, job_conf):
                 extra_headers=extra_headers)
         sites.append(site)
 
+    # insert all the sites into database before the job
     for site in sites:
         new_site(frontier, site)
+
+    frontier.new_job(job)
 
 def new_site(frontier, site):
     site.id = str(uuid.uuid4())

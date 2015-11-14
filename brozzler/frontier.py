@@ -63,7 +63,9 @@ class RethinkDbFrontier:
         self.logger.info("inserting into 'sites' table %s", site)
         result = self.r.table("sites").insert(site.to_dict()).run()
         self._vet_result(result, inserted=1)
-        site.id = result["generated_keys"][0]
+        if not site.id:
+            # only if "id" has not already been set
+            site.id = result["generated_keys"][0]
 
     def update_job(self, job):
         self.logger.debug("updating 'jobs' table entry %s", job)
