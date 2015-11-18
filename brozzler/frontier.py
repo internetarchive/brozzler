@@ -4,6 +4,7 @@ import random
 import time
 import datetime
 import rethinkdb
+import rethinkstuff
 
 class UnexpectedDbResult(Exception):
     pass
@@ -91,9 +92,13 @@ class RethinkDbFrontier:
         # XXX keep track of aggregate priority and prioritize sites accordingly?
         while True:
             result = (self.r.table("sites")
-                    .between(["ACTIVE",False,0], ["ACTIVE",False,250000000000], index="sites_last_disclaimed")
+                    .between(
+                        ["ACTIVE",False,rethinkdb.minval],
+                        ["ACTIVE",False,rethinkdb.maxval],
+                        index="sites_last_disclaimed")
                     .order_by(index="sites_last_disclaimed").limit(1)
-                    .update({"claimed":True,"last_claimed_by":worker_id},return_changes=True)).run()
+                    .update({"claimed":True,"last_claimed_by":worker_id},
+                        return_changes=True)).run()
             self._vet_result(result, replaced=[0,1], unchanged=[0,1])
             if result["replaced"] == 1:
                 site = brozzler.Site(**result["changes"][0]["new_val"])
@@ -108,7 +113,7 @@ class RethinkDbFrontier:
 
     def _enforce_time_limit(self, site):
         if (site.time_limit and site.time_limit > 0
-                and time.time() - site.start_time > site.time_limit):
+                and (rethinkstuff.utcnow() - site.start_time).total_seconds() > site.time_limit):
             self.logger.debug("site FINISHED_TIME_LIMIT! time_limit=%s start_time=%s elapsed=%s %s",
                     site.time_limit, site.start_time, time.time() - site.start_time, site)
             self.finished(site, "FINISHED_TIME_LIMIT")
@@ -177,7 +182,7 @@ class RethinkDbFrontier:
 
         self.logger.info("all %s sites finished, job %s is FINISHED!", n, job.id)
         job.status = "FINISHED"
-        job.finished = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        job.finished = rethinkdb.utcnow()
         self.update_job(job)
         return True
 
@@ -185,13 +190,13 @@ class RethinkDbFrontier:
         self.logger.info("%s %s", site, status)
         site.status = status
         self.update_site(site)
-        if site.job_id: 
+        if site.job_id:
             self._maybe_finish_job(site.job_id)
 
     def disclaim_site(self, site, page=None):
         self.logger.info("disclaiming %s", site)
         site.claimed = False
-        site.last_disclaimed = time.time()  # XXX use string or rethinkdb time type?
+        site.last_disclaimed = rethinkstuff.utcnow()
         if not page and not self.has_outstanding_pages(site):
             self.finished(site, "FINISHED")
         else:

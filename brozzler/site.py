@@ -1,11 +1,13 @@
-# vim: set sw=4 et:
-
 import surt
 import json
 import logging
 import brozzler
 import hashlib
 import time
+import rethinkstuff
+import datetime
+
+_EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(tzinfo=rethinkstuff.UTC)
 
 class Site(brozzler.BaseDictable):
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -13,8 +15,8 @@ class Site(brozzler.BaseDictable):
     def __init__(self, seed, id=None, job_id=None, scope=None, proxy=None,
         ignore_robots=False, time_limit=None, extra_headers=None,
         enable_warcprox_features=False, reached_limit=None, status="ACTIVE",
-        claimed=False, start_time=time.time(), last_disclaimed=0,
-        last_claimed_by=None):
+        claimed=False, start_time=rethinkstuff.utcnow(),
+        last_disclaimed=_EPOCH_UTC, last_claimed_by=None):
 
         self.seed = seed
         self.id = id
@@ -28,7 +30,6 @@ class Site(brozzler.BaseDictable):
         self.status = status
         self.claimed = bool(claimed)
         self.last_claimed_by = last_claimed_by
-        # times as seconds since epoch
         self.start_time = start_time
         self.last_disclaimed = last_disclaimed
 

@@ -4,6 +4,7 @@ import yaml
 import json
 import datetime
 import uuid
+import rethinkstuff
 
 def merge(a, b):
     if isinstance(a, dict) and isinstance(b, dict):
@@ -26,18 +27,18 @@ def new_job_file(frontier, job_conf_file):
 
 def new_job(frontier, job_conf):
     job = Job(id=job_conf.get("id"), conf=job_conf, status="ACTIVE",
-        started=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
+        started=rethinkstuff.utcnow())
 
     sites = []
     for seed_conf in job_conf["seeds"]:
         merged_conf = merge(seed_conf, job_conf)
         # XXX check for unknown settings, invalid url, etc
-    
+
         extra_headers = None
         if "warcprox_meta" in merged_conf:
             warcprox_meta = json.dumps(merged_conf["warcprox_meta"], separators=(',', ':'))
             extra_headers = {"Warcprox-Meta":warcprox_meta}
-    
+
         site = brozzler.Site(job_id=job.id,
                 seed=merged_conf["url"],
                 scope=merged_conf.get("scope"),
