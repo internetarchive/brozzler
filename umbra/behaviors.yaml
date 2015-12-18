@@ -24,6 +24,10 @@ behaviors:
    url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
    behavior_js: instagram.js
    request_idle_timeout_sec: 10
+ - 
+   url_regex: '^https?://(?:www\.)?brooklynmuseum\.org/exhibitions/.*$'
+   click_css_selector: img.img-responsive
+   request_idle_timeout_sec: 10
  - # acalog https://webarchive.jira.com/browse/ARI-3775
    url_regex: '^https?://.*[?&]catoid=[^?]*$'
    click_css_selector: a[onclick]
