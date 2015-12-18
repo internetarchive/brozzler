@@ -89,7 +89,11 @@ class Browser:
 
     def stop(self):
         self._chrome_instance.stop()
-        self._work_dir.cleanup()
+        try:
+            self._work_dir.cleanup()
+        except:
+            self.logger.error("exception deleting %s", self._work_dir,
+                              exc_info=True)
 
     def abort_browse_page(self):
         self._abort_browse_page = True
