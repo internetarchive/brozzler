@@ -8,7 +8,8 @@ var umbraBehavior = {
 		var somethingLeftBelow = false;
 		var somethingLeftAbove = false;
 		var cssSelector = "${click_css_selector}";
-
+		var clickUntilTimeout = "${click_until_hard_timeout}";
+		
 		var iframes = document.querySelectorAll("iframe");
 		var documents = Array(iframes.length + 1);
 		documents[0] = document;
@@ -22,7 +23,7 @@ var umbraBehavior = {
 			var clickTargets = documents[j].querySelectorAll(cssSelector);
 
 			for ( var i = 0; i < clickTargets.length; i++) {
-				if (clickTargets[i].umbraClicked) {
+				if (clickTargets[i].umbraClicked && !clickUntilTimeout) {
 					continue;
 				}
 

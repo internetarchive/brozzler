@@ -32,7 +32,11 @@ class Behavior:
                     behavior_js = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ["behaviors.d"] + [behavior["behavior_js"]])
                     behavior["script"] = open(behavior_js, encoding="utf-8").read()
                 elif "click_css_selector" in behavior:
-                    behavior["script"] = simpleclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"])
+                    if "click_until_hard_timeout" in behavior: 
+                        click_until_hard_timeout_value=behavior["click_until_hard_timeout"]
+                    else:
+                        click_until_hard_timeout_value = False
+                    behavior["script"] = simpleclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"], click_until_hard_timeout=click_until_hard_timeout_value)
 
         return Behavior._behaviors
 
