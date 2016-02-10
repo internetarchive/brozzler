@@ -42,7 +42,7 @@ _stop() {
         for node in aidata{400,401}{,-bu} ; do
             ssh $node pkill -f brozzler-worker
         done
-        for node in wbgrp-svc{110,111} ; do 
+        for node in wbgrp-svc{110,111} ; do
             ssh $node pkill -f /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox
         done
         set +x
@@ -51,6 +51,10 @@ _stop() {
     if _status > /dev/null ; then
         while _status > /dev/null ; do sleep 0.5 ; done
     fi
+
+    for node in aidata{400,401}{,-bu} ; do
+        ssh $node killall chromium-browser
+    done
 
     echo "$0: all services stopped"
 }
@@ -61,7 +65,7 @@ _reset() {
         exit 1
     fi
 
-    tstamp=$(date +"%Y%m%d%H%M%S") 
+    tstamp=$(date +"%Y%m%d%H%M%S")
     echo "renaming rethinkdb database archiveit_brozzler to archiveit_brozzler_$tstamp"
     PYTHONPATH=/home/nlevitt/workspace/brozzler/brozzler-ve34/lib/python3.4/site-packages python3.4 <<EOF
 import rethinkdb as r
@@ -118,17 +122,14 @@ EOF
 start_warcprox() {
     echo $0: starting warcprox
     for node in wbgrp-svc{110,111} ; do 
-        ssh -fn $node 'PYTHONPATH=/home/nlevitt/workspace/warcprox/warcprox-ve34/lib/python3.4/site-packages nice /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox --profile --dir=/1/brzl/warcs --rethinkdb-servers=wbgrp-svc020,wbgrp-svc035,wbgrp-svc036 --rethinkdb-db=archiveit_brozzler --rethinkdb-big-table --cacert=/1/brzl/warcprox-ca.pem --certs-dir=/1/brzl/certs --address=0.0.0.0 --base32 --gzip --rollover-idle-time=180 --kafka-broker-list=qa-archive-it.org:6092 --kafka-capture-feed-topic=ait-brozzler-captures' &>>/1/brzl/logs/warcprox-$node.out &
-        while ! rethinkdb_tables_ready stats:0 captures:2 services:0 ; do 
-            sleep 1 ; 
-        done
+        ssh -fn $node 'PYTHONPATH=/home/nlevitt/workspace/warcprox/warcprox-ve34/lib/python3.4/site-packages nice /home/nlevitt/workspace/warcprox/warcprox-ve34/bin/warcprox --profile --dir=/1/brzl/warcs --rethinkdb-servers=wbgrp-svc020,wbgrp-svc035,wbgrp-svc036 --rethinkdb-db=archiveit_brozzler --rethinkdb-big-table --cacert=/1/brzl/warcprox-ca.pem --certs-dir=/1/brzl/certs --address=0.0.0.0 --base32 --gzip --rollover-idle-time=180 --kafka-broker-list=qa-archive-it.org:6092 --kafka-capture-feed-topic=ait-brozzler-captures --onion-tor-socks-proxy=localhost:9050' &>>/1/brzl/logs/warcprox-$node.out &
+        while ! rethinkdb_tables_ready stats:0 captures:2 services:0 ; do sleep 1 ; done
     done
 }
 
 start_brozzler_boss() {
     echo $0: starting ait-brozzler-boss.py
-    venv=/home/nlevitt/workspace/ait5/ait5-ve34
-    PYTHONPATH=$venv/lib/python3.4/site-packages $venv/bin/python /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py &>> /1/brzl/logs/ait-brozzler-boss.out &
+    PYTHONPATH=/home/nlevitt/workspace/ait5/ait5-ve34/lib/python3.4/site-packages /home/nlevitt/workspace/ait5/ait5-ve34/bin/python /home/nlevitt/workspace/ait5/scripts/ait-brozzler-boss.py &>> /1/brzl/logs/ait-brozzler-boss.out &
     while ! rethinkdb_tables_ready stats:0 services:0 jobs:0 pages:1 sites:2 ; do sleep 1 ; done
 }
 
