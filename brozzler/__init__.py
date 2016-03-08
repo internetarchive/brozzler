@@ -10,6 +10,9 @@ class ShutdownRequested(Exception):
 class NothingToClaim(Exception):
     pass
 
+class CrawlJobStopped(Exception):
+    pass
+
 class ReachedLimit(Exception):
     def __init__(self, http_error=None, warcprox_meta=None, http_payload=None):
         if http_error:

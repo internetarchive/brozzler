@@ -109,8 +109,10 @@ class BrozzlerWorker:
     def brozzle_page(self, browser, ydl, site, page):
         def on_screenshot(screenshot_png):
             if site.proxy and site.enable_warcprox_features:
-                self.logger.info("sending WARCPROX_WRITE_RECORD request to warcprox with screenshot for %s", page)
-                screenshot_jpeg, thumbnail_jpeg = self.full_and_thumb_jpegs(screenshot_png)
+                self.logger.info("sending WARCPROX_WRITE_RECORD request "
+                                 "to warcprox with screenshot for %s", page)
+                screenshot_jpeg, thumbnail_jpeg = self.full_and_thumb_jpegs(
+                        screenshot_png)
                 self._warcprox_write_record(warcprox_address=site.proxy,
                         url="screenshot:{}".format(page.url),
                         warc_type="resource", content_type="image/jpeg",
@@ -128,20 +130,23 @@ class BrozzlerWorker:
         except brozzler.ReachedLimit as e:
             raise
         except:
-            self.logger.error("youtube_dl raised exception on {}".format(page), exc_info=True)
+            self.logger.error("youtube_dl raised exception on %s",
+                              page, exc_info=True)
 
         if not browser.is_running():
             browser.start(proxy=site.proxy)
-        outlinks = browser.browse_page(page.url,
-                extra_headers=site.extra_headers, on_screenshot=on_screenshot,
-                on_url_change=page.note_redirect)
+        outlinks = browser.browse_page(
+                page.url, extra_headers=site.extra_headers,
+                on_screenshot=on_screenshot, on_url_change=page.note_redirect)
         return outlinks
 
     def _brozzle_site(self, browser, ydl, site):
         start = time.time()
         page = None
         try:
-            while not self._shutdown_requested.is_set() and time.time() - start < 7 * 60:
+            while (not self._shutdown_requested.is_set()
+                   and time.time() - start < 7 * 60):
+                self._frontier.honor_stop_request(site.job_id)
                 page = self._frontier.claim_page(site, self._id)
                 outlinks = self.brozzle_page(browser, ydl, site, page)
                 self._frontier.completed_page(site, page)
@@ -151,12 +156,15 @@ class BrozzlerWorker:
             self.logger.info("no pages left for site %s", site)
         except brozzler.ReachedLimit as e:
             self._frontier.reached_limit(site, e)
+        except brozzler.CrawlJobStopped:
+            self._frontier.finished(site, "FINISHED_STOP_REQUESTED")
         except brozzler.browser.BrowsingAborted:
             self.logger.info("{} shut down".format(browser))
         except:
             self.logger.critical("unexpected exception", exc_info=True)
         finally:
-            self.logger.info("finished session brozzling site, stopping browser and disclaiming site")
+            self.logger.info("finished session brozzling site, stopping "
+                             "browser and disclaiming site")
             browser.stop()
             self._frontier.disclaim_site(site, page)
             self._browser_pool.release(browser)

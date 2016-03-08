@@ -115,7 +115,7 @@ class RethinkDbFrontier:
         if (site.time_limit and site.time_limit > 0
                 and (rethinkstuff.utcnow() - site.start_time).total_seconds() > site.time_limit):
             self.logger.debug("site FINISHED_TIME_LIMIT! time_limit=%s start_time=%s elapsed=%s %s",
-                    site.time_limit, site.start_time, time.time() - site.start_time, site)
+                    site.time_limit, site.start_time, rethinkstuff.utcnow() - site.start_time, site)
             self.finished(site, "FINISHED_TIME_LIMIT")
             return True
         else:
@@ -164,9 +164,18 @@ class RethinkDbFrontier:
         else:
             return None
 
+    def honor_stop_request(self, job_id):
+        """Raises brozzler.CrawlJobStopped if stop has been requested."""
+        job = self.job(job_id)
+        if job and job.stop_requested:
+            self.logger.info("stop requested for job %s", job_id)
+            raise brozzler.CrawlJobStopped
+
     def _maybe_finish_job(self, job_id):
         """Returns True if job is finished."""
         job = self.job(job_id)
+        if not job:
+            return False
         if job.status.startswith("FINISH"):
             self.logger.warn("%s is already %s", job, job.status)
             return True
@@ -182,12 +191,12 @@ class RethinkDbFrontier:
 
         self.logger.info("all %s sites finished, job %s is FINISHED!", n, job.id)
         job.status = "FINISHED"
-        job.finished = rethinkdb.utcnow()
+        job.finished = rethinkstuff.utcnow()
         self.update_job(job)
         return True
 
     def finished(self, site, status):
-        self.logger.info("%s %s", site, status)
+        self.logger.info("%s %s", status, site)
         site.status = status
         self.update_site(site)
         if site.job_id:
@@ -211,7 +220,10 @@ class RethinkDbFrontier:
             for url in outlinks:
                 if site.is_in_scope(url, parent_page):
                     if brozzler.is_permitted_by_robots(site, url):
-                        new_child_page = brozzler.Page(url, site_id=site.id, job_id=site.job_id, hops_from_seed=parent_page.hops_from_seed+1, via_page_id=parent_page.id)
+                        new_child_page = brozzler.Page(
+                                url, site_id=site.id, job_id=site.job_id,
+                                hops_from_seed=parent_page.hops_from_seed+1,
+                                via_page_id=parent_page.id)
                         existing_child_page = self.page(new_child_page.id)
                         if existing_child_page:
                             existing_child_page.priority += new_child_page.priority

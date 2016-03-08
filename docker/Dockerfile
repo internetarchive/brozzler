@@ -22,5 +22,5 @@ ADD vnc-websock.sh /etc/service/vnc-websock/run
 EXPOSE 5901 8901
 EXPOSE 8080
 
-RUN pip3 install -i http://crawl342.us.archive.org:9000/nlevitt/dev/+simple/ git+https://github.com/nlevitt/brozzler.git
+# RUN pip3 install -i http://crawl342.us.archive.org:9000/nlevitt/dev/+simple/ git+https://github.com/nlevitt/brozzler.git
 
