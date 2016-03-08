@@ -125,7 +125,11 @@ class Browser:
             if self.is_running():
                 self._chrome_instance.stop()
                 self._chrome_instance = None
-                self._work_dir.cleanup()
+                try:
+                    self._work_dir.cleanup()
+                except:
+                    self.logger.error("exception deleting %s", self._work_dir,
+                                      exc_info=True)
                 self._work_dir = None
                 self._websocket_url = None
         except:
