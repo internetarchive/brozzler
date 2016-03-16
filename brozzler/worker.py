@@ -221,6 +221,7 @@ class BrozzlerWorker:
     def start(self):
         th = threading.Thread(target=self.run, name="BrozzlerWorker")
         th.start()
+        return th
 
     def shutdown_now(self):
         self.logger.info("brozzler worker shutting down")
