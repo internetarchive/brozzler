@@ -96,11 +96,12 @@ class RethinkDbFrontier:
                         ["ACTIVE",rethinkdb.minval],
                         ["ACTIVE",rethinkdb.maxval],
                         index="sites_last_disclaimed")
-                    .order_by(index="sites_last_disclaimed").limit(1)
+                    .order_by(index="sites_last_disclaimed")
                     .filter(
                         (rethinkdb.row["claimed"] != True) |
                         (rethinkdb.row["last_disclaimed"]
                             < rethinkdb.now() - 2*60*60))
+                    .limit(1)
                     .update({"claimed":True,"last_claimed_by":worker_id},
                         return_changes=True)).run()
             self._vet_result(result, replaced=[0,1], unchanged=[0,1])
