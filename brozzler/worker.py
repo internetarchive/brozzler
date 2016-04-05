@@ -12,6 +12,18 @@ import PIL.Image
 import io
 import socket
 import datetime
+import urllib.request
+
+class ExtraHeaderAdder(urllib.request.HTTPHandler):
+    def __init__(self, extra_headers, *args, **kwargs):
+        urllib.request.HTTPHandler.__init__(self, *args, **kwargs)
+        self.extra_headers = extra_headers
+
+    def http_request(self, req):
+        for h, v in self.extra_headers.items():
+            if h.capitalize() not in req.headers:
+                req.add_header(h, v)
+        return req
 
 class BrozzlerWorker:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -39,15 +51,16 @@ class BrozzlerWorker:
             "nopart": True,
             "no_color": True,
         }
-        if site.extra_headers:
-            ydl_opts["extra_http_headers"] = site.extra_headers
         if site.proxy:
             ydl_opts["proxy"] = "http://{}".format(site.proxy)
             ## XXX (sometimes?) causes chrome debug websocket to go through
             ## proxy. Maybe not needed thanks to hls_prefer_native.
             ## # see https://github.com/rg3/youtube-dl/issues/6087
             ## os.environ["http_proxy"] = "http://{}".format(site.proxy)
-        return youtube_dl.YoutubeDL(ydl_opts)
+        ydl = youtube_dl.YoutubeDL(ydl_opts)
+        if site.extra_headers:
+            ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers))
+        return ydl
 
     def _warcprox_write_record(self, warcprox_address, url, warc_type, content_type, payload, extra_headers=None):
         headers = {"Content-Type":content_type,"WARC-Type":warc_type,"Host":"N/A"}
