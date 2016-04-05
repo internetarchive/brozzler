@@ -43,6 +43,9 @@ class Site(brozzler.BaseDictable):
                 repr(self.proxy), self.enable_warcprox_features,
                 self.ignore_robots, self.extra_headers, self.reached_limit)
 
+    def __str__(self):
+        return "site-%s-%s" % (self.id, self.seed)
+
     def _to_surt(self, url):
         hurl = surt.handyurl.parse(url)
         surt.GoogleURLCanonicalizer.canonicalize(hurl)
