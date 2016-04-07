@@ -202,7 +202,6 @@ class BrozzlerWorker:
             self.logger.error("youtube_dl raised exception on %s",
                               page, exc_info=True)
 
-        import pdb; pdb.set_trace()
         if self._needs_browsing(page, ydl.brozzler_spy):
             self.logger.info('needs browsing: %s', page)
             if not browser.is_running():
