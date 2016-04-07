@@ -21,6 +21,7 @@ setuptools.setup(name='brozzler',
             'pillow',
             'surt>=0.3b2',
             'rethinkstuff',
+            'rethinkdb>=2.3,<2.4',
             ],
         zip_safe=False,
         classifiers=[
