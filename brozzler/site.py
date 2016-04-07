@@ -15,8 +15,8 @@ class Site(brozzler.BaseDictable):
     def __init__(self, seed, id=None, job_id=None, scope=None, proxy=None,
         ignore_robots=False, time_limit=None, extra_headers=None,
         enable_warcprox_features=False, reached_limit=None, status="ACTIVE",
-        claimed=False, start_time=rethinkstuff.utcnow(),
-        last_disclaimed=_EPOCH_UTC, last_claimed_by=None):
+        claimed=False, start_time=None, last_disclaimed=_EPOCH_UTC,
+        last_claimed_by=None):
 
         self.seed = seed
         self.id = id
@@ -30,7 +30,7 @@ class Site(brozzler.BaseDictable):
         self.status = status
         self.claimed = bool(claimed)
         self.last_claimed_by = last_claimed_by
-        self.start_time = start_time
+        self.start_time = start_time or rethinkstuff.utcnow()
         self.last_disclaimed = last_disclaimed
 
         self.scope = scope or {}
