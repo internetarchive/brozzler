@@ -12,18 +12,60 @@ import PIL.Image
 import io
 import socket
 import datetime
-import urllib.request
+import collections
+import requests
 
-class ExtraHeaderAdder(urllib.request.HTTPHandler):
-    def __init__(self, extra_headers, *args, **kwargs):
-        urllib.request.HTTPHandler.__init__(self, *args, **kwargs)
+class ExtraHeaderAdder(urllib.request.BaseHandler):
+    def __init__(self, extra_headers):
         self.extra_headers = extra_headers
+        self.http_request = self._http_request
+        self.https_request = self._http_request
 
-    def http_request(self, req):
+    def _http_request(self, req):
         for h, v in self.extra_headers.items():
             if h.capitalize() not in req.headers:
                 req.add_header(h, v)
         return req
+
+class YoutubeDLSpy(urllib.request.BaseHandler):
+    Transaction = collections.namedtuple('Transaction', ['request', 'response'])
+
+    def __init__(self):
+        self.reset()
+
+    def _http_response(self, request, response):
+        self.transactions.append(YoutubeDLSpy.Transaction(request,response))
+        return response
+
+    http_response = https_response = _http_response
+
+    def reset(self):
+        self.transactions = []
+
+    def final_bounces(self, url):
+        """Resolves redirect chains in self.transactions, returns a list of
+        Transaction representing the final redirect destinations of the given
+        url. There could be more than one if for example youtube-dl hit the
+        same url with HEAD and then GET requests."""
+        redirects = {}
+        for txn in self.transactions:
+             # XXX check http status 301,302,303,307? check for "uri" header
+             # as well as "location"? see urllib.request.HTTPRedirectHandler
+             if ((txn.request.full_url == url
+                     or txn.request.full_url in redirects)
+                     and 'location' in txn.response.headers):
+                 redirects[txn.request.full_url] = txn
+
+        final_url = url
+        while final_url in redirects:
+            final_url = redirects[final_url].response.headers['location']
+
+        final_bounces = []
+        for txn in self.transactions:
+            if txn.request.full_url == final_url:
+                final_bounces.append(txn)
+
+        return final_bounces
 
 class BrozzlerWorker:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -60,9 +102,13 @@ class BrozzlerWorker:
         ydl = youtube_dl.YoutubeDL(ydl_opts)
         if site.extra_headers:
             ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers))
+        ydl.brozzler_spy = YoutubeDLSpy()
+        ydl._opener.add_handler(ydl.brozzler_spy)
         return ydl
 
-    def _warcprox_write_record(self, warcprox_address, url, warc_type, content_type, payload, extra_headers=None):
+    def _warcprox_write_record(
+            self, warcprox_address, url, warc_type, content_type,
+            payload, extra_headers=None):
         headers = {"Content-Type":content_type,"WARC-Type":warc_type,"Host":"N/A"}
         if extra_headers:
             headers.update(extra_headers)
@@ -77,9 +123,15 @@ class BrozzlerWorker:
         try:
             with urllib.request.urlopen(request) as response:
                 if response.status != 204:
-                    self.logger.warn("""got "{} {}" response on warcprox WARCPROX_WRITE_RECORD request (expected 204)""".format(response.status, response.reason))
+                    self.logger.warn(
+                            'got "%s %s" response on warcprox '
+                            'WARCPROX_WRITE_RECORD request (expected 204)',
+                            response.status, response.reason)
         except urllib.error.HTTPError as e:
-            self.logger.warn("""got "{} {}" response on warcprox WARCPROX_WRITE_RECORD request (expected 204)""".format(e.getcode(), e.info()))
+            self.logger.warn(
+                    'got "%s %s" response on warcprox '
+                    'WARCPROX_WRITE_RECORD request (expected 204)',
+                    e.getcode(), e.info())
 
     def _try_youtube_dl(self, ydl, site, page):
         try:
@@ -87,8 +139,11 @@ class BrozzlerWorker:
             info = ydl.extract_info(page.url)
             if site.proxy and site.enable_warcprox_features:
                 info_json = json.dumps(info, sort_keys=True, indent=4)
-                self.logger.info("sending WARCPROX_WRITE_RECORD request to warcprox with youtube-dl json for %s", page)
-                self._warcprox_write_record(warcprox_address=site.proxy,
+                self.logger.info(
+                        "sending WARCPROX_WRITE_RECORD request to warcprox "
+                        "with youtube-dl json for %s", page)
+                self._warcprox_write_record(
+                        warcprox_address=site.proxy,
                         url="youtube-dl:%s" % page.url, warc_type="metadata",
                         content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                         payload=info_json.encode("utf-8"),
@@ -138,6 +193,7 @@ class BrozzlerWorker:
                         extra_headers=site.extra_headers)
 
         self.logger.info("brozzling {}".format(page))
+        ydl.brozzler_spy.reset()
         try:
             self._try_youtube_dl(ydl, site, page)
         except brozzler.ReachedLimit as e:
@@ -146,12 +202,54 @@ class BrozzlerWorker:
             self.logger.error("youtube_dl raised exception on %s",
                               page, exc_info=True)
 
-        if not browser.is_running():
-            browser.start(proxy=site.proxy)
-        outlinks = browser.browse_page(
-                page.url, extra_headers=site.extra_headers,
-                on_screenshot=on_screenshot, on_url_change=page.note_redirect)
-        return outlinks
+        import pdb; pdb.set_trace()
+        if self._needs_browsing(page, ydl.brozzler_spy):
+            self.logger.info('needs browsing: %s', page)
+            if not browser.is_running():
+                browser.start(proxy=site.proxy)
+            outlinks = browser.browse_page(
+                    page.url, extra_headers=site.extra_headers,
+                    on_screenshot=on_screenshot,
+                    on_url_change=page.note_redirect)
+            return outlinks
+        else:
+            if not self._already_fetched(page, ydl.brozzler_spy):
+                self.logger.info('needs fetch: %s', page)
+                self._fetch_url(site, page)
+            else:
+                self.logger.info('already fetched: %s', page)
+            return []
+
+    def _fetch_url(self, site, page):
+        proxies = None
+        if site.proxy:
+            proxies = {
+                'http': 'http://%s' % site.proxy,
+                'https': 'http://%s' % site.proxy,
+            }
+
+        self.logger.info('fetching %s', page)
+        # response is ignored
+        requests.get(
+                page.url, proxies=proxies, headers=site.extra_headers,
+                verify=False)
+
+    def _needs_browsing(self, page, brozzler_spy):
+        final_bounces = brozzler_spy.final_bounces(page.url)
+        if not final_bounces:
+            return True
+        for txn in final_bounces:
+            if txn.response.headers.get_content_type() in [
+                    'text/html', 'application/xhtml+xml']:
+                return True
+        return False
+
+    def _already_fetched(self, page, brozzler_spy):
+        for txn in brozzler_spy.final_bounces(page.url):
+            if (txn.request.get_method() == 'GET'
+                    and txn.response.status == 200):
+                return True
+        return False
 
     def _brozzle_site(self, browser, ydl, site):
         start = time.time()
