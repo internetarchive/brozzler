@@ -4,6 +4,7 @@ import json
 import sys
 import os
 import importlib
+import rethinkdb
 
 # XXX flask does its own logging config
 # import logging
@@ -102,8 +103,7 @@ def services():
 
 @app.route("/api/jobs")
 def jobs():
-    jobs_ = list(r.table("jobs").run())
-    jobs_ = sorted(jobs_, key=lambda j: j['id'], reverse=True)
+    jobs_ = list(r.table("jobs").order_by(rethinkdb.desc("id")).run())
     return flask.jsonify(jobs=jobs_)
 
 @app.route("/api/config")
