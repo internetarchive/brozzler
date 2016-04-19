@@ -3,19 +3,30 @@ import rethinkstuff
 import json
 import logging
 import sys
+import os
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO,
         format="%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
 
 app = flask.Flask(__name__)
 
-r = rethinkstuff.Rethinker(["wbgrp-svc020", "wbgrp-svc035", "wbgrp-svc036"],
-                           db="archiveit_brozzler")
+# configure with environment variables
+SETTINGS= {
+    'RETHINKDB_SERVERS': os.environ.get(
+        'RETHINKDB_SERVERS', 'localhost').split(','),
+    'RETHINKDB_DB': os.environ.get('RETHINKDB_DB', 'brozzler'),
+    'WAYBACK_BASEURL': os.environ.get(
+        'WAYBACK_BASEURL', 'http://wbgrp-svc107.us.archive.org:8091'),
+}
+r = rethinkstuff.Rethinker(
+        SETTINGS['RETHINKDB_SERVERS'], db=SETTINGS['RETHINKDB_DB'])
 
 @app.route("/api/sites/<site_id>/queued_count")
 @app.route("/api/site/<site_id>/queued_count")
 def queued_count(site_id):
-    count = r.table("pages").between([site_id, 0, False, r.minval], [site_id, 0, False, r.maxval], index="priority_by_site").count().run()
+    count = r.table("pages").between(
+            [site_id, 0, False, r.minval], [site_id, 0, False, r.maxval],
+            index="priority_by_site").count().run()
     return flask.jsonify(count=count)
 
 @app.route("/api/sites/<site_id>/queue")
@@ -24,7 +35,9 @@ def queue(site_id):
     logging.info("flask.request.args=%s", flask.request.args)
     start = flask.request.args.get("start", 0)
     end = flask.request.args.get("end", start + 90)
-    queue_ = r.table("pages").between([site_id, 0, False, r.minval], [site_id, 0, False, r.maxval], index="priority_by_site")[start:end].run()
+    queue_ = r.table("pages").between(
+            [site_id, 0, False, r.minval], [site_id, 0, False, r.maxval],
+            index="priority_by_site")[start:end].run()
     return flask.jsonify(queue_=list(queue_))
 
 @app.route("/api/sites/<site_id>/pages_count")
@@ -32,7 +45,10 @@ def queue(site_id):
 @app.route("/api/sites/<site_id>/page_count")
 @app.route("/api/site/<site_id>/page_count")
 def page_count(site_id):
-    count = r.table("pages").between([site_id, 1, False, r.minval], [site_id, r.maxval, False, r.maxval], index="priority_by_site").count().run()
+    count = r.table("pages").between(
+            [site_id, 1, False, r.minval],
+            [site_id, r.maxval, False, r.maxval],
+            index="priority_by_site").count().run()
     return flask.jsonify(count=count)
 
 @app.route("/api/sites/<site_id>/pages")
@@ -42,7 +58,10 @@ def pages(site_id):
     logging.info("flask.request.args=%s", flask.request.args)
     start = int(flask.request.args.get("start", 0))
     end = int(flask.request.args.get("end", start + 90))
-    pages_ = r.table("pages").between([site_id, 1, False, r.minval], [site_id, r.maxval, False, r.maxval], index="priority_by_site")[start:end].run()
+    pages_ = r.table("pages").between(
+            [site_id, 1, False, r.minval],
+            [site_id, r.maxval, False, r.maxval],
+            index="priority_by_site")[start:end].run()
     return flask.jsonify(pages=list(pages_))
 
 @app.route("/api/sites/<site_id>")
@@ -81,7 +100,12 @@ def services():
 @app.route("/api/jobs")
 def jobs():
     jobs_ = list(r.table("jobs").run())
+    jobs_ = sorted(jobs_, key=lambda j: j['id'], reverse=True)
     return flask.jsonify(jobs=jobs_)
+
+@app.route("/api/config")
+def config():
+    return flask.jsonify(config=SETTINGS)
 
 @app.route("/api/<path:path>")
 @app.route("/api", defaults={"path":""})
@@ -91,7 +115,7 @@ def api404(path):
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def root(path):
-    return app.send_static_file("index.html")
+    return flask.render_template("index.html")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8081, debug=True)

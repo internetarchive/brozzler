@@ -40,8 +40,8 @@
         <div class="col-sm-12">
             <h2>Pages</h2>
             <div class="col-sm-6 col-md-4" ng-repeat="page in pages">
-                <a class="thumbnail" href="http://wbgrp-svc107.us.archive.org:8091/web/3/{{page.url}}">
-                    <img style="width:300px;height:190px" src="http://wbgrp-svc107.us.archive.org:8091/web/3/thumbnail:{{page.url}}" alt="thumb">
+                <a class="thumbnail" href="{{config.WAYBACK_BASEURL}}/3/{{page.url}}">
+                    <img style="width:300px;height:190px" src="{{config.WAYBACK_BASEURL}}/3/thumbnail:{{page.url}}" alt="thumb">
                     <div class="caption">
                         <h5>{{page.url}}</h5>
                     </div>

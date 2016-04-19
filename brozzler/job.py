@@ -88,3 +88,6 @@ class Job(brozzler.BaseDictable):
         self.finished = finished
         self.stop_requested = stop_requested
 
+    def __str__(self):
+        return 'Job(id=%s)' % self.id
+

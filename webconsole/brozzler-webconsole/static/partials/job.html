@@ -40,7 +40,7 @@
             <h3>Sites</h3>
             <div class="col-sm-6 col-md-4" ng-repeat="site in sites">
                 <a class="thumbnail" href="/sites/{{site.id}}">
-                    <img style="width:300px;height:190px" src="http://wbgrp-svc107.us.archive.org:8091/web/3/thumbnail:{{site.seed}}" alt="thumb">
+                    <img style="width:300px;height:190px" src="{{config.WAYBACK_BASEURL}}/3/thumbnail:{{site.seed}}" alt="thumb">
                     <div class="caption">
                         <h5>{{site.seed}}</h5>
                         <!--

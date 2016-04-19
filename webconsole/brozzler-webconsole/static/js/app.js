@@ -52,16 +52,22 @@ var brozzlerControllers = angular.module("brozzlerControllers", []);
 
 brozzlerControllers.controller("HomeController", ["$scope", "$http",
    function($scope, $http) {
-       $http.get("/api/jobs").success(function(data) {
-           $scope.jobs = data.jobs;
-       });
-       $http.get("/api/services").success(function(data) {
-           $scope.services = data.services;
-       });
+        $http.get("/api/config").success(function(data) {
+            $scope.config = data.config;
+        });
+        $http.get("/api/jobs").success(function(data) {
+            $scope.jobs = data.jobs;
+        });
+        $http.get("/api/services").success(function(data) {
+            $scope.services = data.services;
+        });
    }]);
 
 brozzlerControllers.controller("WorkersListController", ["$scope", "$http",
    function($scope, $http) {
+        $http.get("/api/config").success(function(data) {
+            $scope.config = data.config;
+        });
        $http.get("/api/workers").success(function(data) {
            $scope.workers = data.workers;
        });
@@ -80,9 +86,9 @@ function pageCountSuccessCallback(site, job) {
         // console.log("site = ", site);
         // console.log("/api/sites/" + site.id + "/page_count = ", data);
         site.page_count = data.count;
-	if (job) {
-		job.page_count += data.count;
-	}
+        if (job) {
+            job.page_count += data.count;
+        }
     }
 }
 
@@ -91,9 +97,9 @@ function queuedCountSuccessCallback(site, job) {
         // console.log("site = ", site);
         // console.log("/api/sites/" + site.id + "/queued_count = ", data);
         site.queued_count = data.count;
-	if (job) {
-		job.queued_count += data.count;
-	}
+        if (job) {
+            job.queued_count += data.count;
+        }
     }
 }
 
@@ -114,6 +120,10 @@ function loadSiteStats($http, site, job) {
 
 brozzlerControllers.controller("JobController", ["$scope", "$routeParams", "$http",
     function($scope, $routeParams, $http) {
+        console.log('JobController');
+        $http.get("/api/config").success(function(data) {
+            $scope.config = data.config;
+        });
         $http.get("/api/jobs/" + $routeParams.id).success(function(data) {
             $scope.job = data;
             $scope.job.page_count = $scope.job.queued_count = 0;
@@ -127,11 +137,10 @@ brozzlerControllers.controller("JobController", ["$scope", "$routeParams", "$htt
                 $scope.sites = data.sites;
                 // console.log("sites=", $scope.sites);
                 for (var i = 0; i < $scope.sites.length; i++) {
-                    loadSiteStats($http, $scope.sites[i], $scope.job); 
+                    loadSiteStats($http, $scope.sites[i], $scope.job);
                 }
             });
         });
-
     }]);
 
 brozzlerControllers.controller("SiteController", ["$scope", "$routeParams", "$http", "$window",
@@ -163,6 +172,9 @@ brozzlerControllers.controller("SiteController", ["$scope", "$routeParams", "$ht
 
         };
 
+        $http.get("/api/config").success(function(data) {
+            $scope.config = data.config;
+        });
         $http.get("/api/site/" + $routeParams.id).success(function(data) {
             $scope.site = data;
             loadSiteStats($http, $scope.site);
