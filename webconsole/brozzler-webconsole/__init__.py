@@ -1,12 +1,14 @@
 import flask
 import rethinkstuff
 import json
-import logging
 import sys
 import os
+import importlib
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO,
-        format="%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
+# XXX flask does its own logging config
+# import logging
+# logging.basicConfig(stream=sys.stdout, level=logging.INFO,
+#         format="%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
 
 app = flask.Flask(__name__)
 
@@ -20,6 +22,7 @@ SETTINGS= {
 }
 r = rethinkstuff.Rethinker(
         SETTINGS['RETHINKDB_SERVERS'], db=SETTINGS['RETHINKDB_DB'])
+service_registry = rethinkstuff.ServiceRegistry(r)
 
 @app.route("/api/sites/<site_id>/queued_count")
 @app.route("/api/site/<site_id>/queued_count")
@@ -32,7 +35,7 @@ def queued_count(site_id):
 @app.route("/api/sites/<site_id>/queue")
 @app.route("/api/site/<site_id>/queue")
 def queue(site_id):
-    logging.info("flask.request.args=%s", flask.request.args)
+    app.logger.info("flask.request.args=%s", flask.request.args)
     start = flask.request.args.get("start", 0)
     end = flask.request.args.get("end", start + 90)
     queue_ = r.table("pages").between(
@@ -55,7 +58,7 @@ def page_count(site_id):
 @app.route("/api/site/<site_id>/pages")
 def pages(site_id):
     """Pages already crawled."""
-    logging.info("flask.request.args=%s", flask.request.args)
+    app.logger.info("flask.request.args=%s", flask.request.args)
     start = int(flask.request.args.get("start", 0))
     end = int(flask.request.args.get("end", start + 90))
     pages_ = r.table("pages").between(
@@ -89,12 +92,12 @@ def job(job_id):
 
 @app.route("/api/workers")
 def workers():
-    workers_ = r.table("services").filter({"role":"brozzler-worker"}).run()
+    workers_ = service_registry.available_services("brozzler-worker")
     return flask.jsonify(workers=list(workers_))
 
 @app.route("/api/services")
 def services():
-    services_ = r.table("services").run()
+    services_ = service_registry.available_services()
     return flask.jsonify(services=list(services_))
 
 @app.route("/api/jobs")
