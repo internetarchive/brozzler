@@ -65,7 +65,11 @@ class Site(brozzler.BaseDictable):
             self.scope["surt"] = new_scope_surt
 
     def is_in_scope(self, surt_, parent_page=None):
-        if (parent_page and "max_hops" in self.scope
+        if not surt_.startswith("http://") and not surt_.startswith("https://"):
+            # XXX doesn't belong here maybe (where? worker ignores unknown
+            # schemes?)
+            return False
+        elif (parent_page and "max_hops" in self.scope
                 and parent_page.hops_from_seed >= self.scope["max_hops"]):
             return False
         elif surt_.startswith(self.scope["surt"]):
