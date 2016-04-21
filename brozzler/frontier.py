@@ -91,7 +91,7 @@ class RethinkDbFrontier:
     def claim_site(self, worker_id):
         # XXX keep track of aggregate priority and prioritize sites accordingly?
         while True:
-            result = (self.r.table("sites")
+            result = (self.r.table("sites", read_mode="majority")
                     .between(
                         ["ACTIVE",rethinkdb.minval],
                         ["ACTIVE",rethinkdb.maxval],
