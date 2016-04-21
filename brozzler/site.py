@@ -12,11 +12,13 @@ _EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(tzinfo=rethinkstuff
 class Site(brozzler.BaseDictable):
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, seed, id=None, job_id=None, scope=None, proxy=None,
-        ignore_robots=False, time_limit=None, extra_headers=None,
-        enable_warcprox_features=False, reached_limit=None, status="ACTIVE",
-        claimed=False, start_time=None, last_disclaimed=_EPOCH_UTC,
-        last_claimed_by=None):
+    def __init__(
+            self, seed, id=None, job_id=None, scope=None, proxy=None,
+            ignore_robots=False, time_limit=None, extra_headers=None,
+            enable_warcprox_features=False, reached_limit=None,
+            status="ACTIVE", claimed=False, start_time=None,
+            last_disclaimed=_EPOCH_UTC, last_claimed_by=None,
+            last_claimed=_EPOCH_UTC):
 
         self.seed = seed
         self.id = id
@@ -32,6 +34,7 @@ class Site(brozzler.BaseDictable):
         self.last_claimed_by = last_claimed_by
         self.start_time = start_time or rethinkstuff.utcnow()
         self.last_disclaimed = last_disclaimed
+        self.last_claimed = last_claimed
 
         self.scope = scope or {}
         if not "surt" in self.scope:
@@ -44,7 +47,7 @@ class Site(brozzler.BaseDictable):
                 self.ignore_robots, self.extra_headers, self.reached_limit)
 
     def __str__(self):
-        return "site-%s-%s" % (self.id, self.seed)
+        return "Site-%s-%s" % (self.id, self.seed)
 
     def _to_surt(self, url):
         hurl = surt.handyurl.parse(url)

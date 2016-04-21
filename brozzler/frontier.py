@@ -99,19 +99,23 @@ class RethinkDbFrontier:
                     .order_by(index="sites_last_disclaimed")
                     .filter(
                         (rethinkdb.row["claimed"] != True) |
-                        (rethinkdb.row["last_disclaimed"]
+                        (rethinkdb.row["last_claimed"]
                             < rethinkdb.now() - 2*60*60))
                     .limit(1)
-                    .update({"claimed":True,"last_claimed_by":worker_id},
-                        return_changes=True)).run()
+                    .update({
+                        "claimed": True,
+                        "last_claimed_by": worker_id,
+                        "last_claimed": rethinkstuff.utcnow(),
+                        }, return_changes=True)).run()
             self._vet_result(result, replaced=[0,1], unchanged=[0,1])
             if result["replaced"] == 1:
                 if result["changes"][0]["old_val"]["claimed"]:
                     self.logger.warn(
                             "re-claimed site that was still marked 'claimed' "
-                            "because it was last disclaimed a long time ago "
-                            "at %s",
-                            result["changes"][0]["old_val"]["last_disclaimed"])
+                            "because it was last claimed a long time ago "
+                            "at %s, and presumably some error stopped it from "
+                            "being disclaimed",
+                            result["changes"][0]["old_val"]["last_claimed"])
                 site = brozzler.Site(**result["changes"][0]["new_val"])
             else:
                 raise brozzler.NothingToClaim
