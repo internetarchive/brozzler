@@ -105,8 +105,7 @@ class Page(brozzler.BaseDictable):
         if id is not None:
             self.id = id
         else:
-            digest_this = "site_id:{},canon_url:{}".format(
-                    self.site_id, self.canon_url())
+            digest_this = "site_id:{},url:{}".format(self.site_id, self.url)
             self.id = hashlib.sha1(digest_this.encode("utf-8")).hexdigest()
 
     def __repr__(self):
