@@ -60,30 +60,27 @@ class Site(brozzler.BaseDictable):
     def note_seed_redirect(self, url):
         new_scope_surt = self._to_surt(url)
         if not new_scope_surt.startswith(self.scope["surt"]):
-            self.logger.info("changing site scope surt from {} to {}".format(self.scope["surt"], new_scope_surt))
+            self.logger.info("changing site scope surt from {} to {}".format(
+                self.scope["surt"], new_scope_surt))
             self.scope["surt"] = new_scope_surt
 
-    def is_in_scope(self, url, parent_page=None):
-        if parent_page and "max_hops" in self.scope and parent_page.hops_from_seed >= self.scope["max_hops"]:
+    def is_in_scope(self, surt_, parent_page=None):
+        if (parent_page and "max_hops" in self.scope
+                and parent_page.hops_from_seed >= self.scope["max_hops"]):
             return False
-
-        try:
-            hurl = surt.handyurl.parse(url)
-
-            # XXX doesn't belong here probably (where? worker ignores unknown schemes?)
-            if hurl.scheme != "http" and hurl.scheme != "https":
-                return False
-
-            surtt = surt.GoogleURLCanonicalizer.canonicalize(hurl).getURLString(surt=True, trailing_comma=True)
-            return surtt.startswith(self.scope["surt"])
-        except:
-            self.logger.warn("problem parsing url %s", repr(url))
+        elif surt_.startswith(self.scope["surt"]):
+            return True
+        elif parent_page and parent_page.hops_off_surt < self.scope.get(
+                "max_hops_off_surt", 0):
+            return True
+        else:
             return False
 
 class Page(brozzler.BaseDictable):
-    def __init__(self, url, id=None, site_id=None, job_id=None,
-            hops_from_seed=0, redirect_url=None, priority=None, claimed=False,
-            brozzle_count=0, via_page_id=None, last_claimed_by=None):
+    def __init__(
+            self, url, id=None, site_id=None, job_id=None, hops_from_seed=0,
+            redirect_url=None, priority=None, claimed=False, brozzle_count=0,
+            via_page_id=None, last_claimed_by=None, hops_off_surt=0):
         self.site_id = site_id
         self.job_id = job_id
         self.url = url
@@ -93,6 +90,7 @@ class Page(brozzler.BaseDictable):
         self.last_claimed_by = last_claimed_by
         self.brozzle_count = brozzle_count
         self.via_page_id = via_page_id
+        self.hops_off_surt = hops_off_surt
         self._canon_hurl = None
 
         if priority is not None:
@@ -103,7 +101,8 @@ class Page(brozzler.BaseDictable):
         if id is not None:
             self.id = id
         else:
-            digest_this = "site_id:{},canon_url:{}".format(self.site_id, self.canon_url())
+            digest_this = "site_id:{},canon_url:{}".format(
+                    self.site_id, self.canon_url())
             self.id = hashlib.sha1(digest_this.encode("utf-8")).hexdigest()
 
     def __repr__(self):
@@ -125,3 +124,7 @@ class Page(brozzler.BaseDictable):
             surt.GoogleURLCanonicalizer.canonicalize(self._canon_hurl)
         return self._canon_hurl.geturl()
 
+def to_surt(url):
+    hurl = surt.handyurl.parse(url)
+    return surt.GoogleURLCanonicalizer.canonicalize(
+            hurl).getURLString(surt=True, trailing_comma=True)

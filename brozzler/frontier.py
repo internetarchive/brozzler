@@ -231,26 +231,32 @@ class RethinkDbFrontier:
 
     def scope_and_schedule_outlinks(self, site, parent_page, outlinks):
         counts = {"added":0,"updated":0,"rejected":0,"blocked":0}
-        if outlinks:
-            for url in outlinks:
-                if site.is_in_scope(url, parent_page):
-                    if brozzler.is_permitted_by_robots(site, url):
-                        new_child_page = brozzler.Page(
-                                url, site_id=site.id, job_id=site.job_id,
-                                hops_from_seed=parent_page.hops_from_seed+1,
-                                via_page_id=parent_page.id)
-                        existing_child_page = self.page(new_child_page.id)
-                        if existing_child_page:
-                            existing_child_page.priority += new_child_page.priority
-                            self.update_page(existing_child_page)
-                            counts["updated"] += 1
-                        else:
-                            self.new_page(new_child_page)
-                            counts["added"] += 1
+        for url in outlinks or []:
+            surt_ = brozzler.site.to_surt(url)
+
+            if site.is_in_scope(surt_, parent_page):
+                if brozzler.is_permitted_by_robots(site, url):
+                    if not surt_.startswith(site.scope["surt"]):
+                        hops_off_surt = parent_page.hops_off_surt + 1
                     else:
-                        counts["blocked"] += 1
+                        hops_off_surt = 0
+                    new_child_page = brozzler.Page(
+                            url, site_id=site.id, job_id=site.job_id,
+                            hops_from_seed=parent_page.hops_from_seed+1,
+                            via_page_id=parent_page.id,
+                            hops_off_surt=hops_off_surt)
+                    existing_child_page = self.page(new_child_page.id)
+                    if existing_child_page:
+                        existing_child_page.priority += new_child_page.priority
+                        self.update_page(existing_child_page)
+                        counts["updated"] += 1
+                    else:
+                        self.new_page(new_child_page)
+                        counts["added"] += 1
                 else:
-                    counts["rejected"] += 1
+                    counts["blocked"] += 1
+            else:
+                counts["rejected"] += 1
 
         self.logger.info("%s new links added, %s existing links updated, %s links rejected, %s links blocked by robots from %s",
             counts["added"], counts["updated"], counts["rejected"], counts["blocked"], parent_page)
