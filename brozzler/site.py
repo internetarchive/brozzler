@@ -6,6 +6,7 @@ import hashlib
 import time
 import rethinkstuff
 import datetime
+import re
 
 _EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(tzinfo=rethinkstuff.UTC)
 
@@ -64,21 +65,57 @@ class Site(brozzler.BaseDictable):
                 self.scope["surt"], new_scope_surt))
             self.scope["surt"] = new_scope_surt
 
-    def is_in_scope(self, surt_, parent_page=None):
+    def is_in_scope(self, url, surt_=None, parent_page=None):
+        if not surt_:
+            surt_ = to_surt(url)
+        might_accept = False
+
         if not surt_.startswith("http://") and not surt_.startswith("https://"):
             # XXX doesn't belong here maybe (where? worker ignores unknown
             # schemes?)
             return False
         elif (parent_page and "max_hops" in self.scope
                 and parent_page.hops_from_seed >= self.scope["max_hops"]):
-            return False
+            pass
         elif surt_.startswith(self.scope["surt"]):
-            return True
+            might_accept = True
         elif parent_page and parent_page.hops_off_surt < self.scope.get(
                 "max_hops_off_surt", 0):
+            might_accept = True
+        elif "accepts" in self.scope:
+            for rule in self.scope["accepts"]:
+                if self._scope_rule_applies(rule, url, surt_):
+                    might_accept = True
+
+        if might_accept:
+            if "blocks" in self.scope:
+                for rule in self.scope["blocks"]:
+                    if self._scope_rule_applies(rule, url, surt_):
+                        return False
             return True
         else:
             return False
+
+    def _scope_rule_applies(self, rule, url, surt_):
+        if not "url_match" in rule or not "value" in rule:
+            self.logger.warn("unable to make sense of scope rule %s", rule)
+            return False
+        if rule["url_match"] == "STRING_MATCH":
+            return url.find(rule["value"]) >= 0
+        elif rule["url_match"] == "REGEX_MATCH":
+            try:
+                return re.fullmatch(rule["value"], url)
+            except Exception as e:
+                self.logger.warn(
+                        "caught exception matching against regex %s: %s",
+                        rule["value"], e)
+                return False
+        elif rule["url_match"] == "SURT_MATCH":
+            return surt_.startswith(rule["value"])
+        else:
+            self.logger.warn("invalid rule.url_match=%s", rule.url_match)
+            return False
+
 
 class Page(brozzler.BaseDictable):
     def __init__(

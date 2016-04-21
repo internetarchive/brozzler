@@ -307,8 +307,10 @@ class BrozzlerWorker:
                         site = self._frontier.claim_site(self._id)
                         self.logger.info("brozzling site %s", site)
                         ydl = self._youtube_dl(site)
-                        th = threading.Thread(target=lambda: self._brozzle_site(browser, ydl, site),
-                            name="BrowsingThread-{}".format(site.seed))
+                        th = threading.Thread(
+                                target=lambda: self._brozzle_site(
+                                    browser, ydl, site),
+                                name="BrowsingThread-{}".format(site.seed))
                         th.start()
                     except:
                         self._browser_pool.release(browser)

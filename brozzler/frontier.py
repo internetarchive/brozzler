@@ -233,8 +233,7 @@ class RethinkDbFrontier:
         counts = {"added":0,"updated":0,"rejected":0,"blocked":0}
         for url in outlinks or []:
             surt_ = brozzler.site.to_surt(url)
-
-            if site.is_in_scope(surt_, parent_page):
+            if site.is_in_scope(url, surt_=surt_, parent_page=parent_page):
                 if brozzler.is_permitted_by_robots(site, url):
                     if not surt_.startswith(site.scope["surt"]):
                         hops_off_surt = parent_page.hops_off_surt + 1
@@ -258,8 +257,11 @@ class RethinkDbFrontier:
             else:
                 counts["rejected"] += 1
 
-        self.logger.info("%s new links added, %s existing links updated, %s links rejected, %s links blocked by robots from %s",
-            counts["added"], counts["updated"], counts["rejected"], counts["blocked"], parent_page)
+        self.logger.info(
+                "%s new links added, %s existing links updated, %s links "
+                "rejected, %s links blocked by robots from %s",
+                counts["added"], counts["updated"], counts["rejected"],
+                counts["blocked"], parent_page)
 
     def reached_limit(self, site, e):
         self.logger.info("reached_limit site=%s e=%s", site, e)
