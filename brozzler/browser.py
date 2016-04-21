@@ -210,20 +210,20 @@ class Browser:
             raise BrowsingException("""chrome tab went "aw snap" or "he's dead jim"!""")
         elif (self._behavior != None and self._behavior.is_finished()
                 or time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS):
-            if time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
-                self.logger.info(
-                        "reached hard timeout of {} "
-                        "seconds url={}".format(
-                            Browser.HARD_TIMEOUT_SECONDS, self.url))
-            else:
-                self.logger.info(
-                        "behavior decided it's finished with %s", self.url)
-
             if self._outlinks:
-                self.logger.info("got outlinks, finished url={}".format(self.url))
+                self.logger.info("got outlinks, finished browsing %s", self.url)
                 return True
             elif not self._waiting_on_outlinks_msg_id:
-                self.logger.info("finished browsing page according to behavior, retrieving outlinks url={}".format(self.url))
+                if time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
+                    self.logger.info(
+                            "reached hard timeout of {} "
+                            "seconds url={}".format(
+                                Browser.HARD_TIMEOUT_SECONDS, self.url))
+                else:
+                    self.logger.info(
+                            "behavior decided it's finished with %s", self.url)
+
+                self.logger.info("retrieving outlinks for %s", self.url)
                 self._waiting_on_outlinks_msg_id = self.send_to_chrome(method="Runtime.evaluate",
                         params={"expression":"Array.prototype.slice.call(document.querySelectorAll('a[href]')).join(' ')"})
                 self._waiting_on_outlinks_start = time.time()
