@@ -208,7 +208,17 @@ class Browser:
             raise BrowsingException("websocket closed, did chrome die? {}".format(self._websocket_url))
         elif self._aw_snap_hes_dead_jim:
             raise BrowsingException("""chrome tab went "aw snap" or "he's dead jim"!""")
-        elif self._behavior != None and self._behavior.is_finished():
+        elif (self._behavior != None and self._behavior.is_finished()
+                or time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS):
+            if time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
+                self.logger.info(
+                        "reached hard timeout of {} "
+                        "seconds url={}".format(
+                            Browser.HARD_TIMEOUT_SECONDS, self.url))
+            else:
+                self.logger.info(
+                        "behavior decided it's finished with %s", self.url)
+
             if self._outlinks:
                 self.logger.info("got outlinks, finished url={}".format(self.url))
                 return True
@@ -218,12 +228,9 @@ class Browser:
                         params={"expression":"Array.prototype.slice.call(document.querySelectorAll('a[href]')).join(' ')"})
                 self._waiting_on_outlinks_start = time.time()
                 return False
-            elif time.time() - self._waiting_on_outlinks_start > 300:
-                raise BrowsingException("timed out after waiting {} seconds for outlinks", time.time() - self._waiting_on_outlinks_start)
-            else:
+            else: # self._waiting_on_outlinks_msg_id
                 return False
         elif time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
-            self.logger.info("finished browsing page, reached hard timeout of {} seconds url={}".format(Browser.HARD_TIMEOUT_SECONDS, self.url))
             return True
         elif self._reached_limit:
             raise self._reached_limit
