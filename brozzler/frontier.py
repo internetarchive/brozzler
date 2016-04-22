@@ -62,6 +62,8 @@ class RethinkDbFrontier:
 
     def new_site(self, site):
         self.logger.info("inserting into 'sites' table %s", site)
+        import pprint
+        self.logger.info("update_site:\n%s", pprint.pformat(vars(site)))
         result = self.r.table("sites").insert(site.to_dict()).run()
         self._vet_result(result, inserted=1)
         if not site.id:
@@ -75,6 +77,8 @@ class RethinkDbFrontier:
 
     def update_site(self, site):
         self.logger.debug("updating 'sites' table entry %s", site)
+        import pprint
+        self.logger.info("update_site:\n%s", pprint.pformat(vars(site)))
         result = self.r.table("sites").get(site.id).replace(site.to_dict()).run()
         self._vet_result(result, replaced=[0,1], unchanged=[0,1])
 
@@ -91,7 +95,8 @@ class RethinkDbFrontier:
     def claim_site(self, worker_id):
         # XXX keep track of aggregate priority and prioritize sites accordingly?
         while True:
-            result = (self.r.table("sites", read_mode="majority")
+            result = (
+                    self.r.table("sites", read_mode="majority")
                     .between(
                         ["ACTIVE",rethinkdb.minval],
                         ["ACTIVE",rethinkdb.maxval],
@@ -102,11 +107,18 @@ class RethinkDbFrontier:
                         (rethinkdb.row["last_claimed"]
                             < rethinkdb.now() - 2*60*60))
                     .limit(1)
-                    .update({
-                        "claimed": True,
-                        "last_claimed_by": worker_id,
-                        "last_claimed": rethinkstuff.utcnow(),
-                        }, return_changes=True)).run()
+                    .update(
+                        # try to avoid a race condition resulting in multiple
+                        # brozzler-workers claiming the same site
+                        # see https://github.com/rethinkdb/rethinkdb/issues/3235#issuecomment-60283038
+                        rethinkdb.branch(
+                            (rethinkdb.row["claimed"] != True) |
+                            (rethinkdb.row["last_claimed"]
+                                < rethinkdb.now() - 2*60*60), {
+                                    "claimed": True,
+                                    "last_claimed_by": worker_id,
+                                    "last_claimed": rethinkstuff.utcnow()
+                                }, {}), return_changes=True)).run()
             self._vet_result(result, replaced=[0,1], unchanged=[0,1])
             if result["replaced"] == 1:
                 if result["changes"][0]["old_val"]["claimed"]:
@@ -117,6 +129,8 @@ class RethinkDbFrontier:
                             "being disclaimed",
                             result["changes"][0]["old_val"]["last_claimed"])
                 site = brozzler.Site(**result["changes"][0]["new_val"])
+                import pprint
+                self.logger.info("claim_site:\n%s", pprint.pformat(vars(site)))
             else:
                 raise brozzler.NothingToClaim
             # XXX This is the only place we enforce time limit for now. Worker

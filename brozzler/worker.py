@@ -79,7 +79,6 @@ class BrozzlerWorker:
         self._browser_pool = brozzler.browser.BrowserPool(max_browsers,
                 chrome_exe=chrome_exe, ignore_cert_errors=True)
         self._shutdown_requested = threading.Event()
-        self._id = "{}@{}".format(socket.gethostname(), os.getpid())
 
     def _youtube_dl(self, site):
         ydl_opts = {
@@ -257,7 +256,9 @@ class BrozzlerWorker:
             while (not self._shutdown_requested.is_set()
                    and time.time() - start < 7 * 60):
                 self._frontier.honor_stop_request(site.job_id)
-                page = self._frontier.claim_page(site, self._id)
+                page = self._frontier.claim_page(site,
+                        "{}:{}".format(
+                            socket.gethostname(), browser.chrome_port))
                 outlinks = self.brozzle_page(browser, ydl, site, page)
                 self._frontier.completed_page(site, page)
                 self._frontier.scope_and_schedule_outlinks(site, page, outlinks)
@@ -304,13 +305,15 @@ class BrozzlerWorker:
                 try:
                     browser = self._browser_pool.acquire()
                     try:
-                        site = self._frontier.claim_site(self._id)
+                        site = self._frontier.claim_site("{}:{}".format(
+                            socket.gethostname(), browser.chrome_port))
                         self.logger.info("brozzling site %s", site)
                         ydl = self._youtube_dl(site)
                         th = threading.Thread(
                                 target=lambda: self._brozzle_site(
                                     browser, ydl, site),
-                                name="BrowsingThread-{}".format(site.seed))
+                                name="BrowsingThread:{}-{}".format(
+                                    browser.chrome_port, site.seed))
                         th.start()
                     except:
                         self._browser_pool.release(browser)
