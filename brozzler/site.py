@@ -19,7 +19,7 @@ class Site(brozzler.BaseDictable):
             enable_warcprox_features=False, reached_limit=None,
             status="ACTIVE", claimed=False, start_time=None,
             last_disclaimed=_EPOCH_UTC, last_claimed_by=None,
-            last_claimed=_EPOCH_UTC):
+            last_claimed=_EPOCH_UTC, metadata={}):
 
         self.seed = seed
         self.id = id
@@ -36,6 +36,7 @@ class Site(brozzler.BaseDictable):
         self.start_time = start_time or rethinkstuff.utcnow()
         self.last_disclaimed = last_disclaimed
         self.last_claimed = last_claimed
+        self.metadata = metadata
 
         self.scope = scope or {}
         if not "surt" in self.scope:

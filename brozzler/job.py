@@ -26,8 +26,9 @@ def new_job_file(frontier, job_conf_file):
         new_job(frontier, job_conf)
 
 def new_job(frontier, job_conf):
-    job = Job(id=job_conf.get("id"), conf=job_conf, status="ACTIVE",
-        started=rethinkstuff.utcnow())
+    job = Job(
+            id=job_conf.get("id"), conf=job_conf, status="ACTIVE",
+            started=rethinkstuff.utcnow())
 
     sites = []
     for seed_conf in job_conf["seeds"]:
@@ -36,7 +37,8 @@ def new_job(frontier, job_conf):
 
         extra_headers = None
         if "warcprox_meta" in merged_conf:
-            warcprox_meta = json.dumps(merged_conf["warcprox_meta"], separators=(',', ':'))
+            warcprox_meta = json.dumps(
+                    merged_conf["warcprox_meta"], separators=(',', ':'))
             extra_headers = {"Warcprox-Meta":warcprox_meta}
 
         site = brozzler.Site(job_id=job.id,
@@ -45,8 +47,10 @@ def new_job(frontier, job_conf):
                 time_limit=merged_conf.get("time_limit"),
                 proxy=merged_conf.get("proxy"),
                 ignore_robots=merged_conf.get("ignore_robots"),
-                enable_warcprox_features=merged_conf.get("enable_warcprox_features"),
-                extra_headers=extra_headers)
+                enable_warcprox_features=merged_conf.get(
+                    "enable_warcprox_features"),
+                extra_headers=extra_headers,
+                metadata=merged_conf.get("metadata"))
         sites.append(site)
 
     # insert all the sites into database before the job
