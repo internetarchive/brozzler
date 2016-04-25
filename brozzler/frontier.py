@@ -286,3 +286,19 @@ class RethinkDbFrontier:
         else:
             site.reached_limit = e.warcprox_meta["reached-limit"]
             self.finished(site, "FINISHED_REACHED_LIMIT")
+
+    def job_sites(self, job_id):
+        results = self.r.table('sites').get_all(job_id, index="job_id").run()
+        for result in results:
+            yield brozzler.Site(**result)
+
+    def seed_page(self, site_id):
+        results = self.r.table("pages").between(
+                [site_id, self.r.minval, self.r.minval, self.r.minval],
+                [site_id, self.r.maxval, self.r.maxval, self.r.maxval],
+                index="priority_by_site").filter({"hops_from_seed":0}).run()
+        pages = list(results)
+        if len(pages) > 1:
+            self.logger.warn(
+                    "more than one seed page for site_id %s ?", site_id)
+        return brozzler.Page(**pages[0])
