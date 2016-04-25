@@ -1,3 +1,22 @@
+/*
+ * brozzler/behaviors.d/simpleclicks.js.in - simpleclicks behavior template,
+ * clicks on elements matching templatized css selector
+ *
+ * Copyright (C) 2014-2016 Internet Archive
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 var umbraBehavior = {
 	IDLE_TIMEOUT_SEC : 10,
 	idleSince : null,
@@ -12,11 +31,11 @@ var umbraBehavior = {
 
 		//handle Python to JavaScript boolean conversion
 		clickUntilTimeout == "True" ? clickUntilTimeout = true : clickUntilTimeout = false;
-		
+
 		var iframes = document.querySelectorAll("iframe");
 		var documents = Array(iframes.length + 1);
 		documents[0] = document;
-		
+
 		for (var i = 0; i < iframes.length; i++) {
 			documents[i+1] = iframes[i].contentWindow.document;
 		}

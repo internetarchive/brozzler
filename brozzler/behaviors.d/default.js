@@ -1,8 +1,21 @@
-// vim:set sw=8 et:
-//
-// Scrolls to the bottom of the page, and clicks on embedded soundcloud
-// elements.
-//
+/*
+ * brozzler/behaviors.d/default.js - default behavior, scrolls to the bottom of
+ * the page and clicks on embedded soundcloud elements
+ *
+ * Copyright (C) 2014-2016 Internet Archive
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 var umbraAboveBelowOrOnScreen = function(e) {
         var eTop = e.getBoundingClientRect().top;
@@ -26,21 +39,21 @@ var umbraIntervalFunc = function() {
     var umbraSoundCloudEmbeddedElements = [];
 
     getUmbraSoundCloudEmbeddedElements(umbraSoundCloudEmbeddedElements);
-	
+
     var clickedSomething = false;
     var somethingLeftBelow = false;
     var somethingLeftAbove = false;
     var missedAbove = 0;
-    
+
     for (var i = 0; i < umbraSoundCloudEmbeddedElements.length; i++) {
-    
+
             var targetId = umbraSoundCloudEmbeddedElements[i].id;
             var target = umbraSoundCloudEmbeddedElements[i].target;
-            
+
             if (!(targetId in umbraAlreadyClicked)) {
-            		
+
                     var where = umbraAboveBelowOrOnScreen(target);
-                    
+
                     if (where == 0) { // on screen
                             // var pos = target.getBoundingClientRect().top;
                             // window.scrollTo(0, target.getBoundingClientRect().top - 100);
@@ -52,14 +65,14 @@ var umbraIntervalFunc = function() {
                             clickedSomething = true;
                             umbraState.idleSince = null;
                             break;
-                    } else if (where > 0) { 
+                    } else if (where > 0) {
                             somethingLeftBelow = true;
                     } else if (where < 0) {
                             somethingLeftAbove = true;
                     }
             }
     }
-    
+
     if (!clickedSomething) {
         if (somethingLeftAbove) {
                 console.log("scrolling UP because everything on this screen has been clicked but we missed something above");
@@ -77,7 +90,7 @@ var umbraIntervalFunc = function() {
                 umbraState.idleSince = Date.now();
         }
     }
-	
+
 	if (umbraState.idleSince == null) {
                 umbraState.idleSince = Date.now();
     }
@@ -86,31 +99,31 @@ var umbraIntervalFunc = function() {
 //try to detect sound cloud "Play" buttons and return them as targets for clicking
 var getUmbraSoundCloudEmbeddedElements = function(soundCloudEmbeddedElements, currentIframeDepth, currentDocument,
 		iframeElement) {
-	
+
 	//set default values for parameters
 	currentIframeDepth = currentIframeDepth || 0;
 	currentDocument = currentDocument || document;
-	
+
 	if (currentIframeDepth > MAX_IFRAME_RECURSE_DEPTH) {
 		return;
 	}
-	
+
 	//collect all buttons on current document first
 	var button = [];
-	
+
 	button = currentDocument.querySelectorAll(UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR);
 
 	var cssPathIframe = iframeElement ? getElementCssPath(iframeElement) : "";
-	
+
 	for (var i = 0; i < button.length; i++) {
 		soundCloudEmbeddedElements.push({"id" : cssPathIframe + getElementCssPath(button.item(i)), "target" : button.item(i)});
 	}
-	
+
 	//now get all buttons in embedded iframes
 	var iframe = [];
-	
+
 	iframe = currentDocument.querySelectorAll(UMBRA_IFRAME_SOUNDCLOUD_EMBEDDED_SELECTOR);
-	
+
 	for (var i = 0; i < iframe.length; i++) {
 		getUmbraSoundCloudEmbeddedElements(soundCloudEmbeddedElements, currentIframeDepth + 1, iframe[i].contentWindow.document.body, iframe[i]);
 	}
@@ -135,7 +148,7 @@ var umbraBehaviorFinished = function() {
 var getElementCssPath = function(element) {
 
 	var names = [];
-	  
+
 	while (element.parentNode){
 		if (element.id){
 			names.unshift('#' + element.id);
@@ -146,14 +159,14 @@ var getElementCssPath = function(element) {
 			}
 			else {
 				for (var c = 1, e = element; e.previousElementSibling; e = e.previousElementSibling, c++);
-				
+
 				names.unshift(element.tagName + ":nth-child(" + c + ")");
 			}
-			
+
 			element = element.parentNode;
 		}
 	}
-	  
+
 	return names.join(" > ");
 }
 
