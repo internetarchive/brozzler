@@ -80,8 +80,6 @@ class RethinkDbFrontier:
 
     def new_site(self, site):
         self.logger.info("inserting into 'sites' table %s", site)
-        import pprint
-        self.logger.info("update_site:\n%s", pprint.pformat(vars(site)))
         result = self.r.table("sites").insert(site.to_dict()).run()
         self._vet_result(result, inserted=1)
         if not site.id:
@@ -95,8 +93,6 @@ class RethinkDbFrontier:
 
     def update_site(self, site):
         self.logger.debug("updating 'sites' table entry %s", site)
-        import pprint
-        self.logger.info("update_site:\n%s", pprint.pformat(vars(site)))
         result = self.r.table("sites").get(site.id).replace(site.to_dict()).run()
         self._vet_result(result, replaced=[0,1], unchanged=[0,1])
 
@@ -147,8 +143,6 @@ class RethinkDbFrontier:
                             "being disclaimed",
                             result["changes"][0]["old_val"]["last_claimed"])
                 site = brozzler.Site(**result["changes"][0]["new_val"])
-                import pprint
-                self.logger.info("claim_site:\n%s", pprint.pformat(vars(site)))
             else:
                 raise brozzler.NothingToClaim
             # XXX This is the only place we enforce time limit for now. Worker
@@ -320,3 +314,14 @@ class RethinkDbFrontier:
             self.logger.warn(
                     "more than one seed page for site_id %s ?", site_id)
         return brozzler.Page(**pages[0])
+
+    def site_pages(self, site_id, unbrozzled_only=False):
+        results = self.r.table("pages").between(
+                [site_id, 0 if unbrozzled_only else self.r.minval,
+                    self.r.minval, self.r.minval],
+                [site_id, 0 if unbrozzled_only else self.r.maxval,
+                    self.r.maxval, self.r.maxval],
+                index="priority_by_site").run()
+        for result in results:
+            yield brozzler.Page(**result)
+
