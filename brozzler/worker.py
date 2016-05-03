@@ -34,6 +34,7 @@ import socket
 import datetime
 import collections
 import requests
+import rethinkstuff
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
