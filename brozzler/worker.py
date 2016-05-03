@@ -312,14 +312,20 @@ class BrozzlerWorker:
         status_info["browser_pool_size"] = self._browser_pool.size
         status_info["browsers_in_use"] = self._browser_pool.num_in_use()
 
-        self.status_info = self._service_registry.heartbeat(status_info)
-        self.logger.debug("status in service registry: %s", self.status_info)
+        try:
+            self.status_info = self._service_registry.heartbeat(status_info)
+            self.logger.debug(
+                    "status in service registry: %s", self.status_info)
+        except rethinkdb.ReqlError as e:
+            self.logger.error(
+                    "failed to send heartbeat and update service registry "
+                    "with info %s: %s", status_info, e)
 
     def run(self):
         try:
             latest_state = None
             while not self._shutdown_requested.is_set():
-                if self._service_registry and (not hasattr(self, "status_info") or (datetime.datetime.now(datetime.timezone.utc) - self.status_info["last_heartbeat"]).total_seconds() > self.HEARTBEAT_INTERVAL):
+                if self._service_registry and (not hasattr(self, "status_info") or (rethinkstuff.utcnow() - self.status_info["last_heartbeat"]).total_seconds() > self.HEARTBEAT_INTERVAL):
                     self._service_heartbeat()
 
                 try:
