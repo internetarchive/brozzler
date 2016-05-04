@@ -200,12 +200,13 @@ class Browser:
 
         try:
             while True:
-                before_sleep = time.time()
                 time.sleep(0.5)
-                after_sleep = time.time()
-                if after_sleep - before_sleep > 1:
-                    self.logger.warn("slept for %d seconds?!?!?! (should have been ~0.5)", (after_sleep - before_sleep))
                 if self._browse_interval_func():
+                    break
+
+            while True:
+                time.sleep(0.5)
+                if self._post_behavior_interval_func():
                     return self._outlinks
         finally:
             if self._websock and self._websock.sock and self._websock.sock.connected:
@@ -224,50 +225,60 @@ class Browser:
 
             self._behavior = None
 
+    def _post_behavior_interval_func(self):
+        """Called periodically after behavior is finished on the page. Returns
+        true when post-behavior tasks are finished."""
+        if not self._has_screenshot and (
+                not self._waiting_on_scroll_to_top_msg_id
+                and not self._waiting_on_screenshot_msg_id):
+            if time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
+                self.logger.info(
+                        "reached hard timeout of {} seconds url={}".format(
+                            Browser.HARD_TIMEOUT_SECONDS, self.url))
+            else:
+                self.logger.info(
+                        "behavior decided it's finished with %s", self.url)
+
+            self.logger.info(
+                    "scrolling to the top, then requesting screenshot %s",
+                    self.url)
+            self._waiting_on_scroll_to_top_msg_id = self.send_to_chrome(
+                    method="Runtime.evaluate",
+                    params={"expression":"window.scrollTo(0, 0);"})
+            return False
+        elif not self._has_screenshot and (
+                self._waiting_on_scroll_to_top_msg_id
+                or self._waiting_on_screenshot_msg_id):
+            return False
+
+        if self._outlinks:
+            self.logger.info("got outlinks, finished browsing %s", self.url)
+            return True
+        elif not self._waiting_on_outlinks_msg_id:
+            self.logger.info("retrieving outlinks for %s", self.url)
+            self._waiting_on_outlinks_msg_id = self.send_to_chrome(
+                    method="Runtime.evaluate",
+                    params={"expression":"Array.prototype.slice.call(document.querySelectorAll('a[href]')).join(' ')"})
+            return False
+        else: # self._waiting_on_outlinks_msg_id
+            return False
+
     def _browse_interval_func(self):
-        """Returns True when finished browsing."""
+        """Called periodically while page is being browsed. Returns True when
+        finished browsing."""
         if not self._websock or not self._websock.sock or not self._websock.sock.connected:
             raise BrowsingException("websocket closed, did chrome die? {}".format(self._websocket_url))
         elif self._aw_snap_hes_dead_jim:
             raise BrowsingException("""chrome tab went "aw snap" or "he's dead jim"!""")
         elif (self._behavior != None and self._behavior.is_finished()
                 or time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS):
-
-            if ( not self._has_screenshot and not self._waiting_on_scroll_to_top_msg_id and not self._waiting_on_screenshot_msg_id):
-                self.logger.info("Behaviors finished, requesting screenshot %s", self.url)
-                self._waiting_on_scroll_to_top_msg_id = self.send_to_chrome(method="Runtime.evaluate", 
-                    params={"expression":"window.scrollTo(0, 0);"})
-                return False
-            elif not self._has_screenshot and (self._waiting_on_scroll_to_top_msg_id or self._waiting_on_screenshot_msg_id):
-                return False
-  
-            if self._outlinks:
-                self.logger.info("got outlinks, finished browsing %s", self.url)
-                return True
-            elif not self._waiting_on_outlinks_msg_id:
-                if time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
-                    self.logger.info(
-                            "reached hard timeout of {} "
-                            "seconds url={}".format(
-                                Browser.HARD_TIMEOUT_SECONDS, self.url))
-                else:
-                    self.logger.info(
-                            "behavior decided it's finished with %s", self.url)
-
-                self.logger.info("retrieving outlinks for %s", self.url)
-                self._waiting_on_outlinks_msg_id = self.send_to_chrome(method="Runtime.evaluate",
-                        params={"expression":"Array.prototype.slice.call(document.querySelectorAll('a[href]')).join(' ')"})
-                self._waiting_on_outlinks_start = time.time()
-                return False
-            else: # self._waiting_on_outlinks_msg_id
-                return False
-
-        elif time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
             return True
         elif self._reached_limit:
             raise self._reached_limit
         elif self._abort_browse_page:
             raise BrowsingAborted("browsing page aborted")
+        else:
+            return False
 
     def send_to_chrome(self, suppress_logging=False, **kwargs):
         msg_id = next(self.command_id)
