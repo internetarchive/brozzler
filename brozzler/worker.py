@@ -194,9 +194,11 @@ class BrozzlerWorker:
 
         return full_jpeg, thumb_jpeg
 
-    def brozzle_page(self, browser, ydl, site, page):
-        def on_screenshot(screenshot_png):
-            if site.proxy and site.enable_warcprox_features:
+    def brozzle_page(self, browser, ydl, site, page, on_screenshot=None):
+        def _on_screenshot(screenshot_png):
+            if on_screenshot:
+                on_screenshot(screenshot_png)
+            elif site.proxy and site.enable_warcprox_features:
                 self.logger.info("sending WARCPROX_WRITE_RECORD request "
                                  "to warcprox with screenshot for %s", page)
                 screenshot_jpeg, thumbnail_jpeg = self.full_and_thumb_jpegs(
@@ -228,7 +230,7 @@ class BrozzlerWorker:
                 browser.start(proxy=site.proxy)
             outlinks = browser.browse_page(
                     page.url, extra_headers=site.extra_headers,
-                    on_screenshot=on_screenshot,
+                    on_screenshot=_on_screenshot,
                     on_url_change=page.note_redirect)
             return outlinks
         else:

@@ -26,6 +26,8 @@ import brozzler
 import re
 import warnings
 import requests
+import string
+import datetime
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description="brozzle-page - brozzle a single page",
@@ -63,10 +65,21 @@ page = brozzler.Page(url=args.url, site_id=site.id)
 worker = brozzler.BrozzlerWorker(frontier=None)
 ydl = worker._youtube_dl(site)
 
+def on_screenshot(screenshot_png):
+    OK_CHARS = (string.ascii_letters + string.digits)
+    filename = "/tmp/{}-{:%Y%m%d%H%M%S}.png".format(
+            "".join(ch if ch in OK_CHARS else "_" for ch in args.url),
+            datetime.datetime.now())
+    # logging.info("len(screenshot_png)=%s", len(screenshot_png))
+    with open(filename, 'wb') as f:
+        f.write(screenshot_png)
+    logging.info("wrote screenshot to %s", filename)
+
 browser = brozzler.Browser(chrome_exe=args.chrome_exe)
 browser.start(proxy=site.proxy)
 try:
-    outlinks = worker.brozzle_page(browser, ydl, site, page)
+    outlinks = worker.brozzle_page(
+            browser, ydl, site, page, on_screenshot=on_screenshot)
     logging.info("outlinks: \n\t%s", "\n\t".join(sorted(outlinks)))
 except brozzler.ReachedLimit as e:
     logging.error("reached limit %s", e)
