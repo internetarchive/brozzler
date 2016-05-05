@@ -157,8 +157,10 @@ class Browser:
     def abort_browse_page(self):
         self._abort_browse_page = True
 
-    def browse_page(self, url, extra_headers=None, on_request=None,
-        on_screenshot=None, on_url_change=None):
+    def browse_page(
+            self, url, extra_headers=None, behavior_parameters=None,
+            on_request=None, on_response=None, on_screenshot=None,
+            on_url_change=None):
         """Synchronously loads a page, takes a screenshot, and runs behaviors.
 
         Raises BrowsingException if browsing the page fails in a non-critical
@@ -173,6 +175,8 @@ class Browser:
         self.on_request = on_request
         self.on_screenshot = on_screenshot
         self.on_url_change = on_url_change
+        self.on_response = on_response
+        self.behavior_parameters = behavior_parameters
 
         self._waiting_on_screenshot_msg_id = None
         self._waiting_on_document_url_msg_id = None
@@ -301,10 +305,15 @@ class Browser:
     def _network_response_received(self, message):
         if (not self._reached_limit
                 and message["params"]["response"]["status"] == 420
-                and "Warcprox-Meta" in CaseInsensitiveDict(message["params"]["response"]["headers"])):
-            warcprox_meta = json.loads(CaseInsensitiveDict(message["params"]["response"]["headers"])["Warcprox-Meta"])
-            self._reached_limit = brozzler.ReachedLimit(warcprox_meta=warcprox_meta)
+                and "Warcprox-Meta" in CaseInsensitiveDict(
+                    message["params"]["response"]["headers"])):
+            warcprox_meta = json.loads(CaseInsensitiveDict(
+                message["params"]["response"]["headers"])["Warcprox-Meta"])
+            self._reached_limit = brozzler.ReachedLimit(
+                    warcprox_meta=warcprox_meta)
             self.logger.info("reached limit %s", self._reached_limit)
+        if self.on_response:
+            self.on_response(message)
 
     def _page_load_event_fired(self, message):
         self.logger.info("Page.loadEventFired, requesting screenshot url={} message={}".format(self.url, message))
@@ -335,7 +344,7 @@ class Browser:
             self._waiting_on_screenshot_msg_id = None
             self.logger.info("got screenshot, moving on to starting behaviors url={}".format(self.url))
             self._behavior = Behavior(self.url, self)
-            self._behavior.start()
+            self._behavior.start(self.behavior_parameters)
         elif message["id"] == self._waiting_on_outlinks_msg_id:
             self.logger.debug("got outlinks message=%s", message)
             self._outlinks = frozenset(message["result"]["result"]["value"].split(" "))
@@ -347,10 +356,8 @@ class Browser:
         elif self._behavior and self._behavior.is_waiting_on_result(message["id"]):
             self._behavior.notify_of_result(message)
 
-    def _handle_message(self, websock, message):
-        # self.logger.debug("message from {} - {}".format(websock.url, message[:95]))
-        # self.logger.debug("message from {} - {}".format(websock.url, message))
-        message = json.loads(message)
+    def _handle_message(self, websock, json_message):
+        message = json.loads(json_message)
         if "method" in message and message["method"] == "Network.requestWillBeSent":
             self._network_request_will_be_sent(message)
         elif "method" in message and message["method"] == "Network.responseReceived":
@@ -368,9 +375,9 @@ class Browser:
         # elif "method" in message and message["method"] in ("Network.dataReceived", "Network.responseReceived", "Network.loadingFinished"):
         #     pass
         # elif "method" in message:
-        #     self.logger.debug("{} {}".format(message["method"], message))
+        #     self.logger.debug("{} {}".format(message["method"], json_message))
         # else:
-        #     self.logger.debug("[no-method] {}".format(message))
+        #     self.logger.debug("[no-method] {}".format(json_message))
 
 class Chrome:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -396,15 +403,16 @@ class Chrome:
         timeout_sec = 600
         new_env = os.environ.copy()
         new_env["HOME"] = self.user_home_dir
-        chrome_args = [self.executable,
-                "--use-mock-keychain", # mac thing
+        chrome_args = [
+                self.executable, "--use-mock-keychain", # mac thing
                 "--user-data-dir={}".format(self.user_data_dir),
                 "--remote-debugging-port={}".format(self.port),
                 "--disable-web-sockets", "--disable-cache",
                 "--window-size=1100,900", "--no-default-browser-check",
                 "--disable-first-run-ui", "--no-first-run",
                 "--homepage=about:blank", "--disable-direct-npapi-requests",
-                "--disable-web-security"]
+                "--disable-web-security", "--disable-notifications",
+                "--disable-save-password-bubble"]
         if self.ignore_cert_errors:
             chrome_args.append("--ignore-certificate-errors")
         if self.proxy:
