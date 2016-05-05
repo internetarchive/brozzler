@@ -138,6 +138,7 @@ var umbraBehaviorFinished = function() {
         if (umbraState.idleSince != null) {
                 var idleTimeMs = Date.now() - umbraState.idleSince;
                 if (idleTimeMs / 1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC) {
+                        clearInterval(umbraIntervalId)
                         return true;
                 }
         }

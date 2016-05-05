@@ -178,6 +178,7 @@ class Browser:
         self.on_response = on_response
         self.behavior_parameters = behavior_parameters
 
+        self._waiting_on_scroll_to_top_msg_id = None
         self._waiting_on_screenshot_msg_id = None
         self._waiting_on_document_url_msg_id = None
         self._waiting_on_outlinks_msg_id = None
@@ -185,6 +186,7 @@ class Browser:
         self._reached_limit = None
         self._aw_snap_hes_dead_jim = None
         self._abort_browse_page = False
+        self._has_screenshot = False
 
         self._websock = websocket.WebSocketApp(self._websocket_url,
                 on_open=self._visit_page, on_message=self._wrap_handle_message)
@@ -230,6 +232,15 @@ class Browser:
             raise BrowsingException("""chrome tab went "aw snap" or "he's dead jim"!""")
         elif (self._behavior != None and self._behavior.is_finished()
                 or time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS):
+
+            if ( not self._has_screenshot and not self._waiting_on_scroll_to_top_msg_id and not self._waiting_on_screenshot_msg_id):
+                self.logger.info("Behaviors finished, requesting screenshot %s", self.url)
+                self._waiting_on_scroll_to_top_msg_id = self.send_to_chrome(method="Runtime.evaluate", 
+                    params={"expression":"window.scrollTo(0, 0);"})
+                return False
+            elif not self._has_screenshot and (self._waiting_on_scroll_to_top_msg_id or self._waiting_on_screenshot_msg_id):
+                return False
+  
             if self._outlinks:
                 self.logger.info("got outlinks, finished browsing %s", self.url)
                 return True
@@ -250,6 +261,7 @@ class Browser:
                 return False
             else: # self._waiting_on_outlinks_msg_id
                 return False
+
         elif time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
             return True
         elif self._reached_limit:
@@ -316,8 +328,10 @@ class Browser:
             self.on_response(message)
 
     def _page_load_event_fired(self, message):
-        self.logger.info("Page.loadEventFired, requesting screenshot url={} message={}".format(self.url, message))
-        self._waiting_on_screenshot_msg_id = self.send_to_chrome(method="Page.captureScreenshot")
+        self.logger.info("Page.loadEventFired, moving on to starting behaviors url={}".format(self.url))
+        self._behavior = Behavior(self.url, self)
+        self._behavior.start()
+
         self._waiting_on_document_url_msg_id = self.send_to_chrome(method="Runtime.evaluate", params={"expression":"document.URL"})
 
     def _console_message_added(self, message):
@@ -342,9 +356,11 @@ class Browser:
             if self.on_screenshot:
                 self.on_screenshot(base64.b64decode(message["result"]["data"]))
             self._waiting_on_screenshot_msg_id = None
-            self.logger.info("got screenshot, moving on to starting behaviors url={}".format(self.url))
-            self._behavior = Behavior(self.url, self)
-            self._behavior.start(self.behavior_parameters)
+            self._has_screenshot = True
+            self.logger.info("got screenshot, moving on to getting outlinks url={}".format(self.url))
+        elif message["id"] == self._waiting_on_scroll_to_top_msg_id:
+            self._waiting_on_screenshot_msg_id = self.send_to_chrome(method="Page.captureScreenshot")
+            self._waiting_on_scroll_to_top_msg_id = None
         elif message["id"] == self._waiting_on_outlinks_msg_id:
             self.logger.debug("got outlinks message=%s", message)
             self._outlinks = frozenset(message["result"]["result"]["value"].split(" "))
