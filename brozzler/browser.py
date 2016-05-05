@@ -156,14 +156,13 @@ class Browser:
     def _find_available_port(self):
         port_available = False
         port = self.chrome_port
-        while not port_available:
-            for connection in psutil.net_connections(kind='tcp'):
-                if connection.laddr[1] == port:
-                    self.logger.warn("Port already open %s", port)
-                    port_available = False
-                    port += 1
-                    break
-            port_available = True
+
+        for p in range(port,65535):
+            if any(connection.laddr[1] == p for connection in psutil.net_connections(kind='tcp')):
+                self.logger.warn("Port already open %s, will try %s", p, p + 1)
+            else:
+                port = p
+                break
         return port
 
     def is_running(self):
