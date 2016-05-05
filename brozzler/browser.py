@@ -34,6 +34,7 @@ from requests.structures import CaseInsensitiveDict
 import select
 import re
 import base64
+import psutil
 
 __all__ = ["BrowserPool", "Browser"]
 
@@ -127,6 +128,7 @@ class Browser:
     def start(self, proxy=None):
         if not self._chrome_instance:
             # these can raise exceptions
+            self.chrome_port = self._find_available_port()
             self._work_dir = tempfile.TemporaryDirectory()
             self._chrome_instance = Chrome(port=self.chrome_port,
                     executable=self.chrome_exe,
@@ -150,6 +152,18 @@ class Browser:
                 self._websocket_url = None
         except:
             self.logger.error("problem stopping", exc_info=True)
+
+    def _find_available_port(self):
+        port_available = False
+        port = self.chrome_port
+
+        for p in range(port,65535):
+            if any(connection.laddr[1] == p for connection in psutil.net_connections(kind='tcp')):
+                self.logger.warn("Port already open %s, will try %s", p, p + 1)
+            else:
+                port = p
+                break
+        return port
 
     def is_running(self):
         return bool(self._websocket_url)
