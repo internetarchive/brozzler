@@ -54,12 +54,6 @@ def new_job(frontier, job_conf):
         merged_conf = merge(seed_conf, job_conf)
         # XXX check for unknown settings, invalid url, etc
 
-        extra_headers = None
-        if "warcprox_meta" in merged_conf:
-            warcprox_meta = json.dumps(
-                    merged_conf["warcprox_meta"], separators=(',', ':'))
-            extra_headers = {"Warcprox-Meta":warcprox_meta}
-
         site = brozzler.Site(job_id=job.id,
                 seed=merged_conf["url"],
                 scope=merged_conf.get("scope"),
@@ -68,7 +62,7 @@ def new_job(frontier, job_conf):
                 ignore_robots=merged_conf.get("ignore_robots"),
                 enable_warcprox_features=merged_conf.get(
                     "enable_warcprox_features"),
-                extra_headers=extra_headers,
+                warcprox_meta=merged_conf.get("warcprox_meta"),
                 metadata=merged_conf.get("metadata"))
         sites.append(site)
 

@@ -120,8 +120,8 @@ class BrozzlerWorker:
             ## # see https://github.com/rg3/youtube-dl/issues/6087
             ## os.environ["http_proxy"] = "http://{}".format(site.proxy)
         ydl = youtube_dl.YoutubeDL(ydl_opts)
-        if site.extra_headers:
-            ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers))
+        if site.extra_headers():
+            ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers()))
         ydl.brozzler_spy = YoutubeDLSpy()
         ydl._opener.add_handler(ydl.brozzler_spy)
         return ydl
@@ -167,7 +167,7 @@ class BrozzlerWorker:
                         url="youtube-dl:%s" % page.url, warc_type="metadata",
                         content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                         payload=info_json.encode("utf-8"),
-                        extra_headers=site.extra_headers)
+                        extra_headers=site.extra_headers())
         except BaseException as e:
             if hasattr(e, "exc_info") and e.exc_info[0] == youtube_dl.utils.UnsupportedError:
                 pass
@@ -207,12 +207,12 @@ class BrozzlerWorker:
                         url="screenshot:{}".format(page.url),
                         warc_type="resource", content_type="image/jpeg",
                         payload=screenshot_jpeg,
-                        extra_headers=site.extra_headers)
+                        extra_headers=site.extra_headers())
                 self._warcprox_write_record(warcprox_address=site.proxy,
                         url="thumbnail:{}".format(page.url),
                         warc_type="resource", content_type="image/jpeg",
                         payload=thumbnail_jpeg,
-                        extra_headers=site.extra_headers)
+                        extra_headers=site.extra_headers())
 
         self.logger.info("brozzling {}".format(page))
         ydl.brozzler_spy.reset()
@@ -229,7 +229,7 @@ class BrozzlerWorker:
             if not browser.is_running():
                 browser.start(proxy=site.proxy)
             outlinks = browser.browse_page(
-                    page.url, extra_headers=site.extra_headers,
+                    page.url, extra_headers=site.extra_headers(),
                     on_screenshot=_on_screenshot,
                     on_url_change=page.note_redirect)
             return outlinks
@@ -252,7 +252,7 @@ class BrozzlerWorker:
         self.logger.info('fetching %s', page)
         # response is ignored
         requests.get(
-                page.url, proxies=proxies, headers=site.extra_headers,
+                page.url, proxies=proxies, headers=site.extra_headers(),
                 verify=False)
 
     def _needs_browsing(self, page, brozzler_spy):

@@ -36,8 +36,6 @@ arg_parser.add_argument('url', metavar='URL', help='page url')
 arg_parser.add_argument('-e', '--executable', dest='chrome_exe', default='chromium-browser',
         help='executable to use to invoke chrome')
 arg_parser.add_argument("--proxy", dest="proxy", default=None, help="http proxy for this site")
-arg_parser.add_argument("-H", "--extra-header", action="append",
-        dest="extra_headers", default=None, help="extra http header to send with every request for this site (may be used multiple times)")
 arg_parser.add_argument('--enable-warcprox-features', dest='enable_warcprox_features',
                 action='store_true', help='enable special features for this site that assume the configured proxy is warcprox')
 arg_parser.add_argument("-v", "--verbose", dest="log_level",
@@ -52,15 +50,9 @@ logging.getLogger("requests.packages.urllib3").setLevel(logging.WARN)
 warnings.simplefilter("ignore", category=requests.packages.urllib3.exceptions.InsecureRequestWarning)
 warnings.simplefilter("ignore", category=requests.packages.urllib3.exceptions.InsecurePlatformWarning)
 
-extra_headers = {}
-if args.extra_headers:
-    for hh in args.extra_headers:
-        [k,v] = re.split(r":\s*", hh, 1)
-        extra_headers[k] = v
-
-site = brozzler.Site(id=-1, seed=args.url, proxy=args.proxy,
-        enable_warcprox_features=args.enable_warcprox_features,
-        extra_headers=extra_headers)
+site = brozzler.Site(
+        id=-1, seed=args.url, proxy=args.proxy,
+        enable_warcprox_features=args.enable_warcprox_features)
 page = brozzler.Page(url=args.url, site_id=site.id)
 worker = brozzler.BrozzlerWorker(frontier=None)
 ydl = worker._youtube_dl(site)

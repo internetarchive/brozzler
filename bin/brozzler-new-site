@@ -38,12 +38,14 @@ arg_parser.add_argument('--rethinkdb-db', dest='rethinkdb_db', default="brozzler
         help='rethinkdb database name')
 arg_parser.add_argument("--proxy", dest="proxy", default=None, help="http proxy for this site")
 arg_parser.add_argument("--time-limit", dest="time_limit", default=None, help="time limit in seconds for this site")
-arg_parser.add_argument("-H", "--extra-header", action="append",
-        dest="extra_headers", default=None, help="extra http header to send with every request for this site (may be used multiple times)")
 arg_parser.add_argument("--ignore-robots", dest="ignore_robots",
         action="store_true", help="ignore robots.txt for this site")
 arg_parser.add_argument('--enable-warcprox-features', dest='enable_warcprox_features',
                 action='store_true', help='enable special features for this site that assume the configured proxy is warcprox')
+arg_parser.add_argument(
+        '--warcprox-meta', dest='warcprox_meta',
+        help='Warcprox-Meta http request header to send with each request; '
+        'must be a json blob, ignored unless warcprox features are enabled')
 arg_parser.add_argument("-v", "--verbose", dest="log_level",
         action="store_const", default=logging.INFO, const=logging.DEBUG)
 arg_parser.add_argument("--version", action="version",
@@ -56,17 +58,12 @@ logging.getLogger("requests.packages.urllib3").setLevel(logging.WARN)
 warnings.simplefilter("ignore", category=requests.packages.urllib3.exceptions.InsecureRequestWarning)
 warnings.simplefilter("ignore", category=requests.packages.urllib3.exceptions.InsecurePlatformWarning)
 
-extra_headers = {}
-if args.extra_headers:
-    for hh in args.extra_headers:
-        [k,v] = re.split(r":\s*", hh, 1)
-        extra_headers[k] = v
-
-site = brozzler.Site(seed=args.seed, proxy=args.proxy,
+site = brozzler.Site(
+        seed=args.seed, proxy=args.proxy,
         time_limit=int(args.time_limit) if args.time_limit else None,
         ignore_robots=args.ignore_robots,
         enable_warcprox_features=args.enable_warcprox_features,
-        extra_headers=extra_headers)
+        warcprox_meta=json.loads(args.warcprox_meta))
 
 r = rethinkstuff.Rethinker(args.rethinkdb_servers.split(","), args.rethinkdb_db)
 frontier = brozzler.RethinkDbFrontier(r)

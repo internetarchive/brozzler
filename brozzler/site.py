@@ -87,7 +87,7 @@ class Site(brozzler.BaseDictable):
 
     def __init__(
             self, seed, id=None, job_id=None, scope=None, proxy=None,
-            ignore_robots=False, time_limit=None, extra_headers=None,
+            ignore_robots=False, time_limit=None, warcprox_meta=None,
             enable_warcprox_features=False, reached_limit=None,
             status="ACTIVE", claimed=False, start_time=None,
             last_disclaimed=_EPOCH_UTC, last_claimed_by=None,
@@ -99,7 +99,7 @@ class Site(brozzler.BaseDictable):
         self.proxy = proxy
         self.ignore_robots = ignore_robots
         self.enable_warcprox_features = bool(enable_warcprox_features)
-        self.extra_headers = extra_headers
+        self.warcprox_meta = warcprox_meta
         self.time_limit = time_limit
         self.reached_limit = reached_limit
         self.status = status
@@ -114,12 +114,6 @@ class Site(brozzler.BaseDictable):
         if not "surt" in self.scope:
             self.scope["surt"] = Url(seed).surt
 
-    def __repr__(self):
-        return """Site(id={},seed={},scope={},proxy={},enable_warcprox_features={},ignore_robots={},extra_headers={},reached_limit={})""".format(
-                self.id, repr(self.seed), repr(self.scope),
-                repr(self.proxy), self.enable_warcprox_features,
-                self.ignore_robots, self.extra_headers, self.reached_limit)
-
     def __str__(self):
         return "Site-%s-%s" % (self.id, self.seed)
 
@@ -129,6 +123,13 @@ class Site(brozzler.BaseDictable):
             self.logger.info("changing site scope surt from {} to {}".format(
                 self.scope["surt"], new_scope_surt))
             self.scope["surt"] = new_scope_surt
+
+    def extra_headers(self):
+        hdrs = {}
+        if self.enable_warcprox_features and self.warcprox_meta:
+            hdrs["Warcprox-Meta"] = json.dumps(
+                    self.warcprox_meta, separators=(',', ':'))
+        return hdrs
 
     def is_in_scope(self, url, parent_page=None):
         if not isinstance(url, Url):
