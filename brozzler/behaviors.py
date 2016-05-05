@@ -42,43 +42,49 @@ class Behavior:
                 conf = yaml.load(fin)
             Behavior._behaviors = conf['behaviors']
 
-            simpleclicks_js_in = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ["behaviors.d"] + ["simpleclicks.js.in"])
-            with open(simpleclicks_js_in) as fin:
-                simpleclicks_js_template = string.Template(fin.read())
-
             for behavior in Behavior._behaviors:
                 if "behavior_js" in behavior:
                     behavior_js = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ["behaviors.d"] + [behavior["behavior_js"]])
-                    behavior["script"] = open(behavior_js, encoding="utf-8").read()
-                elif "click_css_selector" in behavior:
-                    if "click_until_hard_timeout" in behavior: 
-                        click_until_hard_timeout_value=behavior["click_until_hard_timeout"]
-                    else:
-                        click_until_hard_timeout_value = False
-                    behavior["script"] = simpleclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"], click_until_hard_timeout=click_until_hard_timeout_value)
+                    with open(behavior_js, encoding="utf-8") as fin:
+                        behavior["script"] = fin.read()
+                elif "behavior_js_template" in behavior:
+                    behavior_js_template = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ["behaviors.d"] + [behavior["behavior_js_template"]])
+                    with open(behavior_js_template, encoding="utf-8") as fin:
+                        behavior["template"] = string.Template(fin.read())
 
         return Behavior._behaviors
 
     def __init__(self, url, umbra_worker):
         self.url = url
         self.umbra_worker = umbra_worker
-
         self.script_finished = False
         self.waiting_result_msg_ids = []
         self.active_behavior = None
         self.last_activity = time.time()
 
-    def start(self):
+    def start(self, template_parameters=None):
         for behavior in Behavior.behaviors():
             if re.match(behavior['url_regex'], self.url):
                 if "behavior_js" in behavior:
-                    self.logger.info("using {} behavior for {}".format(behavior["behavior_js"], self.url))
-                elif "click_css_selector" in behavior:
-                    self.logger.info("using simple click behavior with css selector {} for {}".format(behavior["click_css_selector"], self.url))
+                    self.logger.info("using %s behavior for %s",
+                                     behavior["behavior_js"], self.url)
+                elif "behavior_js_template" in behavior:
+                    parameters = dict()
+                    if "default_parameters" in behavior:
+                        parameters.update(behavior["default_parameters"])
+                    if template_parameters:
+                        parameters.update(template_parameters)
+                    behavior["script"] = behavior["template"].safe_substitute(parameters)
+
+                    self.logger.info(
+                            "using template=%s populated with parameters=%s for %s",
+                            repr(behavior["behavior_js_template"]),
+                            parameters, self.url)
 
                 self.active_behavior = behavior
-                self.umbra_worker.send_to_chrome(method="Runtime.evaluate",
-                        suppress_logging=True, params={"expression": behavior["script"]})
+                self.umbra_worker.send_to_chrome(
+                        method="Runtime.evaluate", suppress_logging=True,
+                        params={"expression": behavior["script"]})
                 self.notify_of_activity()
                 return
 

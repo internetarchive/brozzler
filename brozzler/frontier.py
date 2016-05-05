@@ -258,10 +258,10 @@ class RethinkDbFrontier:
     def scope_and_schedule_outlinks(self, site, parent_page, outlinks):
         counts = {"added":0,"updated":0,"rejected":0,"blocked":0}
         for url in outlinks or []:
-            surt_ = brozzler.site.to_surt(url)
-            if site.is_in_scope(url, surt_=surt_, parent_page=parent_page):
+            u = brozzler.site.Url(url)
+            if site.is_in_scope(u, parent_page=parent_page):
                 if brozzler.is_permitted_by_robots(site, url):
-                    if not surt_.startswith(site.scope["surt"]):
+                    if not u.surt.startswith(site.scope["surt"]):
                         hops_off_surt = parent_page.hops_off_surt + 1
                     else:
                         hops_off_surt = 0

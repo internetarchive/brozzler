@@ -25,8 +25,62 @@ import time
 import rethinkstuff
 import datetime
 import re
+import ipaddress
 
-_EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(tzinfo=rethinkstuff.UTC)
+_EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(
+        tzinfo=rethinkstuff.UTC)
+
+class Url:
+    def __init__(self, url):
+        self.url = url
+        self._surt = None
+        self._host = None
+
+    @property
+    def surt(self):
+        if not self._surt:
+            hurl = surt.handyurl.parse(self.url)
+            surt.GoogleURLCanonicalizer.canonicalize(hurl)
+            hurl.query = None
+            hurl.hash = None
+            # XXX chop off path after last slash??
+            self._surt = hurl.getURLString(surt=True, trailing_comma=True)
+        return self._surt
+
+    @property
+    def host(self):
+        if not self._host:
+            self._host = surt.handyurl.parse(self.url).host
+        return self._host
+
+    def matches_ip_or_domain(self, ip_or_domain):
+        """Returns true if
+           - ip_or_domain is an ip address and self.host is the same ip address
+           - ip_or_domain is a domain and self.host is the same domain
+           - ip_or_domain is a domain and self.host is a subdomain of it
+        """
+        if ip_or_domain == self.host:
+            return True
+
+        # if either ip_or_domain or self.host are ip addresses, and they're not
+        # identical (previous check), not a match
+        try:
+            ipaddress.ip_address(ip_or_domain)
+            return False
+        except:
+            pass
+        try:
+            ipaddress.ip_address(self.host)
+            return False
+        except:
+            pass
+
+        # if we get here, we're looking at two hostnames
+        # XXX do we need to handle case of one punycoded idn, other not?
+        domain_parts = ip_or_domain.split(".")
+        host_parts = self.host.split(".")
+
+        return host_parts[-len(domain_parts):] == domain_parts
 
 class Site(brozzler.BaseDictable):
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -58,7 +112,7 @@ class Site(brozzler.BaseDictable):
 
         self.scope = scope or {}
         if not "surt" in self.scope:
-            self.scope["surt"] = self._to_surt(seed)
+            self.scope["surt"] = Url(seed).surt
 
     def __repr__(self):
         return """Site(id={},seed={},scope={},proxy={},enable_warcprox_features={},ignore_robots={},extra_headers={},reached_limit={})""".format(
@@ -69,72 +123,95 @@ class Site(brozzler.BaseDictable):
     def __str__(self):
         return "Site-%s-%s" % (self.id, self.seed)
 
-    def _to_surt(self, url):
-        hurl = surt.handyurl.parse(url)
-        surt.GoogleURLCanonicalizer.canonicalize(hurl)
-        hurl.query = None
-        hurl.hash = None
-        # XXX chop off path after last slash??
-        return hurl.getURLString(surt=True, trailing_comma=True)
-
     def note_seed_redirect(self, url):
-        new_scope_surt = self._to_surt(url)
+        new_scope_surt = Url(url).surt
         if not new_scope_surt.startswith(self.scope["surt"]):
             self.logger.info("changing site scope surt from {} to {}".format(
                 self.scope["surt"], new_scope_surt))
             self.scope["surt"] = new_scope_surt
 
-    def is_in_scope(self, url, surt_=None, parent_page=None):
-        if not surt_:
-            surt_ = to_surt(url)
-        might_accept = False
+    def is_in_scope(self, url, parent_page=None):
+        if not isinstance(url, Url):
+            u = Url(url)
+        else:
+            u = url
 
-        if not surt_.startswith("http://") and not surt_.startswith("https://"):
+        might_accept = False
+        if not u.surt.startswith("http://") and not u.surt.startswith("https://"):
             # XXX doesn't belong here maybe (where? worker ignores unknown
             # schemes?)
             return False
         elif (parent_page and "max_hops" in self.scope
                 and parent_page.hops_from_seed >= self.scope["max_hops"]):
             pass
-        elif surt_.startswith(self.scope["surt"]):
+        elif u.surt.startswith(self.scope["surt"]):
             might_accept = True
         elif parent_page and parent_page.hops_off_surt < self.scope.get(
                 "max_hops_off_surt", 0):
             might_accept = True
         elif "accepts" in self.scope:
             for rule in self.scope["accepts"]:
-                if self._scope_rule_applies(rule, url, surt_):
+                if self._scope_rule_applies(rule, u):
                     might_accept = True
+                    break
 
         if might_accept:
             if "blocks" in self.scope:
                 for rule in self.scope["blocks"]:
-                    if self._scope_rule_applies(rule, url, surt_):
+                    if self._scope_rule_applies(rule, u):
                         return False
             return True
         else:
             return False
 
-    def _scope_rule_applies(self, rule, url, surt_):
-        if not "url_match" in rule or not "value" in rule:
-            self.logger.warn("unable to make sense of scope rule %s", rule)
-            return False
-        if rule["url_match"] == "STRING_MATCH":
-            return url.find(rule["value"]) >= 0
-        elif rule["url_match"] == "REGEX_MATCH":
-            try:
-                return re.fullmatch(rule["value"], url)
-            except Exception as e:
-                self.logger.warn(
-                        "caught exception matching against regex %s: %s",
-                        rule["value"], e)
-                return False
-        elif rule["url_match"] == "SURT_MATCH":
-            return surt_.startswith(rule["value"])
+    def _scope_rule_applies(self, rule, url):
+        """
+        Examples of valid rules:
+        [
+            {
+                "host": "monkey.org",
+                "url_match": "STRING_MATCH",
+                "value": "bar",
+            },
+            {
+                "url_match": "SURT_MATCH",
+                "value": "+http://(com,woop,)/fuh/",
+            },
+            {
+                "host": "badhost.com",
+            },
+        ]
+        """
+        if not isinstance(url, Url):
+            u = Url(url)
         else:
-            self.logger.warn("invalid rule.url_match=%s", rule.url_match)
-            return False
+            u = url
 
+        if "host" in rule and not u.matches_ip_or_domain(rule["host"]):
+            return False
+        if "url_match" in rule:
+            if rule["url_match"] == "STRING_MATCH":
+                return u.url.find(rule["value"]) >= 0
+            elif rule["url_match"] == "REGEX_MATCH":
+                try:
+                    return re.fullmatch(rule["value"], u.url)
+                except Exception as e:
+                    self.logger.warn(
+                            "caught exception matching against regex %s: %s",
+                            rule["value"], e)
+                    return False
+            elif rule["url_match"] == "SURT_MATCH":
+                return u.surt.startswith(rule["value"])
+            else:
+                self.logger.warn("invalid rule.url_match=%s", rule.url_match)
+                return False
+        else:
+            if "host" in rule:
+                # we already know that it matches from earlier check
+                return True
+            else:
+                self.logger.warn("unable to make sense of scope rule %s", rule)
+                return False
 
 class Page(brozzler.BaseDictable):
     def __init__(
@@ -183,7 +260,3 @@ class Page(brozzler.BaseDictable):
             surt.GoogleURLCanonicalizer.canonicalize(self._canon_hurl)
         return self._canon_hurl.geturl()
 
-def to_surt(url):
-    hurl = surt.handyurl.parse(url)
-    return surt.GoogleURLCanonicalizer.canonicalize(
-            hurl).getURLString(surt=True, trailing_comma=True)
