@@ -137,6 +137,7 @@ var umbraInstagramBehavior = {
                 if (this.idleSince != null) {
                         var idleTimeMs = Date.now() - this.idleSince;
                         if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
+                                clearInterval(this.intervalId);
                                 return true;
                         }
                 }
