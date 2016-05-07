@@ -176,7 +176,7 @@ class Site(brozzler.BaseDictable):
             },
             {
                 "url_match": "SURT_MATCH",
-                "value": "+http://(com,woop,)/fuh/",
+                "value": "http://(com,woop,)/fuh/",
             },
             {
                 "host": "badhost.com",
