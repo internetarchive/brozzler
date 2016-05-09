@@ -1,5 +1,5 @@
 /*
- * brozzler/behaviors.d/clickGetPDFs.js.template - click on each of several elements and 
+ * brozzler/behaviors.d/clickGetPDFs.js.template - click on each of several elements and
  * click on linked PDFs found
  *
  * Copyright (C) 2014-2016 Internet Archive
@@ -17,6 +17,12 @@
  * limitations under the License.
  */
 
+/*
+ * to do:
+ * <blocker> disable multiple file download warning dialog
+ * <major>   enable storage across page loads to capture all PDFs AND decrease work
+ */
+
 var umbraAboveBelowOrOnScreen = function(e) {
   var eTop = e.getBoundingClientRect().top;
   if (eTop < window.scrollY) {
@@ -26,35 +32,58 @@ var umbraAboveBelowOrOnScreen = function(e) {
   } else {
     return 0;  // on screen
   }
-}
+};
 
 var umbraState = {'idleSince':null};
-var umbraAlreadyClicked = {};
+var umbraAlreadyClicked = {'2016':true};
+
+var clickTargets = document.querySelectorAll("${css_selector}");
+
+var pdfSelector = "a";
 
 var umbraIntervalFunc = function() {
 	var clickedSomething = false;
 	var somethingLeftBelow = false;
 	var somethingLeftAbove = false;
-	var cssSelector = "${css_selector}";
-	var pdfSelector = "a";
 	var i = 0;
 
-	var clickTargets = document.querySelectorAll(cssSelector);
 	var pdfTargets = document.querySelectorAll(pdfSelector);
 
-	if (pdfTargets.length > 0) {
+	if (!(clickTargets[0].text in umbraAlreadyClicked)) {
+		targetID = clickTargets[0].text;
+		logmsg = 'clicking ' + targetID;
+		console.log(logmsg);
+		var where = umbraAboveBelowOrOnScreen(clickTargets[0]);
+		if (where === 0) {
+			var mouseOverEvent = document.createEvent('Events');
+			mouseOverEvent.initEvent("mouseover", true, false);
+			clickTargets[0].dispatchEvent(mouseOverEvent);
+			clickTargets[0].click();
+			clickedSomething = true;
+			umbraState.idleSince = null;
+			umbraAlreadyClicked[targetID] = true;
+		} else if (where > 0) {
+			somethingLeftBelow = true;
+		} else if (where < 0) {
+			somethingLeftAbove = true;
+		}
+	} else if (pdfTargets.length > 0) {
 		for (i = 0; i < pdfTargets.length; i++) {
 			if (pdfTargets[i].href.toLowerCase().lastIndexOf('pdf') > 0) {
-				if (!(pdfTargets[i].href in umbraAlreadyClicked)){
+				pdfID = pdfTargets[i].href;
+				logmsg = 'clicking ' + pdfID;
+				console.log(logmsg);
+				if (!(pdfID in umbraAlreadyClicked)){
 					var where = umbraAboveBelowOrOnScreen(pdfTargets[i]);
 					if (where === 0) {
+						pdfTargets[i].setAttribute('download','');
 						var mouseOverEvent = document.createEvent('Events');
 						mouseOverEvent.initEvent("mouseover", true, false);
 						pdfTargets[i].dispatchEvent(mouseOverEvent);
 						pdfTargets[i].click();
 						clickedSomething = true;
 						umbraState.idleSince = null;
-						umbraAlreadyClicked[pdfTargets[i].href] = true;
+						umbraAlreadyClicked[pdfID] = true;
 						break; // break from loop
 					} else if (where > 0) {
 						somethingLeftBelow = true;
@@ -67,11 +96,10 @@ var umbraIntervalFunc = function() {
 	}
 
 	if((i === pdfTargets.length) && !clickedSomething) {
-		for (var i = 0; i < clickTargets.length; i++) {
-			targetID = clickTargets[i].id;
-			if (targetID === "") {
-				targetID = location.host + "-" + i;
-			}
+		for (i = 1; i < clickTargets.length; i++) {
+			targetID = clickTargets[i].text;
+			logmsg = 'clicking ' + targetID;
+			console.log(logmsg);
 			if (!(targetID in umbraAlreadyClicked)) {
 				var where = umbraAboveBelowOrOnScreen(clickTargets[i]);
 				if (where === 0) {
@@ -105,15 +133,15 @@ var umbraIntervalFunc = function() {
 		} else if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
 			window.scrollBy(0, 200);
 			umbraState.idleSince = null;
-		} else if (umbraState.idleSince == null) {
+		} else if (umbraState.idleSince === null) {
 			umbraState.idleSince = Date.now();
 		}
 	}
 
-	if (umbraState.idleSince == null) {
+	if (umbraState.idleSince === null) {
 		umbraState.idleSince = Date.now();
 	}
-}
+};
 
 // If we haven't had anything to do (scrolled, clicked, etc) in this amount of
 // time, then we consider ourselves finished with the page.
@@ -121,7 +149,7 @@ var UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC = 7;
 
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
-  if (umbraState.idleSince != null) {
+  if (umbraState.idleSince !== null) {
     var idleTimeMs = Date.now() - umbraState.idleSince;
     if (idleTimeMs / 1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC) {
       clearInterval(umbraIntervalId);
@@ -129,6 +157,6 @@ var umbraBehaviorFinished = function() {
     }
   }
   return false;
-}
+};
 
 var umbraIntervalId = setInterval(umbraIntervalFunc, 5000);
