@@ -157,9 +157,14 @@ class Browser:
         port_available = False
         port = self.chrome_port
 
-        for p in range(port,65535):
-            if any(connection.laddr[1] == p for connection in psutil.net_connections(kind='tcp')):
-                self.logger.warn("Port already open %s, will try %s", p, p + 1)
+        try:
+            conns = psutil.net_connections(kind="tcp")
+        except psutil.AccessDenied:
+            return port
+
+        for p in range(port, 65535):
+            if any(connection.laddr[1] == p for connection in conns):
+                self.logger.warn("port %s already open, will try %s", p, p+1)
             else:
                 port = p
                 break
