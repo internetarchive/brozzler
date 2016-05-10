@@ -40,6 +40,7 @@ setuptools.setup(name='brozzler',
             'surt>=0.3b2',
             'rethinkstuff',
             'rethinkdb>=2.3,<2.4',
+            'psutil',
             ],
         zip_safe=False,
         classifiers=[
