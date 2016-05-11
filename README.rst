@@ -20,19 +20,15 @@ archiving.
 Installation
 ------------
 
-XXX These instructions don't work at the moment. Brozzler requires some
-customized packages not easily installable in the outside world. I intend to
-remedy the situation soon.
-
 ::
 
     # set up virtualenv if desired
-    pip install git+https://github.com/nlevitt/brozzler.git
+    pip install brozzler
 
 Brozzler also requires a rethinkdb deployment.
 
-Fonts for good screenshots
---------------------------
+Fonts (for decent screenshots)
+------------------------------
 
 On ubuntu 14.04 trusty I installed these packages:
 
@@ -42,12 +38,10 @@ fonts-arphic-ukai fonts-farsiweb fonts-nafees fonts-sil-abyssinica
 fonts-sil-ezra fonts-sil-padauk fonts-unfonts-extra fonts-unfonts-core
 ttf-indic-fonts fonts-thai-tlwg fonts-lklug-sinhala
 
-Haven't looked much at the resulting screenshots yet though.
-
 License
 -------
 
-Copyright 2015 Internet Archive
+Copyright 2015-2016 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may
 not use this software except in compliance with the License. You may
