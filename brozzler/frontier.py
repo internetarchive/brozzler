@@ -313,6 +313,8 @@ class RethinkDbFrontier:
         if len(pages) > 1:
             self.logger.warn(
                     "more than one seed page for site_id %s ?", site_id)
+        if len(pages) < 1:
+            return None
         return brozzler.Page(**pages[0])
 
     def site_pages(self, site_id, unbrozzled_only=False):

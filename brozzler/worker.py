@@ -360,7 +360,12 @@ class BrozzlerWorker:
             self.logger.critical("thread exiting due to unexpected exception", exc_info=True)
         finally:
             if self._service_registry and hasattr(self, "status_info"):
-                self._service_registry.unregister(self.status_info["id"])
+                try:
+                    self._service_registry.unregister(self.status_info["id"])
+                except:
+                    self.logger.error(
+                            "failed to unregister from service registry",
+                            exc_info=True)
 
     def start(self):
         th = threading.Thread(target=self.run, name="BrozzlerWorker")

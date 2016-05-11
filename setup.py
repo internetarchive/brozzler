@@ -20,7 +20,7 @@ import setuptools
 import glob
 
 setuptools.setup(name='brozzler',
-        version='1.1.dev9',
+        version='1.1.dev10',
         description='Distributed web crawling with browsers',
         url='https://github.com/nlevitt/brozzler',
         author='Noah Levitt',
