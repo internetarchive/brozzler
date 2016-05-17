@@ -46,14 +46,14 @@ Job Configuration
 -----------------
 
 Jobs are defined using yaml files. Options may be specified either at the
-top-level or on individual seeds. A job id id and at least one seed url
+top-level or on individual seeds. A job id and at least one seed url
 must be specified, everything else is optional.
 
 ::
 
     id: myjob
     time_limit: 60 # seconds
-    proxy: http://127.0.0.1:8000 # point at warcprox for archiving
+    proxy: 127.0.0.1:8000 # point at warcprox for archiving
     ignore_robots: false
     enable_warcprox_features: false
     warcprox_meta: null
