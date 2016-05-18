@@ -52,6 +52,10 @@ behaviors:
       css_selector: img[id^='NavtwocolUserControl11_NavMeeting_item']
    request_idle_timeout_sec: 10
  -
+   url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
+   behavior_js_template: huffpostslides.js
+   request_idle_timeout_sec: 10
+ -
    url_regex: '^https?://(?:www\.)?brooklynmuseum\.org/exhibitions/.*$'
    behavior_js_template: simpleclicks.js.template
    default_parameters:
