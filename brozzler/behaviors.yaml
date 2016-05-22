@@ -47,7 +47,7 @@ behaviors:
    request_idle_timeout_sec: 10
  - # ARI-4838 racineco.com document viewers
    url_regex: '^https?://(?:www\.)?racineco\.com/.*$'
-   behavior_js_template: multiclicks.js.template
+   behavior_js_template: clickGetPDFs.js.template
    default_parameters:
       css_selector: img[id^='NavtwocolUserControl11_NavMeeting_item']
    request_idle_timeout_sec: 10
