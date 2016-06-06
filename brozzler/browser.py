@@ -458,6 +458,7 @@ class Chrome:
                 "--disable-first-run-ui", "--no-first-run",
                 "--homepage=about:blank", "--disable-direct-npapi-requests",
                 "--disable-web-security", "--disable-notifications",
+                "--disable-extensions",
                 "--disable-save-password-bubble"]
         if self.ignore_cert_errors:
             chrome_args.append("--ignore-certificate-errors")
