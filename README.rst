@@ -27,6 +27,47 @@ Installation
 
 Brozzler also requires a rethinkdb deployment.
 
+Usage
+-----
+
+Launch one or more workers:
+
+::
+
+    brozzler-worker -e chromium
+
+Submit jobs:
+
+::
+
+    brozzler-new-job myjob.yaml
+
+Job Configuration
+-----------------
+
+Jobs are defined using yaml files. Options may be specified either at the
+top-level or on individual seeds. A job id and at least one seed url
+must be specified, everything else is optional.
+
+::
+
+    id: myjob
+    time_limit: 60 # seconds
+    proxy: 127.0.0.1:8000 # point at warcprox for archiving
+    ignore_robots: false
+    enable_warcprox_features: false
+    warcprox_meta: null
+    metadata: {}
+    seeds:
+      - url: http://one.example.org/
+      - url: http://two.example.org/
+        time_limit: 30
+      - url: http://three.example.org/
+        time_limit: 10
+        ignore_robots: true
+        scope:
+          surt: http://(org,example,
+
 Fonts (for decent screenshots)
 ------------------------------
 
