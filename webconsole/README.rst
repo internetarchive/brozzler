@@ -1,1 +1,1 @@
-flask --debug --app=brozzler-webconsole.py run --host=0.0.0.0 --port=8081
+gunicorn --bind=0.0.0.0:8081 brozzler-webconsole:app
