@@ -21,9 +21,9 @@ import glob
 
 setuptools.setup(
         name='brozzler',
-        version='1.1.dev14',
+        version='1.1b2',
         description='Distributed web crawling with browsers',
-        url='https://github.com/nlevitt/brozzler',
+        url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
         author_email='nlevitt@archive.org',
         long_description=open('README.rst', encoding='UTF-8').read(),
