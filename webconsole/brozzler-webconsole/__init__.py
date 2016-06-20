@@ -33,7 +33,7 @@ import rethinkdb
 app = flask.Flask(__name__)
 
 # configure with environment variables
-SETTINGS= {
+SETTINGS = {
     'RETHINKDB_SERVERS': os.environ.get(
         'RETHINKDB_SERVERS', 'localhost').split(','),
     'RETHINKDB_DB': os.environ.get('RETHINKDB_DB', 'brozzler'),
