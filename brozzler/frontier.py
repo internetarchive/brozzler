@@ -39,21 +39,43 @@ class RethinkDbFrontier:
     def _ensure_db(self):
         dbs = self.r.db_list().run()
         if not self.r.dbname in dbs:
-            self.logger.info("creating rethinkdb database %s", repr(self.r.dbname))
+            self.logger.info(
+                    "creating rethinkdb database %s", repr(self.r.dbname))
             self.r.db_create(self.r.dbname).run()
         tables = self.r.table_list().run()
         if not "sites" in tables:
-            self.logger.info("creating rethinkdb table 'sites' in database %s", repr(self.r.dbname))
-            self.r.table_create("sites", shards=self.shards, replicas=self.replicas).run()
-            self.r.table("sites").index_create("sites_last_disclaimed", [self.r.row["status"], self.r.row["last_disclaimed"]]).run()
+            self.logger.info(
+                    "creating rethinkdb table 'sites' in database %s",
+                    repr(self.r.dbname))
+            self.r.table_create(
+                    "sites", shards=self.shards, replicas=self.replicas).run()
+            self.r.table("sites").index_create(
+                    "sites_last_disclaimed", [
+                        self.r.row["status"],
+                        self.r.row["last_disclaimed"]]).run()
             self.r.table("sites").index_create("job_id").run()
         if not "pages" in tables:
-            self.logger.info("creating rethinkdb table 'pages' in database %s", repr(self.r.dbname))
-            self.r.table_create("pages", shards=self.shards, replicas=self.replicas).run()
-            self.r.table("pages").index_create("priority_by_site", [self.r.row["site_id"], self.r.row["brozzle_count"], self.r.row["claimed"], self.r.row["priority"]]).run()
+            self.logger.info(
+                    "creating rethinkdb table 'pages' in database %s",
+                    repr(self.r.dbname))
+            self.r.table_create(
+                    "pages", shards=self.shards, replicas=self.replicas).run()
+            self.r.table("pages").index_create(
+                    "priority_by_site", [
+                        self.r.row["site_id"], self.r.row["brozzle_count"],
+                        self.r.row["claimed"], self.r.row["priority"]]).run()
+            # this index is for displaying pages in a sensible order in the web
+            # console
+            self.r.table("pages").index_create(
+                    "least_hops", [
+                        r.row["site_id"], r.row["brozzle_count"],
+                        r.row["hops_from_seed"]])
         if not "jobs" in tables:
-            self.logger.info("creating rethinkdb table 'jobs' in database %s", repr(self.r.dbname))
-            self.r.table_create("jobs", shards=self.shards, replicas=self.replicas).run()
+            self.logger.info(
+                    "creating rethinkdb table 'jobs' in database %s",
+                    repr(self.r.dbname))
+            self.r.table_create(
+                    "jobs", shards=self.shards, replicas=self.replicas).run()
 
     def _vet_result(self, result, **kwargs):
         # self.logger.debug("vetting expected=%s result=%s", kwargs, result)

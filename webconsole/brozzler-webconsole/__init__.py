@@ -24,13 +24,22 @@ import sys
 import os
 import importlib
 import rethinkdb
+import logging
 
-# XXX flask does its own logging config
-# import logging
-# logging.basicConfig(stream=sys.stdout, level=logging.INFO,
-#         format="%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
+# flask does its own logging config
+# logging.basicConfig(
+#         stream=sys.stdout, level=logging.INFO,
+#         format=(
+#             "%(asctime)s %(process)d %(levelname)s %(threadName)s "
+#             "%(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
 
 app = flask.Flask(__name__)
+
+# http://stackoverflow.com/questions/26578733/why-is-flask-application-not-creating-any-logs-when-hosted-by-gunicorn
+gunicorn_error_logger = logging.getLogger('gunicorn.error')
+app.logger.handlers.extend(gunicorn_error_logger.handlers)
+app.logger.setLevel(logging.INFO)
+app.logger.info('will this show in the log?')
 
 # configure with environment variables
 SETTINGS = {
@@ -82,9 +91,8 @@ def pages(site_id):
     start = int(flask.request.args.get("start", 0))
     end = int(flask.request.args.get("end", start + 90))
     pages_ = r.table("pages").between(
-            [site_id, 1, False, r.minval],
-            [site_id, r.maxval, False, r.maxval],
-            index="priority_by_site")[start:end].run()
+            [site_id, 1, r.minval], [site_id, r.maxval, r.maxval],
+            index="least_hops").order_by(index="least_hops")[start:end].run()
     return flask.jsonify(pages=list(pages_))
 
 @app.route("/api/sites/<site_id>")
