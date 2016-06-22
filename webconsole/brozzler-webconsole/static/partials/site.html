@@ -40,12 +40,22 @@
         <div class="col-sm-12">
             <h2>Pages</h2>
             <div class="col-sm-6 col-md-4" ng-repeat="page in pages">
-                <a class="thumbnail" href="{{config.WAYBACK_BASEURL}}/3/{{page.url}}">
-                    <img style="width:300px;height:190px" src="{{config.WAYBACK_BASEURL}}/3/thumbnail:{{page.url}}" alt="thumb">
+                <div class="thumbnail">
+                    <img style="border:1px solid #ddd;width:300px;height:190px" src="{{config.WAYBACK_BASEURL}}/3/thumbnail:{{page.url}}" alt="thumb">
                     <div class="caption">
                         <h5>{{page.url}}</h5>
+                        <ul class="fa-ul">
+                            <li>
+                            <span class="fa fa-li fa-camera"></span>
+                            <a target="_blank" href="{{config.WAYBACK_BASEURL}}/3/screenshot:{{page.url}}">full size screenshot &gt;</a>
+                            </li>
+                            <li>
+                            <span class="fa fa-li fa-university"></span>
+                            <a target="_blank" href="{{config.WAYBACK_BASEURL}}/3/{{page.url}}">wayback &gt;</a>
+                            </li>
+                        </ul>
                     </div>
-                </a>
+                </div>
             </div>
         </div>
         <div class="col-sm-12" ng-show="loading">
