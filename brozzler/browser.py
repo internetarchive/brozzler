@@ -408,7 +408,8 @@ compileOutlinks(window).join(' ');
             self._waiting_on_scroll_to_top_msg_id = None
         elif message["id"] == self._waiting_on_outlinks_msg_id:
             self.logger.debug("got outlinks message=%s", message)
-            self._outlinks = frozenset(message["result"]["result"]["value"].split(" "))
+            self._outlinks = frozenset(
+                    message["result"]["result"]["value"].split())
         elif message["id"] == self._waiting_on_document_url_msg_id:
             if message["result"]["result"]["value"] != self.url:
                 if self.on_url_change:
