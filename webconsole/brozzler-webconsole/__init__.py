@@ -1,21 +1,21 @@
-#
-# brozzler-webconsole/__init__.py - flask app for brozzler web console, defines
-# api endspoints etc
-#
-# Copyright (C) 2014-2016 Internet Archive
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+'''
+brozzler-webconsole/__init__.py - flask app for brozzler web console, defines
+api endspoints etc
+
+Copyright (C) 2014-2016 Internet Archive
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+'''
 
 import flask
 import rethinkstuff
@@ -25,6 +25,7 @@ import os
 import importlib
 import rethinkdb
 import logging
+import yaml
 
 # flask does its own logging config
 # logging.basicConfig(
@@ -90,6 +91,7 @@ def pages(site_id):
     app.logger.info("flask.request.args=%s", flask.request.args)
     start = int(flask.request.args.get("start", 0))
     end = int(flask.request.args.get("end", start + 90))
+    app.logger.info("yes new query")
     pages_ = r.table("pages").between(
             [site_id, 1, r.minval], [site_id, r.maxval, r.maxval],
             index="least_hops").order_by(index="least_hops")[start:end].run()
@@ -117,6 +119,14 @@ def sites(job_id):
 def job(job_id):
     job_ = r.table("jobs").get(job_id).run()
     return flask.jsonify(job_)
+
+@app.route("/api/jobs/<int:job_id>/yaml")
+@app.route("/api/job/<int:job_id>/yaml")
+def job_yaml(job_id):
+    job_ = r.table("jobs").get(job_id).run()
+    return app.response_class(
+            yaml.dump(job_, default_flow_style=False),
+            mimetype='application/yaml')
 
 @app.route("/api/workers")
 def workers():

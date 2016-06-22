@@ -137,6 +137,7 @@ function loadSiteStats($http, site, job) {
 
 brozzlerControllers.controller("JobController", ["$scope", "$routeParams", "$http",
     function($scope, $routeParams, $http) {
+        $scope.show_yaml = false;
         // console.log('JobController');
         $http.get("/api/config").success(function(data) {
             $scope.config = data.config;
@@ -157,6 +158,9 @@ brozzlerControllers.controller("JobController", ["$scope", "$routeParams", "$htt
                     loadSiteStats($http, $scope.sites[i], $scope.job);
                 }
             });
+        });
+        $http.get("/api/jobs/" + $routeParams.id + "/yaml").success(function(data) {
+            $scope.job_yaml = data;
         });
     }]);
 

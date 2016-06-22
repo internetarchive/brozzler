@@ -10,7 +10,12 @@
 </div>
 
 <div>
-    <h2>Job {{job.id}} <small>{{job.started}}-{{job.finished}} {{job.status}}</small></h2>
+    <h2 ng-click="show_yaml = !show_yaml">
+        <span class="fa fa-caret-right"
+            ng-class="{ 'fa-caret-right': !show_yaml, 'fa-caret-down': !!show_yaml }"></span>
+        Job {{job.id}} <small>{{job.started}}-{{job.finished}}: {{job.status}}</small>
+    </h2>
+    <pre style="display:{{show_yaml?'block':'none'}}">{{job_yaml}}</pre>
 
     <div class="row bigstats">
         <div class="col-sm-6 col-md-3">
