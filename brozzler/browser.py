@@ -1,21 +1,21 @@
-#
-# brozzler/browser.py - classes responsible for running web browsers
-# (chromium/chromium) and browsing web pages in them
-#
-# Copyright (C) 2014-2016 Internet Archive
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+'''
+brozzler/browser.py - classes responsible for running web browsers
+(chromium/chromium) and browsing web pages in them
+
+Copyright (C) 2014-2016 Internet Archive
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+'''
 
 import logging
 import json
@@ -58,7 +58,10 @@ class BrowserPool:
         self.logger.info("browser ports: {}".format([browser.chrome_port for browser in self._available]))
 
     def acquire(self):
-        """Returns browser from pool if available, raises NoBrowsersAvailable otherwise."""
+        """
+        Returns browser from pool if available, raises NoBrowsersAvailable
+        otherwise.
+        """
         with self._lock:
             try:
                 browser = self._available.pop()
@@ -277,10 +280,22 @@ class Browser:
             self.logger.info("retrieving outlinks for %s", self.url)
             self._waiting_on_outlinks_msg_id = self.send_to_chrome(
                     method="Runtime.evaluate",
-                    params={"expression":"Array.prototype.slice.call(document.querySelectorAll('a[href]')).join(' ')"})
+                    params={"expression": self.OUTLINKS_JS})
             return False
         else: # self._waiting_on_outlinks_msg_id
             return False
+
+    OUTLINKS_JS = """
+var compileOutlinks = function(frame) {
+    var outlinks = Array.prototype.slice.call(
+            frame.document.querySelectorAll('a[href]'));
+    for (var i = 0; i < frame.frames.length; i++) {
+        outlinks = outlinks.concat(compileOutlinks(frame.frames[i]));
+    }
+    return outlinks;
+}
+compileOutlinks(window).join(' ');
+"""
 
     def _browse_interval_func(self):
         """Called periodically while page is being browsed. Returns True when
@@ -393,7 +408,8 @@ class Browser:
             self._waiting_on_scroll_to_top_msg_id = None
         elif message["id"] == self._waiting_on_outlinks_msg_id:
             self.logger.debug("got outlinks message=%s", message)
-            self._outlinks = frozenset(message["result"]["result"]["value"].split(" "))
+            self._outlinks = frozenset(
+                    message["result"]["result"]["value"].split())
         elif message["id"] == self._waiting_on_document_url_msg_id:
             if message["result"]["result"]["value"] != self.url:
                 if self.on_url_change:

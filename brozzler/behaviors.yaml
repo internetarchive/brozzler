@@ -98,6 +98,10 @@ behaviors:
       click_css_selector: button[data-more-results-bottom-button]
       click_until_hard_timeout: True
    request_idle_timeout_sec: 10
+ - # https://webarchive.jira.com/browse/ARI-4692
+   url_regex: '^https?://(?:www\.)?fec.gov/data/.*$'
+   behavior_js: fec_gov.js
+   request_idle_timeout_sec: 10
  - # default fallback behavior
    url_regex: '^.*$'
    request_idle_timeout_sec: 10

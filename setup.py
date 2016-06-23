@@ -19,10 +19,11 @@
 import setuptools
 import glob
 
-setuptools.setup(name='brozzler',
-        version='1.1.dev10',
+setuptools.setup(
+        name='brozzler',
+        version='1.1.dev20',
         description='Distributed web crawling with browsers',
-        url='https://github.com/nlevitt/brozzler',
+        url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
         author_email='nlevitt@archive.org',
         long_description=open('README.rst', encoding='UTF-8').read(),
@@ -41,10 +42,10 @@ setuptools.setup(name='brozzler',
             'rethinkstuff',
             'rethinkdb>=2.3,<2.4',
             'psutil',
-            ],
+        ],
         zip_safe=False,
         classifiers=[
-            'Development Status :: 3 - Alpha',
+            'Development Status :: 4 - Beta',
             'Environment :: Console',
             'License :: OSI Approved :: Apache Software License',
             'Programming Language :: Python :: 3.4',

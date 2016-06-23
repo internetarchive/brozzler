@@ -27,6 +27,7 @@ import re
 import rethinkstuff
 import warnings
 import requests
+import json
 
 arg_parser = argparse.ArgumentParser(prog=os.path.basename(__file__),
         description="brozzler-new-site - register site to brozzle",
@@ -63,7 +64,7 @@ site = brozzler.Site(
         time_limit=int(args.time_limit) if args.time_limit else None,
         ignore_robots=args.ignore_robots,
         enable_warcprox_features=args.enable_warcprox_features,
-        warcprox_meta=json.loads(args.warcprox_meta))
+        warcprox_meta=json.loads(args.warcprox_meta) if args.warcprox_meta else None)
 
 r = rethinkstuff.Rethinker(args.rethinkdb_servers.split(","), args.rethinkdb_db)
 frontier = brozzler.RethinkDbFrontier(r)

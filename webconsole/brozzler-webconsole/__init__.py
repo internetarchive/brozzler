@@ -1,21 +1,21 @@
-#
-# brozzler-webconsole/__init__.py - flask app for brozzler web console, defines
-# api endspoints etc
-#
-# Copyright (C) 2014-2016 Internet Archive
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+'''
+brozzler-webconsole/__init__.py - flask app for brozzler web console, defines
+api endspoints etc
+
+Copyright (C) 2014-2016 Internet Archive
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+'''
 
 import flask
 import rethinkstuff
@@ -24,16 +24,26 @@ import sys
 import os
 import importlib
 import rethinkdb
+import logging
+import yaml
 
-# XXX flask does its own logging config
-# import logging
-# logging.basicConfig(stream=sys.stdout, level=logging.INFO,
-#         format="%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
+# flask does its own logging config
+# logging.basicConfig(
+#         stream=sys.stdout, level=logging.INFO,
+#         format=(
+#             "%(asctime)s %(process)d %(levelname)s %(threadName)s "
+#             "%(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s")
 
 app = flask.Flask(__name__)
 
+# http://stackoverflow.com/questions/26578733/why-is-flask-application-not-creating-any-logs-when-hosted-by-gunicorn
+gunicorn_error_logger = logging.getLogger('gunicorn.error')
+app.logger.handlers.extend(gunicorn_error_logger.handlers)
+app.logger.setLevel(logging.INFO)
+app.logger.info('will this show in the log?')
+
 # configure with environment variables
-SETTINGS= {
+SETTINGS = {
     'RETHINKDB_SERVERS': os.environ.get(
         'RETHINKDB_SERVERS', 'localhost').split(','),
     'RETHINKDB_DB': os.environ.get('RETHINKDB_DB', 'brozzler'),
@@ -81,10 +91,10 @@ def pages(site_id):
     app.logger.info("flask.request.args=%s", flask.request.args)
     start = int(flask.request.args.get("start", 0))
     end = int(flask.request.args.get("end", start + 90))
+    app.logger.info("yes new query")
     pages_ = r.table("pages").between(
-            [site_id, 1, False, r.minval],
-            [site_id, r.maxval, False, r.maxval],
-            index="priority_by_site")[start:end].run()
+            [site_id, 1, r.minval], [site_id, r.maxval, r.maxval],
+            index="least_hops").order_by(index="least_hops")[start:end].run()
     return flask.jsonify(pages=list(pages_))
 
 @app.route("/api/sites/<site_id>")
@@ -109,6 +119,14 @@ def sites(job_id):
 def job(job_id):
     job_ = r.table("jobs").get(job_id).run()
     return flask.jsonify(job_)
+
+@app.route("/api/jobs/<int:job_id>/yaml")
+@app.route("/api/job/<int:job_id>/yaml")
+def job_yaml(job_id):
+    job_ = r.table("jobs").get(job_id).run()
+    return app.response_class(
+            yaml.dump(job_, default_flow_style=False),
+            mimetype='application/yaml')
 
 @app.route("/api/workers")
 def workers():
