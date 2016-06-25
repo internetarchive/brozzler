@@ -1,5 +1,5 @@
 /*
- * brozzler/behaviors.d/clickGetPDFs.js.template - click on each of several elements and
+ * brozzler/behaviors.d/clickGetPDFs.js.template - WIP click on each of several elements and
  * click on linked PDFs found
  *
  * Copyright (C) 2014-2016 Internet Archive
@@ -76,7 +76,7 @@ var umbraIntervalFunc = function() {
 				if (!(pdfID in umbraAlreadyClicked)){
 					var where = umbraAboveBelowOrOnScreen(pdfTargets[i]);
 					if (where === 0) {
-						pdfTargets[i].setAttribute('download','');
+						// pdfTargets[i].setAttribute('download','');  // umbra ignores downloads
 						var mouseOverEvent = document.createEvent('Events');
 						mouseOverEvent.initEvent("mouseover", true, false);
 						pdfTargets[i].dispatchEvent(mouseOverEvent);
