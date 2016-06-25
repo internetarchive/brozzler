@@ -20,6 +20,8 @@ archiving.
 Installation
 ------------
 
+Brozzler requires python 3.4 or later.
+
 ::
 
     # set up virtualenv if desired
