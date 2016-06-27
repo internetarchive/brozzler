@@ -21,7 +21,7 @@ import glob
 
 setuptools.setup(
         name='brozzler',
-        version='1.1.dev20',
+        version='1.1.dev21',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
@@ -31,6 +31,11 @@ setuptools.setup(
         packages=['brozzler'],
         package_data={'brozzler': ['behaviors.d/*.js*', 'behaviors.yaml']},
         scripts=glob.glob('bin/*'),
+        entry_points={
+            'console_scripts': [
+                'brozzler-webconsole = brozzler.webconsole:run',
+            ],
+        },
         install_requires=[
             'PyYAML',
             'youtube-dl',
@@ -38,11 +43,15 @@ setuptools.setup(
             'requests',
             'websocket-client',
             'pillow',
-            'surt>=0.3b2',
-            'rethinkstuff',
+            'surt>=0.3.0',
+            'rethinkstuff>=0.1.5',
             'rethinkdb>=2.3,<2.4',
             'psutil',
         ],
+        extras_require={
+            'webconsole': ['flask>=0.11', 'gunicorn'],
+            # 'brozzler-easy': ['warcprox', 'pywb'],
+        },
         zip_safe=False,
         classifiers=[
             'Development Status :: 4 - Beta',
