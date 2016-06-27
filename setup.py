@@ -1,27 +1,27 @@
-#
-# setup.py - brozzler setup script
-#
-# Copyright (C) 2014-2016 Internet Archive
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+#!/usr/bin/env python
+'''
+setup.py - brozzler setup script
+
+Copyright (C) 2014-2016 Internet Archive
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+'''
 
 import setuptools
-import glob
 
 setuptools.setup(
         name='brozzler',
-        version='1.1.dev21',
+        version='1.1.dev22',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
@@ -30,10 +30,13 @@ setuptools.setup(
         license='Apache License 2.0',
         packages=['brozzler'],
         package_data={'brozzler': ['behaviors.d/*.js*', 'behaviors.yaml']},
-        scripts=glob.glob('bin/*'),
         entry_points={
             'console_scripts': [
-                'brozzler-webconsole = brozzler.webconsole:run',
+                'brozzle-page=brozzler.cli:brozzle_page',
+                'brozzler-new-job=brozzler.cli:brozzler_new_job',
+                'brozzler-new-site=brozzler.cli:brozzler_new_site',
+                'brozzler-worker=brozzler.cli:brozzler_worker',
+                'brozzler-webconsole=brozzler.webconsole:run',
             ],
         },
         install_requires=[

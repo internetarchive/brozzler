@@ -1,5 +1,5 @@
 '''
-brozzler-webconsole/__init__.py - flask app for brozzler web console, defines
+brozzler/webconsole/__init__.py - flask app for brozzler web console, defines
 api endspoints etc
 
 Copyright (C) 2014-2016 Internet Archive
