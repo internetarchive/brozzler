@@ -273,7 +273,7 @@ class Browser:
                 or self._waiting_on_screenshot_msg_id):
             return False
 
-        if self._outlinks:
+        if self._outlinks is not None:
             self.logger.info("got outlinks, finished browsing %s", self.url)
             return True
         elif not self._waiting_on_outlinks_msg_id:
