@@ -1,20 +1,20 @@
-#
-# brozzler/site.py - classes representing sites and pages
-#
-# Copyright (C) 2014-2016 Internet Archive
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+'''
+brozzler/site.py - classes representing sites and pages
+
+Copyright (C) 2014-2016 Internet Archive
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+'''
 
 import surt
 import json
@@ -170,7 +170,7 @@ class Site(brozzler.BaseDictable):
         Examples of valid rules:
         [
             {
-                "host": "monkey.org",
+                "domain": "monkey.org",
                 "url_match": "STRING_MATCH",
                 "value": "bar",
             },
@@ -179,7 +179,7 @@ class Site(brozzler.BaseDictable):
                 "value": "http://(com,woop,)/fuh/",
             },
             {
-                "host": "badhost.com",
+                "domain": "bad.domain.com",
             },
         ]
         """
@@ -188,7 +188,7 @@ class Site(brozzler.BaseDictable):
         else:
             u = url
 
-        if "host" in rule and not u.matches_ip_or_domain(rule["host"]):
+        if "domain" in rule and not u.matches_ip_or_domain(rule["domain"]):
             return False
         if "url_match" in rule:
             if rule["url_match"] == "STRING_MATCH":
@@ -207,7 +207,7 @@ class Site(brozzler.BaseDictable):
                 self.logger.warn("invalid rule.url_match=%s", rule.url_match)
                 return False
         else:
-            if "host" in rule:
+            if "domain" in rule:
                 # we already know that it matches from earlier check
                 return True
             else:
