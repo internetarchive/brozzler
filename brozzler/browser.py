@@ -290,7 +290,9 @@ var compileOutlinks = function(frame) {
     var outlinks = Array.prototype.slice.call(
             frame.document.querySelectorAll('a[href]'));
     for (var i = 0; i < frame.frames.length; i++) {
-        outlinks = outlinks.concat(compileOutlinks(frame.frames[i]));
+        if (frame.frames[i]) { // sometimes undefined (why?)
+            outlinks = outlinks.concat(compileOutlinks(frame.frames[i]));
+        }
     }
     return outlinks;
 }
