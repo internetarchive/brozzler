@@ -127,8 +127,11 @@ function loadSiteStats($http, site, job) {
 
     // look at Warcprox-Meta to find stats bucket
     for (var j = 0; j < site.warcprox_meta.stats.buckets.length; j++) {
-        if (site.warcprox_meta.stats.buckets[j].indexOf("seed") >= 0) {
-            var bucket = site.warcprox_meta.stats.buckets[j];
+        var bucket = site.warcprox_meta.stats.buckets[j];
+        if (typeof(bucket) == "object") {
+            bucket = bucket["bucket"];
+        }
+        if (bucket.indexOf("seed") >= 0) {
             // console.log("warcprox_meta.stats.buckets[" + j + "]=" + bucket);
             $http.get("/api/stats/" + bucket).success(statsSuccessCallback(site, bucket));
         }
@@ -146,7 +149,11 @@ brozzlerControllers.controller("JobController", ["$scope", "$routeParams", "$htt
             $scope.job = data;
             $scope.job.page_count = $scope.job.queued_count = 0;
             // console.log("job=", $scope.job);
-            $http.get("/api/stats/" + $scope.job.conf.warcprox_meta.stats.buckets[0]).success(function(data) {
+            var bucket = $scope.job.conf.warcprox_meta.stats.buckets[0];
+            if (typeof(bucket) == "object") {
+                bucket = bucket["bucket"];
+            }
+            $http.get("/api/stats/" + bucket).success(function(data) {
                 $scope.job.stats = data;
                 // console.log("job stats=", $scope.job.stats);
             });

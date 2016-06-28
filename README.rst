@@ -20,6 +20,8 @@ archiving.
 Installation
 ------------
 
+Brozzler requires python 3.4 or later.
+
 ::
 
     # set up virtualenv if desired
@@ -67,6 +69,26 @@ must be specified, everything else is optional.
         ignore_robots: true
         scope:
           surt: http://(org,example,
+
+Brozzler Web Console
+--------------------
+
+Brozzler comes with a rudimentary web application for viewing crawl job status.
+To install the brozzler with dependencies required to run this app, run
+
+::
+
+    pip install brozzler[webconsole]
+
+
+To start the app, run
+
+::
+
+    brozzler-webconsole
+
+
+XXX configuration stuff
 
 Fonts (for decent screenshots)
 ------------------------------

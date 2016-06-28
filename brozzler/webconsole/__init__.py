@@ -1,5 +1,5 @@
 '''
-brozzler-webconsole/__init__.py - flask app for brozzler web console, defines
+brozzler/webconsole/__init__.py - flask app for brozzler web console, defines
 api endspoints etc
 
 Copyright (C) 2014-2016 Internet Archive
@@ -17,14 +17,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-import flask
+import logging
+import sys
+try:
+    import flask
+except ImportError as e:
+    logging.critical(
+            '%s: %s\n\nYou might need to run "pip install '
+            'brozzler[webconsole]".\nSee README.rst for more information.',
+            type(e).__name__, e)
+    sys.exit(1)
+
 import rethinkstuff
 import json
-import sys
 import os
 import importlib
 import rethinkdb
-import logging
 import yaml
 
 # flask does its own logging config
@@ -157,6 +165,36 @@ def api404(path):
 def root(path):
     return flask.render_template("index.html")
 
+try:
+    import gunicorn.app.base
+    from gunicorn.six import iteritems
+
+    class GunicornBrozzlerWebConsole(gunicorn.app.base.BaseApplication):
+        def __init__(self, app, options=None):
+            self.options = options or {}
+            self.application = app
+            super(GunicornBrozzlerWebConsole, self).__init__()
+
+        def load_config(self):
+            config = dict(
+                    [(key, value) for key, value in iteritems(self.options)
+                        if key in self.cfg.settings and value is not None])
+            for key, value in iteritems(config):
+                self.cfg.set(key.lower(), value)
+
+        def load(self):
+            return self.application
+
+    def run(**options):
+        logging.info('running brozzler-webconsole using gunicorn')
+        GunicornBrozzlerWebConsole(app, options).run()
+
+except ImportError:
+    def run():
+        logging.info('running brozzler-webconsole using simple flask app.run')
+        app.run()
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8081, debug=True)
+    # arguments?
+    run()
 
