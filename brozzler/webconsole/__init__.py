@@ -165,7 +165,6 @@ def api404(path):
 def root(path):
     return flask.render_template("index.html")
 
-import pdb; pdb.set_trace()
 try:
     import gunicorn.app.base
     from gunicorn.six import iteritems
@@ -187,13 +186,11 @@ try:
             return self.application
 
     def run(**options):
-        import pdb; pdb.set_trace()
         logging.info('running brozzler-webconsole using gunicorn')
         GunicornBrozzlerWebConsole(app, options).run()
 
 except ImportError:
     def run():
-        import pdb; pdb.set_trace()
         logging.info('running brozzler-webconsole using simple flask app.run')
         app.run()
 
