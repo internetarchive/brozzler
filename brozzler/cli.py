@@ -108,7 +108,6 @@ def brozzle_page():
             enable_warcprox_features=args.enable_warcprox_features)
     page = brozzler.Page(url=args.url, site_id=site.id)
     worker = brozzler.BrozzlerWorker(frontier=None)
-    ydl = worker._youtube_dl(site)
 
     def on_screenshot(screenshot_png):
         OK_CHARS = (string.ascii_letters + string.digits)
@@ -124,7 +123,7 @@ def brozzle_page():
     browser.start(proxy=site.proxy)
     try:
         outlinks = worker.brozzle_page(
-                browser, ydl, site, page, on_screenshot=on_screenshot)
+                browser, site, page, on_screenshot=on_screenshot)
         logging.info('outlinks: \n\t%s', '\n\t'.join(sorted(outlinks)))
     except brozzler.ReachedLimit as e:
         logging.error('reached limit %s', e)

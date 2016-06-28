@@ -1,22 +1,22 @@
-#
-# brozzler/worker.py - BrozzlerWorker brozzles pages from the frontier, meaning
-# it runs youtube-dl on them, browses them and runs behaviors if appropriate,
-# scopes and adds outlinks to the frontier
-#
-# Copyright (C) 2014-2016 Internet Archive
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+'''
+brozzler/worker.py - BrozzlerWorker brozzles pages from the frontier, meaning
+it runs youtube-dl on them, browses them and runs behaviors if appropriate,
+scopes and adds outlinks to the frontier
+
+Copyright (C) 2014-2016 Internet Archive
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+'''
 
 import os
 import logging
@@ -35,6 +35,7 @@ import datetime
 import collections
 import requests
 import rethinkstuff
+import tempfile
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
@@ -101,9 +102,9 @@ class BrozzlerWorker:
                 chrome_exe=chrome_exe, ignore_cert_errors=True)
         self._shutdown_requested = threading.Event()
 
-    def _youtube_dl(self, site):
+    def _youtube_dl(self, destdir, site):
         ydl_opts = {
-            "outtmpl": "/dev/null",
+            "outtmpl": "{}/ydl%(autonumber)s.out".format(destdir),
             "verbose": False,
             "retries": 1,
             "logger": logging.getLogger("youtube_dl"),
@@ -194,7 +195,7 @@ class BrozzlerWorker:
 
         return full_jpeg, thumb_jpeg
 
-    def brozzle_page(self, browser, ydl, site, page, on_screenshot=None):
+    def brozzle_page(self, browser, site, page, on_screenshot=None):
         def _on_screenshot(screenshot_png):
             if on_screenshot:
                 on_screenshot(screenshot_png)
@@ -215,16 +216,18 @@ class BrozzlerWorker:
                         extra_headers=site.extra_headers())
 
         self.logger.info("brozzling {}".format(page))
-        ydl.brozzler_spy.reset()
         try:
-            self._try_youtube_dl(ydl, site, page)
+            with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
+                ydl = self._youtube_dl(tempdir, site)
+                ydl_spy = ydl.brozzler_spy # remember for later
+                self._try_youtube_dl(ydl, site, page)
         except brozzler.ReachedLimit as e:
             raise
         except:
             self.logger.error("youtube_dl raised exception on %s",
                               page, exc_info=True)
 
-        if self._needs_browsing(page, ydl.brozzler_spy):
+        if self._needs_browsing(page, ydl_spy):
             self.logger.info('needs browsing: %s', page)
             if not browser.is_running():
                 browser.start(proxy=site.proxy)
@@ -234,7 +237,7 @@ class BrozzlerWorker:
                     on_url_change=page.note_redirect)
             return outlinks
         else:
-            if not self._already_fetched(page, ydl.brozzler_spy):
+            if not self._already_fetched(page, ydl_spy):
                 self.logger.info('needs fetch: %s', page)
                 self._fetch_url(site, page)
             else:
@@ -272,7 +275,7 @@ class BrozzlerWorker:
                 return True
         return False
 
-    def _brozzle_site(self, browser, ydl, site):
+    def _brozzle_site(self, browser, site):
         start = time.time()
         page = None
         try:
@@ -282,7 +285,7 @@ class BrozzlerWorker:
                 page = self._frontier.claim_page(site,
                         "{}:{}".format(
                             socket.gethostname(), browser.chrome_port))
-                outlinks = self.brozzle_page(browser, ydl, site, page)
+                outlinks = self.brozzle_page(browser, site, page)
                 self._frontier.completed_page(site, page)
                 self._frontier.scope_and_schedule_outlinks(site, page, outlinks)
                 page = None
@@ -337,10 +340,9 @@ class BrozzlerWorker:
                         site = self._frontier.claim_site("{}:{}".format(
                             socket.gethostname(), browser.chrome_port))
                         self.logger.info("brozzling site %s", site)
-                        ydl = self._youtube_dl(site)
                         th = threading.Thread(
                                 target=lambda: self._brozzle_site(
-                                    browser, ydl, site),
+                                    browser, site),
                                 name="BrowsingThread:{}-{}".format(
                                     browser.chrome_port, site.seed))
                         th.start()
