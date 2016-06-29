@@ -64,6 +64,9 @@ class BaseDictable:
     def __repr__(self):
         return "{}(**{})".format(self.__class__.__name__, self.to_dict())
 
+# logging level more fine-grained than logging.DEBUG==10
+TRACE = 5
+
 from brozzler.site import Page, Site
 from brozzler.worker import BrozzlerWorker
 from brozzler.robots import is_permitted_by_robots
