@@ -233,6 +233,8 @@ class RethinkDbFrontier:
             yield brozzler.Job(**result)
 
     def job(self, id):
+        if id is None:
+            return None
         result = self.r.table("jobs").get(id).run()
         if result:
             return brozzler.Job(**result)
