@@ -55,8 +55,6 @@ class BrowserPool:
 
         self._lock = threading.Lock()
 
-        self.logger.info("browser ports: {}".format([browser.chrome_port for browser in self._available]))
-
     def acquire(self):
         """
         Returns browser from pool if available, raises NoBrowsersAvailable
@@ -464,7 +462,7 @@ class Chrome:
 
     # returns websocket url to chrome window with about:blank loaded
     def start(self):
-        timeout_sec = 20
+        timeout_sec = 600
         new_env = os.environ.copy()
         new_env["HOME"] = self.user_home_dir
         chrome_args = [
