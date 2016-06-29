@@ -185,10 +185,19 @@ class RethinkDbFrontier:
             return False
 
     def claim_page(self, site, worker_id):
-        result = (self.r.table("pages")
-                .between([site.id, 0, False, self.r.minval], [site.id, 0, False, self.r.maxval], index="priority_by_site")
-                .order_by(index=rethinkdb.desc("priority_by_site")).limit(1)
-                .update({"claimed":True,"last_claimed_by":worker_id},return_changes=True)).run()
+        # ignores the "claimed" field of the page, because only one
+        # brozzler-worker can be working on a site at a time, and that would
+        # have to be the worker calling this method, so if something is claimed
+        # already, it must have been left that way because of some error
+        result = self.r.table("pages").between(
+                [site.id, 0, self.r.minval, self.r.minval],
+                [site.id, 0, self.r.maxval, self.r.maxval],
+                index="priority_by_site").order_by(
+                        index=rethinkdb.desc("priority_by_site")).limit(
+                                1).update({
+                                    "claimed":True,
+                                    "last_claimed_by":worker_id},
+                                    return_changes=True).run()
         self._vet_result(result, replaced=[0,1])
         if result["replaced"] == 1:
             return brozzler.Page(**result["changes"][0]["new_val"])
@@ -196,7 +205,10 @@ class RethinkDbFrontier:
             raise brozzler.NothingToClaim
 
     def has_outstanding_pages(self, site):
-        results_iter = self.r.table("pages").between([site.id, 0, False, self.r.minval], [site.id, 0, True, self.r.maxval], index="priority_by_site").limit(1).run()
+        results_iter = self.r.table("pages").between(
+                [site.id, 0, self.r.minval, self.r.minval],
+                [site.id, 0, self.r.maxval, self.r.maxval],
+                index="priority_by_site").limit(1).run()
         return len(list(results_iter)) > 0
 
     def page(self, id):
