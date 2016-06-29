@@ -223,9 +223,15 @@ class BrozzlerWorker:
                 self._try_youtube_dl(ydl, site, page)
         except brozzler.ReachedLimit as e:
             raise
-        except:
-            self.logger.error("youtube_dl raised exception on %s",
-                              page, exc_info=True)
+        except Exception as e:
+            if (hasattr(e, 'exc_info') and len(e.exc_info) >= 2
+                    and e.exc_info[1].code == 430):
+                self.logger.info(
+                        'youtube-dl got %s %s processing %s',
+                        e.exc_info[1].code, e.exc_info[1].msg, page.url)
+            else:
+                self.logger.error(
+                        "youtube_dl raised exception on %s", page, exc_info=True)
 
         if self._needs_browsing(page, ydl_spy):
             self.logger.info('needs browsing: %s', page)

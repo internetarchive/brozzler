@@ -1,20 +1,20 @@
-#
-# brozzler/frontier.py - RethinkDbFrontier manages crawl jobs, sites and pages
-#
-# Copyright (C) 2014-2016 Internet Archive
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+'''
+brozzler/frontier.py - RethinkDbFrontier manages crawl jobs, sites and pages
+
+Copyright (C) 2014-2016 Internet Archive
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+'''
 
 import logging
 import brozzler
@@ -68,8 +68,8 @@ class RethinkDbFrontier:
             # console
             self.r.table("pages").index_create(
                     "least_hops", [
-                        r.row["site_id"], r.row["brozzle_count"],
-                        r.row["hops_from_seed"]])
+                        self.r.row["site_id"], self.r.row["brozzle_count"],
+                        self.r.row["hops_from_seed"]])
         if not "jobs" in tables:
             self.logger.info(
                     "creating rethinkdb table 'jobs' in database %s",
@@ -185,10 +185,19 @@ class RethinkDbFrontier:
             return False
 
     def claim_page(self, site, worker_id):
-        result = (self.r.table("pages")
-                .between([site.id, 0, False, self.r.minval], [site.id, 0, False, self.r.maxval], index="priority_by_site")
-                .order_by(index=rethinkdb.desc("priority_by_site")).limit(1)
-                .update({"claimed":True,"last_claimed_by":worker_id},return_changes=True)).run()
+        # ignores the "claimed" field of the page, because only one
+        # brozzler-worker can be working on a site at a time, and that would
+        # have to be the worker calling this method, so if something is claimed
+        # already, it must have been left that way because of some error
+        result = self.r.table("pages").between(
+                [site.id, 0, self.r.minval, self.r.minval],
+                [site.id, 0, self.r.maxval, self.r.maxval],
+                index="priority_by_site").order_by(
+                        index=rethinkdb.desc("priority_by_site")).limit(
+                                1).update({
+                                    "claimed":True,
+                                    "last_claimed_by":worker_id},
+                                    return_changes=True).run()
         self._vet_result(result, replaced=[0,1])
         if result["replaced"] == 1:
             return brozzler.Page(**result["changes"][0]["new_val"])
@@ -196,7 +205,10 @@ class RethinkDbFrontier:
             raise brozzler.NothingToClaim
 
     def has_outstanding_pages(self, site):
-        results_iter = self.r.table("pages").between([site.id, 0, False, self.r.minval], [site.id, 0, True, self.r.maxval], index="priority_by_site").limit(1).run()
+        results_iter = self.r.table("pages").between(
+                [site.id, 0, self.r.minval, self.r.minval],
+                [site.id, 0, self.r.maxval, self.r.maxval],
+                index="priority_by_site").limit(1).run()
         return len(list(results_iter)) > 0
 
     def page(self, id):
