@@ -225,6 +225,7 @@ class BrozzlerWorker:
             raise
         except Exception as e:
             if (hasattr(e, 'exc_info') and len(e.exc_info) >= 2
+                    and hasattr(e.exc_info[1], 'code')
                     and e.exc_info[1].code == 430):
                 self.logger.info(
                         'youtube-dl got %s %s processing %s',
