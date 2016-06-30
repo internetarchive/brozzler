@@ -21,7 +21,7 @@ import setuptools
 
 setuptools.setup(
         name='brozzler',
-        version='1.1.dev41',
+        version='1.1.dev42',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
