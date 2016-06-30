@@ -70,6 +70,14 @@ must be specified, everything else is optional.
         scope:
           surt: http://(org,example,
 
+Submit a Site to Crawl Without Configuring a Job
+------------------------------------------------
+
+::
+
+    brozzler-new-site --proxy=localhost:8000 --enable-warcprox-features \
+        --time-limit=600 http://example.com/
+
 Brozzler Web Console
 --------------------
 

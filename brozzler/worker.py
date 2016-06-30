@@ -225,6 +225,7 @@ class BrozzlerWorker:
             raise
         except Exception as e:
             if (hasattr(e, 'exc_info') and len(e.exc_info) >= 2
+                    and hasattr(e.exc_info[1], 'code')
                     and e.exc_info[1].code == 430):
                 self.logger.info(
                         'youtube-dl got %s %s processing %s',
@@ -288,9 +289,8 @@ class BrozzlerWorker:
             while (not self._shutdown_requested.is_set()
                    and time.time() - start < 7 * 60):
                 self._frontier.honor_stop_request(site.job_id)
-                page = self._frontier.claim_page(site,
-                        "{}:{}".format(
-                            socket.gethostname(), browser.chrome_port))
+                page = self._frontier.claim_page(site, "%s:%s" % (
+                    socket.gethostname(), browser.chrome_port))
                 outlinks = self.brozzle_page(browser, site, page)
                 self._frontier.completed_page(site, page)
                 self._frontier.scope_and_schedule_outlinks(site, page, outlinks)
@@ -326,8 +326,9 @@ class BrozzlerWorker:
 
         try:
             self.status_info = self._service_registry.heartbeat(status_info)
-            self.logger.debug(
-                    "status in service registry: %s", self.status_info)
+            self.logger.log(
+                    brozzler.TRACE, "status in service registry: %s",
+                    self.status_info)
         except rethinkdb.ReqlError as e:
             self.logger.error(
                     "failed to send heartbeat and update service registry "
@@ -337,7 +338,11 @@ class BrozzlerWorker:
         try:
             latest_state = None
             while not self._shutdown_requested.is_set():
-                if self._service_registry and (not hasattr(self, "status_info") or (rethinkstuff.utcnow() - self.status_info["last_heartbeat"]).total_seconds() > self.HEARTBEAT_INTERVAL):
+                if self._service_registry and (
+                        not hasattr(self, "status_info")
+                        or (rethinkstuff.utcnow() -
+                            self.status_info["last_heartbeat"]).total_seconds()
+                        > self.HEARTBEAT_INTERVAL):
                     self._service_heartbeat()
 
                 try:
@@ -357,7 +362,8 @@ class BrozzlerWorker:
                         raise
                 except brozzler.browser.NoBrowsersAvailable:
                     if latest_state != "browsers-busy":
-                        self.logger.info("all %s browsers are busy", self._max_browsers)
+                        self.logger.info(
+                                "all %s browsers are busy", self._max_browsers)
                         latest_state = "browsers-busy"
                 except brozzler.NothingToClaim:
                     if latest_state != "no-unclaimed-sites":

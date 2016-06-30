@@ -42,6 +42,9 @@ def _add_common_options(arg_parser):
             '-v', '--verbose', dest='log_level',
             action='store_const', default=logging.INFO, const=logging.DEBUG)
     arg_parser.add_argument(
+            '--trace', dest='log_level',
+            action='store_const', default=logging.INFO, const=brozzler.TRACE)
+    arg_parser.add_argument(
             '--version', action='version',
             version='brozzler %s - %s' % (
                 brozzler.__version__, os.path.basename(sys.argv[0])))
