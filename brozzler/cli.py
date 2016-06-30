@@ -39,11 +39,17 @@ import yaml
 
 def _add_common_options(arg_parser):
     arg_parser.add_argument(
+            '-q', '--quiet', dest='log_level',
+            action='store_const', default=logging.INFO, const=logging.WARN)
+    arg_parser.add_argument(
             '-v', '--verbose', dest='log_level',
             action='store_const', default=logging.INFO, const=logging.DEBUG)
     arg_parser.add_argument(
             '--trace', dest='log_level',
             action='store_const', default=logging.INFO, const=brozzler.TRACE)
+    # arg_parser.add_argument(
+    #         '-s', '--silent', dest='log_level',
+    #         action='store_const', default=logging.INFO, const=logging.CRITICAL)
     arg_parser.add_argument(
             '--version', action='version',
             version='brozzler %s - %s' % (
@@ -266,3 +272,30 @@ def brozzler_worker():
                 th.join()
 
     logging.info("brozzler-worker is all done, exiting")
+
+def brozzler_ensure_tables():
+    '''
+    Creates rethinkdb tables if they don't already exist. Brozzler
+    (brozzler-worker, brozzler-new-job, etc) normally creates the tables it
+    needs on demand at startup, but if multiple instances are starting up at
+    the same time, you can end up with duplicate broken tables. So it's a good
+    idea to use this utility at an early step when spinning up a cluster.
+    '''
+    arg_parser = argparse.ArgumentParser(
+            prog=os.path.basename(sys.argv[0]),
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    _add_rethinkdb_options(arg_parser)
+    _add_common_options(arg_parser)
+
+    args = arg_parser.parse_args(args=sys.argv[1:])
+    _configure_logging(args)
+
+    r = rethinkstuff.Rethinker(
+            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+
+    # services table
+    rethinkstuff.ServiceRegistry(r)
+
+    # sites, pages, jobs tables
+    brozzler.frontier.RethinkDbFrontier(r)
+
