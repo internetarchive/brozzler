@@ -131,13 +131,18 @@ class Browser:
             # these can raise exceptions
             self.chrome_port = self._find_available_port()
             self._work_dir = tempfile.TemporaryDirectory()
-            self._chrome_instance = Chrome(port=self.chrome_port,
-                    executable=self.chrome_exe,
+            self._chrome_instance = Chrome(
+                    port=self.chrome_port, executable=self.chrome_exe,
                     user_home_dir=self._work_dir.name,
-                    user_data_dir=os.sep.join([self._work_dir.name, "chrome-user-data"]),
+                    user_data_dir=os.sep.join([
+                        self._work_dir.name, "chrome-user-data"]),
                     ignore_cert_errors=self.ignore_cert_errors,
                     proxy=proxy or self.proxy)
-            self._websocket_url = self._chrome_instance.start()
+            try:
+                self._websocket_url = self._chrome_instance.start()
+            except:
+                self._chrome_instance = None
+                raise
 
     def stop(self):
         try:
