@@ -204,6 +204,7 @@ class Browser:
         self.behavior_parameters = behavior_parameters
 
         self._waiting_on_scroll_to_top_msg_id = None
+        self._waiting_on_scroll_to_top_start = None
         self._waiting_on_screenshot_msg_id = None
         self._waiting_on_document_url_msg_id = None
         self._waiting_on_outlinks_msg_id = None
@@ -270,7 +271,19 @@ class Browser:
             self._waiting_on_scroll_to_top_msg_id = self.send_to_chrome(
                     method="Runtime.evaluate",
                     params={"expression":"window.scrollTo(0, 0);"})
+            self._waiting_on_scroll_to_top_start = time.time()
             return False
+        elif (self._waiting_on_scroll_to_top_msg_id
+                and time.time() - self._waiting_on_scroll_to_top_start > 30):
+            # chromium bug? occasionally we get no scroll-to-top result message
+            self.logger.warn(
+                    "timed out after %.1fs waiting for scroll-to-top result "
+                    "message, requesting screenshot now",
+                    time.time() - self._waiting_on_scroll_to_top_start)
+            self._waiting_on_scroll_to_top_msg_id = None
+            self._waiting_on_scroll_to_top_start = None
+            self._waiting_on_screenshot_msg_id = self.send_to_chrome(
+                    method="Page.captureScreenshot")
         elif not self._has_screenshot and (
                 self._waiting_on_scroll_to_top_msg_id
                 or self._waiting_on_screenshot_msg_id):
@@ -409,8 +422,10 @@ compileOutlinks(window).join(' ');
             self._has_screenshot = True
             self.logger.info("got screenshot, moving on to getting outlinks url={}".format(self.url))
         elif message["id"] == self._waiting_on_scroll_to_top_msg_id:
-            self._waiting_on_screenshot_msg_id = self.send_to_chrome(method="Page.captureScreenshot")
             self._waiting_on_scroll_to_top_msg_id = None
+            self._waiting_on_scroll_to_top_start = None
+            self._waiting_on_screenshot_msg_id = self.send_to_chrome(
+                    method="Page.captureScreenshot")
         elif message["id"] == self._waiting_on_outlinks_msg_id:
             self.logger.debug("got outlinks message=%s", message)
             self._outlinks = frozenset(
