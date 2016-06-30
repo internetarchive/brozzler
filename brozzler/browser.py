@@ -35,6 +35,7 @@ import select
 import re
 import base64
 import psutil
+import signal
 
 __all__ = ["BrowserPool", "Browser"]
 
@@ -502,9 +503,11 @@ class Chrome:
             chrome_args.append("--proxy-server={}".format(self.proxy))
         chrome_args.append("about:blank")
         self.logger.info("running: {}".format(" ".join(chrome_args)))
+        # start_new_session - new process group so we can kill the whole group
         self.chrome_process = subprocess.Popen(chrome_args, env=new_env,
-                start_new_session=True, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, bufsize=0)
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+                start_new_session=True)
         self._out_reader_thread = threading.Thread(target=self._read_stderr_stdout,
                 name="ChromeOutReaderThread(pid={})".format(self.chrome_process.pid))
         self._out_reader_thread.start()
@@ -540,7 +543,9 @@ class Chrome:
         # XXX select doesn't work on windows
         def readline_nonblock(f):
             buf = b""
-            while not self._shutdown.is_set() and (len(buf) == 0 or buf[-1] != 0xa) and select.select([f],[],[],0.5)[0]:
+            while not self._shutdown.is_set() and (
+                    len(buf) == 0 or buf[-1] != 0xa) and select.select(
+                            [f],[],[],0.5)[0]:
                 buf += f.read(1)
             return buf
 
@@ -548,17 +553,33 @@ class Chrome:
             while not self._shutdown.is_set():
                 buf = readline_nonblock(self.chrome_process.stdout)
                 if buf:
-                    if re.search(b"Xlib:  extension|CERT_PKIXVerifyCert for [^ ]* failed|^ALSA lib|ERROR:gl_surface_glx.cc|ERROR:gpu_child_thread.cc", buf):
-                        logging.debug("chrome pid %s STDERR %s", self.chrome_process.pid, buf)
+                    if re.search(
+                            b"Xlib:  extension|"
+                            b"CERT_PKIXVerifyCert for [^ ]* failed|"
+                            b"^ALSA lib|ERROR:gl_surface_glx.cc|"
+                            b"ERROR:gpu_child_thread.cc", buf):
+                        logging.log(
+                                brozzler.TRACE, "chrome pid %s STDOUT %s",
+                                self.chrome_process.pid, buf)
                     else:
-                        logging.warn("chrome pid %s STDERR %s", self.chrome_process.pid, buf)
+                        logging.info(
+                                "chrome pid %s STDOUT %s",
+                                self.chrome_process.pid, buf)
 
                 buf = readline_nonblock(self.chrome_process.stderr)
                 if buf:
-                    if re.search(b"Xlib:  extension|CERT_PKIXVerifyCert for [^ ]* failed|^ALSA lib|ERROR:gl_surface_glx.cc|ERROR:gpu_child_thread.cc", buf):
-                        logging.debug("chrome pid %s STDERR %s", self.chrome_process.pid, buf)
+                    if re.search(
+                            b"Xlib:  extension|"
+                            b"CERT_PKIXVerifyCert for [^ ]* failed|"
+                            b"^ALSA lib|ERROR:gl_surface_glx.cc|"
+                            b"ERROR:gpu_child_thread.cc", buf):
+                        logging.log(
+                                brozzler.TRACE, "chrome pid %s STDOUT %s",
+                                self.chrome_process.pid, buf)
                     else:
-                        logging.warn("chrome pid %s STDERR %s", self.chrome_process.pid, buf)
+                        logging.info(
+                                "chrome pid %s STDERR %s",
+                                self.chrome_process.pid, buf)
         except:
             logging.error("unexpected exception", exc_info=True)
 
@@ -568,10 +589,10 @@ class Chrome:
 
         timeout_sec = 300
         self._shutdown.set()
-        self.logger.info("terminating chrome pid {}".format(self.chrome_process.pid))
+        self.logger.info("terminating chrome pid %s" % self.chrome_process.pid)
 
-        self.chrome_process.terminate()
-        first_sigterm = last_sigterm = time.time()
+        os.killpg(self.chrome_process.pid, signal.SIGTERM)
+        first_sigterm = time.time()
 
         try:
             while time.time() - first_sigterm < timeout_sec:
@@ -580,20 +601,29 @@ class Chrome:
                 status = self.chrome_process.poll()
                 if status is not None:
                     if status == 0:
-                        self.logger.info("chrome pid {} exited normally".format(self.chrome_process.pid, status))
+                        self.logger.info(
+                                "chrome pid %s exited normally",
+                                self.chrome_process.pid)
                     else:
-                        self.logger.warn("chrome pid {} exited with nonzero status {}".format(self.chrome_process.pid, status))
+                        self.logger.warn(
+                                "chrome pid %s exited with nonzero status %s",
+                                self.chrome_process.pid, status)
+
+                    # XXX I would like to forcefully kill the process group
+                    # here to guarantee no orphaned chromium subprocesses hang
+                    # around, but there's a chance I suppose that some other
+                    # process could have started with the same pgid
                     return
 
-                # sometimes a hung chrome process will terminate on repeated sigterms
-                if time.time() - last_sigterm > 10:
-                    self.chrome_process.terminate()
-                    last_sigterm = time.time()
-
-            self.logger.warn("chrome pid {} still alive {} seconds after sending SIGTERM, sending SIGKILL".format(self.chrome_process.pid, timeout_sec))
-            self.chrome_process.kill()
+            self.logger.warn(
+                    "chrome pid %s still alive %.1f seconds after sending "
+                    "SIGTERM, sending SIGKILL", self.chrome_process.pid,
+                    time.time() - first_sigterm)
+            os.killpg(self.chrome_process.pid, signal.SIGKILL)
             status = self.chrome_process.wait()
-            self.logger.warn("chrome pid {} reaped (status={}) after killing with SIGKILL".format(self.chrome_process.pid, status))
+            self.logger.warn(
+                    "chrome pid %s reaped (status=%s) after killing with "
+                    "SIGKILL", self.chrome_process.pid, status)
         finally:
             self._out_reader_thread.join()
             self.chrome_process = None
