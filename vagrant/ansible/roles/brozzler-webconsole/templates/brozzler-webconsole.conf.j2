@@ -1,0 +1,21 @@
+description "brozzler-webconsole"
+
+start on runlevel [2345]
+stop on runlevel [!2345]
+
+env PYTHONPATH=/home/vagrant/brozzler-webconsole-ve34/lib/python3.4/site-packages:/home/vagrant/brozzler/webconsole
+env PATH=/home/vagrant/brozzler-webconsole-ve34/bin:/usr/bin:/bin
+env LC_ALL=C.UTF-8
+
+env WAYBACK_BASEURL={{base_wayback_url}}/all
+# env RETHINKDB_SERVERS={{groups['rethinkdb'] | join(',')}}
+env RETHINKDB_SERVERS=localhost
+env RETHINKDB_DB={{rethinkdb_db}}
+
+setuid vagrant
+
+# console log
+
+exec gunicorn --bind=0.0.0.0:8081 brozzler-webconsole:app >&/vagrant/logs/brozzler-webconsole.log
+
+
