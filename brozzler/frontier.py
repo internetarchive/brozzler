@@ -197,12 +197,12 @@ class RethinkDbFrontier:
                                 1).update({
                                     "claimed":True,
                                     "last_claimed_by":worker_id},
-                                    return_changes=True).run()
-        self._vet_result(result, replaced=[0,1])
-        if result["replaced"] == 1:
-            return brozzler.Page(**result["changes"][0]["new_val"])
-        else:
+                                    return_changes="always").run()
+        self._vet_result(result, unchanged=[0,1], replaced=[0,1])
+        if result["unchanged"] == 0 and result["replaced"] == 0:
             raise brozzler.NothingToClaim
+        else:
+            return brozzler.Page(**result["changes"][0]["new_val"])
 
     def has_outstanding_pages(self, site):
         results_iter = self.r.table("pages").between(
