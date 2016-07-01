@@ -506,7 +506,6 @@ class Chrome:
         # start_new_session - new process group so we can kill the whole group
         self.chrome_process = subprocess.Popen(chrome_args, env=new_env,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0,
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
                 start_new_session=True)
         self._out_reader_thread = threading.Thread(target=self._read_stderr_stdout,
                 name="ChromeOutReaderThread(pid={})".format(self.chrome_process.pid))
