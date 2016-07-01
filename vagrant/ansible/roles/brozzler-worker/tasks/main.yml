@@ -46,7 +46,8 @@
     - restart vnc-websock
 - name: install brozzler in virtualenv
   become: true
-  pip: name=git+https://github.com/internetarchive/brozzler.git#egg=brozzler
+  pip: # name=git+https://github.com/internetarchive/brozzler.git#egg=brozzler
+       name='-e /brozzler'
        virtualenv=/home/vagrant/brozzler-ve34
        virtualenv_python=python3.4
        extra_args='--no-input --upgrade --pre'

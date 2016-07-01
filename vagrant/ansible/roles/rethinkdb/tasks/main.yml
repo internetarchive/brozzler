@@ -11,6 +11,8 @@
   become: true
   notify:
     - restart rethinkdb
+- name: ensure rethinkdb starts on reboot
+  service: name=rethinkdb enabled=yes
 - name: ensure rethinkdb instance config file is installed
   template: src=templates/rethinkdb-brozzler-easy.conf.j2
             dest=/etc/rethinkdb/instances.d/rethinkdb-brozzler-easy.conf
