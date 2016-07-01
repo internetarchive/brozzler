@@ -163,7 +163,6 @@ def brozzler_new_job():
     frontier = brozzler.RethinkDbFrontier(r)
     brozzler.job.new_job_file(frontier, args.job_conf_file)
 
-
 def brozzler_new_site():
     '''
     Command line utility entry point for queuing a new brozzler site. 

@@ -54,8 +54,8 @@ def new_job(frontier, job_conf):
         merged_conf = merge(seed_conf, job_conf)
         # XXX check for unknown settings, invalid url, etc
 
-        site = brozzler.Site(job_id=job.id,
-                seed=merged_conf["url"],
+        site = brozzler.Site(
+                job_id=job.id, seed=merged_conf["url"],
                 scope=merged_conf.get("scope"),
                 time_limit=merged_conf.get("time_limit"),
                 proxy=merged_conf.get("proxy"),
@@ -63,7 +63,8 @@ def new_job(frontier, job_conf):
                 enable_warcprox_features=merged_conf.get(
                     "enable_warcprox_features"),
                 warcprox_meta=merged_conf.get("warcprox_meta"),
-                metadata=merged_conf.get("metadata"))
+                metadata=merged_conf.get("metadata"),
+                remember_outlinks=merged_conf.get("remember_outlinks"))
         sites.append(site)
 
     # insert all the sites into database before the job
