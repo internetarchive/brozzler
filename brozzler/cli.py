@@ -24,7 +24,6 @@ import datetime
 import json
 import logging
 import os
-import pprint
 import re
 import requests
 import rethinkstuff
@@ -233,7 +232,6 @@ def brozzler_worker():
         raise brozzler.ShutdownRequested('shutdown requested (caught SIGINT)')
 
     def dump_state(signum, frame):
-        pp = pprint.PrettyPrinter(indent=4)
         state_strs = []
 
         for th in threading.enumerate():
@@ -256,19 +254,15 @@ def brozzler_worker():
             frontier, service_registry, max_browsers=int(args.max_browsers),
             chrome_exe=args.chrome_exe)
 
-    worker_thread = worker.start()
-
+    worker.start()
     try:
-        while worker_thread.is_alive():
+        while worker.is_alive():
             time.sleep(0.5)
         logging.critical("worker thread has died, shutting down")
     except brozzler.ShutdownRequested as e:
         pass
     finally:
         worker.shutdown_now()
-        for th in threading.enumerate():
-            if th != threading.current_thread():
-                th.join()
 
     logging.info("brozzler-worker is all done, exiting")
 
