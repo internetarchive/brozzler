@@ -208,6 +208,9 @@ brozzlerControllers.controller("SiteController", ["$scope", "$routeParams", "$ht
             loadSiteStats($http, $scope.site);
             // console.log("site = ", $scope.site);
         });
+        $http.get("/api/site/" + $routeParams.id + "/yaml").success(function(data) {
+            $scope.site_yaml = data;
+        });
 
         loadMorePages();
     }]);

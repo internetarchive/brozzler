@@ -11,7 +11,12 @@
 </div>
 
 <div>
-    <h2>Site {{site.seed}} (Job <a href="/jobs/{{site.job_id}}">{{site.job_id}}</a>)</h2>
+    <h2 ng-click="show_yaml = !show_yaml">
+        <span class="fa fa-caret-right"
+            ng-class="{ 'fa-caret-right': !show_yaml, 'fa-caret-down': !!show_yaml }"></span>
+        Site {{site.seed}} (Job <a href="/jobs/{{site.job_id}}">{{site.job_id}}</a>)
+    </h2>
+    <pre style="display:{{show_yaml?'block':'none'}}">{{site_yaml}}</pre>
 
     <div class="row bigstats">
         <div class="col-sm-6 col-md-3">
