@@ -209,6 +209,8 @@ class Browser:
         self._waiting_on_screenshot_msg_id = None
         self._waiting_on_document_url_msg_id = None
         self._waiting_on_outlinks_msg_id = None
+        self._waiting_on_outlinks_start = None
+        self._waiting_on_outlinks_attempt = 0
         self._outlinks = None
         self._reached_limit = None
         self._aw_snap_hes_dead_jim = None
@@ -255,8 +257,8 @@ class Browser:
     def _post_behavior_interval_func(self):
         """Called periodically after behavior is finished on the page. Returns
         true when post-behavior tasks are finished."""
-        if not self._has_screenshot and (
-                not self._waiting_on_scroll_to_top_msg_id
+        if (not self._has_screenshot
+                and not self._waiting_on_scroll_to_top_msg_id
                 and not self._waiting_on_screenshot_msg_id):
             if time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
                 self.logger.info(
@@ -275,7 +277,7 @@ class Browser:
             self._waiting_on_scroll_to_top_start = time.time()
             return False
         elif (self._waiting_on_scroll_to_top_msg_id
-                and time.time() - self._waiting_on_scroll_to_top_start > 30):
+                and time.time() - self._waiting_on_scroll_to_top_start > 30.0):
             # chromium bug? occasionally we get no scroll-to-top result message
             self.logger.warn(
                     "timed out after %.1fs waiting for scroll-to-top result "
@@ -295,12 +297,33 @@ class Browser:
             return True
         elif not self._waiting_on_outlinks_msg_id:
             self.logger.info("retrieving outlinks for %s", self.url)
-            self._waiting_on_outlinks_msg_id = self.send_to_chrome(
-                    method="Runtime.evaluate",
-                    params={"expression": self.OUTLINKS_JS})
+            self._request_outlinks()
             return False
         else: # self._waiting_on_outlinks_msg_id
-            return False
+            if time.time() - self._waiting_on_outlinks_start > 30.0:
+                if self._waiting_on_outlinks_attempt < 5:
+                    self.logger.warn(
+                            "timed out after %.1fs on attempt %s to retrieve "
+                            "outlinks, trying again",
+                            time.time() - self._waiting_on_outlinks_start,
+                            self._waiting_on_outlinks_attempt)
+                    self._request_outlinks()
+                    return False
+                else:
+                    raise BrowsingException(
+                            "timed out after %.1fs on (final) attempt %s "
+                            "to retrieve outlinks" % (
+                            time.time() - self._waiting_on_outlinks_start,
+                            self._waiting_on_outlinks_attempt))
+            else: # just waiting for outlinks
+                return False
+
+    def _request_outlinks(self):
+        self._waiting_on_outlinks_msg_id = self.send_to_chrome(
+                method="Runtime.evaluate",
+                params={"expression": self.OUTLINKS_JS})
+        self._waiting_on_outlinks_attempt += 1
+        self._waiting_on_outlinks_start = time.time()
 
     OUTLINKS_JS = """
 var compileOutlinks = function(frame) {
@@ -319,10 +342,14 @@ compileOutlinks(window).join(' ');
     def _browse_interval_func(self):
         """Called periodically while page is being browsed. Returns True when
         finished browsing."""
-        if not self._websock or not self._websock.sock or not self._websock.sock.connected:
-            raise BrowsingException("websocket closed, did chrome die? {}".format(self._websocket_url))
+        if (not self._websock or not self._websock.sock
+                or not self._websock.sock.connected):
+            raise BrowsingException(
+                    "websocket closed, did chrome die? {}".format(
+                        self._websocket_url))
         elif self._aw_snap_hes_dead_jim:
-            raise BrowsingException("""chrome tab went "aw snap" or "he's dead jim"!""")
+            raise BrowsingException(
+                    """chrome tab went "aw snap" or "he's dead jim"!""")
         elif (self._behavior != None and self._behavior.is_finished()
                 or time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS):
             return True
