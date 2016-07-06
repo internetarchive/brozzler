@@ -233,12 +233,10 @@ def brozzler_worker():
 
     def dump_state(signum, frame):
         state_strs = []
-
         for th in threading.enumerate():
             state_strs.append(str(th))
             stack = traceback.format_stack(sys._current_frames()[th.ident])
             state_strs.append("".join(stack))
-
         logging.warn("dumping state (caught signal {})\n{}".format(
             signum, "\n".join(state_strs)))
 
