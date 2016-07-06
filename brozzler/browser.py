@@ -238,25 +238,41 @@ class Browser:
                 if self._post_behavior_interval_func():
                     return self._outlinks
         finally:
-            if self._websock and self._websock.sock and self._websock.sock.connected:
+            if (self._websock and self._websock.sock
+                    and self._websock.sock.connected):
                 try:
                     self._websock.close()
                 except BaseException as e:
-                    self.logger.error("exception closing websocket {} - {}".format(self._websock, e))
+                    self.logger.error(
+                            "exception closing websocket %s - %s" % (
+                                self._websock, e))
 
             websock_thread.join(timeout=30)
             if websock_thread.is_alive():
-                self.logger.error("{} still alive 30 seconds after closing {}, will forcefully nudge it again".format(websock_thread, self._websock))
+                self.logger.error(
+                        "%s still alive 30 seconds after closing %s, will "
+                        "forcefully nudge it again" % (
+                            websock_thread, self._websock))
                 self._websock.keep_running = False
                 websock_thread.join(timeout=30)
                 if websock_thread.is_alive():
-                    self.logger.critical("{} still alive 60 seconds after closing {}".format(websock_thread, self._websock))
+                    self.logger.critical(
+                            "%s still alive 60 seconds after closing %s" % (
+                                websock_thread, self._websock))
 
             self._behavior = None
 
     def _post_behavior_interval_func(self):
-        """Called periodically after behavior is finished on the page. Returns
-        true when post-behavior tasks are finished."""
+        """
+        Called periodically after behavior is finished on the page. Returns
+        true when post-behavior tasks are finished.
+        """
+        if (not self._websock or not self._websock.sock
+                or not self._websock.sock.connected):
+            raise BrowsingException(
+                    "websocket closed, did chrome die? {}".format(
+                        self._websocket_url))
+
         if (not self._has_screenshot
                 and not self._waiting_on_scroll_to_top_msg_id
                 and not self._waiting_on_screenshot_msg_id):
@@ -501,15 +517,19 @@ class Chrome:
         self.ignore_cert_errors = ignore_cert_errors
         self._shutdown = threading.Event()
 
-    # returns websocket url to chrome window with about:blank loaded
     def __enter__(self):
+        '''
+        Returns websocket url to chrome window with about:blank loaded.
+        '''
         return self.start()
 
     def __exit__(self, *args):
         self.stop()
 
-    # returns websocket url to chrome window with about:blank loaded
     def start(self):
+        '''
+        Returns websocket url to chrome window with about:blank loaded.
+        '''
         timeout_sec = 600
         new_env = os.environ.copy()
         new_env["HOME"] = self.user_home_dir
@@ -615,7 +635,7 @@ class Chrome:
 
         timeout_sec = 300
         self._shutdown.set()
-        self.logger.info("terminating chrome pid %s" % self.chrome_process.pid)
+        self.logger.info("terminating chrome pgid %s" % self.chrome_process.pid)
 
         os.killpg(self.chrome_process.pid, signal.SIGTERM)
         first_sigterm = time.time()
