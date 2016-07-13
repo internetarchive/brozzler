@@ -210,7 +210,6 @@ def brozzler_worker():
     Main entrypoint for brozzler, gets sites and pages to brozzle from
     rethinkdb, brozzles them.
     '''
-
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(__file__),
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -231,21 +230,35 @@ def brozzler_worker():
     def sigint(signum, frame):
         raise brozzler.ShutdownRequested('shutdown requested (caught SIGINT)')
 
-    def dump_state(signum, frame):
-        state_strs = []
-        for th in threading.enumerate():
-            state_strs.append(str(th))
-            stack = traceback.format_stack(sys._current_frames()[th.ident])
-            state_strs.append("".join(stack))
-        logging.warn("dumping state (caught signal {})\n{}".format(
-            signum, "\n".join(state_strs)))
+    # do not print in signal handler to avoid RuntimeError: reentrant call
+    state_dump_msgs = []
+    def queue_state_dump(signum, frame):
+        signal.signal(signal.SIGQUIT, signal.SIG_IGN)
+        try:
+            state_strs = []
+            frames = sys._current_frames()
+            threads = {th.ident: th for th in threading.enumerate()}
+            for ident in frames:
+                if threads[ident]:
+                    state_strs.append(str(threads[ident]))
+                else:
+                    state_strs.append('<???:thread:ident=%s>' % ident)
+                stack = traceback.format_stack(frames[ident])
+                state_strs.append(''.join(stack))
+            state_dump_msgs.append(
+                    'dumping state (caught signal %s)\n%s' % (
+                        signum, '\n'.join(state_strs)))
+        except BaseException as e:
+            state_dump_msgs.append('exception dumping state: %s' % e)
+        finally:
+            signal.signal(signal.SIGQUIT, queue_state_dump)
 
-    signal.signal(signal.SIGQUIT, dump_state)
+    signal.signal(signal.SIGQUIT, queue_state_dump)
     signal.signal(signal.SIGTERM, sigterm)
     signal.signal(signal.SIGINT, sigint)
 
     r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(","), args.rethinkdb_db)
+            args.rethinkdb_servers.split(','), args.rethinkdb_db)
     frontier = brozzler.RethinkDbFrontier(r)
     service_registry = rethinkstuff.ServiceRegistry(r)
     worker = brozzler.worker.BrozzlerWorker(
@@ -255,14 +268,16 @@ def brozzler_worker():
     worker.start()
     try:
         while worker.is_alive():
+            while state_dump_msgs:
+                logging.warn(state_dump_msgs.pop(0))
             time.sleep(0.5)
-        logging.critical("worker thread has died, shutting down")
+        logging.critical('worker thread has died, shutting down')
     except brozzler.ShutdownRequested as e:
         pass
     finally:
         worker.shutdown_now()
 
-    logging.info("brozzler-worker is all done, exiting")
+    logging.info('brozzler-worker is all done, exiting')
 
 def brozzler_ensure_tables():
     '''
