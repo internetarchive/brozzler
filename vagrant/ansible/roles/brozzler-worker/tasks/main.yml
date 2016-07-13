@@ -1,4 +1,8 @@
 ---
+- name: ensure canonical partner repo is in apt sources.list
+  apt_repository: repo='deb http://archive.canonical.com/ubuntu trusty partner'
+                  state=present
+  become: true
 - name: ensure required packages are installed
   become: true
   apt: name={{item}} state=present
@@ -28,7 +32,7 @@
     - zlib1g-dev
     - gcc
     - libpython3.4-dev
-    - git
+    - adobe-flashplugin
 - name: install Xvnc upstart config /etc/init/Xvnc.conf
   template: src=templates/Xvnc.conf.j2 dest=/etc/init/Xvnc.conf
   become: true
