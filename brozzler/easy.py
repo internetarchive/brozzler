@@ -64,11 +64,6 @@ def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
     arg_parser.add_argument(
             '-d', '--warcs-dir', dest='warcs_dir', default='./warcs',
             help='where to write warcs')
-    arg_parser.add_argument(
-            '-v', '--verbose', dest='verbose', action='store_true')
-    arg_parser.add_argument('-q', '--quiet', dest='quiet', action='store_true')
-    # arg_parser.add_argument('--version', action='version',
-    #         version="warcprox {}".format(warcprox.__version__))
 
     # === warcprox args ===
     arg_parser.add_argument(
@@ -100,6 +95,17 @@ def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
             '--pywb-port', dest='pywb_port', type=int, default=8091,
             help='pywb wayback port')
 
+    # === common at the bottom args ===
+    arg_parser.add_argument(
+            '-v', '--verbose', dest='verbose', action='store_true')
+    arg_parser.add_argument('-q', '--quiet', dest='quiet', action='store_true')
+    # arg_parser.add_argument(
+    #         '-s', '--silent', dest='log_level', action='store_const',
+    #         default=logging.INFO, const=logging.CRITICAL)
+    arg_parser.add_argument(
+            '--version', action='version',
+            version='brozzler %s - %s' % (brozzler.__version__, prog))
+
     return arg_parser
 
 class BrozzlerEasyController:
@@ -127,9 +133,9 @@ class BrozzlerEasyController:
         return worker
 
     def _init_pywb(self, args):
-        # replace parent class of CustomUrlCanonicalizer
-        pywb.cdx.cdxdomainspecific.CustomUrlCanonicalizer.__bases__ = (
-                brozzler.pywb.TheGoodUrlCanonicalizer,)
+        brozzler.pywb.TheGoodUrlCanonicalizer.replace_default_canonicalizer()
+        brozzler.pywb.support_in_progress_warcs()
+
         if args.warcs_dir.endswith('/'):
             warcs_dir = args.warcs_dir
         else:

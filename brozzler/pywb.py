@@ -18,6 +18,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+import sys
+import logging
 try:
     import pywb.apps.cli
     import pywb.cdx.cdxdomainspecific
@@ -30,8 +32,6 @@ except ImportError as e:
             'brozzler[easy]".\nSee README.rst for more information.',
             type(e).__name__, e)
     sys.exit(1)
-import sys
-import logging
 import rethinkstuff
 import rethinkdb
 import surt
@@ -123,4 +123,26 @@ class TheGoodUrlCanonicalizer(object):
         except Exception as e:
             raise pywb.utils.canonicalize.UrlCanonicalizeException(
                     'Invalid Url: ' + url)
+
+    def replace_default_canonicalizer():
+        '''Replace parent class of CustomUrlCanonicalizer with this class.'''
+        pywb.cdx.cdxdomainspecific.CustomUrlCanonicalizer.__bases__ = (
+                TheGoodUrlCanonicalizer,)
+
+def support_in_progress_warcs():
+    '''
+    Monkey-patch pywb.warc.pathresolvers.PrefixResolver to include warcs still
+    being written to (warcs having ".open" suffix). This way if a cdx entry
+    references foo.warc.gz, pywb will try both foo.warc.gz and
+    foo.warc.gz.open.
+    '''
+    _orig_prefix_resolver_call = pywb.warc.pathresolvers.PrefixResolver.__call__
+    def _prefix_resolver_call(self, filename, cdx=None):
+        raw_results = _orig_prefix_resolver_call(self, filename, cdx)
+        results = []
+        for warc_path in raw_results:
+            results.append(warc_path)
+            results.append('%s.open' % warc_path)
+        return results
+    pywb.warc.pathresolvers.PrefixResolver.__call__ = _prefix_resolver_call
 
