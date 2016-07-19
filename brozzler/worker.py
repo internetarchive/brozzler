@@ -376,8 +376,7 @@ class BrozzlerWorker:
                         th = threading.Thread(
                                 target=lambda: self._brozzle_site(
                                     browser, site),
-                                name="BrowsingThread:{}-{}".format(
-                                    browser.chrome_port, site.seed))
+                                name="BrozzlingThread:%s" % site.seed)
                         th.start()
                         self._browsing_threads.add(th)
                     except:

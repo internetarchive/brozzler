@@ -36,6 +36,7 @@ import re
 import base64
 import psutil
 import signal
+import string
 
 __all__ = ["BrowserPool", "Browser"]
 
@@ -217,12 +218,15 @@ class Browser:
         self._abort_browse_page = False
         self._has_screenshot = False
 
-        self._websock = websocket.WebSocketApp(self._websocket_url,
-                on_open=self._visit_page, on_message=self._wrap_handle_message)
+        self._websock = websocket.WebSocketApp(
+                self._websocket_url, on_open=self._visit_page,
+                on_message=self._wrap_handle_message)
 
-        threadName = "WebsockThread{}-{}".format(self.chrome_port,
-                ''.join((random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(6))))
-        websock_thread = threading.Thread(target=self._websock.run_forever, name=threadName, kwargs={'ping_timeout':0.5})
+        threadName = "WebsockThread:%s-%s" % (self.chrome_port, ''.join(
+            random.choice(string.ascii_letters) for _ in range(6)))
+        websock_thread = threading.Thread(
+                target=self._websock.run_forever, name=threadName,
+                kwargs={'ping_timeout':0.5})
         websock_thread.start()
         self._start = time.time()
         aborted = False
@@ -464,7 +468,7 @@ compileOutlinks(window).join(' ');
                 self.on_screenshot(base64.b64decode(message["result"]["data"]))
             self._waiting_on_screenshot_msg_id = None
             self._has_screenshot = True
-            self.logger.info("got screenshot, moving on to getting outlinks url={}".format(self.url))
+            self.logger.info("got screenshot, moving on to getting outlinks")
         elif message["id"] == self._waiting_on_scroll_to_top_msg_id:
             self._waiting_on_scroll_to_top_msg_id = None
             self._waiting_on_scroll_to_top_start = None
@@ -673,4 +677,3 @@ class Chrome:
         finally:
             self._out_reader_thread.join()
             self.chrome_process = None
-
