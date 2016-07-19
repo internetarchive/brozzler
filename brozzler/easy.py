@@ -134,6 +134,7 @@ class BrozzlerEasyController:
 
     def _init_pywb(self, args):
         brozzler.pywb.TheGoodUrlCanonicalizer.replace_default_canonicalizer()
+        brozzler.pywb.TheGoodUrlCanonicalizer.monkey_patch_dsrules_init()
         brozzler.pywb.support_in_progress_warcs()
 
         if args.warcs_dir.endswith('/'):
@@ -156,7 +157,6 @@ class BrozzlerEasyController:
             'framed_replay': True,
             'port': args.pywb_port,
             'enable_auto_colls': False,
-            # 'domain_specific_rules': '/Users/nlevitt/workspace/brozzler-easy/pywb-rethinkdb/rules.yaml'
         }
         wsgi_app = pywb.framework.wsgi_wrappers.init_app(
                 pywb.webapp.pywb_init.create_wb_router, config=conf,
@@ -266,4 +266,3 @@ def main():
     signal.signal(signal.SIGQUIT, controller.dump_state)
     controller.start()
     controller.wait_for_shutdown_request()
-

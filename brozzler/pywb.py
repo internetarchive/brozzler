@@ -4,18 +4,17 @@ brozzler/pywb.py - pywb support for rethinkdb index
 
 Copyright (C) 2016 Internet Archive
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 '''
 
 import sys
@@ -129,6 +128,54 @@ class TheGoodUrlCanonicalizer(object):
         pywb.cdx.cdxdomainspecific.CustomUrlCanonicalizer.__bases__ = (
                 TheGoodUrlCanonicalizer,)
 
+    def good_surts_from_default(default_surt):
+        '''
+        Takes a standard surt without scheme and without trailing comma, and
+        returns a list of "good" surts that together match the same set of
+        urls. For example:
+
+             good_surts_from_default('com,example)/path')
+
+        returns
+
+            ['http://(com,example,)/path',
+             'https://(com,example,)/path',
+             'http://(com,example,www,)/path',
+             'https://(com,example,www,)/path']
+
+        '''
+        if default_surt == '':
+            return ['']
+
+        parts = default_surt.split(')', 1)
+        if len(parts) == 2:
+            orig_host_part, path_part = parts
+            good_surts = [
+                'http://(%s,)%s' % (orig_host_part, path_part),
+                'https://(%s,)%s' % (orig_host_part, path_part),
+                'http://(%s,www,)%s' % (orig_host_part, path_part),
+                'https://(%s,www,)%s' % (orig_host_part, path_part),
+            ]
+        else: # no path part
+            host_part = parts[0]
+            good_surts = [
+                'http://(%s' % host_part,
+                'https://(%s' % host_part,
+            ]
+        return good_surts
+
+    def monkey_patch_dsrules_init():
+        orig_init = pywb.cdx.cdxdomainspecific.CDXDomainSpecificRule.__init__
+        def cdx_dsrule_init(self, url_prefix, rules):
+            orig_init(self, url_prefix, rules)
+            good_surts = []
+            for url_prefix in self.url_prefix:
+                good_surts.extend(
+                        TheGoodUrlCanonicalizer.good_surts_from_default(
+                                url_prefix))
+            self.url_prefix = good_surts
+        pywb.cdx.cdxdomainspecific.CDXDomainSpecificRule.__init__ = cdx_dsrule_init
+
 def support_in_progress_warcs():
     '''
     Monkey-patch pywb.warc.pathresolvers.PrefixResolver to include warcs still
@@ -145,4 +192,3 @@ def support_in_progress_warcs():
             results.append('%s.open' % warc_path)
         return results
     pywb.warc.pathresolvers.PrefixResolver.__call__ = _prefix_resolver_call
-
