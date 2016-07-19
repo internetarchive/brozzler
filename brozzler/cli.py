@@ -35,6 +35,7 @@ import time
 import traceback
 import warnings
 import yaml
+import shutil
 
 def _add_common_options(arg_parser):
     arg_parser.add_argument(
@@ -47,8 +48,8 @@ def _add_common_options(arg_parser):
             '--trace', dest='log_level',
             action='store_const', default=logging.INFO, const=brozzler.TRACE)
     # arg_parser.add_argument(
-    #         '-s', '--silent', dest='log_level',
-    #         action='store_const', default=logging.INFO, const=logging.CRITICAL)
+    #         '-s', '--silent', dest='log_level', action='store_const',
+    #         default=logging.INFO, const=logging.CRITICAL)
     arg_parser.add_argument(
             '--version', action='version',
             version='brozzler %s - %s' % (
@@ -85,6 +86,26 @@ def _configure_logging(args):
     warnings.simplefilter(
             'ignore', category=requests.packages.urllib3.exceptions.InsecurePlatformWarning)
 
+def suggest_default_chome_exe():
+    # mac os x application executable paths
+    for path in [
+            '/Applications/Chromium.app/Contents/MacOS/Chromium',
+            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome']:
+        if os.path.exists(path):
+            return path
+
+    # "chromium-browser" is the executable on ubuntu trusty
+    # https://github.com/internetarchive/brozzler/pull/6/files uses "chromium"
+    # google chrome executable names taken from these packages:
+    # http://www.ubuntuupdates.org/ppa/google_chrome
+    for exe in [
+            'chromium-browser', 'chromium', 'google-chrome',
+            'google-chrome-stable', 'google-chrome-beta',
+            'google-chrome-unstable']:
+        if shutil.which(exe):
+            return exe
+    return 'chromium-browser'
+
 def brozzle_page():
     '''
     Command line utility entry point for brozzling a single page. Opens url in
@@ -96,7 +117,8 @@ def brozzle_page():
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('url', metavar='URL', help='page url')
     arg_parser.add_argument(
-            '-e', '--executable', dest='chrome_exe', default='chromium-browser',
+            '-e', '--chrome-exe', dest='chrome_exe',
+            default=suggest_default_chome_exe(),
             help='executable to use to invoke chrome')
     arg_parser.add_argument(
             '--proxy', dest='proxy', default=None,
@@ -164,7 +186,7 @@ def brozzler_new_job():
 
 def brozzler_new_site():
     '''
-    Command line utility entry point for queuing a new brozzler site. 
+    Command line utility entry point for queuing a new brozzler site.
     Takes a seed url and creates a site and page object in rethinkdb, which
     brozzler-workers will look at and start crawling.
     '''
@@ -215,7 +237,8 @@ def brozzler_worker():
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     _add_rethinkdb_options(arg_parser)
     arg_parser.add_argument(
-            '-e', '--executable', dest='chrome_exe', default='chromium-browser',
+            '-e', '--chrome-exe', dest='chrome_exe',
+            default=suggest_default_chome_exe(),
             help='executable to use to invoke chrome')
     arg_parser.add_argument(
             '-n', '--max-browsers', dest='max_browsers', default='1',
@@ -304,4 +327,3 @@ def brozzler_ensure_tables():
 
     # sites, pages, jobs tables
     brozzler.frontier.RethinkDbFrontier(r)
-
