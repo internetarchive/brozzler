@@ -128,11 +128,19 @@ class Browser:
     def __exit__(self, *args):
         self.stop()
 
-    def start(self, proxy=None):
+    def start(self, proxy=None, cookieDb=None):
         if not self._chrome_instance:
             # these can raise exceptions
             self.chrome_port = self._find_available_port()
             self._work_dir = tempfile.TemporaryDirectory()
+            if cookieDb is not None:
+                cookieLocation = os.sep.join([self._work_dir.name, "chrome-user-data","Default","Cookies"])
+                try:
+                    with open(cookieLocation,'w') as cookieFile:
+                        cookieFile.write(cookieDb)
+                except EnvironmentError:
+                    self.logger.error("exception writing cookie file at: %s", cookieLocation, exc_info=True)
+
             self._chrome_instance = Chrome(
                     port=self.chrome_port, executable=self.chrome_exe,
                     user_home_dir=self._work_dir.name,
@@ -160,6 +168,24 @@ class Browser:
                 self._websocket_url = None
         except:
             self.logger.error("problem stopping", exc_info=True)
+
+    def read_cookie_db(self):
+        cookieLocation = os.sep.join([self._work_dir.name, "chrome-user-data","Default","Cookies"])
+
+        try:
+            with sqlite3.connect(cookieLocation) as conn:
+                cur = conn.cursor()
+                cur.execute("UPDATE cookies SET persistent = 1")
+        except sqlite3.Error:
+            self.logger.error("exception updating cookie DB", exc_info=True)
+
+        cookieDb=None
+        try:
+            with open(cookieLocation, "rb") as cookieFile:
+                cookieDb=bytearray(cookieFile.read())
+        except EnvironmentError:
+            self.logger.error("exception reading from cookie DB file at: %s", cookieLocation, exc_info=True)
+        return cookieDb
 
     def _find_available_port(self):
         port_available = False
