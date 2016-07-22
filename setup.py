@@ -21,7 +21,7 @@ import setuptools
 
 setuptools.setup(
         name='brozzler',
-        version='1.1b3.dev56',
+        version='1.1b3.dev57',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
@@ -55,7 +55,7 @@ setuptools.setup(
         ],
         extras_require={
             'webconsole': ['flask>=0.11', 'gunicorn'],
-            'easy': ['warcprox', 'pywb'],
+            'easy': ['warcprox>=2.0b1', 'pywb'],
         },
         zip_safe=False,
         classifiers=[
