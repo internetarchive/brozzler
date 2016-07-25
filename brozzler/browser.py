@@ -37,6 +37,7 @@ import base64
 import psutil
 import signal
 import string
+import sqlite3
 
 __all__ = ["BrowserPool", "Browser"]
 
@@ -134,9 +135,17 @@ class Browser:
             self.chrome_port = self._find_available_port()
             self._work_dir = tempfile.TemporaryDirectory()
             if cookieDb is not None:
-                cookieLocation = os.sep.join([self._work_dir.name, "chrome-user-data","Default","Cookies"])
+                cookieDir = os.sep.join([self._work_dir.name, "chrome-user-data","Default"])
+                cookieLocation = os.sep.join([cookieDir,"Cookies"])
+                self.logger.debug("Cookie DB provided. Writing to: %s", cookieLocation)
                 try:
-                    with open(cookieLocation,'w') as cookieFile:
+                    os.makedirs(cookieDir)
+                except OSError as ex:
+                    if ex.errno!=errno.EEXIST:
+                        self.logger.error("Error creating cookie directory: %s", cookieDir, exc_info=True)
+
+                try:
+                    with open(cookieLocation,'wb') as cookieFile:
                         cookieFile.write(cookieDb)
                 except EnvironmentError:
                     self.logger.error("exception writing cookie file at: %s", cookieLocation, exc_info=True)
@@ -171,7 +180,7 @@ class Browser:
 
     def read_cookie_db(self):
         cookieLocation = os.sep.join([self._work_dir.name, "chrome-user-data","Default","Cookies"])
-
+        self.logger.debug("Saving Cookie DB from: %s", cookieLocation)
         try:
             with sqlite3.connect(cookieLocation) as conn:
                 cur = conn.cursor()

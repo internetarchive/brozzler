@@ -110,7 +110,7 @@ class Site(brozzler.BaseDictable):
         self.last_claimed = last_claimed
         self.metadata = metadata
         self.remember_outlinks = remember_outlinks
-        self.cookieDb = bytearray(cookieDb)
+        self.cookieDb = bytearray(cookieDb) if cookieDb is not None else None
 
         self.scope = scope or {}
         if not "surt" in self.scope:
