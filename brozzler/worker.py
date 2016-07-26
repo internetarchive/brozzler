@@ -257,7 +257,7 @@ class BrozzlerWorker:
         if self._needs_browsing(page, ydl_spy):
             self.logger.info('needs browsing: %s', page)
             if not browser.is_running():
-                browser.start(proxy=self._proxy(site), cookieDb=site.cookieDb)
+                browser.start(proxy=self._proxy(site), cookie_db=site.cookie_db)
             outlinks = browser.browse_page(
                     page.url, extra_headers=site.extra_headers(),
                     on_screenshot=_on_screenshot,
@@ -312,7 +312,7 @@ class BrozzlerWorker:
                 page = self._frontier.claim_page(site, "%s:%s" % (
                     socket.gethostname(), browser.chrome_port))
                 outlinks = self.brozzle_page(browser, site, page)
-                site.cookieDb=browser.read_cookie_db()
+                site.cookie_db=browser.persist_and_read_cookie_db()
                 self._frontier.completed_page(site, page)
                 self._frontier.scope_and_schedule_outlinks(
                         site, page, outlinks)
