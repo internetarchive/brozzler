@@ -91,7 +91,7 @@ class Site(brozzler.BaseDictable):
             enable_warcprox_features=False, reached_limit=None,
             status="ACTIVE", claimed=False, start_time=None,
             last_disclaimed=_EPOCH_UTC, last_claimed_by=None,
-            last_claimed=_EPOCH_UTC, metadata={}, remember_outlinks=None):
+            last_claimed=_EPOCH_UTC, metadata={}, remember_outlinks=None, cookie_db=None):
 
         self.seed = seed
         self.id = id
@@ -110,6 +110,7 @@ class Site(brozzler.BaseDictable):
         self.last_claimed = last_claimed
         self.metadata = metadata
         self.remember_outlinks = remember_outlinks
+        self.cookie_db = cookie_db
 
         self.scope = scope or {}
         if not "surt" in self.scope:
