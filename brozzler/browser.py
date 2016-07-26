@@ -143,7 +143,7 @@ class Browser:
                 try:
                     with open(cookie_location,'wb') as cookie_file:
                         cookie_file.write(cookie_db)
-                except EnvironmentError:
+                except OSError:
                     self.logger.error("exception writing cookie file at: %s", cookie_location, exc_info=True)
 
             self._chrome_instance = Chrome(
@@ -188,7 +188,7 @@ class Browser:
         try:
             with open(cookie_location, "rb") as cookie_file:
                 cookie_db=cookie_file.read()
-        except EnvironmentError:
+        except OSError:
             self.logger.error("exception reading from cookie DB file at: %s", cookie_location, exc_info=True)
         return cookie_db
 
