@@ -1,0 +1,26 @@
+description "warcprox"
+
+start on runlevel [2345]
+stop on runlevel [!2345]
+
+env PYTHONPATH=/home/vagrant/warcprox-ve34/lib/python3.4/site-packages
+env PATH=/home/vagrant/warcprox-ve34/bin:/usr/bin:/bin
+
+# by default warcprox creates some files/dirs relative to cwd
+chdir /home/vagrant
+setuid vagrant
+
+# console log
+
+# --profile
+exec nice warcprox \
+         --dir=/vagrant/warcs \
+         --base32 \
+         --gzip \
+         --rollover-idle-time=180 \
+         --cacert=/vagrant/warcprox-ca.pem \
+         --onion-tor-socks-proxy=localhost:9050 \
+         --rethinkdb-servers=localhost \
+         --rethinkdb-db=brozzler \
+         --rethinkdb-big-table >>/vagrant/logs/warcprox.log 2>&1
+         # --rethinkdb-servers={{groups['rethinkdb'] | join(',')}} \

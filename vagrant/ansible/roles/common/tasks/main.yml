@@ -1,0 +1,4 @@
+---
+- name: ensure logs directory exists
+  file: path=/vagrant/logs state=directory
+  become: true

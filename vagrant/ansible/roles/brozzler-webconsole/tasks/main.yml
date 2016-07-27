@@ -1,0 +1,19 @@
+---
+- name: git clone https://github.com/internetarchive/brozzler.git
+  git: repo=https://github.com/internetarchive/brozzler.git
+       dest=/home/vagrant/brozzler
+- name: pip install -r requirements.txt in virtualenv
+  pip: requirements=/home/vagrant/brozzler/webconsole/requirements.txt
+       virtualenv=/home/vagrant/brozzler-webconsole-ve34
+       virtualenv_python=python3.4
+       extra_args='--no-input --upgrade --pre'
+  notify:
+    - restart brozzler-webconsole
+- name: install upstart config /etc/init/brozzler-webconsole.conf
+  become: true
+  template: src=templates/brozzler-webconsole.conf.j2
+            dest=/etc/init/brozzler-webconsole.conf
+  notify:
+    - restart brozzler-webconsole
+
+

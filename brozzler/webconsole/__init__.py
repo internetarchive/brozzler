@@ -48,7 +48,6 @@ app = flask.Flask(__name__)
 gunicorn_error_logger = logging.getLogger('gunicorn.error')
 app.logger.handlers.extend(gunicorn_error_logger.handlers)
 app.logger.setLevel(logging.INFO)
-app.logger.info('will this show in the log?')
 
 # configure with environment variables
 SETTINGS = {
@@ -99,17 +98,38 @@ def pages(site_id):
     app.logger.info("flask.request.args=%s", flask.request.args)
     start = int(flask.request.args.get("start", 0))
     end = int(flask.request.args.get("end", start + 90))
-    app.logger.info("yes new query")
     pages_ = r.table("pages").between(
             [site_id, 1, r.minval], [site_id, r.maxval, r.maxval],
             index="least_hops").order_by(index="least_hops")[start:end].run()
     return flask.jsonify(pages=list(pages_))
+
+@app.route("/api/pages/<page_id>")
+@app.route("/api/page/<page_id>")
+def page(page_id):
+    page_ = r.table("pages").get(page_id).run()
+    return flask.jsonify(page_)
+
+@app.route("/api/pages/<page_id>/yaml")
+@app.route("/api/page/<page_id>/yaml")
+def page_yaml(page_id):
+    page_ = r.table("pages").get(page_id).run()
+    return app.response_class(
+            yaml.dump(page_, default_flow_style=False),
+            mimetype='application/yaml')
 
 @app.route("/api/sites/<site_id>")
 @app.route("/api/site/<site_id>")
 def site(site_id):
     site_ = r.table("sites").get(site_id).run()
     return flask.jsonify(site_)
+
+@app.route("/api/sites/<site_id>/yaml")
+@app.route("/api/site/<site_id>/yaml")
+def site_yaml(site_id):
+    site_ = r.table("sites").get(site_id).run()
+    return app.response_class(
+            yaml.dump(site_, default_flow_style=False),
+            mimetype='application/yaml')
 
 @app.route("/api/stats/<bucket>")
 def stats(bucket):

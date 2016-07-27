@@ -24,7 +24,6 @@ import datetime
 import json
 import logging
 import os
-import pprint
 import re
 import requests
 import rethinkstuff
@@ -36,14 +35,21 @@ import time
 import traceback
 import warnings
 import yaml
+import shutil
 
 def _add_common_options(arg_parser):
+    arg_parser.add_argument(
+            '-q', '--quiet', dest='log_level',
+            action='store_const', default=logging.INFO, const=logging.WARN)
     arg_parser.add_argument(
             '-v', '--verbose', dest='log_level',
             action='store_const', default=logging.INFO, const=logging.DEBUG)
     arg_parser.add_argument(
             '--trace', dest='log_level',
             action='store_const', default=logging.INFO, const=brozzler.TRACE)
+    # arg_parser.add_argument(
+    #         '-s', '--silent', dest='log_level', action='store_const',
+    #         default=logging.INFO, const=logging.CRITICAL)
     arg_parser.add_argument(
             '--version', action='version',
             version='brozzler %s - %s' % (
@@ -80,6 +86,26 @@ def _configure_logging(args):
     warnings.simplefilter(
             'ignore', category=requests.packages.urllib3.exceptions.InsecurePlatformWarning)
 
+def suggest_default_chome_exe():
+    # mac os x application executable paths
+    for path in [
+            '/Applications/Chromium.app/Contents/MacOS/Chromium',
+            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome']:
+        if os.path.exists(path):
+            return path
+
+    # "chromium-browser" is the executable on ubuntu trusty
+    # https://github.com/internetarchive/brozzler/pull/6/files uses "chromium"
+    # google chrome executable names taken from these packages:
+    # http://www.ubuntuupdates.org/ppa/google_chrome
+    for exe in [
+            'chromium-browser', 'chromium', 'google-chrome',
+            'google-chrome-stable', 'google-chrome-beta',
+            'google-chrome-unstable']:
+        if shutil.which(exe):
+            return exe
+    return 'chromium-browser'
+
 def brozzle_page():
     '''
     Command line utility entry point for brozzling a single page. Opens url in
@@ -91,7 +117,8 @@ def brozzle_page():
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('url', metavar='URL', help='page url')
     arg_parser.add_argument(
-            '-e', '--executable', dest='chrome_exe', default='chromium-browser',
+            '-e', '--chrome-exe', dest='chrome_exe',
+            default=suggest_default_chome_exe(),
             help='executable to use to invoke chrome')
     arg_parser.add_argument(
             '--proxy', dest='proxy', default=None,
@@ -157,10 +184,9 @@ def brozzler_new_job():
     frontier = brozzler.RethinkDbFrontier(r)
     brozzler.job.new_job_file(frontier, args.job_conf_file)
 
-
 def brozzler_new_site():
     '''
-    Command line utility entry point for queuing a new brozzler site. 
+    Command line utility entry point for queuing a new brozzler site.
     Takes a seed url and creates a site and page object in rethinkdb, which
     brozzler-workers will look at and start crawling.
     '''
@@ -206,13 +232,13 @@ def brozzler_worker():
     Main entrypoint for brozzler, gets sites and pages to brozzle from
     rethinkdb, brozzles them.
     '''
-
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(__file__),
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     _add_rethinkdb_options(arg_parser)
     arg_parser.add_argument(
-            '-e', '--executable', dest='chrome_exe', default='chromium-browser',
+            '-e', '--chrome-exe', dest='chrome_exe',
+            default=suggest_default_chome_exe(),
             help='executable to use to invoke chrome')
     arg_parser.add_argument(
             '-n', '--max-browsers', dest='max_browsers', default='1',
@@ -227,42 +253,77 @@ def brozzler_worker():
     def sigint(signum, frame):
         raise brozzler.ShutdownRequested('shutdown requested (caught SIGINT)')
 
-    def dump_state(signum, frame):
-        pp = pprint.PrettyPrinter(indent=4)
-        state_strs = []
+    # do not print in signal handler to avoid RuntimeError: reentrant call
+    state_dump_msgs = []
+    def queue_state_dump(signum, frame):
+        signal.signal(signal.SIGQUIT, signal.SIG_IGN)
+        try:
+            state_strs = []
+            frames = sys._current_frames()
+            threads = {th.ident: th for th in threading.enumerate()}
+            for ident in frames:
+                if threads[ident]:
+                    state_strs.append(str(threads[ident]))
+                else:
+                    state_strs.append('<???:thread:ident=%s>' % ident)
+                stack = traceback.format_stack(frames[ident])
+                state_strs.append(''.join(stack))
+            state_dump_msgs.append(
+                    'dumping state (caught signal %s)\n%s' % (
+                        signum, '\n'.join(state_strs)))
+        except BaseException as e:
+            state_dump_msgs.append('exception dumping state: %s' % e)
+        finally:
+            signal.signal(signal.SIGQUIT, queue_state_dump)
 
-        for th in threading.enumerate():
-            state_strs.append(str(th))
-            stack = traceback.format_stack(sys._current_frames()[th.ident])
-            state_strs.append("".join(stack))
-
-        logging.warn("dumping state (caught signal {})\n{}".format(
-            signum, "\n".join(state_strs)))
-
-    signal.signal(signal.SIGQUIT, dump_state)
+    signal.signal(signal.SIGQUIT, queue_state_dump)
     signal.signal(signal.SIGTERM, sigterm)
     signal.signal(signal.SIGINT, sigint)
 
     r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(","), args.rethinkdb_db)
+            args.rethinkdb_servers.split(','), args.rethinkdb_db)
     frontier = brozzler.RethinkDbFrontier(r)
     service_registry = rethinkstuff.ServiceRegistry(r)
     worker = brozzler.worker.BrozzlerWorker(
             frontier, service_registry, max_browsers=int(args.max_browsers),
             chrome_exe=args.chrome_exe)
 
-    worker_thread = worker.start()
-
+    worker.start()
     try:
-        while worker_thread.is_alive():
+        while worker.is_alive():
+            while state_dump_msgs:
+                logging.warn(state_dump_msgs.pop(0))
             time.sleep(0.5)
-        logging.critical("worker thread has died, shutting down")
+        logging.critical('worker thread has died, shutting down')
     except brozzler.ShutdownRequested as e:
         pass
     finally:
         worker.shutdown_now()
-        for th in threading.enumerate():
-            if th != threading.current_thread():
-                th.join()
 
-    logging.info("brozzler-worker is all done, exiting")
+    logging.info('brozzler-worker is all done, exiting')
+
+def brozzler_ensure_tables():
+    '''
+    Creates rethinkdb tables if they don't already exist. Brozzler
+    (brozzler-worker, brozzler-new-job, etc) normally creates the tables it
+    needs on demand at startup, but if multiple instances are starting up at
+    the same time, you can end up with duplicate broken tables. So it's a good
+    idea to use this utility at an early step when spinning up a cluster.
+    '''
+    arg_parser = argparse.ArgumentParser(
+            prog=os.path.basename(sys.argv[0]),
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    _add_rethinkdb_options(arg_parser)
+    _add_common_options(arg_parser)
+
+    args = arg_parser.parse_args(args=sys.argv[1:])
+    _configure_logging(args)
+
+    r = rethinkstuff.Rethinker(
+            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+
+    # services table
+    rethinkstuff.ServiceRegistry(r)
+
+    # sites, pages, jobs tables
+    brozzler.frontier.RethinkDbFrontier(r)

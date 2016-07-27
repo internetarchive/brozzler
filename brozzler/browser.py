@@ -35,6 +35,9 @@ import select
 import re
 import base64
 import psutil
+import signal
+import string
+import sqlite3
 
 __all__ = ["BrowserPool", "Browser"]
 
@@ -126,11 +129,23 @@ class Browser:
     def __exit__(self, *args):
         self.stop()
 
-    def start(self, proxy=None):
+    def start(self, proxy=None, cookie_db=None):
         if not self._chrome_instance:
             # these can raise exceptions
             self.chrome_port = self._find_available_port()
             self._work_dir = tempfile.TemporaryDirectory()
+            if cookie_db is not None:
+                cookie_dir = os.sep.join([self._work_dir.name, "chrome-user-data","Default"])
+                cookie_location = os.sep.join([cookie_dir,"Cookies"])
+                self.logger.debug("Cookie DB provided. Writing to: %s", cookie_location)
+                os.makedirs(cookie_dir, exist_ok=True)
+
+                try:
+                    with open(cookie_location,'wb') as cookie_file:
+                        cookie_file.write(cookie_db)
+                except OSError:
+                    self.logger.error("exception writing cookie file at: %s", cookie_location, exc_info=True)
+
             self._chrome_instance = Chrome(
                     port=self.chrome_port, executable=self.chrome_exe,
                     user_home_dir=self._work_dir.name,
@@ -158,6 +173,24 @@ class Browser:
                 self._websocket_url = None
         except:
             self.logger.error("problem stopping", exc_info=True)
+
+    def persist_and_read_cookie_db(self):
+        cookie_location = os.sep.join([self._work_dir.name, "chrome-user-data","Default","Cookies"])
+        self.logger.debug("Saving Cookie DB from: %s", cookie_location)
+        try:
+            with sqlite3.connect(cookie_location) as conn:
+                cur = conn.cursor()
+                cur.execute("UPDATE cookies SET persistent = 1")
+        except sqlite3.Error:
+            self.logger.error("exception updating cookie DB", exc_info=True)
+
+        cookie_db=None
+        try:
+            with open(cookie_location, "rb") as cookie_file:
+                cookie_db=cookie_file.read()
+        except OSError:
+            self.logger.error("exception reading from cookie DB file at: %s", cookie_location, exc_info=True)
+        return cookie_db
 
     def _find_available_port(self):
         port_available = False
@@ -208,18 +241,23 @@ class Browser:
         self._waiting_on_screenshot_msg_id = None
         self._waiting_on_document_url_msg_id = None
         self._waiting_on_outlinks_msg_id = None
+        self._waiting_on_outlinks_start = None
+        self._waiting_on_outlinks_attempt = 0
         self._outlinks = None
         self._reached_limit = None
         self._aw_snap_hes_dead_jim = None
         self._abort_browse_page = False
         self._has_screenshot = False
 
-        self._websock = websocket.WebSocketApp(self._websocket_url,
-                on_open=self._visit_page, on_message=self._wrap_handle_message)
+        self._websock = websocket.WebSocketApp(
+                self._websocket_url, on_open=self._visit_page,
+                on_message=self._wrap_handle_message)
 
-        threadName = "WebsockThread{}-{}".format(self.chrome_port,
-                ''.join((random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(6))))
-        websock_thread = threading.Thread(target=self._websock.run_forever, name=threadName, kwargs={'ping_timeout':0.5})
+        threadName = "WebsockThread:%s-%s" % (self.chrome_port, ''.join(
+            random.choice(string.ascii_letters) for _ in range(6)))
+        websock_thread = threading.Thread(
+                target=self._websock.run_forever, name=threadName,
+                kwargs={'ping_timeout':0.5})
         websock_thread.start()
         self._start = time.time()
         aborted = False
@@ -235,27 +273,43 @@ class Browser:
                 if self._post_behavior_interval_func():
                     return self._outlinks
         finally:
-            if self._websock and self._websock.sock and self._websock.sock.connected:
+            if (self._websock and self._websock.sock
+                    and self._websock.sock.connected):
                 try:
                     self._websock.close()
                 except BaseException as e:
-                    self.logger.error("exception closing websocket {} - {}".format(self._websock, e))
+                    self.logger.error(
+                            "exception closing websocket %s - %s" % (
+                                self._websock, e))
 
             websock_thread.join(timeout=30)
             if websock_thread.is_alive():
-                self.logger.error("{} still alive 30 seconds after closing {}, will forcefully nudge it again".format(websock_thread, self._websock))
+                self.logger.error(
+                        "%s still alive 30 seconds after closing %s, will "
+                        "forcefully nudge it again" % (
+                            websock_thread, self._websock))
                 self._websock.keep_running = False
                 websock_thread.join(timeout=30)
                 if websock_thread.is_alive():
-                    self.logger.critical("{} still alive 60 seconds after closing {}".format(websock_thread, self._websock))
+                    self.logger.critical(
+                            "%s still alive 60 seconds after closing %s" % (
+                                websock_thread, self._websock))
 
             self._behavior = None
 
     def _post_behavior_interval_func(self):
-        """Called periodically after behavior is finished on the page. Returns
-        true when post-behavior tasks are finished."""
-        if not self._has_screenshot and (
-                not self._waiting_on_scroll_to_top_msg_id
+        """
+        Called periodically after behavior is finished on the page. Returns
+        true when post-behavior tasks are finished.
+        """
+        if (not self._websock or not self._websock.sock
+                or not self._websock.sock.connected):
+            raise BrowsingException(
+                    "websocket closed, did chrome die? {}".format(
+                        self._websocket_url))
+
+        if (not self._has_screenshot
+                and not self._waiting_on_scroll_to_top_msg_id
                 and not self._waiting_on_screenshot_msg_id):
             if time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS:
                 self.logger.info(
@@ -274,7 +328,7 @@ class Browser:
             self._waiting_on_scroll_to_top_start = time.time()
             return False
         elif (self._waiting_on_scroll_to_top_msg_id
-                and time.time() - self._waiting_on_scroll_to_top_start > 30):
+                and time.time() - self._waiting_on_scroll_to_top_start > 30.0):
             # chromium bug? occasionally we get no scroll-to-top result message
             self.logger.warn(
                     "timed out after %.1fs waiting for scroll-to-top result "
@@ -294,12 +348,33 @@ class Browser:
             return True
         elif not self._waiting_on_outlinks_msg_id:
             self.logger.info("retrieving outlinks for %s", self.url)
-            self._waiting_on_outlinks_msg_id = self.send_to_chrome(
-                    method="Runtime.evaluate",
-                    params={"expression": self.OUTLINKS_JS})
+            self._request_outlinks()
             return False
         else: # self._waiting_on_outlinks_msg_id
-            return False
+            if time.time() - self._waiting_on_outlinks_start > 30.0:
+                if self._waiting_on_outlinks_attempt < 5:
+                    self.logger.warn(
+                            "timed out after %.1fs on attempt %s to retrieve "
+                            "outlinks, trying again",
+                            time.time() - self._waiting_on_outlinks_start,
+                            self._waiting_on_outlinks_attempt)
+                    self._request_outlinks()
+                    return False
+                else:
+                    raise BrowsingException(
+                            "timed out after %.1fs on (final) attempt %s "
+                            "to retrieve outlinks" % (
+                            time.time() - self._waiting_on_outlinks_start,
+                            self._waiting_on_outlinks_attempt))
+            else: # just waiting for outlinks
+                return False
+
+    def _request_outlinks(self):
+        self._waiting_on_outlinks_msg_id = self.send_to_chrome(
+                method="Runtime.evaluate",
+                params={"expression": self.OUTLINKS_JS})
+        self._waiting_on_outlinks_attempt += 1
+        self._waiting_on_outlinks_start = time.time()
 
     OUTLINKS_JS = """
 var compileOutlinks = function(frame) {
@@ -318,10 +393,14 @@ compileOutlinks(window).join(' ');
     def _browse_interval_func(self):
         """Called periodically while page is being browsed. Returns True when
         finished browsing."""
-        if not self._websock or not self._websock.sock or not self._websock.sock.connected:
-            raise BrowsingException("websocket closed, did chrome die? {}".format(self._websocket_url))
+        if (not self._websock or not self._websock.sock
+                or not self._websock.sock.connected):
+            raise BrowsingException(
+                    "websocket closed, did chrome die? {}".format(
+                        self._websocket_url))
         elif self._aw_snap_hes_dead_jim:
-            raise BrowsingException("""chrome tab went "aw snap" or "he's dead jim"!""")
+            raise BrowsingException(
+                    """chrome tab went "aw snap" or "he's dead jim"!""")
         elif (self._behavior != None and self._behavior.is_finished()
                 or time.time() - self._start > Browser.HARD_TIMEOUT_SECONDS):
             return True
@@ -393,7 +472,7 @@ compileOutlinks(window).join(' ');
     def _page_load_event_fired(self, message):
         self.logger.info("Page.loadEventFired, moving on to starting behaviors url={}".format(self.url))
         self._behavior = Behavior(self.url, self)
-        self._behavior.start()
+        self._behavior.start(self.behavior_parameters)
 
         self._waiting_on_document_url_msg_id = self.send_to_chrome(method="Runtime.evaluate", params={"expression":"document.URL"})
 
@@ -420,7 +499,7 @@ compileOutlinks(window).join(' ');
                 self.on_screenshot(base64.b64decode(message["result"]["data"]))
             self._waiting_on_screenshot_msg_id = None
             self._has_screenshot = True
-            self.logger.info("got screenshot, moving on to getting outlinks url={}".format(self.url))
+            self.logger.info("got screenshot, moving on to getting outlinks")
         elif message["id"] == self._waiting_on_scroll_to_top_msg_id:
             self._waiting_on_scroll_to_top_msg_id = None
             self._waiting_on_scroll_to_top_start = None
@@ -473,15 +552,19 @@ class Chrome:
         self.ignore_cert_errors = ignore_cert_errors
         self._shutdown = threading.Event()
 
-    # returns websocket url to chrome window with about:blank loaded
     def __enter__(self):
+        '''
+        Returns websocket url to chrome window with about:blank loaded.
+        '''
         return self.start()
 
     def __exit__(self, *args):
         self.stop()
 
-    # returns websocket url to chrome window with about:blank loaded
     def start(self):
+        '''
+        Returns websocket url to chrome window with about:blank loaded.
+        '''
         timeout_sec = 600
         new_env = os.environ.copy()
         new_env["HOME"] = self.user_home_dir
@@ -502,9 +585,10 @@ class Chrome:
             chrome_args.append("--proxy-server={}".format(self.proxy))
         chrome_args.append("about:blank")
         self.logger.info("running: {}".format(" ".join(chrome_args)))
+        # start_new_session - new process group so we can kill the whole group
         self.chrome_process = subprocess.Popen(chrome_args, env=new_env,
-                start_new_session=True, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, bufsize=0)
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0,
+                start_new_session=True)
         self._out_reader_thread = threading.Thread(target=self._read_stderr_stdout,
                 name="ChromeOutReaderThread(pid={})".format(self.chrome_process.pid))
         self._out_reader_thread.start()
@@ -540,7 +624,9 @@ class Chrome:
         # XXX select doesn't work on windows
         def readline_nonblock(f):
             buf = b""
-            while not self._shutdown.is_set() and (len(buf) == 0 or buf[-1] != 0xa) and select.select([f],[],[],0.5)[0]:
+            while not self._shutdown.is_set() and (
+                    len(buf) == 0 or buf[-1] != 0xa) and select.select(
+                            [f],[],[],0.5)[0]:
                 buf += f.read(1)
             return buf
 
@@ -548,17 +634,33 @@ class Chrome:
             while not self._shutdown.is_set():
                 buf = readline_nonblock(self.chrome_process.stdout)
                 if buf:
-                    if re.search(b"Xlib:  extension|CERT_PKIXVerifyCert for [^ ]* failed|^ALSA lib|ERROR:gl_surface_glx.cc|ERROR:gpu_child_thread.cc", buf):
-                        logging.debug("chrome pid %s STDERR %s", self.chrome_process.pid, buf)
+                    if re.search(
+                            b"Xlib:  extension|"
+                            b"CERT_PKIXVerifyCert for [^ ]* failed|"
+                            b"^ALSA lib|ERROR:gl_surface_glx.cc|"
+                            b"ERROR:gpu_child_thread.cc", buf):
+                        logging.log(
+                                brozzler.TRACE, "chrome pid %s STDOUT %s",
+                                self.chrome_process.pid, buf)
                     else:
-                        logging.warn("chrome pid %s STDERR %s", self.chrome_process.pid, buf)
+                        logging.info(
+                                "chrome pid %s STDOUT %s",
+                                self.chrome_process.pid, buf)
 
                 buf = readline_nonblock(self.chrome_process.stderr)
                 if buf:
-                    if re.search(b"Xlib:  extension|CERT_PKIXVerifyCert for [^ ]* failed|^ALSA lib|ERROR:gl_surface_glx.cc|ERROR:gpu_child_thread.cc", buf):
-                        logging.debug("chrome pid %s STDERR %s", self.chrome_process.pid, buf)
+                    if re.search(
+                            b"Xlib:  extension|"
+                            b"CERT_PKIXVerifyCert for [^ ]* failed|"
+                            b"^ALSA lib|ERROR:gl_surface_glx.cc|"
+                            b"ERROR:gpu_child_thread.cc", buf):
+                        logging.log(
+                                brozzler.TRACE, "chrome pid %s STDOUT %s",
+                                self.chrome_process.pid, buf)
                     else:
-                        logging.warn("chrome pid %s STDERR %s", self.chrome_process.pid, buf)
+                        logging.info(
+                                "chrome pid %s STDERR %s",
+                                self.chrome_process.pid, buf)
         except:
             logging.error("unexpected exception", exc_info=True)
 
@@ -568,10 +670,10 @@ class Chrome:
 
         timeout_sec = 300
         self._shutdown.set()
-        self.logger.info("terminating chrome pid {}".format(self.chrome_process.pid))
+        self.logger.info("terminating chrome pgid %s" % self.chrome_process.pid)
 
-        self.chrome_process.terminate()
-        first_sigterm = last_sigterm = time.time()
+        os.killpg(self.chrome_process.pid, signal.SIGTERM)
+        first_sigterm = time.time()
 
         try:
             while time.time() - first_sigterm < timeout_sec:
@@ -580,21 +682,29 @@ class Chrome:
                 status = self.chrome_process.poll()
                 if status is not None:
                     if status == 0:
-                        self.logger.info("chrome pid {} exited normally".format(self.chrome_process.pid, status))
+                        self.logger.info(
+                                "chrome pid %s exited normally",
+                                self.chrome_process.pid)
                     else:
-                        self.logger.warn("chrome pid {} exited with nonzero status {}".format(self.chrome_process.pid, status))
+                        self.logger.warn(
+                                "chrome pid %s exited with nonzero status %s",
+                                self.chrome_process.pid, status)
+
+                    # XXX I would like to forcefully kill the process group
+                    # here to guarantee no orphaned chromium subprocesses hang
+                    # around, but there's a chance I suppose that some other
+                    # process could have started with the same pgid
                     return
 
-                # sometimes a hung chrome process will terminate on repeated sigterms
-                if time.time() - last_sigterm > 10:
-                    self.chrome_process.terminate()
-                    last_sigterm = time.time()
-
-            self.logger.warn("chrome pid {} still alive {} seconds after sending SIGTERM, sending SIGKILL".format(self.chrome_process.pid, timeout_sec))
-            self.chrome_process.kill()
+            self.logger.warn(
+                    "chrome pid %s still alive %.1f seconds after sending "
+                    "SIGTERM, sending SIGKILL", self.chrome_process.pid,
+                    time.time() - first_sigterm)
+            os.killpg(self.chrome_process.pid, signal.SIGKILL)
             status = self.chrome_process.wait()
-            self.logger.warn("chrome pid {} reaped (status={}) after killing with SIGKILL".format(self.chrome_process.pid, status))
+            self.logger.warn(
+                    "chrome pid %s reaped (status=%s) after killing with "
+                    "SIGKILL", self.chrome_process.pid, status)
         finally:
             self._out_reader_thread.join()
             self.chrome_process = None
-

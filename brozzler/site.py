@@ -91,7 +91,7 @@ class Site(brozzler.BaseDictable):
             enable_warcprox_features=False, reached_limit=None,
             status="ACTIVE", claimed=False, start_time=None,
             last_disclaimed=_EPOCH_UTC, last_claimed_by=None,
-            last_claimed=_EPOCH_UTC, metadata={}):
+            last_claimed=_EPOCH_UTC, metadata={}, remember_outlinks=None, cookie_db=None):
 
         self.seed = seed
         self.id = id
@@ -109,6 +109,8 @@ class Site(brozzler.BaseDictable):
         self.last_disclaimed = last_disclaimed
         self.last_claimed = last_claimed
         self.metadata = metadata
+        self.remember_outlinks = remember_outlinks
+        self.cookie_db = cookie_db
 
         self.scope = scope or {}
         if not "surt" in self.scope:
@@ -218,7 +220,8 @@ class Page(brozzler.BaseDictable):
     def __init__(
             self, url, id=None, site_id=None, job_id=None, hops_from_seed=0,
             redirect_url=None, priority=None, claimed=False, brozzle_count=0,
-            via_page_id=None, last_claimed_by=None, hops_off_surt=0):
+            via_page_id=None, last_claimed_by=None, hops_off_surt=0,
+            outlinks=None):
         self.site_id = site_id
         self.job_id = job_id
         self.url = url
@@ -229,6 +232,7 @@ class Page(brozzler.BaseDictable):
         self.brozzle_count = brozzle_count
         self.via_page_id = via_page_id
         self.hops_off_surt = hops_off_surt
+        self.outlinks = outlinks
         self._canon_hurl = None
 
         if priority is not None:

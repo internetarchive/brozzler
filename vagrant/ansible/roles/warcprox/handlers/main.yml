@@ -1,0 +1,14 @@
+---
+# - name: start warcprox
+#   environment:
+#     PYTHONPATH: /home/vagrant/warcprox-ve34/lib/python3.4/site-packages
+#     PATH: /home/vagrant/warcprox-ve34/bin:/usr/bin:/bin
+#   args:
+#     executable: /bin/bash
+#   shell: nice warcprox --dir=/vagrant/warcs --base32 --gzip
+#          --rollover-idle-time=180 --cacert=/vagrant/warcprox-ca.pem
+#          --onion-tor-socks-proxy=localhost:9050 --rethinkdb-servers=localhost
+#          --rethinkdb-big-table &> /vagrant/logs/warcprox.out &
+- name: restart warcprox
+  service: name=warcprox state=restarted
+  become: true

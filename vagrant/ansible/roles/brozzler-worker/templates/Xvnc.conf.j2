@@ -1,0 +1,14 @@
+description "Xvnc"
+
+start on runlevel [2345]
+stop on runlevel [!2345]
+
+setuid vagrant
+
+console log
+
+exec nice Xvnc4 :1 -auth /tmp/Xauthority.vagrant \
+    -geometry 1600x1000 -depth 24 -rfbwait 0 -nolisten tcp -rfbport 5901 \
+    -SecurityTypes None -pn -fp /usr/share/fonts/X11/misc/ -co /etc/X11/rgb \
+    AcceptCutText=0 AcceptPointerEvents=0 AcceptKeyEvents=0
+

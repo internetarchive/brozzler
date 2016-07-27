@@ -292,6 +292,8 @@ class RethinkDbFrontier:
             self.update_page(page)
 
     def scope_and_schedule_outlinks(self, site, parent_page, outlinks):
+        if site.remember_outlinks:
+            parent_page.outlinks = {"accepted":[],"blocked":[],"rejected":[]}
         counts = {"added":0,"updated":0,"rejected":0,"blocked":0}
         for url in outlinks or []:
             u = brozzler.site.Url(url)
@@ -314,10 +316,19 @@ class RethinkDbFrontier:
                     else:
                         self.new_page(new_child_page)
                         counts["added"] += 1
+                    if site.remember_outlinks:
+                        parent_page.outlinks["accepted"].append(url)
                 else:
                     counts["blocked"] += 1
+                    if site.remember_outlinks:
+                        parent_page.outlinks["blocked"].append(url)
             else:
                 counts["rejected"] += 1
+                if site.remember_outlinks:
+                    parent_page.outlinks["rejected"].append(url)
+
+        if site.remember_outlinks:
+            self.update_page(parent_page)
 
         self.logger.info(
                 "%s new links added, %s existing links updated, %s links "
