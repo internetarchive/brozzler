@@ -643,7 +643,7 @@ class Chrome:
                                 brozzler.TRACE, "chrome pid %s STDOUT %s",
                                 self.chrome_process.pid, buf)
                     else:
-                        logging.info(
+                        logging.debug(
                                 "chrome pid %s STDOUT %s",
                                 self.chrome_process.pid, buf)
 
@@ -658,7 +658,7 @@ class Chrome:
                                 brozzler.TRACE, "chrome pid %s STDOUT %s",
                                 self.chrome_process.pid, buf)
                     else:
-                        logging.info(
+                        logging.debug(
                                 "chrome pid %s STDERR %s",
                                 self.chrome_process.pid, buf)
         except:
