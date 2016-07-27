@@ -472,7 +472,7 @@ compileOutlinks(window).join(' ');
     def _page_load_event_fired(self, message):
         self.logger.info("Page.loadEventFired, moving on to starting behaviors url={}".format(self.url))
         self._behavior = Behavior(self.url, self)
-        self._behavior.start()
+        self._behavior.start(self.behavior_parameters)
 
         self._waiting_on_document_url_msg_id = self.send_to_chrome(method="Runtime.evaluate", params={"expression":"document.URL"})
 
