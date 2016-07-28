@@ -445,7 +445,9 @@ compileOutlinks(window).join(' ');
         try:
             self._handle_message(websock, message)
         except:
-            self.logger.error("uncaught exception in _handle_message", exc_info=True)
+            self.logger.error(
+                    "uncaught exception in _handle_message message=%s",
+                    message, exc_info=True)
             self.abort_browse_page()
 
     def _network_request_will_be_sent(self, message):
