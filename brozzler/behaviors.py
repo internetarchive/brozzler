@@ -1,21 +1,21 @@
-#
-# brozzler/behaviors.py - manages behaviors, which are javascript scripts that
-# run in brozzled web pages
-#
-# Copyright (C) 2014-2016 Internet Archive
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+'''
+brozzler/behaviors.py - manages behaviors, which are javascript scripts that
+run in brozzled web pages
+
+Copyright (C) 2014-2016 Internet Archive
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+'''
 
 import json
 import itertools
@@ -111,13 +111,21 @@ class Behavior:
         # {'id': 59, 'result': {'result': {'type': 'boolean', 'value': True}, 'wasThrown': False}}
         # {'id': 59, 'result': {'result': {'type': 'boolean', 'value': False}}
         self.waiting_result_msg_ids.remove(chrome_message['id'])
-        if ('result' in chrome_message
-                and not ('wasThrown' in chrome_message['result'] and chrome_message['result']['wasThrown'])
+        if ('result' in chrome_message and not (
+                    'wasThrown' in chrome_message['result']
+                    and chrome_message['result']['wasThrown'])
                 and 'result' in chrome_message['result']
                 and type(chrome_message['result']['result']['value']) == bool):
             self.script_finished = chrome_message['result']['result']['value']
         else:
-            self.logger.error("chrome message doesn't look like a boolean result! {}".format(chrome_message))
+            # this happens if the behavior script doesn't define
+            # umbraBehaviorFinished, and I think it can also happen normally
+            # after the behavior has been sent to the browser but before
+            # the browser has it fully loaded... in any case the message
+            # was overwhelming the logs, so I'm bumping it down to debug level
+            self.logger.debug(
+                    "chrome message doesn't look like a boolean result! %s",
+                    chrome_message)
 
     def notify_of_activity(self):
         self.last_activity = time.time()
@@ -127,5 +135,3 @@ if __name__ == "__main__":
             format='%(asctime)s %(process)d %(levelname)s %(threadName)s %(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s')
     logger = logging.getLogger('umbra.behaviors')
     logger.info("custom behaviors: {}".format(Behavior.behaviors()))
-
-
