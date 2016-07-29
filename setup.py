@@ -18,18 +18,32 @@ limitations under the License.
 '''
 
 import setuptools
+import os
+
+def find_package_data(package):
+    pkg_data = []
+    depth = len(package.split('.'))
+    path = os.path.join(*package.split('.'))
+    for dirpath, dirnames, filenames in os.walk(path):
+        if not os.path.exists(os.path.join(dirpath, '__init__.py')):
+            relpath = os.path.join(*dirpath.split(os.sep)[depth:])
+            pkg_data.extend(os.path.join(relpath, f) for f in filenames)
+    return pkg_data
 
 setuptools.setup(
         name='brozzler',
-        version='1.1b4.dev63',
+        version='1.1b4.dev64',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
         author_email='nlevitt@archive.org',
         long_description=open('README.rst', encoding='UTF-8').read(),
         license='Apache License 2.0',
-        packages=['brozzler'],
-        package_data={'brozzler': ['behaviors.d/*.js*', 'behaviors.yaml']},
+        packages=['brozzler', 'brozzler.webconsole'],
+        package_data={
+            'brozzler': ['behaviors.d/*.js*', 'behaviors.yaml'],
+            'brozzler.webconsole': find_package_data('brozzler.webconsole'),
+        },
         entry_points={
             'console_scripts': [
                 'brozzle-page=brozzler.cli:brozzle_page',
