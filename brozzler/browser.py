@@ -36,8 +36,8 @@ import re
 import base64
 import psutil
 import signal
-import string
 import sqlite3
+import datetime
 
 __all__ = ["BrowserPool", "Browser"]
 
@@ -261,8 +261,8 @@ class Browser:
                 self._websocket_url, on_open=self._visit_page,
                 on_message=self._wrap_handle_message)
 
-        threadName = "WebsockThread:%s-%s" % (self.chrome_port, ''.join(
-            random.choice(string.ascii_letters) for _ in range(6)))
+        threadName = "WebsockThread:{}-{:%Y%m%d%H%M%S}".format(
+                self.chrome_port, datetime.datetime.utcnow())
         websock_thread = threading.Thread(
                 target=self._websock.run_forever, name=threadName,
                 kwargs={'ping_timeout':0.5})
@@ -315,12 +315,26 @@ compileOutlinks(window).join(' ');
 """
 
     def _chain_chrome_messages(self, chain):
+        """
+        Sends a series of messages to chrome/chromium on the debugging protocol
+        websocket. Waits for a reply from each one before sending the next.
+        Enforces a timeout waiting for each reply. If the timeout is hit, sets
+        self._result_message_timeout with a ResultMessageTimeout (an exception
+        class). Takes an array of dicts, each of which should look like this:
+
+            {
+                "info": "human readable description",
+                "chrome_msg": { ... },   # message to send to chrome, as a dict
+                "timeout": 30,           # timeout in seconds
+                "callback": my_callback, # takes one arg, the result message
+            }
+
+        The code is rather convoluted because of the asynchronous nature of the
+        whole thing. See how it's used in _start_postbehavior_chain.
+        """
         timer = None
 
         def callback(message):
-            self.logger.info(
-                    "timer=%s chain[0]['callback']=%s len(chain[1:])=%s",
-                    timer, chain[0]["callback"], len(chain[1:]))
             if timer:
                 timer.cancel()
             if message["id"] in self._waiting_on_result_messages:
