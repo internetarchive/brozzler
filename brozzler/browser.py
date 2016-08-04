@@ -540,7 +540,7 @@ compileOutlinks(window).join(' ');
         elif "result" in message:
             if message["id"] in self._waiting_on_result_messages:
                 callback = self._waiting_on_result_messages[message["id"]]
-                self.logger.info(
+                self.logger.debug(
                         "received result for message id=%s, calling %s",
                         message["id"], callback)
                 callback(message)
