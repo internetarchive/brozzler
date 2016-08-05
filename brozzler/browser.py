@@ -301,17 +301,19 @@ class Browser:
             self._behavior = None
 
     OUTLINKS_JS = """
-var compileOutlinks = function(frame) {
+var __brzl_framesDone = new Set();
+var __brzl_compileOutlinks = function(frame) {
+    __brzl_framesDone.add(frame);
     var outlinks = Array.prototype.slice.call(
             frame.document.querySelectorAll('a[href]'));
     for (var i = 0; i < frame.frames.length; i++) {
-        if (frame.frames[i]) { // sometimes undefined (why?)
-            outlinks = outlinks.concat(compileOutlinks(frame.frames[i]));
+        if (frame.frames[i] && !__brzl_framesDone.has(frame.frames[i])) {
+            outlinks = outlinks.concat(__brzl_compileOutlinks(frame.frames[i]));
         }
     }
     return outlinks;
 }
-compileOutlinks(window).join(' ');
+__brzl_compileOutlinks(window).join(' ');
 """
 
     def _chain_chrome_messages(self, chain):
