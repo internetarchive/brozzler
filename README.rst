@@ -1,4 +1,4 @@
-.. |logo| image:: https://cdn.rawgit.com/nlevitt/brozzler/d1158ab2242815b28fe7bb066042b5b5982e4627/webconsole/static/brozzler.svg
+.. |logo| image:: https://cdn.rawgit.com/internetarchive/brozzler/1.1b5/brozzler/webconsole/static/brozzler.svg
    :width: 7%
 
 brozzler |logo|
@@ -6,43 +6,89 @@ brozzler |logo|
 
 "browser" \| "crawler" = "brozzler"
 
-Brozzler is a distributed web crawler (爬虫) that uses a real browser
-(chrome or chromium) to fetch pages and embedded urls and to extract
-links. It also uses `youtube-dl <https://github.com/rg3/youtube-dl>`__
-to enhance media capture capabilities.
-
-It is forked from https://github.com/internetarchive/umbra.
+Brozzler is a distributed web crawler (爬虫) that uses a real browser (chrome
+or chromium) to fetch pages and embedded urls and to extract links. It also
+uses `youtube-dl <https://github.com/rg3/youtube-dl>`_ to enhance media
+capture capabilities.
 
 Brozzler is designed to work in conjunction with
-`warcprox <https://github.com/internetarchive/warcprox>`__ for web
+`warcprox <https://github.com/internetarchive/warcprox>`_ for web
 archiving.
 
-Installation
+Requirements
 ------------
 
-Brozzler requires python 3.4 or later.
+- Python 3.4 or later
+- RethinkDB deployment
+- Chromium or Google Chrome browser
+
+Worth noting is that the browser requires a graphical environment to run. You
+already have this on your laptop, but on a server it will probably require
+deploying some additional infrastructure (typically X11). The vagrant
+configuration in the brozzler repository (still a work in progress) has an
+example setup.
+
+Getting Started
+---------------
+
+The easiest way to get started with brozzler for web archiving is with
+``brozzler-easy``. Brozzler-easy runs brozzler-worker, warcprox, and
+`pywb <https://github.com/ikreymer/pywb>`_, configured to work with each other,
+in a single process.
+
+Mac instructions:
 
 ::
 
-    # set up virtualenv if desired
-    pip install brozzler
+    # install and start rethinkdb
+    brew install rethinkdb
+    rethinkdb &>>rethinkdb.log &
 
-Brozzler also requires a rethinkdb deployment.
+    # install brozzler with special dependencies pywb and warcprox
+    pip install brozzler[easy]  # in a virtualenv if desired
 
-Usage
------
+    # queue a site to crawl
+    brozzler-new-site http://example.com/
+
+    # or a job
+    brozzler-new-job job1.yml
+
+    # start brozzler-easy
+    brozzler-easy
+
+At this point brozzler-easy will start brozzling your site. Results will be
+immediately available for playback in pywb at http://localhost:8091/brozzler/.
+
+*Brozzler-easy demonstrates the full brozzler archival crawling workflow, but
+does not take advantage of brozzler's distributed nature.*
+
+Installation and Usage
+----------------------
+
+To install brozzler only:
+
+::
+
+    pip install brozzler  # in a virtualenv if desired
 
 Launch one or more workers:
 
 ::
 
-    brozzler-worker -e chromium
+    brozzler-worker
 
 Submit jobs:
 
 ::
 
     brozzler-new-job myjob.yaml
+
+Submit sites not tied to a job:
+
+::
+
+    brozzler-new-site --proxy=localhost:8000 --enable-warcprox-features \
+        --time-limit=600 http://example.com/
 
 Job Configuration
 -----------------
@@ -70,14 +116,6 @@ must be specified, everything else is optional.
         scope:
           surt: http://(org,example,
 
-Submit a Site to Crawl Without Configuring a Job
-------------------------------------------------
-
-::
-
-    brozzler-new-site --proxy=localhost:8000 --enable-warcprox-features \
-        --time-limit=600 http://example.com/
-
 Brozzler Web Console
 --------------------
 
@@ -95,19 +133,7 @@ To start the app, run
 
     brozzler-webconsole
 
-
-XXX configuration stuff
-
-Fonts (for decent screenshots)
-------------------------------
-
-On ubuntu 14.04 trusty I installed these packages:
-
-xfonts-base ttf-mscorefonts-installer fonts-arphic-bkai00mp
-fonts-arphic-bsmi00lp fonts-arphic-gbsn00lp fonts-arphic-gkai00mp
-fonts-arphic-ukai fonts-farsiweb fonts-nafees fonts-sil-abyssinica
-fonts-sil-ezra fonts-sil-padauk fonts-unfonts-extra fonts-unfonts-core
-ttf-indic-fonts fonts-thai-tlwg fonts-lklug-sinhala
+See ``brozzler-webconsole --help`` for configuration options.
 
 License
 -------
