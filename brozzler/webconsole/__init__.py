@@ -34,6 +34,7 @@ import os
 import importlib
 import rethinkdb
 import yaml
+import base64
 
 # flask does its own logging config
 # logging.basicConfig(
@@ -120,8 +121,10 @@ def page_yaml(page_id):
 @app.route("/api/sites/<site_id>")
 @app.route("/api/site/<site_id>")
 def site(site_id):
-    site_ = r.table("sites").get(site_id).run()
-    return flask.jsonify(site_)
+    s = r.table("sites").get(site_id).run()
+    if "cookie_db" in s:
+        s["cookie_db"] = base64.b64encode(s["cookie_db"]).decode("ascii")
+    return flask.jsonify(s)
 
 @app.route("/api/sites/<site_id>/yaml")
 @app.route("/api/site/<site_id>/yaml")
@@ -139,8 +142,12 @@ def stats(bucket):
 @app.route("/api/jobs/<int:job_id>/sites")
 @app.route("/api/job/<int:job_id>/sites")
 def sites(job_id):
-    sites_ = r.table("sites").get_all(job_id, index="job_id").run()
-    return flask.jsonify(sites=list(sites_))
+    sites_ = list(r.table("sites").get_all(job_id, index="job_id").run())
+    # TypeError: <binary, 7168 bytes, '53 51 4c 69 74 65...'> is not JSON serializable
+    for s in sites_:
+        if "cookie_db" in s:
+            s["cookie_db"] = base64.b64encode(s["cookie_db"]).decode("ascii")
+    return flask.jsonify(sites=sites_)
 
 @app.route("/api/jobs/<int:job_id>")
 @app.route("/api/job/<int:job_id>")
