@@ -56,7 +56,7 @@ SETTINGS = {
         'RETHINKDB_SERVERS', 'localhost').split(','),
     'RETHINKDB_DB': os.environ.get('RETHINKDB_DB', 'brozzler'),
     'WAYBACK_BASEURL': os.environ.get(
-        'WAYBACK_BASEURL', 'http://wbgrp-svc107.us.archive.org:8091'),
+        'WAYBACK_BASEURL', 'http://localhost:8091/brozzler'),
 }
 r = rethinkstuff.Rethinker(
         SETTINGS['RETHINKDB_SERVERS'], db=SETTINGS['RETHINKDB_DB'])
@@ -221,7 +221,26 @@ except ImportError:
         logging.info('running brozzler-webconsole using simple flask app.run')
         app.run()
 
-if __name__ == "__main__":
-    # arguments?
+def main():
+    import argparse
+    arg_parser = argparse.ArgumentParser(
+            prog=os.path.basename(sys.argv[0]),
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description=(
+                'brozzler-webconsole - web application for viewing brozzler '
+                'crawl status'),
+            epilog=(
+                'brozzler-webconsole has no command line options, but can be '
+                'configured using the following environment variables:\n\n'
+                '  RETHINKDB_SERVERS   rethinkdb servers, e.g. db0.foo.org,'
+                'db0.foo.org:38015,db1.foo.org (default: localhost)\n'
+                '  RETHINKDB_DB        rethinkdb database name (default: '
+                'brozzler)\n'
+                '  WAYBACK_BASEURL     base url for constructing wayback '
+                'links (default http://localhost:8091/brozzler)'))
+    args = arg_parser.parse_args(args=sys.argv[1:])
     run()
+
+if __name__ == "__main__":
+    main()
 
