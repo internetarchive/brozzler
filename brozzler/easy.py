@@ -90,15 +90,28 @@ def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
             default=brozzler.cli.suggest_default_chome_exe(),
             help='executable to use to invoke chrome')
     arg_parser.add_argument(
-            '-n', '--max-browsers', dest='max_browsers', default='1',
-            help='max number of chrome instances simultaneously browsing pages')
+            '-n', '--max-browsers', dest='max_browsers',
+            type=int, default=1, help=(
+                'max number of chrome instances simultaneously '
+                'browsing pages'))
 
     # pywb args
     arg_parser.add_argument(
-            '--pywb-port', dest='pywb_port', type=int, default=8091,
-            help='pywb wayback port')
+            '--pywb-address', dest='pywb_address',
+            default='0.0.0.0',
+            help='pywb wayback address to listen on')
+    arg_parser.add_argument(
+            '--pywb-port', dest='pywb_port', type=int,
+            default=8880, help='pywb wayback port')
 
     # webconsole args
+    arg_parser.add_argument(
+            '--webconsole-address', dest='webconsole_address',
+            default='localhost',
+            help='brozzler web console address to listen on')
+    arg_parser.add_argument(
+            '--webconsole-port', dest='webconsole_port',
+            type=int, default=8881, help='brozzler web console port')
 
     # common at the bottom args
     arg_parser.add_argument(
@@ -134,7 +147,8 @@ class BrozzlerEasyController:
 
     def _init_brozzler_webconsole(self, args):
         return wsgiref.simple_server.make_server(
-                '', 8081, brozzler.webconsole.app, ThreadingWSGIServer)
+                args.webconsole_address, args.webconsole_port,
+                brozzler.webconsole.app, ThreadingWSGIServer)
 
     def _init_brozzler_worker(self, args):
         r = rethinkstuff.Rethinker(
@@ -143,7 +157,7 @@ class BrozzlerEasyController:
         service_registry = rethinkstuff.ServiceRegistry(r)
         worker = brozzler.worker.BrozzlerWorker(
                 frontier, service_registry,
-                max_browsers=int(args.max_browsers),
+                max_browsers=args.max_browsers,
                 chrome_exe=args.chrome_exe,
                 proxy='%s:%s' % self.warcprox_controller.proxy.server_address,
                 enable_warcprox_features=True)
@@ -182,7 +196,8 @@ class BrozzlerEasyController:
         # disable is_hop_by_hop restrictions
         wsgiref.handlers.is_hop_by_hop = lambda x: False
         return wsgiref.simple_server.make_server(
-                '', args.pywb_port, wsgi_app, ThreadingWSGIServer)
+                args.pywb_address, args.pywb_port, wsgi_app,
+                ThreadingWSGIServer)
 
     def start(self):
         self.logger.info('starting warcprox')
@@ -197,7 +212,8 @@ class BrozzlerEasyController:
         threading.Thread(target=self.pywb_httpd.serve_forever).start()
 
         self.logger.info(
-                'starting brozzler-webconsole at %s:%s', 'XXX', 'XXX')
+                'starting brozzler-webconsole at %s:%s',
+                *self.webconsole_httpd.server_address)
         threading.Thread(target=self.webconsole_httpd.serve_forever).start()
 
     def shutdown(self):
