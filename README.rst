@@ -32,9 +32,9 @@ Getting Started
 ---------------
 
 The easiest way to get started with brozzler for web archiving is with
-``brozzler-easy``. Brozzler-easy runs brozzler-worker, warcprox, and
-`pywb <https://github.com/ikreymer/pywb>`_, configured to work with each other,
-in a single process.
+``brozzler-easy``. Brozzler-easy runs brozzler-worker, warcprox,
+`pywb <https://github.com/ikreymer/pywb>`_, and brozzler-webconsole, configured
+to work with each other, in a single process.
 
 Mac instructions:
 
