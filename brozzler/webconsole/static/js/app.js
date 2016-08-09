@@ -79,6 +79,9 @@ brozzlerControllers.controller("HomeController", ["$scope", "$http",
         $http.get("/api/services").success(function(data) {
             $scope.services = data.services;
         });
+        $http.get("/api/jobless-sites").success(function(data) {
+            $scope.joblessSites = data.sites;
+        });
    }]);
 
 brozzlerControllers.controller("WorkersListController", ["$scope", "$http",

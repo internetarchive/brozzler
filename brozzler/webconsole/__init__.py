@@ -27,7 +27,6 @@ except ImportError as e:
             'brozzler[webconsole]".\nSee README.rst for more information.',
             type(e).__name__, e)
     sys.exit(1)
-
 import rethinkstuff
 import json
 import os
@@ -143,6 +142,16 @@ def stats(bucket):
 @app.route("/api/job/<int:job_id>/sites")
 def sites(job_id):
     sites_ = list(r.table("sites").get_all(job_id, index="job_id").run())
+    # TypeError: <binary, 7168 bytes, '53 51 4c 69 74 65...'> is not JSON serializable
+    for s in sites_:
+        if "cookie_db" in s:
+            s["cookie_db"] = base64.b64encode(s["cookie_db"]).decode("ascii")
+    return flask.jsonify(sites=sites_)
+
+@app.route("/api/jobless-sites")
+def jobless_sites():
+    # XXX inefficient (unindexed) query
+    sites_ = list(r.table("sites").filter(~r.row.has_fields("job_id")).run())
     # TypeError: <binary, 7168 bytes, '53 51 4c 69 74 65...'> is not JSON serializable
     for s in sites_:
         if "cookie_db" in s:
