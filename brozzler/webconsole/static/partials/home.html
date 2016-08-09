@@ -73,12 +73,18 @@
                 <thead>
                     <tr>
                         <th>id</th>
+                        <th>status</th>
+                        <th>started</th>
+                        <th>seed url</th>
                     </tr>
                 </thead>
                 <tbody>
-                <tr ng-repeat="site in joblessSites">
-                    <td><a href="/sites/{{site.id}}">{{site.id}}</a></td>
-                </tr>
+                  <tr ng-repeat="site in joblessSites">
+                      <td><a href="/sites/{{site.id}}">{{site.id}}</a></td>
+                      <td>{{site.status}}</td>
+                      <td>{{site.start_time}}</td>
+                      <td>{{site.seed}}</td>
+                  </tr>
                 </tbody>
             </table>
         </div>

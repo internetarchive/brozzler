@@ -69,7 +69,7 @@ class RethinkDbFrontier:
             self.r.table("pages").index_create(
                     "least_hops", [
                         self.r.row["site_id"], self.r.row["brozzle_count"],
-                        self.r.row["hops_from_seed"]])
+                        self.r.row["hops_from_seed"]]).run()
         if not "jobs" in tables:
             self.logger.info(
                     "creating rethinkdb table 'jobs' in database %s",

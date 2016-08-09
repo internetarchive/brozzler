@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
-brozzler-easy - brozzler-worker, warcprox, and pywb all working together in a
-single process
+brozzler-easy - brozzler-worker, warcprox, pywb, and brozzler-webconsole all
+working together in a single process
 
 Copyright (C) 2016 Internet Archive
 
