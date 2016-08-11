@@ -59,7 +59,12 @@ SETTINGS = {
 }
 r = rethinkstuff.Rethinker(
         SETTINGS['RETHINKDB_SERVERS'], db=SETTINGS['RETHINKDB_DB'])
-service_registry = rethinkstuff.ServiceRegistry(r)
+_svc_reg = None
+def service_registry():
+    global _svc_reg
+    if not _svc_reg:
+        _svc_reg = rethinkstuff.ServiceRegistry(r)
+    return _svc_reg
 
 @app.route("/api/sites/<site_id>/queued_count")
 @app.route("/api/site/<site_id>/queued_count")
@@ -174,12 +179,12 @@ def job_yaml(job_id):
 
 @app.route("/api/workers")
 def workers():
-    workers_ = service_registry.available_services("brozzler-worker")
+    workers_ = service_registry().available_services("brozzler-worker")
     return flask.jsonify(workers=list(workers_))
 
 @app.route("/api/services")
 def services():
-    services_ = service_registry.available_services()
+    services_ = service_registry().available_services()
     return flask.jsonify(services=list(services_))
 
 @app.route("/api/jobs")
