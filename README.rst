@@ -57,7 +57,7 @@ Mac instructions:
     brozzler-easy
 
 At this point brozzler-easy will start brozzling your site. Results will be
-immediately available for playback in pywb at http://localhost:8091/brozzler/.
+immediately available for playback in pywb at http://localhost:8880/brozzler/.
 
 *Brozzler-easy demonstrates the full brozzler archival crawling workflow, but
 does not take advantage of brozzler's distributed nature.*
