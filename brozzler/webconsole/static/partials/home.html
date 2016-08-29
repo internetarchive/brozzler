@@ -41,7 +41,6 @@
     </div>
 
     <h2>Jobs</h2>
-
     <div class="row">
         <div class="col-sm-12">
             <table class="table table-striped">
@@ -66,4 +65,29 @@
             </table>
         </div>
     </div>
+
+    <h2>Jobless Sites</h2>
+    <div class="row">
+        <div class="col-sm-12">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>status</th>
+                        <th>started</th>
+                        <th>seed url</th>
+                    </tr>
+                </thead>
+                <tbody>
+                  <tr ng-repeat="site in joblessSites">
+                      <td><a href="/sites/{{site.id}}">{{site.id}}</a></td>
+                      <td>{{site.status}}</td>
+                      <td>{{site.start_time}}</td>
+                      <td>{{site.seed}}</td>
+                  </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>

@@ -27,7 +27,6 @@ except ImportError as e:
             'brozzler[webconsole]".\nSee README.rst for more information.',
             type(e).__name__, e)
     sys.exit(1)
-
 import rethinkstuff
 import json
 import os
@@ -56,11 +55,16 @@ SETTINGS = {
         'RETHINKDB_SERVERS', 'localhost').split(','),
     'RETHINKDB_DB': os.environ.get('RETHINKDB_DB', 'brozzler'),
     'WAYBACK_BASEURL': os.environ.get(
-        'WAYBACK_BASEURL', 'http://wbgrp-svc107.us.archive.org:8091'),
+        'WAYBACK_BASEURL', 'http://localhost:8091/brozzler'),
 }
 r = rethinkstuff.Rethinker(
         SETTINGS['RETHINKDB_SERVERS'], db=SETTINGS['RETHINKDB_DB'])
-service_registry = rethinkstuff.ServiceRegistry(r)
+_svc_reg = None
+def service_registry():
+    global _svc_reg
+    if not _svc_reg:
+        _svc_reg = rethinkstuff.ServiceRegistry(r)
+    return _svc_reg
 
 @app.route("/api/sites/<site_id>/queued_count")
 @app.route("/api/site/<site_id>/queued_count")
@@ -149,6 +153,16 @@ def sites(job_id):
             s["cookie_db"] = base64.b64encode(s["cookie_db"]).decode("ascii")
     return flask.jsonify(sites=sites_)
 
+@app.route("/api/jobless-sites")
+def jobless_sites():
+    # XXX inefficient (unindexed) query
+    sites_ = list(r.table("sites").filter(~r.row.has_fields("job_id")).run())
+    # TypeError: <binary, 7168 bytes, '53 51 4c 69 74 65...'> is not JSON serializable
+    for s in sites_:
+        if "cookie_db" in s:
+            s["cookie_db"] = base64.b64encode(s["cookie_db"]).decode("ascii")
+    return flask.jsonify(sites=sites_)
+
 @app.route("/api/jobs/<int:job_id>")
 @app.route("/api/job/<int:job_id>")
 def job(job_id):
@@ -165,12 +179,12 @@ def job_yaml(job_id):
 
 @app.route("/api/workers")
 def workers():
-    workers_ = service_registry.available_services("brozzler-worker")
+    workers_ = service_registry().available_services("brozzler-worker")
     return flask.jsonify(workers=list(workers_))
 
 @app.route("/api/services")
 def services():
-    services_ = service_registry.available_services()
+    services_ = service_registry().available_services()
     return flask.jsonify(services=list(services_))
 
 @app.route("/api/jobs")
@@ -221,7 +235,26 @@ except ImportError:
         logging.info('running brozzler-webconsole using simple flask app.run')
         app.run()
 
-if __name__ == "__main__":
-    # arguments?
+def main():
+    import argparse
+    arg_parser = argparse.ArgumentParser(
+            prog=os.path.basename(sys.argv[0]),
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description=(
+                'brozzler-webconsole - web application for viewing brozzler '
+                'crawl status'),
+            epilog=(
+                'brozzler-webconsole has no command line options, but can be '
+                'configured using the following environment variables:\n\n'
+                '  RETHINKDB_SERVERS   rethinkdb servers, e.g. db0.foo.org,'
+                'db0.foo.org:38015,db1.foo.org (default: localhost)\n'
+                '  RETHINKDB_DB        rethinkdb database name (default: '
+                'brozzler)\n'
+                '  WAYBACK_BASEURL     base url for constructing wayback '
+                'links (default http://localhost:8091/brozzler)'))
+    args = arg_parser.parse_args(args=sys.argv[1:])
     run()
+
+if __name__ == "__main__":
+    main()
 

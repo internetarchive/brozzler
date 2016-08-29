@@ -19,7 +19,5 @@ stop on stopping Xvnc
 kill timeout 60
 
 exec nice brozzler-worker \
-     --rethinkdb-servers=localhost \
-     --max-browsers=4 >>/vagrant/logs/brozzler-worker.log 2>&1
-     # --rethinkdb-servers={{groups['rethinkdb'] | join(',')}} \
-
+    --rethinkdb-servers={{groups['rethinkdb'] | join(',')}} \
+    --max-browsers=4 >>/vagrant/logs/brozzler-worker.log 2>&1

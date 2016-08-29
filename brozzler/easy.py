@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
-brozzler-easy - brozzler-worker, warcprox, and pywb all working together in a
-single process
+brozzler-easy - brozzler-worker, warcprox, pywb, and brozzler-webconsole all
+working together in a single process
 
 Copyright (C) 2016 Internet Archive
 
@@ -27,7 +27,7 @@ try:
     import brozzler.pywb
     import wsgiref.simple_server
     import wsgiref.handlers
-    import six.moves.socketserver
+    import brozzler.webconsole
 except ImportError as e:
     logging.critical(
             '%s: %s\n\nYou might need to run "pip install '
@@ -44,16 +44,17 @@ import threading
 import time
 import rethinkstuff
 import traceback
+import socketserver
 
 def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
     arg_parser = argparse.ArgumentParser(
             prog=prog, formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             description=(
                 'brozzler-easy - easy deployment of brozzler, with '
-                'brozzler-worker, warcprox, and pywb all running in a single '
-                'process'))
+                'brozzler-worker, warcprox, pywb, and brozzler-webconsole all '
+                'running in a single process'))
 
-    # === common args ===
+    # common args
     arg_parser.add_argument(
             '--rethinkdb-servers', dest='rethinkdb_servers',
             default='localhost', help=(
@@ -66,7 +67,7 @@ def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
             '-d', '--warcs-dir', dest='warcs_dir', default='./warcs',
             help='where to write warcs')
 
-    # === warcprox args ===
+    # warcprox args
     arg_parser.add_argument(
             '-c', '--cacert', dest='cacert',
             default='./%s-warcprox-ca.pem' % socket.gethostname(),
@@ -83,24 +84,42 @@ def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
                 'host:port of tor socks proxy, used only to connect to '
                 '.onion sites'))
 
-    # === brozzler-worker args ===
+    # brozzler-worker args
     arg_parser.add_argument(
             '-e', '--chrome-exe', dest='chrome_exe',
             default=brozzler.cli.suggest_default_chome_exe(),
             help='executable to use to invoke chrome')
     arg_parser.add_argument(
-            '-n', '--max-browsers', dest='max_browsers', default='1',
-            help='max number of chrome instances simultaneously browsing pages')
+            '-n', '--max-browsers', dest='max_browsers',
+            type=int, default=1, help=(
+                'max number of chrome instances simultaneously '
+                'browsing pages'))
 
-    # === pywb args ===
+    # pywb args
     arg_parser.add_argument(
-            '--pywb-port', dest='pywb_port', type=int, default=8091,
-            help='pywb wayback port')
+            '--pywb-address', dest='pywb_address',
+            default='0.0.0.0',
+            help='pywb wayback address to listen on')
+    arg_parser.add_argument(
+            '--pywb-port', dest='pywb_port', type=int,
+            default=8880, help='pywb wayback port')
 
-    # === common at the bottom args ===
+    # webconsole args
     arg_parser.add_argument(
-            '-v', '--verbose', dest='verbose', action='store_true')
-    arg_parser.add_argument('-q', '--quiet', dest='quiet', action='store_true')
+            '--webconsole-address', dest='webconsole_address',
+            default='localhost',
+            help='brozzler web console address to listen on')
+    arg_parser.add_argument(
+            '--webconsole-port', dest='webconsole_port',
+            type=int, default=8881, help='brozzler web console port')
+
+    # common at the bottom args
+    arg_parser.add_argument(
+            '-v', '--verbose', dest='verbose', action='store_true',
+            help='verbose logging')
+    arg_parser.add_argument(
+            '-q', '--quiet', dest='quiet', action='store_true',
+            help='quiet logging (warnings and errors only)')
     # arg_parser.add_argument(
     #         '-s', '--silent', dest='log_level', action='store_const',
     #         default=logging.INFO, const=logging.CRITICAL)
@@ -109,6 +128,10 @@ def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
             version='brozzler %s - %s' % (brozzler.__version__, prog))
 
     return arg_parser
+
+class ThreadingWSGIServer(
+        socketserver.ThreadingMixIn, wsgiref.simple_server.WSGIServer):
+    pass
 
 class BrozzlerEasyController:
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -120,6 +143,12 @@ class BrozzlerEasyController:
                 self._warcprox_args(args))
         self.brozzler_worker = self._init_brozzler_worker(args)
         self.pywb_httpd = self._init_pywb(args)
+        self.webconsole_httpd = self._init_brozzler_webconsole(args)
+
+    def _init_brozzler_webconsole(self, args):
+        return wsgiref.simple_server.make_server(
+                args.webconsole_address, args.webconsole_port,
+                brozzler.webconsole.app, ThreadingWSGIServer)
 
     def _init_brozzler_worker(self, args):
         r = rethinkstuff.Rethinker(
@@ -128,7 +157,7 @@ class BrozzlerEasyController:
         service_registry = rethinkstuff.ServiceRegistry(r)
         worker = brozzler.worker.BrozzlerWorker(
                 frontier, service_registry,
-                max_browsers=int(args.max_browsers),
+                max_browsers=args.max_browsers,
                 chrome_exe=args.chrome_exe,
                 proxy='%s:%s' % self.warcprox_controller.proxy.server_address,
                 enable_warcprox_features=True)
@@ -166,12 +195,9 @@ class BrozzlerEasyController:
 
         # disable is_hop_by_hop restrictions
         wsgiref.handlers.is_hop_by_hop = lambda x: False
-        class ThreadingWSGIServer(
-                six.moves.socketserver.ThreadingMixIn,
-                wsgiref.simple_server.WSGIServer):
-            pass
         return wsgiref.simple_server.make_server(
-                '', args.pywb_port, wsgi_app, ThreadingWSGIServer)
+                args.pywb_address, args.pywb_port, wsgi_app,
+                ThreadingWSGIServer)
 
     def start(self):
         self.logger.info('starting warcprox')
@@ -185,7 +211,15 @@ class BrozzlerEasyController:
                 'starting pywb at %s:%s', *self.pywb_httpd.server_address)
         threading.Thread(target=self.pywb_httpd.serve_forever).start()
 
+        self.logger.info(
+                'starting brozzler-webconsole at %s:%s',
+                *self.webconsole_httpd.server_address)
+        threading.Thread(target=self.webconsole_httpd.serve_forever).start()
+
     def shutdown(self):
+        self.logger.info('shutting down brozzler-webconsole')
+        self.webconsole_httpd.shutdown()
+
         self.logger.info('shutting down brozzler-worker')
         self.brozzler_worker.shutdown_now()
         # brozzler-worker is fully shut down at this point
