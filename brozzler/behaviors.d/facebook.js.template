@@ -48,6 +48,8 @@ var umbraState = {'idleSince':null,'expectingSomething':null,'bottomReachedScrol
 
 var umbraIntervalFunc = function() {
 
+                var fbLogoutMenu = document.querySelector("div#logoutMenu")
+                if (!(fbLogoutMenu)) { console.log("no #logoutMenu; not logged in?");}
 		var thingsToScroll = document.querySelectorAll(UMBRA_THINGS_TO_SCROLL_SELECTOR);
 		var everythingScrolled = true;
 
@@ -173,12 +175,17 @@ var umbraIntervalFunc = function() {
 }
 
 var umbraFacebookLogin = function() {
+        console.log("starting facebook login...")
         var emailInput = document.querySelector("form#login_form input#email");
+        if (emailInput) { console.log("emailInput found"); }
         var passwordInput = document.querySelector("form#login_form input#pass");
+        if (passwordInput) { console.log("passwordInput found"); }
         var loginButton = document.querySelector("form#login_form label#loginbutton > input");
+        if (loginButton) { console.log("loginButton found"); }
         emailInput.value=UMBRA_FB_USER_NAME;
         passwordInput.value=UMBRA_FB_PASSWORD;
         loginButton.click();
+        console.log("logging in with facebook user: " + UMBRA_FB_USER_NAME + " with password: " + UMBRA_FB_PASSWORD);
 }
 
 // If we haven't had anything to do (scrolled, clicked, etc) in this amount of
