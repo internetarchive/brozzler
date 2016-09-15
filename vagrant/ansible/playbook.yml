@@ -24,7 +24,7 @@
   roles:
   - brozzler-webconsole
 
-# - name: deploy pywb
-#   hosts: pywb
-#   roles:
-#     - pywb
+- name: deploy pywb
+  hosts: pywb
+  roles:
+    - pywb

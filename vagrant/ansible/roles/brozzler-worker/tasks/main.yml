@@ -26,7 +26,6 @@
     - ttf-indic-fonts
     - fonts-thai-tlwg
     - fonts-lklug-sinhala
-    - python3-pip
     - git
     - libjpeg-turbo8-dev
     - zlib1g-dev
@@ -49,7 +48,6 @@
   notify:
     - restart vnc-websock
 - name: install brozzler in virtualenv
-  become: true
   pip: # name=git+https://github.com/internetarchive/brozzler.git#egg=brozzler
        name='-e /brozzler'
        virtualenv=/home/vagrant/brozzler-ve34

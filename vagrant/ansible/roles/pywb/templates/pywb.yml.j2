@@ -1,0 +1,12 @@
+archive_paths: /vagrant/warcs/
+collections:
+  brozzler:
+    index_paths: !!python/object:brozzler.pywb.RethinkCDXSource
+      db: brozzler
+      servers: [localhost]
+      table: captures
+enable_auto_colls: false
+enable_cdx_api: true
+framed_replay: true
+port: 8880
+
