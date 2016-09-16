@@ -178,9 +178,7 @@ var umbraFacebookLogin = function() {
         var loginButton = document.querySelector("form#login_form label#loginbutton > input");
         emailInput.value=UMBRA_FB_USER_NAME;
         passwordInput.value=UMBRA_FB_PASSWORD;
-        if (loginButton) { console.log("clicking #loginButton"); }
         loginButton.click();
-        console.log("logging in with facebook user: " + UMBRA_FB_USER_NAME + " with password: " + UMBRA_FB_PASSWORD);
 }
 
 // If we haven't had anything to do (scrolled, clicked, etc) in this amount of
@@ -200,10 +198,12 @@ var umbraBehaviorFinished = function() {
         return false;
 }
 
+
 if (document.getElementById("login_form") == null || UMBRA_FB_USER_NAME.indexOf("parameter")>0 || UMBRA_FB_PASSWORD.indexOf("parameter")>0 ) {//check for unset parameters
+        console.log("missing login_form or login credentials; maybe already logged in?")
         var umbraIntervalId = setInterval(umbraIntervalFunc, 200);
 }
 else {//login
-        console.log("#login_form found for " + location.href);
+        console.log("#login_form and credentials found for " + location.href);
         umbraFacebookLogin();
 }
