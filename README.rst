@@ -142,7 +142,7 @@ Headless Chromium
 may optionally be used instead of Chromium or Chrome to run Brozzler without
 a visisble browser window or X11 server.  At the time of writing
 ``headless_shell`` is a separate Linux-only executable and must be compiled
-from source.  Beware that compiling Chrome requires 10 GB of disk space,
+from source.  Beware that compiling Chromium requires 10 GB of disk space,
 several GB of RAM and patience.
 
 Start by installing the dependencies listed in Chromium's `Linux-specific build
