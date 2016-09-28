@@ -135,6 +135,64 @@ To start the app, run
 
 See ``brozzler-webconsole --help`` for configuration options.
 
+Headless Chromium
+-----------------
+
+`Headless Chromium <https://chromium.googlesource.com/chromium/src/+/master/headless/README.md>`_
+may optionally be used instead of Chromium or Chrome to run Brozzler without
+a visisble browser window or X11 server.  At the time of writing
+``headless_shell`` is a separate Linux-only executable and must be compiled
+from source.  Beware that compiling Chrome requires 10 GB of disk space,
+several GB of RAM and patience.
+
+Start by installing the dependencies listed in Chromium's `Linux-specific build
+instructions <https://chromium.googlesource.com/chromium/src/+/master/docs/linux_build_instructions.md>`_.
+
+Next install the build tools and fetch the source code:
+
+::
+
+    mkdir -p ~/chromium
+    cd ~/chromium
+    git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+    export $PATH=$PWD/depot_tools:$PATH
+    fetch --no-history chromium --nosvn=True
+
+Configure a headless release build (the debug builds are much larger):
+
+::
+
+    cd src
+    mkdir -p out/release
+    echo 'import("//build/args/headless.gn")' > out/release/args.gn
+    echo 'is_debug = false' >> out/release/args.gn
+    gn gen out/release
+
+Run the compile:
+
+::
+
+    ninja -C out/release headless_shell
+
+This will produce an ``out/release/headless_shell`` executable.  Unfortunately
+this cannot be used with Brozzler as-is as the ``--window-size`` command-line
+option expects a different syntax in Headless Chromium.  As a workaround create
+a wrapper shell script ``headless_chromium.sh`` which replaces the misbehaving
+option:
+
+::
+
+    #!/bin/bash
+    exec ~/chromium/src/out/release/headless_shell "${@//--window-size=1100,900/--window-size=1100x900}"
+
+Run brozzler passing the path to the wrapper script as the ``--chrome-exe``
+option:
+
+::
+
+    chmod +x ~/bin/headless_chromium.sh
+    brozzler-worker --chrome-exe ~/bin/headless_chromium.sh
+
 License
 -------
 
