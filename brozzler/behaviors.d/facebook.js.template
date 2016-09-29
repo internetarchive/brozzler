@@ -199,11 +199,11 @@ var umbraBehaviorFinished = function() {
 }
 
 if (document.querySelector("div.captcha_interstitial") != null) { // found a captcha
-        console.log("captcha found");
+        console.log("captcha found for " + location.href);
 }
 
 if (document.getElementById("login_form") == null || UMBRA_FB_USER_NAME.indexOf("parameter")>0 || UMBRA_FB_PASSWORD.indexOf("parameter")>0 ) {//check for unset parameters
-        console.log("missing login_form or login credentials; maybe already logged in?");
+        console.log("missing #login_form or login credentials; maybe already logged in for " + location.href);
         var umbraIntervalId = setInterval(umbraIntervalFunc, 200);
 }
 else {//login
