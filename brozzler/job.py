@@ -87,7 +87,7 @@ def new_site(frontier, site):
                 frontier.new_page(page)
                 logging.info("queued page %s", page)
             else:
-                logging.warn("seed url {} is blocked by robots.txt".format(site.seed))
+                logging.warn("seed url %s is blocked by robots.txt", site.seed)
         finally:
             # finally block because we want to insert the Site no matter what
             frontier.new_site(site)

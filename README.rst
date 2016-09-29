@@ -95,7 +95,8 @@ Job Configuration
 
 Jobs are defined using yaml files. Options may be specified either at the
 top-level or on individual seeds. A job id and at least one seed url
-must be specified, everything else is optional.
+must be specified, everything else is optional. For details, see
+`<job-conf.rst>`_.
 
 ::
 

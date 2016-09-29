@@ -3,7 +3,7 @@
 vagrant-brozzler-new-site.py - runs brozzler-new-site inside the vagrant vm to
 queue a site for your vagrant brozzler deployment.
 
-Fills in the --proxy option automatically. some other options are passed
+Fills in the --proxy option automatically. Some other options are passed
 through.
 
 This is a standalone script with no dependencies other than python, and should

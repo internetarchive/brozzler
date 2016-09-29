@@ -12,11 +12,19 @@
 <div>
     <h2>Workers</h2>
 
+    <p><i>This page depends on some deployment details outside of brozzler
+      itself, namely that port 8901 on each brozzler-worker is running
+      websockify bridging VNC running on the same host. The vagrant+ansible
+      configuration in the brozzler repo contains an example of that.
+      https://github.com/internetarchive/brozzler/tree/master/vagrant
+    </i></p>
+
     <div class="row">
         <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6" ng-repeat="worker in workers">
+            <div>{{worker}}</div>
             <div>{{worker.host}}</div>
-            <iframe style="width:45rem;height:32rem;" 
-		    ng-src="{{'/static/noVNC/vnc.html?host=' + worker.host + '&port=8901&autoconnect=1&resize=downscale'}}">
+            <iframe style="width:45rem;height:32rem;"
+              ng-src="{{'/static/noVNC/vnc.html?host=' + worker.host + '&port=8901&autoconnect=1&resize=downscale'}}">
             </iframe>
         </div>
     </div>
