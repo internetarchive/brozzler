@@ -154,6 +154,7 @@ class Browser:
                             "exception writing cookie file at %s",
                             cookie_location, exc_info=True)
 
+'''
             local_state = {'browser':{'enabled_labs_experiments':['enable-brotli@2']}}
             local_state_location = os.path.join(data_dir, 'Local State')
             try:
@@ -163,6 +164,7 @@ class Browser:
                 self.logger.error(
                     "exception writing local state file at %s",
                     local_state_location, exc_info=True)
+'''
 
             self._chrome_instance = Chrome(
                     port=self.chrome_port, executable=self.chrome_exe,
@@ -468,8 +470,11 @@ __brzl_compileOutlinks(window).join(' ');
         self.send_to_chrome(method="Debugger.enable")
         self.send_to_chrome(method="Runtime.enable")
 
-        if self.extra_headers:
-            self.send_to_chrome(method="Network.setExtraHTTPHeaders", params={"headers":self.extra_headers})
+        headers = self.extra_headers or {}
+        headers['Accept-Encoding'] = 'gzip, deflate'
+        self.send_to_chrome(
+                method="Network.setExtraHTTPHeaders",
+                params={"headers":self.extra_headers})
 
         # disable google analytics, see _handle_message() where breakpoint is caught "Debugger.paused"
         self.send_to_chrome(method="Debugger.setBreakpointByUrl", params={"lineNumber": 1, "urlRegex":"https?://www.google-analytics.com/analytics.js"})
@@ -605,8 +610,7 @@ class Chrome:
                 "--homepage=about:blank", "--disable-direct-npapi-requests",
                 "--disable-web-security", "--disable-notifications",
                 "--disable-extensions",
-                "--disable-save-password-bubble",
-                "--enable-sdch=0"]
+                "--disable-save-password-bubble"]
         if self.ignore_cert_errors:
             chrome_args.append("--ignore-certificate-errors")
         if self.proxy:
