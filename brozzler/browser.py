@@ -154,17 +154,7 @@ class Browser:
                             "exception writing cookie file at %s",
                             cookie_location, exc_info=True)
 
-            local_state_origin = '/tmp/chromium/Local State'
-            with open(local_state_origin) as j:
-                local_state = json.load(j)
-            if 'enabled_labs_experiments' in local_state['browser']:
-                if 'enable-brotli@2' not in local_state['browser']['enabled_labs_experiments']:
-                    local_state['browser']['enabled_labs_experiments'].append('enable-brotli@2')
-            else:
-                local_state['browser']['enabled_labs_experiments'] = ['enable-brotli@2']
-
-            print(local_state)
-
+            local_state = {'browser': ['enable-brotli@2']}
             local_state_location = os.path.join(data_dir, 'Local State')
             try:
                 with open(local_state_location, 'w+') as f:
