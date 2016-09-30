@@ -623,7 +623,8 @@ class Chrome:
                 "--homepage=about:blank", "--disable-direct-npapi-requests",
                 "--disable-web-security", "--disable-notifications",
                 "--disable-extensions",
-                "--disable-save-password-bubble"]
+                "--disable-save-password-bubble",
+                "--enable-sdch=0"]
         if self.ignore_cert_errors:
             chrome_args.append("--ignore-certificate-errors")
         if self.proxy:
