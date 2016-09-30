@@ -1,0 +1,5 @@
+---
+- name: restart pywb
+  service: name=pywb state=restarted
+  become: true
+

@@ -1,6 +1,5 @@
 ---
 - name: install brozzler[webconsole] in virtualenv
-  become: true
   pip: name='-e /brozzler[webconsole]'
        virtualenv=/home/vagrant/brozzler-webconsole-ve34
        virtualenv_python=python3.4

@@ -1,6 +1,7 @@
-#!/usr/bin/env python
 '''
-brozzler/pywb.py - pywb support for rethinkdb index
+brozzler/pywb.py - pywb customizations for brozzler including rethinkdb index,
+loading from warcs still being written to, and canonicalization rules matching
+brozzler conventions
 
 Copyright (C) 2016 Internet Archive
 
@@ -35,6 +36,7 @@ import rethinkstuff
 import rethinkdb
 import surt
 import json
+import brozzler
 
 class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
     def __init__(self, servers, db, table):
@@ -192,3 +194,13 @@ def support_in_progress_warcs():
             results.append('%s.open' % warc_path)
         return results
     pywb.warc.pathresolvers.PrefixResolver.__call__ = _prefix_resolver_call
+
+def main(argv=sys.argv):
+    brozzler.pywb.TheGoodUrlCanonicalizer.replace_default_canonicalizer()
+    brozzler.pywb.TheGoodUrlCanonicalizer.monkey_patch_dsrules_init()
+    brozzler.pywb.support_in_progress_warcs()
+    wayback_cli = pywb.apps.cli.WaybackCli(
+            args=argv[1:], default_port=8880,
+            desc=('brozzler-wayback - pywb wayback (monkey-patched for use '
+                  'with brozzler)'))
+    wayback_cli.run()
