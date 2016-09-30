@@ -153,14 +153,14 @@ class Browser:
                             "exception writing cookie file at %s",
                             cookie_location, exc_info=True)
 
-            flags_location = os.path.join(data_dir, "Local State")
+            local_state_location = os.path.join(data_dir, 'Local State')
             try:
-                with open(flags_location, 'w+') as f:
-                    json.dump(make_local_state, f)
+                with open(local_state_location, 'w+') as f:
+                    json.dump(make_chromium_local_state(), f)
             except OSError:
                 self.logger.error(
                     "exception writing local state file at %s",
-                    flags_location, exc_info=True)
+                    local_state_location, exc_info=True)
 
             self._chrome_instance = Chrome(
                     port=self.chrome_port, executable=self.chrome_exe,
