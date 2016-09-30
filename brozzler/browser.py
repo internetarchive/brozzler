@@ -138,6 +138,7 @@ class Browser:
             self.chrome_port = self._find_available_port()
             self._work_dir = tempfile.TemporaryDirectory()
             data_dir = os.path.join(self._work_dir.name, "chrome-user-data")
+            flags_location =  os.path.join(data_dir, "Local State")
             if cookie_db is not None:
                 cookie_dir = os.path.join(data_dir, "Default")
                 cookie_location = os.path.join(cookie_dir, "Cookies")
