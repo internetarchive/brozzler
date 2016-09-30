@@ -154,7 +154,7 @@ class Browser:
                             "exception writing cookie file at %s",
                             cookie_location, exc_info=True)
 
-            local_state = {'browser': ['enable-brotli@2']}
+            local_state = {'browser':{'enabled_labs_experiments':['enable-brotli@2']}}
             local_state_location = os.path.join(data_dir, 'Local State')
             try:
                 with open(local_state_location, 'w+') as f:
