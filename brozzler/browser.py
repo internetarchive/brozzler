@@ -153,10 +153,21 @@ class Browser:
                             "exception writing cookie file at %s",
                             cookie_location, exc_info=True)
 
+            local_state_origin = '/tmp/chromium/Local State'
+            with open(local_state_origin) as j:
+                local_state = json.load(j)
+            if 'enabled_labs_experiments' in local_state['browser']:
+                if 'enable-brotli@2' not in local_state['browser']['enabled_labs_experiments']:
+                    local_state['browser']['enabled_labs_experiments'].append('enable-brotli@2')
+            else:
+                local_state['browser']['enabled_labs_experiments'] = ['enable-brotli@2']
+
+            print(local_state)
+
             local_state_location = os.path.join(data_dir, 'Local State')
             try:
                 with open(local_state_location, 'w+') as f:
-                    json.dump(make_chromium_local_state(), f)
+                    json.dump(local_state, f)
             except OSError:
                 self.logger.error(
                     "exception writing local state file at %s",
@@ -212,17 +223,6 @@ class Browser:
                     "exception reading from cookie DB file %s",
                     cookie_location, exc_info=True)
         return cookie_db
-
-    def make_chromium_local_state(self):
-        local_state_location = '/tmp/chromium/Local State'
-        with open(local_state_location) as j:
-            local_state = json.load(j)
-        if 'enabled_labs_experiments' in local_state['browser']:
-            if 'enable-brotli@2' not in local_state['browser']['enabled_labs_experiments']:
-                local_state['browser']['enabled_labs_experiments'].append('enable-brotli@2')
-        else:
-            local_state['browser']['enabled_labs_experiments'] = ['enable-brotli@2']
-        return local_state
 
     def _find_available_port(self):
         port_available = False
