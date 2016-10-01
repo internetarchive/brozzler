@@ -457,8 +457,11 @@ __brzl_compileOutlinks(window).join(' ');
         self.send_to_chrome(method="Debugger.enable")
         self.send_to_chrome(method="Runtime.enable")
 
-        if self.extra_headers:
-            self.send_to_chrome(method="Network.setExtraHTTPHeaders", params={"headers":self.extra_headers})
+        headers = self.extra_headers or {}
+        headers['Accept-Encoding'] = 'gzip, deflate'
+        self.send_to_chrome(
+                method="Network.setExtraHTTPHeaders",
+                params={"headers":headers})
 
         # disable google analytics, see _handle_message() where breakpoint is caught "Debugger.paused"
         self.send_to_chrome(method="Debugger.setBreakpointByUrl", params={"lineNumber": 1, "urlRegex":"https?://www.google-analytics.com/analytics.js"})
