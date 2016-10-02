@@ -194,6 +194,14 @@ option:
     chmod +x ~/bin/headless_chromium.sh
     brozzler-worker --chrome-exe ~/bin/headless_chromium.sh
 
+The Pepper Flash plugin ``libpepflashplayer.so`` from an official Google Chrome
+release may be used with Headless Chromium by adding this option to the wrapper
+script:
+
+::
+
+    --register-pepper-plugins=/opt/google/chrome/PepperFlash/libpepflashplayer.so;application/x-shockwave-flash
+
 License
 -------
 
