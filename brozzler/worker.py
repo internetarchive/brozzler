@@ -312,7 +312,8 @@ class BrozzlerWorker:
                 page = self._frontier.claim_page(site, "%s:%s" % (
                     socket.gethostname(), browser.chrome_port))
                 outlinks = self.brozzle_page(browser, site, page)
-                site.cookie_db=browser.persist_and_read_cookie_db()
+                if browser.is_running():
+                    site.cookie_db = browser.persist_and_read_cookie_db()
                 self._frontier.completed_page(site, page)
                 self._frontier.scope_and_schedule_outlinks(
                         site, page, outlinks)

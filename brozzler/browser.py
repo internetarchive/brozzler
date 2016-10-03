@@ -185,7 +185,7 @@ class Browser:
         cookie_location = os.path.join(
                 self._work_dir.name, "chrome-user-data", "Default", "Cookies")
         self.logger.debug(
-                "marking cookies persistent then reading file into memory: %s ",
+                "marking cookies persistent then reading file into memory: %s",
                 cookie_location)
         try:
             with sqlite3.connect(cookie_location) as conn:
