@@ -64,6 +64,9 @@ id:
   metadata:
     type: dict
 
+  user_agent:
+    type: string
+
 seeds:
   type: list
   schema:
