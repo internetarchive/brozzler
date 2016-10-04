@@ -32,7 +32,7 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.1b6.dev89',
+        version='1.1b6.dev90',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
@@ -66,7 +66,7 @@ setuptools.setup(
             'surt>=0.3.0',
             'rethinkstuff>=0.1.5',
             'rethinkdb>=2.3,<2.4',
-            'psutil',
+            'psutil==4.3.0',
         ],
         extras_require={
             'webconsole': ['flask>=0.11', 'gunicorn'],
