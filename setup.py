@@ -67,6 +67,7 @@ setuptools.setup(
             'rethinkstuff>=0.1.5',
             'rethinkdb>=2.3,<2.4',
             'psutil==4.3.0',
+            'cerberus==1.0.1',
         ],
         extras_require={
             'webconsole': ['flask>=0.11', 'gunicorn'],

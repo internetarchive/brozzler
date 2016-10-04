@@ -182,7 +182,12 @@ def brozzler_new_job():
     r = rethinkstuff.Rethinker(
             args.rethinkdb_servers.split(','), args.rethinkdb_db)
     frontier = brozzler.RethinkDbFrontier(r)
-    brozzler.job.new_job_file(frontier, args.job_conf_file)
+    try:
+        brozzler.job.new_job_file(frontier, args.job_conf_file)
+    except brozzler.job.InvalidJobConf as e:
+        print('brozzler-new-job: invalid job file:', args.job_conf_file, file=sys.stderr)
+        print('  ' + yaml.dump(e.errors).rstrip().replace('\n', '\n  '), file=sys.stderr)
+        sys.exit(1)
 
 def brozzler_new_site():
     '''
