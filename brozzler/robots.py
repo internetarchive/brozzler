@@ -42,6 +42,8 @@ def _robots_cache(site):
             req_sesh.proxies = {"http":proxie,"https":proxie}
         if site.extra_headers():
             req_sesh.headers.update(site.extra_headers())
+        if site.user_agent:
+            req_sesh.headers['User-Agent'] = site.user_agent
         _robots_caches[site.id] = reppy.cache.RobotsCache(session=req_sesh)
 
     return _robots_caches[site.id]

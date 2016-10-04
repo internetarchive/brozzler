@@ -260,6 +260,7 @@ class BrozzlerWorker:
                 browser.start(proxy=self._proxy(site), cookie_db=site.cookie_db)
             outlinks = browser.browse_page(
                     page.url, extra_headers=site.extra_headers(),
+                    user_agent=site.user_agent,
                     on_screenshot=_on_screenshot,
                     on_url_change=page.note_redirect)
             return outlinks

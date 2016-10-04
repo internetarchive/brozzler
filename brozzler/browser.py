@@ -229,6 +229,7 @@ class Browser:
 
     def browse_page(
             self, url, extra_headers=None, behavior_parameters=None,
+            user_agent=None,
             on_request=None, on_response=None, on_screenshot=None,
             on_url_change=None):
         """
@@ -243,6 +244,7 @@ class Browser:
             raise BrowsingException("browser has not been started")
         self.url = url
         self.extra_headers = extra_headers
+        self.user_agent = user_agent
         self.on_request = on_request
         self.on_screenshot = on_screenshot
         self.on_url_change = on_url_change
@@ -459,6 +461,9 @@ __brzl_compileOutlinks(window).join(' ');
 
         if self.extra_headers:
             self.send_to_chrome(method="Network.setExtraHTTPHeaders", params={"headers":self.extra_headers})
+
+        if self.user_agent:
+            self.send_to_chrome(method="Network.setUserAgentOverride", params={"userAgent": self.user_agent})
 
         # disable google analytics, see _handle_message() where breakpoint is caught "Debugger.paused"
         self.send_to_chrome(method="Debugger.setBreakpointByUrl", params={"lineNumber": 1, "urlRegex":"https?://www.google-analytics.com/analytics.js"})
