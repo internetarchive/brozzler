@@ -66,6 +66,8 @@ id:
 
 seeds:
   type: list
+  required: true
+  minlength: 1
   schema:
     type: dict
     schema:
