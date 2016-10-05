@@ -29,7 +29,7 @@ import cerberus
 import urllib
 
 def load_schema():
-    schema_file = os.path.join(os.path.dirname(__file__), 'job_schema.yml')
+    schema_file = os.path.join(os.path.dirname(__file__), 'job_schema.yaml')
     with open(schema_file) as f:
         return yaml.load(f)
 
