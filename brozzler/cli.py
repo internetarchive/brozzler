@@ -86,7 +86,7 @@ def _configure_logging(args):
     warnings.simplefilter(
             'ignore', category=requests.packages.urllib3.exceptions.InsecurePlatformWarning)
 
-def suggest_default_chome_exe():
+def suggest_default_chrome_exe():
     # mac os x application executable paths
     for path in [
             '/Applications/Chromium.app/Contents/MacOS/Chromium',
@@ -118,7 +118,7 @@ def brozzle_page():
     arg_parser.add_argument('url', metavar='URL', help='page url')
     arg_parser.add_argument(
             '-e', '--chrome-exe', dest='chrome_exe',
-            default=suggest_default_chome_exe(),
+            default=suggest_default_chrome_exe(),
             help='executable to use to invoke chrome')
     arg_parser.add_argument(
             '--proxy', dest='proxy', default=None,
@@ -243,7 +243,7 @@ def brozzler_worker():
     _add_rethinkdb_options(arg_parser)
     arg_parser.add_argument(
             '-e', '--chrome-exe', dest='chrome_exe',
-            default=suggest_default_chome_exe(),
+            default=suggest_default_chrome_exe(),
             help='executable to use to invoke chrome')
     arg_parser.add_argument(
             '-n', '--max-browsers', dest='max_browsers', default='1',
