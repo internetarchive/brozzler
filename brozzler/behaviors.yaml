@@ -50,6 +50,10 @@ behaviors:
    behavior_js_template: noguchi.js.template
    request_idle_timeout_sec: 10
  -
+   url_regex: '^https?://catalogue\.noguchi\.org/index.php/LoginReg/form$'
+   behavior_js_template: noguchi.js.template
+   request_idle_timeout_sec: 10
+ -
    url_regex: '^https?://catalogue\.noguchi\.org/index.php/Search/Index/search/.*/target/ca_.*$'
    behavior_js_template: noguchi.js.template
    request_idle_timeout_sec: 10
