@@ -41,7 +41,7 @@ setuptools.setup(
         license='Apache License 2.0',
         packages=['brozzler', 'brozzler.webconsole'],
         package_data={
-            'brozzler': ['behaviors.d/*.js*', 'behaviors.yaml'],
+            'brozzler': ['behaviors.d/*.js*', 'behaviors.yaml', 'job_schema.yaml'],
             'brozzler.webconsole': find_package_data('brozzler.webconsole'),
         },
         entry_points={
