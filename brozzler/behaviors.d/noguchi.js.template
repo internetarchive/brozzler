@@ -39,8 +39,19 @@ var umbraIntervalFunc = function() {
 	var clickedSomething = false;
 	var somethingLeftBelow = false;
 	var somethingLeftAbove = false;
+	var target = null;
 
-	var target = document.querySelectorAll("div.nav > a")[1];
+	var navlinks = document.querySelectorAll("div.nav > a");
+	if (navlinks) {
+		if (navlinks.length > 1) {
+			target = navlinks[1];
+		} else {
+			if navlinks[0].textContent.startsWith("Next") {
+				target = navlinks[0];
+			}
+		}
+	}
+
 	if (target) {
 		var where = umbraAboveBelowOrOnScreen(target);
 		if (where === 0) {
