@@ -46,7 +46,7 @@ behaviors:
    behavior_js: instagram.js
    request_idle_timeout_sec: 10
  -
-   url_regex: '^https?://catalogue\.noguchi\.org/index.php/LoginReg/form$'
+   url_regex: '^https?://catalogue\.noguchi\.org/index.php$'
    behavior_js_template: noguchi.js.template
    request_idle_timeout_sec: 10
  -
