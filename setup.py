@@ -32,12 +32,12 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.1b6.dev93',
+        version='1.1b6.dev94',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
         author_email='nlevitt@archive.org',
-        long_description=open('README.rst', encoding='UTF-8').read(),
+        long_description=open('README.rst', mode='rb').read().decode('UTF-8'),
         license='Apache License 2.0',
         packages=['brozzler', 'brozzler.webconsole'],
         package_data={
