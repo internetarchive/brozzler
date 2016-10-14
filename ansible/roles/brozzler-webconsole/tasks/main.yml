@@ -1,0 +1,20 @@
+---
+- name: mkdir {{venv_root}}/brozzler-webconsole-ve34
+  file: path={{venv_root}}/brozzler-webconsole-ve34 state=directory
+        owner={{user}}
+  become: true
+- name: install brozzler[webconsole] in virtualenv
+  pip: name='{{brozzler_pip_name}}[webconsole]'
+       virtualenv={{venv_root}}/brozzler-webconsole-ve34
+       virtualenv_python=python3.4
+       extra_args='--no-input --upgrade --pre'
+  become: true
+  become_user: '{{user}}'
+  notify:
+  - restart brozzler-webconsole
+- name: install upstart config /etc/init/brozzler-webconsole.conf
+  become: true
+  template: src=templates/brozzler-webconsole.conf.j2
+            dest=/etc/init/brozzler-webconsole.conf
+  notify:
+  - restart brozzler-webconsole

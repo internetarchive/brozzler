@@ -7,7 +7,7 @@ Vagrant.configure(2) do |config|
   config.vm.synced_folder "..", "/brozzler"
 
   config.vm.provision "ansible" do |ansible|
-    ansible.inventory_path = "ansible/hosts"
-    ansible.playbook = "ansible/playbook.yml"
+    ansible.inventory_path = "../ansible/hosts-vagrant"
+    ansible.playbook = "../ansible/playbook.yml"
   end
 end

@@ -1,0 +1,6 @@
+bind=0.0.0.0
+# directory=/var/lib/rethinkdb
+log-file=/var/log/rethinkdb.log
+{% for node in groups['rethinkdb'] %}
+join={{node}}:29015
+{% endfor %}

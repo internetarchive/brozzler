@@ -1,0 +1,7 @@
+# variables default values, these can be overridden in the ansible inventory
+# or various other places
+---
+user: brozzler
+venv_root: /opt
+warcs_dir: /var/tmp/warcs
+brozzler_pip_name: brozzler   # get it from pypi by default

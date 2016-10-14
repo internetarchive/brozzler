@@ -1,0 +1,23 @@
+ansible_ssh_private_key_file=.vagrant/machines/10.9.9.9/virtualbox/private_key
+warcs_dir=/vagrant/warcs
+brozzler_pip_name='-e git+file:///brozzler'
+
+### possible values for a prod deployment
+# brozzler_pip_name=brozzler  # get it from pypi
+# brozzler_pip_name=git+https://github.com/internetarchive/brozzler.git#egg=brozzler
+
+[rethinkdb]
+10.9.9.9
+
+[warcprox]
+work_dir=/vagrant
+10.9.9.9
+
+[brozzler-worker]
+10.9.9.9
+
+[brozzler-webconsole]
+10.9.9.9
+
+[pywb]
+10.9.9.9

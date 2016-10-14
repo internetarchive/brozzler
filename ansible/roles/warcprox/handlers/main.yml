@@ -1,0 +1,4 @@
+---
+- name: restart warcprox
+  service: name=warcprox state=restarted
+  become: true
