@@ -40,11 +40,14 @@ var umbraIntervalFunc = function() {
 	var somethingLeftBelow = false;
 	var somethingLeftAbove = false;
 	var target = null;
+	var linktext = "";
 
 	var navlinks = document.querySelectorAll("div.nav > a");
-	for (link in navlinks) {
-		if (link.textContent.indexOf("Next") > 0) {
-			target = link;
+
+	for (i = 0; i < navlinks.length; i++) {
+		linktext = navlinks[i].textContent;
+		if (linktext.indexOf("Next") > -1) {
+			target = navlinks[i];
 		}
 	}
 
