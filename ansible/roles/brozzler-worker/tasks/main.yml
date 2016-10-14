@@ -3,6 +3,8 @@
   apt_repository: repo='deb http://archive.canonical.com/ubuntu trusty partner'
                   state=present
   become: true
+- apt: update_cache=yes
+  become: true
 - name: ensure required packages are installed
   become: true
   apt: name={{item}} state=present

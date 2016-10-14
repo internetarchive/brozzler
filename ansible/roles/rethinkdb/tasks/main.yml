@@ -6,6 +6,8 @@
   apt_repository: repo='deb http://download.rethinkdb.com/apt trusty main'
                   state=present
   become: true
+- apt: update_cache=yes
+  become: true
 - name: ensure rethinkdb package is installed
   apt: name=rethinkdb state=present
   become: true

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd $(dirname "${BASH_SOURCE[0]}")
+
 echo service status:
 vagrant ssh -- 'status warcprox ;
                 status Xvnc ;
@@ -8,5 +10,5 @@ vagrant ssh -- 'status warcprox ;
                 status vnc-websock'
 echo
 
-vagrant ssh -- 'source brozzler-ve34/bin/activate && pip install pytest'
-vagrant ssh -- 'source brozzler-ve34/bin/activate && py.test -v -s /brozzler/tests'
+vagrant ssh -- 'source /opt/brozzler-ve34/bin/activate && pip install pytest'
+vagrant ssh -- 'source /opt/brozzler-ve34/bin/activate && py.test -v -s /brozzler/tests'

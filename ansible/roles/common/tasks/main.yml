@@ -19,7 +19,12 @@
 ##   command: python3 setup.py install chdir=/tmp/pip-8.1.2
 ##            creates=/usr/local/lib/python2.7/dist-packages/pip-8.1.2-py2.7.egg/pip/__init__.py
 ##   become: true
+- command: id {{user}}
+  register: id_user
+  ignore_errors: true
+  changed_when: false
 - name: ensure service user {{user}} exists
   user: name={{user}} system=yes createhome=no home=/nonexistent
         shell=/usr/sbin/nologin
   become: true
+  when: id_user|failed
