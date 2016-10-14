@@ -121,7 +121,7 @@ var umbraNLogin = function() {
 
 if (document.getElementById("loginForm") == null || UMBRA_N_USER_NAME.indexOf("parameter")>0 || UMBRA_N_PASSWORD.indexOf("parameter")>0 ) {//check for unset parameters
         console.log("missing #loginForm or login credentials; maybe already logged in for " + location.href);
-        var umbraIntervalId = setInterval(umbraIntervalFunc, 200);
+        var umbraIntervalId = setInterval(umbraIntervalFunc, 2000);
 }
 else {//login
         console.log("#loginForm and credentials found for " + location.href);
