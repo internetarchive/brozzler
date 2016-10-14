@@ -33,7 +33,7 @@ var UMBRA_N_PASSWORD = "${parameter_password}";
 
 var umbraState = {'idleSince':null};
 var umbraAlreadyClicked = {};
-var re = /(?:‹ Previous){0,1}   (page [\d]+/[\d]+)   (?:Next ›){0,1}/
+var re = /(?:Previous){0,1}   (page \d+\/\d+)   (?:Next){0,1}/;
 
 var umbraIntervalFunc = function() {
 	var clickedSomething = false;
