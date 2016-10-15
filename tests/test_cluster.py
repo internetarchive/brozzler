@@ -111,7 +111,7 @@ def test_brozzle_site(httpd):
 
     # the site should be brozzled fairly quickly
     start = time.time()
-    while site.status != 'FINISHED' and time.time() - start < 120:
+    while site.status != 'FINISHED' and time.time() - start < 300:
         time.sleep(0.5)
         site = frontier.site(site.id)
     assert site.status == 'FINISHED'
@@ -125,19 +125,16 @@ def test_brozzle_site(httpd):
 
     # take a look at the captures table
     captures = r.table('captures').filter({'test_id':test_id}).run()
-    captures_by_url = {c['url']:c for c in captures if c['method'] != 'HEAD'}
+    captures_by_url = {c['url']:c for c in captures if c['http_method'] != 'HEAD'}
     assert page1 in captures_by_url
     assert '%srobots.txt' % page1 in captures_by_url
     assert page2 in captures_by_url
-    assert 'youtube-dl:%s' % page1 in captures_by_url
-    assert 'youtube-dl:%s' % page2 in captures_by_url
     assert 'screenshot:%s' % page1 in captures_by_url
-    assert 'screenshot:%s' % page2 in captures_by_url
     assert 'thumbnail:%s' % page1 in captures_by_url
-    assert 'thumbnail:%s' % page2 in captures_by_url
+    # no screenshots of plaintext
 
     # check pywb
-    t14 = captures_by_url[page2].timestamp.strftime('%Y%m%d%H%M%S')
+    t14 = captures_by_url[page2]['timestamp'].strftime('%Y%m%d%H%M%S')
     wb_url = 'http://localhost:8880/brozzler/%s/%s' % (t14, page2)
     expected_payload = open(os.path.join(
         os.path.dirname(__file__), 'htdocs', 'file1.txt'), 'rb').read()
