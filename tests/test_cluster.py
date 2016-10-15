@@ -138,4 +138,4 @@ def test_brozzle_site(httpd):
     wb_url = 'http://localhost:8880/brozzler/%s/%s' % (t14, page2)
     expected_payload = open(os.path.join(
         os.path.dirname(__file__), 'htdocs', 'file1.txt'), 'rb').read()
-    assert requests.get().content == expected_payload
+    assert requests.get(wb_url).content == expected_payload
