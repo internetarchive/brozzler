@@ -63,13 +63,16 @@ class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
             # short-circuit this step and create the CDXObject directly
             blob = {
                 'url': record['url'],
-                'mime': record['content_type'],
                 'status': str(record['response_code']),
                 'digest': record['sha1base32'],
                 'length': str(record['length']), # XXX is this the right length?
                 'offset': str(record['offset']),
                 'filename': record['filename'],
             }
+            if record['warc_type'] != 'revisit':
+                blob['mime'] = record['content_type']
+            else:
+                blob['mime'] = 'warc/revisit'
             # b'org,archive)/ 20160427215530 {"url": "https://archive.org/", "mime": "text/html", "status": "200", "digest": "VILUFXZD232SLUA6XROZQIMEVUPW6EIE", "length": "16001", "offset": "90144", "filename": "ARCHIVEIT-261-ONE_TIME-JOB209607-20160427215508135-00000.warc.gz"}'
             cdx_line = '{} {:%Y%m%d%H%M%S} {}'.format(
                     record['canon_surt'], record['timestamp'],
