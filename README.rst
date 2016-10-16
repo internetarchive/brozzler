@@ -42,6 +42,7 @@ Mac instructions:
 
     # install and start rethinkdb
     brew install rethinkdb
+    # no brew? try rethinkdb's installer: https://www.rethinkdb.com/docs/install/osx/
     rethinkdb &>>rethinkdb.log &
 
     # install brozzler with special dependencies pywb and warcprox
