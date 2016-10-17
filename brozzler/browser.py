@@ -186,7 +186,7 @@ class Browser:
         cookie_location = os.path.join(
                 self._work_dir.name, "chrome-user-data", "Default", "Cookies")
         self.logger.debug(
-                "marking cookies persistent then reading file into memory: %s ",
+                "marking cookies persistent then reading file into memory: %s",
                 cookie_location)
         try:
             with sqlite3.connect(cookie_location) as conn:
@@ -230,6 +230,7 @@ class Browser:
 
     def browse_page(
             self, url, extra_headers=None, behavior_parameters=None,
+            user_agent=None,
             on_request=None, on_response=None, on_screenshot=None,
             on_url_change=None):
         """
@@ -244,6 +245,7 @@ class Browser:
             raise BrowsingException("browser has not been started")
         self.url = url
         self.extra_headers = extra_headers
+        self.user_agent = user_agent
         self.on_request = on_request
         self.on_screenshot = on_screenshot
         self.on_url_change = on_url_change
@@ -459,10 +461,13 @@ __brzl_compileOutlinks(window).join(' ');
         self.send_to_chrome(method="Runtime.enable")
 
         headers = self.extra_headers or {}
-        headers['Accept-Encoding'] = 'gzip, deflate'
+        headers['Accept-Encoding'] = 'identity'
         self.send_to_chrome(
                 method="Network.setExtraHTTPHeaders",
                 params={"headers":headers})
+
+        if self.user_agent:
+            self.send_to_chrome(method="Network.setUserAgentOverride", params={"userAgent": self.user_agent})
 
         # disable google analytics, see _handle_message() where breakpoint is caught "Debugger.paused"
         self.send_to_chrome(method="Debugger.setBreakpointByUrl", params={"lineNumber": 1, "urlRegex":"https?://www.google-analytics.com/analytics.js"})

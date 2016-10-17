@@ -1,0 +1,82 @@
+id:
+  type: string
+  required: true
+
+<<: &multi_level_options
+  time_limit:
+    type: number
+    min: 0
+
+  enable_warcprox_features:
+    type: boolean
+
+  ignore_robots:
+    type: boolean
+
+  warcprox_meta:
+    type: dict
+    nullable: true
+
+  proxy:
+    type: string
+    nullable: true
+
+  scope:
+    type: dict
+    schema:
+      surt:
+        type: string
+
+      accepts:
+        type: list
+        schema: &scope_rule
+          type: dict
+          schema:
+
+            domain:
+              type: string
+
+            url_match:
+              type: string
+              allowed:
+                - STRING_MATCH
+                - SURT_MATCH
+                - REGEX_MATCH
+
+            value:
+              type: string
+              dependencies:
+                - url_match
+
+      blocks:
+        type: list
+        schema: *scope_rule
+
+      max_hops:
+        type: integer
+
+      max_hops_off_surt:
+        type: integer
+
+  remember_outlinks:
+    type: boolean
+
+  metadata:
+    type: dict
+
+  user_agent:
+    type: string
+
+seeds:
+  type: list
+  required: true
+  minlength: 1
+  schema:
+    type: dict
+    schema:
+
+      url:
+        type: url
+        required: true
+
+      <<: *multi_level_options

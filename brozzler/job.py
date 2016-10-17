@@ -24,6 +24,28 @@ import json
 import datetime
 import uuid
 import rethinkstuff
+import os
+import cerberus
+import urllib
+
+def load_schema():
+    schema_file = os.path.join(os.path.dirname(__file__), 'job_schema.yaml')
+    with open(schema_file) as f:
+        return yaml.load(f)
+
+class JobValidator(cerberus.Validator):
+    def _validate_type_url(self, value):
+        url = urllib.parse.urlparse(value)
+        return url.scheme in ('http', 'https', 'ftp')
+
+class InvalidJobConf(Exception):
+    def __init__(self, errors):
+        self.errors = errors
+
+def validate_conf(job_conf, schema=load_schema()):
+    v = JobValidator(schema)
+    if not v.validate(job_conf):
+        raise InvalidJobConf(v.errors)
 
 def merge(a, b):
     if isinstance(a, dict) and isinstance(b, dict):
@@ -45,6 +67,7 @@ def new_job_file(frontier, job_conf_file):
         new_job(frontier, job_conf)
 
 def new_job(frontier, job_conf):
+    validate_conf(job_conf)
     job = Job(
             id=job_conf.get("id"), conf=job_conf, status="ACTIVE",
             started=rethinkstuff.utcnow())
@@ -52,8 +75,6 @@ def new_job(frontier, job_conf):
     sites = []
     for seed_conf in job_conf["seeds"]:
         merged_conf = merge(seed_conf, job_conf)
-        # XXX check for unknown settings, invalid url, etc
-
         site = brozzler.Site(
                 job_id=job.id, seed=merged_conf["url"],
                 scope=merged_conf.get("scope"),
@@ -64,7 +85,8 @@ def new_job(frontier, job_conf):
                     "enable_warcprox_features"),
                 warcprox_meta=merged_conf.get("warcprox_meta"),
                 metadata=merged_conf.get("metadata"),
-                remember_outlinks=merged_conf.get("remember_outlinks"))
+                remember_outlinks=merged_conf.get("remember_outlinks"),
+                user_agent=merged_conf.get("user_agent"))
         sites.append(site)
 
     # insert all the sites into database before the job

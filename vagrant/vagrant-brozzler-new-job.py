@@ -6,6 +6,20 @@ queue a job for your vagrant brozzler deployment.
 This is a standalone script with no dependencies other than python, and should
 work with python 2.7 or python 3.2+. The only reason it's not a bash script is
 so we can use the argparse library.
+
+Copyright (C) 2016 Internet Archive
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 '''
 
 import sys
@@ -20,23 +34,17 @@ def main(argv=[]):
             help='brozzler job configuration file in yaml')
     args = arg_parser.parse_args(args=argv[1:])
 
-    with open(args.job_conf_file, 'rb') as f:
-        yaml_bytes = f.read()
-        subprocess.call(
-                ['vagrant', 'ssh', '--', 'f=`mktemp` && cat > $f'],
-                stdin=yaml_bytes)
-
     # cd to path with Vagrantfile so "vagrant ssh" knows what to do
     os.chdir(os.path.dirname(__file__))
 
+    with open(args.job_conf_file, 'rb') as f:
+        subprocess.call([
+            'vagrant', 'ssh', '--',
+            'f=`mktemp` && cat > $f && '
+            'PYTHONPATH=/home/vagrant/brozzler-ve34/lib/python3.4/site-packages '
+            '/home/vagrant/brozzler-ve34/bin/python '
+            '/home/vagrant/brozzler-ve34/bin/brozzler-new-job $f'],
+            stdin=f)
+
 if __name__ == '__main__':
     main(sys.argv)
-
-## # cd to path with Vagrantfile so "vagrant ssh" knows what to do
-## script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-## cd $script_dir
-## 
-## vagrant ssh -- \
-##         PYTHONPATH=/home/vagrant/brozzler-ve34/lib/python3.4/site-packages \
-##         /home/vagrant/brozzler-ve34/bin/python \
-##         /home/vagrant/brozzler-ve34/bin/brozzler-new-job "$@"

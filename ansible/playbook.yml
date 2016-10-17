@@ -1,0 +1,25 @@
+---
+- name: deploy rethinkdb
+  hosts: rethinkdb
+  roles:
+  - rethinkdb
+
+- name: deploy warcprox
+  hosts: warcprox
+  roles:
+  - warcprox
+
+- name: deploy brozzler-worker
+  hosts: brozzler-worker
+  roles:
+  - brozzler-worker
+
+- name: deploy brozzler-webconsole
+  hosts: brozzler-webconsole
+  roles:
+  - brozzler-webconsole
+
+- name: deploy pywb
+  hosts: pywb
+  roles:
+  - pywb

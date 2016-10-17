@@ -168,6 +168,18 @@ ignore_robots
 If set to ``true``, brozzler will happily crawl pages that would otherwise be
 blocked by robots.txt rules.
 
+user_agent
+----------
++-----------------------+---------+----------+---------+
+| scope                 | type    | required | default |
++=======================+=========+==========+=========+
+| seed-level, top-level | string  | no       | *none*  |
++-----------------------+---------+----------+---------+
+The ``User-Agent`` header brozzler will send to identify itself to web servers.
+It's good ettiquette to include a project URL with a notice to webmasters that
+explains why you're crawling, how to block the crawler robots.txt and how to
+contact the operator if the crawl is causing problems.
+
 warcprox_meta
 -------------
 +-----------------------+------------+----------+---------+

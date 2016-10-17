@@ -241,6 +241,15 @@ class RethinkDbFrontier:
         else:
             return None
 
+    def site(self, id):
+        if id is None:
+            return None
+        result = self.r.table("sites").get(id).run()
+        if result:
+            return brozzler.Site(**result)
+        else:
+            return None
+
     def honor_stop_request(self, job_id):
         """Raises brozzler.CrawlJobStopped if stop has been requested."""
         job = self.job(job_id)

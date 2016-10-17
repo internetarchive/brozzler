@@ -32,16 +32,16 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.1b6.dev87',
+        version='1.1b7.dev101',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
         author_email='nlevitt@archive.org',
-        long_description=open('README.rst', encoding='UTF-8').read(),
+        long_description=open('README.rst', mode='rb').read().decode('UTF-8'),
         license='Apache License 2.0',
         packages=['brozzler', 'brozzler.webconsole'],
         package_data={
-            'brozzler': ['behaviors.d/*.js*', 'behaviors.yaml'],
+            'brozzler': ['behaviors.d/*.js*', 'behaviors.yaml', 'job_schema.yaml'],
             'brozzler.webconsole': find_package_data('brozzler.webconsole'),
         },
         entry_points={
@@ -62,11 +62,12 @@ setuptools.setup(
             'reppy',
             'requests',
             'websocket-client',
-            'pillow',
+            'pillow==3.3.0',
             'surt>=0.3.0',
             'rethinkstuff>=0.1.5',
             'rethinkdb>=2.3,<2.4',
-            'psutil',
+            'psutil==4.3.0',
+            'cerberus==1.0.1',
         ],
         extras_require={
             'webconsole': ['flask>=0.11', 'gunicorn'],

@@ -10,7 +10,7 @@ This is a standalone script with no dependencies other than python, and should
 work with python 2.7 or python 3.2+. The only reason it's not a bash script is
 so we can use the argparse library.
 
-Copyright (C) 2014-2016 Internet Archive
+Copyright (C) 2016 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

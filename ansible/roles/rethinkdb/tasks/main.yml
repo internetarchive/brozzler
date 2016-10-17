@@ -1,0 +1,29 @@
+---
+- name: ensure rethinkdb apt public key is trusted
+  apt_key: url=http://download.rethinkdb.com/apt/pubkey.gpg
+  become: true
+- name: ensure rethinkdb repo is in apt sources.list
+  apt_repository: repo='deb http://download.rethinkdb.com/apt trusty main'
+                  state=present
+  become: true
+- apt: update_cache=yes
+  become: true
+- name: ensure rethinkdb package is installed
+  apt: name=rethinkdb state=present
+  become: true
+  notify:
+  - restart rethinkdb
+- name: ensure rethinkdb starts on reboot
+  service: name=rethinkdb enabled=yes
+- stat: path=/var/log/rethinkdb.log
+  register: p
+- name: ensure user rethinkdb owns /var/log/rethinkdb.log
+  file: path=/var/log/rethinkdb.log owner=rethinkdb state=touch mode=0644
+  when: not p.stat.exists
+  become: true
+- name: ensure rethinkdb instance config file is installed
+  template: src=templates/rethinkdb-brozzler.conf.j2
+            dest=/etc/rethinkdb/instances.d/rethinkdb-brozzler.conf
+  become: true
+  notify:
+  - restart rethinkdb

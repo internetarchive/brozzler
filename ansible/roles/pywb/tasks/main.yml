@@ -1,0 +1,35 @@
+---
+- name: mkdir {{venv_root}}/pywb-ve34
+  file: path={{venv_root}}/pywb-ve34 state=directory
+        owner={{user}}
+  become: true
+- name: install pywb in virtualenv
+  pip: name=pywb
+       virtualenv={{venv_root}}/pywb-ve34
+       virtualenv_python=python3.4
+       extra_args='--no-input --upgrade --pre'
+  become: true
+  become_user: '{{user}}'
+  notify:
+  - restart pywb
+- name: install brozzler in pywb virtualenv
+  pip: name='{{brozzler_pip_name}}'
+       virtualenv={{venv_root}}/pywb-ve34
+       virtualenv_python=python3.4
+       extra_args='--no-input --upgrade --pre'
+  become: true
+  become_user: '{{user}}'
+  notify:
+  - restart pywb
+- name: pywb config file /etc/pywb.yml
+  template: src=templates/pywb.yml.j2
+            dest=/etc/pywb.yml
+  become: true
+  notify:
+  - restart pywb
+- name: upstart config file /etc/init/pywb.conf
+  template: src=templates/pywb.conf.j2
+            dest=/etc/init/pywb.conf
+  become: true
+  notify:
+  - restart pywb

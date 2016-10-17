@@ -86,7 +86,7 @@ def _configure_logging(args):
     warnings.simplefilter(
             'ignore', category=requests.packages.urllib3.exceptions.InsecurePlatformWarning)
 
-def suggest_default_chome_exe():
+def suggest_default_chrome_exe():
     # mac os x application executable paths
     for path in [
             '/Applications/Chromium.app/Contents/MacOS/Chromium',
@@ -118,7 +118,7 @@ def brozzle_page():
     arg_parser.add_argument('url', metavar='URL', help='page url')
     arg_parser.add_argument(
             '-e', '--chrome-exe', dest='chrome_exe',
-            default=suggest_default_chome_exe(),
+            default=suggest_default_chrome_exe(),
             help='executable to use to invoke chrome')
     arg_parser.add_argument(
             '--proxy', dest='proxy', default=None,
@@ -182,7 +182,12 @@ def brozzler_new_job():
     r = rethinkstuff.Rethinker(
             args.rethinkdb_servers.split(','), args.rethinkdb_db)
     frontier = brozzler.RethinkDbFrontier(r)
-    brozzler.job.new_job_file(frontier, args.job_conf_file)
+    try:
+        brozzler.job.new_job_file(frontier, args.job_conf_file)
+    except brozzler.job.InvalidJobConf as e:
+        print('brozzler-new-job: invalid job file:', args.job_conf_file, file=sys.stderr)
+        print('  ' + yaml.dump(e.errors).rstrip().replace('\n', '\n  '), file=sys.stderr)
+        sys.exit(1)
 
 def brozzler_new_site():
     '''
@@ -238,7 +243,7 @@ def brozzler_worker():
     _add_rethinkdb_options(arg_parser)
     arg_parser.add_argument(
             '-e', '--chrome-exe', dest='chrome_exe',
-            default=suggest_default_chome_exe(),
+            default=suggest_default_chrome_exe(),
             help='executable to use to invoke chrome')
     arg_parser.add_argument(
             '-n', '--max-browsers', dest='max_browsers', default='1',

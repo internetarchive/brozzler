@@ -87,7 +87,7 @@ def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
     # brozzler-worker args
     arg_parser.add_argument(
             '-e', '--chrome-exe', dest='chrome_exe',
-            default=brozzler.cli.suggest_default_chome_exe(),
+            default=brozzler.cli.suggest_default_chrome_exe(),
             help='executable to use to invoke chrome')
     arg_parser.add_argument(
             '-n', '--max-browsers', dest='max_browsers',
