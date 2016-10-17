@@ -459,8 +459,11 @@ __brzl_compileOutlinks(window).join(' ');
         self.send_to_chrome(method="Debugger.enable")
         self.send_to_chrome(method="Runtime.enable")
 
-        if self.extra_headers:
-            self.send_to_chrome(method="Network.setExtraHTTPHeaders", params={"headers":self.extra_headers})
+        headers = self.extra_headers or {}
+        headers['Accept-Encoding'] = 'identity'
+        self.send_to_chrome(
+                method="Network.setExtraHTTPHeaders",
+                params={"headers":headers})
 
         if self.user_agent:
             self.send_to_chrome(method="Network.setUserAgentOverride", params={"userAgent": self.user_agent})
