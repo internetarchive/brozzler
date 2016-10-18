@@ -1,0 +1,14 @@
+[rethinkdb]
+localhost
+
+[warcprox]
+localhost
+
+[brozzler-worker]
+localhost
+
+[brozzler-webconsole]
+localhost
+
+[pywb]
+localhost
