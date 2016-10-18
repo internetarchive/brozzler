@@ -16,7 +16,7 @@ install:
 - ls -al
 - echo $TRAVIS_BUILD_DIR
 - ls -al $TRAVIS_BUILD_DIR
-- ansible-playbook --extra-vars="brozzler_pip_name=file://$TRAVIS_BUILD_DIR user=travis" --inventory-file=ansible/hosts-localhost ansible/playbook.yml
+- ansible-playbook --extra-vars="brozzler_pip_name=file://$TRAVIS_BUILD_DIR#egg=brozzler user=travis" --inventory-file=ansible/hosts-localhost ansible/playbook.yml
 - pip install $TRAVIS_BUILD_DIR pytest
 before_script:
 - pwd
