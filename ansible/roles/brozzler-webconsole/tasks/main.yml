@@ -7,7 +7,7 @@
   pip: name='{{brozzler_pip_name}}[webconsole]'
        virtualenv={{venv_root}}/brozzler-webconsole-ve34
        virtualenv_python=python3.4
-       extra_args='--no-input --upgrade --pre'
+       extra_args='--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
   become: true
   become_user: '{{user}}'
   notify:

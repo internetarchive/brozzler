@@ -46,7 +46,7 @@
   pip: name=git+https://github.com/kanaka/websockify.git#egg=websockify
        virtualenv={{venv_root}}/websockify-ve34
        virtualenv_python=python3.4
-       extra_args='--no-input --upgrade --pre'
+       extra_args='--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
   become: true
   become_user: '{{user}}'
 - name: install vnc-websock upstart config /etc/init/vnc-websock.conf
@@ -62,7 +62,7 @@
        name='{{brozzler_pip_name}}'
        virtualenv={{venv_root}}/brozzler-ve34
        virtualenv_python=python3.4
-       extra_args='--no-input --upgrade --pre'
+       extra_args='--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
   become: true
   become_user: '{{user}}'
   notify:
