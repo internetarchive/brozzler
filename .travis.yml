@@ -12,3 +12,10 @@ install:
 - pip install $TRAVIS_BUILD_DIR pytest
 script:
 - py.test -v -s tests
+after_failure:
+- sudo stop brozzler-worker
+- sudo stop pywb
+- sudo stop warcprox
+- sudo cat /var/log/upstart/brozzler-worker.log
+- sudo cat /var/log/upstart/warcprox.log
+- sudo cat /var/log/upstart/pywb.log
