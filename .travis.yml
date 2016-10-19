@@ -4,28 +4,11 @@ python:
 sudo: required
 dist: trusty
 before_install:
-- pwd
-- ls -al
-- echo $TRAVIS_BUILD_DIR
-- ls -al $TRAVIS_BUILD_DIR
 - sudo apt-add-repository -y ppa:ansible/ansible
 - sudo apt-get -qq update
 - sudo apt-get install -y ansible
 install:
-- pwd
-- ls -al
-- echo $TRAVIS_BUILD_DIR
-- ls -al $TRAVIS_BUILD_DIR
 - ansible-playbook --extra-vars="brozzler_pip_name=file://$TRAVIS_BUILD_DIR#egg=brozzler user=travis" --inventory-file=ansible/hosts-localhost ansible/playbook.yml
 - pip install $TRAVIS_BUILD_DIR pytest
-before_script:
-- pwd
-- ls -al
-- echo $TRAVIS_BUILD_DIR
-- ls -al $TRAVIS_BUILD_DIR
 script:
-- pwd
-- ls -al
-- echo $TRAVIS_BUILD_DIR
-- ls -al $TRAVIS_BUILD_DIR
 - py.test -v -s tests
