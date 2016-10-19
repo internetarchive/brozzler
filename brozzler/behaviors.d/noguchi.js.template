@@ -119,21 +119,9 @@ var umbraNLogin = function() {
         return false;
 }
 
-/*
-var umbraNLogin = function() {
-	var login_inputs = document.querySelectorAll("#loginForm > form > div > input");
-        var emailInput = login_inputs[0];
-        var passwordInput = login_inputs[1];
-        var loginButton = document.querySelector("div.form-submit");
-        emailInput.value=UMBRA_N_USER_NAME;
-        passwordInput.value=UMBRA_N_PASSWORD;
-        loginButton.click();
-}
-*/
-
 if (document.getElementById("loginForm") == null || UMBRA_N_USER_NAME.indexOf("parameter")>0 || UMBRA_N_PASSWORD.indexOf("parameter")>0 ) {//check for unset parameters
         console.log("missing #loginForm or login credentials; maybe already logged in for " + location.href);
-        var umbraIntervalId = setInterval(umbraIntervalFunc, 2000);
+        var umbraIntervalId = setInterval(umbraIntervalFunc, 5000);
 }
 else {//login
         console.log("#loginForm and credentials found for " + location.href);
