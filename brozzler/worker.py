@@ -18,20 +18,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-import os
 import logging
 import brozzler
 import brozzler.browser
 import threading
 import time
-import signal
 import youtube_dl
 import urllib.request
 import json
 import PIL.Image
 import io
 import socket
-import datetime
 import collections
 import requests
 import rethinkstuff
@@ -103,8 +100,8 @@ class BrozzlerWorker:
         self._max_browsers = max_browsers
 
         # these two settings can be overridden by the job/site configuration
-        self.__proxy = proxy
-        self.__enable_warcprox_features = enable_warcprox_features
+        self._default_proxy = proxy
+        self._default_enable_warcprox_features = enable_warcprox_features
 
         self._browser_pool = brozzler.browser.BrowserPool(max_browsers,
                 chrome_exe=chrome_exe, ignore_cert_errors=True)
@@ -114,13 +111,28 @@ class BrozzlerWorker:
         self._browsing_threads = set()
 
     def _proxy(self, site):
-        return site.proxy or self.__proxy
+        if site.proxy:
+            return site.proxy
+        elif self._default_proxy:
+            return self._default_proxy
+        elif self._service_registry and (
+                site.enable_warcprox_features
+                or self._default_enable_warcprox_features):
+            svc = self._service_registry.available_service('warcprox')
+            site.proxy = '%s:%s' % (svc['host'], svc['port'])
+            self._frontier.update_site(site)
+            self.logger.info(
+                    'chose warcprox instance %s from service registry for %s',
+                    repr(site.proxy), site)
+            return site.proxy
+        return None
+
 
     def _enable_warcprox_features(self, site):
         if site.enable_warcprox_features is not None:
             return site.enable_warcprox_features
         else:
-            return self.__enable_warcprox_features
+            return self._default_enable_warcprox_features
 
     def _youtube_dl(self, destdir, site):
         ydl_opts = {

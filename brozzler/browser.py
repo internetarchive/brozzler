@@ -461,7 +461,7 @@ __brzl_compileOutlinks(window).join(' ');
         self.send_to_chrome(method="Runtime.enable")
 
         headers = self.extra_headers or {}
-        headers['Accept-Encoding'] = 'identity'
+        headers['Accept-Encoding'] = 'gzip, deflate'
         self.send_to_chrome(
                 method="Network.setExtraHTTPHeaders",
                 params={"headers":headers})

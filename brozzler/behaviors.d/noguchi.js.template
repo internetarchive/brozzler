@@ -113,11 +113,10 @@ var umbraNLogin = function() {
 	var login_inputs = document.querySelectorAll("#loginForm > form > div > input");
         var emailInput = login_inputs[0];
         var passwordInput = login_inputs[1];
-<<<<<<< HEAD
-=======
         emailInput.value=UMBRA_N_USER_NAME;
         passwordInput.value=UMBRA_N_PASSWORD;
         document.forms.login.submit();
+        return false;
 }
 
 /*
@@ -125,16 +124,12 @@ var umbraNLogin = function() {
 	var login_inputs = document.querySelectorAll("#loginForm > form > div > input");
         var emailInput = login_inputs[0];
         var passwordInput = login_inputs[1];
->>>>>>> noguchi
         var loginButton = document.querySelector("div.form-submit");
         emailInput.value=UMBRA_N_USER_NAME;
         passwordInput.value=UMBRA_N_PASSWORD;
         loginButton.click();
 }
-<<<<<<< HEAD
-=======
 */
->>>>>>> noguchi
 
 if (document.getElementById("loginForm") == null || UMBRA_N_USER_NAME.indexOf("parameter")>0 || UMBRA_N_PASSWORD.indexOf("parameter")>0 ) {//check for unset parameters
         console.log("missing #loginForm or login credentials; maybe already logged in for " + location.href);

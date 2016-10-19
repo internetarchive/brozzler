@@ -1,0 +1,16 @@
+localhost ansible_connection=local
+
+[rethinkdb]
+localhost
+
+[warcprox]
+localhost
+
+[brozzler-worker]
+localhost
+
+[brozzler-webconsole]
+localhost
+
+[pywb]
+localhost
