@@ -18,20 +18,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-import os
 import logging
 import brozzler
 import brozzler.browser
 import threading
 import time
-import signal
 import youtube_dl
 import urllib.request
 import json
 import PIL.Image
 import io
 import socket
-import datetime
 import collections
 import requests
 import rethinkstuff
@@ -114,7 +111,23 @@ class BrozzlerWorker:
         self._browsing_threads = set()
 
     def _proxy(self, site):
-        return site.proxy or self.__proxy
+        if site.proxy:
+            return site.proxy
+        elif self.__proxy:
+            return self.__proxy
+        elif self._service_registry and (
+                site.enable_warcprox_features or
+                self.__enable_warcprox_features):
+            warcprox_service = self._service_registry.available_service('warcprox')
+            site.proxy = '%s:%s' % (warcprox_service['host'],
+                                    warcprox_service['port'])
+            self._frontier.update_site(site)
+            self.logger.info(
+                    'chose warcprox %s from service registry for site %s',
+                    site.proxy, site)
+            return site.proxy
+        return None
+
 
     def _enable_warcprox_features(self, site):
         if site.enable_warcprox_features is not None:
