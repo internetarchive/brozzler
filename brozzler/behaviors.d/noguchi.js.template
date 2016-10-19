@@ -116,6 +116,7 @@ var umbraNLogin = function() {
         emailInput.value=UMBRA_N_USER_NAME;
         passwordInput.value=UMBRA_N_PASSWORD;
         document.forms.login.submit();
+        return false;
 }
 
 /*
