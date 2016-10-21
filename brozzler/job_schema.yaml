@@ -1,5 +1,7 @@
 id:
-  type: string
+  type:
+  - string
+  - integer
   required: true
 
 <<: &multi_level_options
