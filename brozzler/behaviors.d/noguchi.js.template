@@ -17,89 +17,71 @@
  * limitations under the License.
  */
 
-var umbraAboveBelowOrOnScreen = function(e) {
-  var eTop = e.getBoundingClientRect().top;
-  if (eTop < window.scrollY) {
-    return -1; // above
-  } else if (eTop > window.scrollY + window.innerHeight) {
-    return 1;  // below
-  } else {
-    return 0;  // on screen
-  }
-};
-
 var UMBRA_N_USER_NAME = "${parameter_username}";
 var UMBRA_N_PASSWORD = "${parameter_password}";
 
-var umbraState = {'idleSince':null};
-var re = /(?:Previous){0,1}\s+(page (\d+)\/\d+)\s+(?:Next){0,1}/;
+var umbraState = {'idleSince': null};
+var re = /(?:Previous){0,1}\s+(page\s(\d+)\/\d+)\s+(?:Next){0,1}/;
 
-var umbraIntervalFunc = function() {
-	var clickedSomething = false;
-	var somethingLeftBelow = false;
-	var somethingLeftAbove = false;
-	var target = null;
-	var linktext = "";
+var umbraIntervalFunc = function () {
+    "use strict";
+    var target = null;
+    var linktext = "";
+    var i = 0;
 
-	var navlinks = document.querySelectorAll("div.nav > a");
+    var navlinks = document.querySelectorAll("div.nav > a");
 
-	for (i = 0; i < navlinks.length; i++) {
-		linktext = navlinks[i].textContent;
-		if (linktext.indexOf("Next") > -1) {
-			target = navlinks[i];
-		}
-	}
+    for (i = 0; i < navlinks.length; i += 1) {
+        linktext = navlinks[i].textContent;
+        if (linktext.indexOf("Next") > -1) {
+            target = navlinks[i];
+        }
+    }
 
-	if (target) {
-		var where = umbraAboveBelowOrOnScreen(target);
-		if (where === 0) {
-			umbraState.idleSince = null;
-			var target_page = re.exec(document.querySelector("div.nav").textContent);
-			console.log('loaded ' + target_page[1]);
-			jQuery("#resultBox").load("/index.php/Search/Index/page/" + (+target_page[2] + 1));
-		} else if (where > 0) {
-			somethingLeftBelow = true;
-		} else if (where < 0) {
-			somethingLeftAbove = true;
-		}
-	}
+    if (target) {
+        umbraState.idleSince = null;
+        var target_page = re.exec(document.querySelector("div.nav").textContent);
+        console.log('loaded ' + target_page[1]);
+        jQuery("#resultBox").load("/index.php/Search/Index/page/" + (+target_page[2] + 1));
+    }
 
-	if (umbraState.idleSince == null) {
-		umbraState.idleSince = Date.now();
-	}
-}
+    if (umbraState.idleSince === null) {
+        umbraState.idleSince = Date.now();
+    }
+};
 
 // If we haven't had anything to do (scrolled, clicked, etc) in this amount of
 // time, then we consider ourselves finished with the page.
 var UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC = 5;
 
 // Called from outside of this script.
-var umbraBehaviorFinished = function() {
-  if (umbraState.idleSince != null) {
-    var idleTimeMs = Date.now() - umbraState.idleSince;
-    if (idleTimeMs / 1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC) {
-      clearInterval(umbraIntervalId);
-      return true;
+var umbraBehaviorFinished = function () {
+    "use strict";
+    if (umbraState.idleSince !== null) {
+        var idleTimeMs = Date.now() - umbraState.idleSince;
+        if (idleTimeMs / 1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC) {
+            clearInterval(umbraIntervalId);
+            return true;
+        }
     }
-  }
-  return false;
-}
+    return false;
+};
 
-var umbraNLogin = function() {
-	var login_inputs = document.querySelectorAll("#loginForm > form > div > input");
-        var emailInput = login_inputs[0];
-        var passwordInput = login_inputs[1];
-        emailInput.value=UMBRA_N_USER_NAME;
-        passwordInput.value=UMBRA_N_PASSWORD;
-        document.forms.login.submit();
-        return false;
-}
+var umbraNLogin = function () {
+    "use strict";
+    var login_inputs = document.querySelectorAll("#loginForm > form > div > input");
+    var emailInput = login_inputs[0];
+    var passwordInput = login_inputs[1];
+    emailInput.value = UMBRA_N_USER_NAME;
+    passwordInput.value = UMBRA_N_PASSWORD;
+    document.forms.login.submit();
+    return false;
+};
 
-if (document.getElementById("loginForm") == null || UMBRA_N_USER_NAME.indexOf("parameter")>0 || UMBRA_N_PASSWORD.indexOf("parameter")>0 ) {//check for unset parameters
-        console.log("missing #loginForm or login credentials; maybe already logged in for " + location.href);
-        var umbraIntervalId = setInterval(umbraIntervalFunc, 5000);
-}
-else {//login
-        console.log("#loginForm and credentials found for " + location.href);
-        umbraNLogin();
+if (document.getElementById("loginForm") === null || UMBRA_N_USER_NAME.indexOf("parameter") > 0 || UMBRA_N_PASSWORD.indexOf("parameter") > 0) {//check for unset parameters
+    console.log("missing #loginForm or login credentials; maybe already logged in for " + location.href);
+    var umbraIntervalId = setInterval(umbraIntervalFunc, 5000);
+} else {//login
+    console.log("#loginForm and credentials found for " + location.href);
+    umbraNLogin();
 }
