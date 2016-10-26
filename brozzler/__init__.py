@@ -19,6 +19,7 @@ limitations under the License.
 
 import json as _json
 import logging as _logging
+import surt as _surt
 from pkg_resources import get_distribution as _get_distribution
 
 __version__ = _get_distribution('brozzler').version
@@ -63,6 +64,16 @@ class BaseDictable:
 
     def __repr__(self):
         return "{}(**{})".format(self.__class__.__name__, self.to_dict())
+
+def fixup(url):
+    '''
+    Does rudimentary canonicalization, such as converting IDN to punycode.
+    '''
+    hurl = _surt.handyurl.parse(url)
+    # handyurl.parse() already lowercases the scheme via urlsplit
+    if hurl.host:
+        hurl.host = hurl.host.encode('idna').decode('ascii').lower()
+    return hurl.getURLString()
 
 # logging level more fine-grained than logging.DEBUG==10
 TRACE = 5

@@ -197,7 +197,8 @@ class BrozzlerWorker:
                         "with youtube-dl json for %s", page)
                 self._warcprox_write_record(
                         warcprox_address=self._proxy(site),
-                        url="youtube-dl:%s" % page.url, warc_type="metadata",
+                        url="youtube-dl:%s" % brozzler.fixup(page.url),
+                        warc_type="metadata",
                         content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                         payload=info_json.encode("utf-8"),
                         extra_headers=site.extra_headers())
@@ -237,12 +238,12 @@ class BrozzlerWorker:
                 screenshot_jpeg, thumbnail_jpeg = self.full_and_thumb_jpegs(
                         screenshot_png)
                 self._warcprox_write_record(warcprox_address=self._proxy(site),
-                        url="screenshot:{}".format(page.url),
+                        url="screenshot:%s" % brozzler.fixup(page.url),
                         warc_type="resource", content_type="image/jpeg",
                         payload=screenshot_jpeg,
                         extra_headers=site.extra_headers())
                 self._warcprox_write_record(warcprox_address=self._proxy(site),
-                        url="thumbnail:{}".format(page.url),
+                        url="thumbnail:%s" % brozzler.fixup(page.url),
                         warc_type="resource", content_type="image/jpeg",
                         payload=thumbnail_jpeg,
                         extra_headers=site.extra_headers())
