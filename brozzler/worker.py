@@ -53,7 +53,7 @@ class YoutubeDLSpy(urllib.request.BaseHandler):
         self.reset()
 
     def _http_response(self, request, response):
-        self.transactions.append(YoutubeDLSpy.Transaction(request,response))
+        self.transactions.append(YoutubeDLSpy.Transaction(request, response))
         return response
 
     http_response = https_response = _http_response
@@ -175,11 +175,11 @@ class BrozzlerWorker:
 
         try:
             with urllib.request.urlopen(request) as response:
-                if response.status != 204:
+                if response.getcode() != 204:
                     self.logger.warn(
                             'got "%s %s" response on warcprox '
                             'WARCPROX_WRITE_RECORD request (expected 204)',
-                            response.status, response.reason)
+                            response.getcode(), response.reason)
         except urllib.error.HTTPError as e:
             self.logger.warn(
                     'got "%s %s" response on warcprox '
@@ -311,7 +311,7 @@ class BrozzlerWorker:
     def _already_fetched(self, page, brozzler_spy):
         for txn in brozzler_spy.final_bounces(page.url):
             if (txn.request.get_method() == 'GET'
-                    and txn.response.status == 200):
+                    and txn.response.getcode() == 200):
                 return True
         return False
 
