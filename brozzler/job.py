@@ -75,6 +75,8 @@ def new_job(frontier, job_conf):
     sites = []
     for seed_conf in job_conf["seeds"]:
         merged_conf = merge(seed_conf, job_conf)
+        if "login" in merged_conf and "metadata" in merged_conf:
+            merged_conf["metadata"]["login"] = merged_conf["login"]
         site = brozzler.Site(
                 job_id=job.id, seed=merged_conf["url"],
                 scope=merged_conf.get("scope"),

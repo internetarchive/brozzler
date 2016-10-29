@@ -120,6 +120,8 @@ def brozzle_page():
             '-e', '--chrome-exe', dest='chrome_exe',
             default=suggest_default_chrome_exe(),
             help='executable to use to invoke chrome')
+    arg_parser.add_argument('--behavior-parameters', dest='behavior_parameters',
+                            default=None, help='json blob of parameters to populate the javascript behavior template, e.g. {"parameter_username":"x","parameter_password":"y"}')
     arg_parser.add_argument(
             '--proxy', dest='proxy', default=None,
             help='http proxy')
@@ -133,9 +135,12 @@ def brozzle_page():
     args = arg_parser.parse_args(args=sys.argv[1:])
     _configure_logging(args)
 
+    metadata = {}
+    if args.behavior_parameters:
+        metadata["behavior_parameters"] = json.loads(args.behavior_parameters)
     site = brozzler.Site(
             id=-1, seed=args.url, proxy=args.proxy,
-            enable_warcprox_features=args.enable_warcprox_features)
+            metadata=metadata, enable_warcprox_features=args.enable_warcprox_features)
     page = brozzler.Page(url=args.url, site_id=site.id)
     worker = brozzler.BrozzlerWorker(frontier=None)
 
