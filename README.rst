@@ -157,7 +157,7 @@ Next install the build tools and fetch the source code:
     mkdir -p ~/chromium
     cd ~/chromium
     git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-    export $PATH=$PWD/depot_tools:$PATH
+    export PATH=$PWD/depot_tools:$PATH
     fetch --no-history chromium --nosvn=True
 
 Configure a headless release build (the debug builds are much larger):
@@ -195,13 +195,13 @@ option:
     chmod +x ~/bin/headless_chromium.sh
     brozzler-worker --chrome-exe ~/bin/headless_chromium.sh
 
-The Pepper Flash plugin ``libpepflashplayer.so`` from an official Google Chrome
-release may be used with Headless Chromium by adding this option to the wrapper
-script:
+To render Flash content, `download <https://get.adobe.com/flashplayer/otherversions/>`_
+and extract the Linux (.tar.gz) PPAPI plugin.  Configure Headless Chromium 
+to load the plugin by adding this option to your wrapper script:
 
 ::
 
-    --register-pepper-plugins=/opt/google/chrome/PepperFlash/libpepflashplayer.so;application/x-shockwave-flash
+    --register-pepper-plugins="/opt/PepperFlash/libpepflashplayer.so;application/x-shockwave-flash"
 
 License
 -------
