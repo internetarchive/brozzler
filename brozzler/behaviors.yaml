@@ -92,6 +92,11 @@ behaviors:
    url_regex: '^https?://(?:www\.)?fec.gov/data/.*$'
    behavior_js: fec_gov.js
    request_idle_timeout_sec: 10
+ - url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
+   behavior_js_template: mouseovers.js.template
+   default_parameters:
+      mouseover_css_selector: .menu-item a
+   request_idle_timeout_sec: 10
  - # default fallback behavior
    url_regex: '^.*$'
    request_idle_timeout_sec: 10
