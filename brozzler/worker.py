@@ -271,7 +271,8 @@ class BrozzlerWorker:
             self.logger.info('needs browsing: %s', page)
             behavior_parameters = {}
             if "login" in site.metadata:
-                behavior_parameters.update(site.metadata["login"])
+                behavior_parameters["parameter_username"] = site.metadata["login"]["username"]
+                behavior_parameters["parameter_password"] = site.metadata["login"]["password"]
             if "behavior_parameters" in site.metadata:
                 behavior_parameters.update(site.metadata["behavior_parameters"])
             if not browser.is_running():
