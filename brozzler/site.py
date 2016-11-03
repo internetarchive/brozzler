@@ -54,11 +54,15 @@ class Url:
         return self._host
 
     def matches_ip_or_domain(self, ip_or_domain):
-        """Returns true if
-           - ip_or_domain is an ip address and self.host is the same ip address
-           - ip_or_domain is a domain and self.host is the same domain
-           - ip_or_domain is a domain and self.host is a subdomain of it
         """
+        Returns true if
+         - ip_or_domain is an ip address and self.host is the same ip address
+         - ip_or_domain is a domain and self.host is the same domain
+         - ip_or_domain is a domain and self.host is a subdomain of it
+        """
+        if not self.host:
+            return False
+
         if ip_or_domain == self.host:
             return True
 

@@ -53,7 +53,7 @@ class YoutubeDLSpy(urllib.request.BaseHandler):
         self.reset()
 
     def _http_response(self, request, response):
-        self.transactions.append(YoutubeDLSpy.Transaction(request,response))
+        self.transactions.append(YoutubeDLSpy.Transaction(request, response))
         return response
 
     http_response = https_response = _http_response
@@ -175,11 +175,11 @@ class BrozzlerWorker:
 
         try:
             with urllib.request.urlopen(request) as response:
-                if response.status != 204:
+                if response.getcode() != 204:
                     self.logger.warn(
                             'got "%s %s" response on warcprox '
                             'WARCPROX_WRITE_RECORD request (expected 204)',
-                            response.status, response.reason)
+                            response.getcode(), response.reason)
         except urllib.error.HTTPError as e:
             self.logger.warn(
                     'got "%s %s" response on warcprox '
@@ -197,7 +197,8 @@ class BrozzlerWorker:
                         "with youtube-dl json for %s", page)
                 self._warcprox_write_record(
                         warcprox_address=self._proxy(site),
-                        url="youtube-dl:%s" % page.url, warc_type="metadata",
+                        url="youtube-dl:%s" % brozzler.fixup(page.url),
+                        warc_type="metadata",
                         content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                         payload=info_json.encode("utf-8"),
                         extra_headers=site.extra_headers())
@@ -237,12 +238,12 @@ class BrozzlerWorker:
                 screenshot_jpeg, thumbnail_jpeg = self.full_and_thumb_jpegs(
                         screenshot_png)
                 self._warcprox_write_record(warcprox_address=self._proxy(site),
-                        url="screenshot:{}".format(page.url),
+                        url="screenshot:%s" % brozzler.fixup(page.url),
                         warc_type="resource", content_type="image/jpeg",
                         payload=screenshot_jpeg,
                         extra_headers=site.extra_headers())
                 self._warcprox_write_record(warcprox_address=self._proxy(site),
-                        url="thumbnail:{}".format(page.url),
+                        url="thumbnail:%s" % brozzler.fixup(page.url),
                         warc_type="resource", content_type="image/jpeg",
                         payload=thumbnail_jpeg,
                         extra_headers=site.extra_headers())
@@ -311,7 +312,7 @@ class BrozzlerWorker:
     def _already_fetched(self, page, brozzler_spy):
         for txn in brozzler_spy.final_bounces(page.url):
             if (txn.request.get_method() == 'GET'
-                    and txn.response.status == 200):
+                    and txn.response.getcode() == 200):
                 return True
         return False
 
