@@ -1,0 +1,4 @@
+---
+- name: restart brozzler-dashboard
+  service: name=brozzler-dashboard state=restarted
+  become: true

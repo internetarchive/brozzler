@@ -14,10 +14,10 @@
   roles:
   - brozzler-worker
 
-- name: deploy brozzler-webconsole
-  hosts: brozzler-webconsole
+- name: deploy brozzler-dashboard
+  hosts: brozzler-dashboard
   roles:
-  - brozzler-webconsole
+  - brozzler-dashboard
 
 - name: deploy pywb
   hosts: pywb

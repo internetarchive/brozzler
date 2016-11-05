@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-brozzler-easy - brozzler-worker, warcprox, pywb, and brozzler-webconsole all
+brozzler-easy - brozzler-worker, warcprox, pywb, and brozzler-dashboard all
 working together in a single process
 
 Copyright (C) 2016 Internet Archive
@@ -27,7 +27,7 @@ try:
     import brozzler.pywb
     import wsgiref.simple_server
     import wsgiref.handlers
-    import brozzler.webconsole
+    import brozzler.dashboard
 except ImportError as e:
     logging.critical(
             '%s: %s\n\nYou might need to run "pip install '
@@ -51,7 +51,7 @@ def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
             prog=prog, formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             description=(
                 'brozzler-easy - easy deployment of brozzler, with '
-                'brozzler-worker, warcprox, pywb, and brozzler-webconsole all '
+                'brozzler-worker, warcprox, pywb, and brozzler-dashboard all '
                 'running in a single process'))
 
     # common args
@@ -104,14 +104,14 @@ def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
             '--pywb-port', dest='pywb_port', type=int,
             default=8880, help='pywb wayback port')
 
-    # webconsole args
+    # dashboard args
     arg_parser.add_argument(
-            '--webconsole-address', dest='webconsole_address',
+            '--dashboard-address', dest='dashboard_address',
             default='localhost',
-            help='brozzler web console address to listen on')
+            help='brozzler dashboard address to listen on')
     arg_parser.add_argument(
-            '--webconsole-port', dest='webconsole_port',
-            type=int, default=8881, help='brozzler web console port')
+            '--dashboard-port', dest='dashboard_port',
+            type=int, default=8881, help='brozzler dashboard port')
 
     # common at the bottom args
     arg_parser.add_argument(
@@ -143,12 +143,12 @@ class BrozzlerEasyController:
                 self._warcprox_args(args))
         self.brozzler_worker = self._init_brozzler_worker(args)
         self.pywb_httpd = self._init_pywb(args)
-        self.webconsole_httpd = self._init_brozzler_webconsole(args)
+        self.dashboard_httpd = self._init_brozzler_dashboard(args)
 
-    def _init_brozzler_webconsole(self, args):
+    def _init_brozzler_dashboard(self, args):
         return wsgiref.simple_server.make_server(
-                args.webconsole_address, args.webconsole_port,
-                brozzler.webconsole.app, ThreadingWSGIServer)
+                args.dashboard_address, args.dashboard_port,
+                brozzler.dashboard.app, ThreadingWSGIServer)
 
     def _init_brozzler_worker(self, args):
         r = rethinkstuff.Rethinker(
@@ -212,13 +212,13 @@ class BrozzlerEasyController:
         threading.Thread(target=self.pywb_httpd.serve_forever).start()
 
         self.logger.info(
-                'starting brozzler-webconsole at %s:%s',
-                *self.webconsole_httpd.server_address)
-        threading.Thread(target=self.webconsole_httpd.serve_forever).start()
+                'starting brozzler-dashboard at %s:%s',
+                *self.dashboard_httpd.server_address)
+        threading.Thread(target=self.dashboard_httpd.serve_forever).start()
 
     def shutdown(self):
-        self.logger.info('shutting down brozzler-webconsole')
-        self.webconsole_httpd.shutdown()
+        self.logger.info('shutting down brozzler-dashboard')
+        self.dashboard_httpd.shutdown()
 
         self.logger.info('shutting down brozzler-worker')
         self.brozzler_worker.shutdown_now()

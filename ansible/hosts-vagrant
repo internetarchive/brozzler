@@ -16,7 +16,7 @@ work_dir=/vagrant
 [brozzler-worker]
 10.9.9.9
 
-[brozzler-webconsole]
+[brozzler-dashboard]
 10.9.9.9
 
 [pywb]

@@ -1,0 +1,20 @@
+---
+- name: mkdir {{venv_root}}/brozzler-dashboard-ve34
+  file: path={{venv_root}}/brozzler-dashboard-ve34 state=directory
+        owner={{user}}
+  become: true
+- name: install brozzler[dashboard] in virtualenv
+  pip: name='{{brozzler_pip_name}}[dashboard]'
+       virtualenv={{venv_root}}/brozzler-dashboard-ve34
+       virtualenv_python=python3.4
+       extra_args='--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
+  become: true
+  become_user: '{{user}}'
+  notify:
+  - restart brozzler-dashboard
+- name: install upstart config /etc/init/brozzler-dashboard.conf
+  become: true
+  template: src=templates/brozzler-dashboard.conf.j2
+            dest=/etc/init/brozzler-dashboard.conf
+  notify:
+  - restart brozzler-dashboard
