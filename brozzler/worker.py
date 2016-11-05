@@ -388,7 +388,9 @@ class BrozzlerWorker:
                     try:
                         site = self._frontier.claim_site("{}:{}".format(
                             socket.gethostname(), browser.chrome_port))
-                        self.logger.info("brozzling site %s", site)
+                        self.logger.info(
+                                "brozzling site (proxy=%s) %s",
+                                repr(self._proxy(site)), site)
                         th = threading.Thread(
                                 target=lambda: self._brozzle_site(
                                     browser, site),
