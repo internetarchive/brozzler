@@ -22,30 +22,78 @@ var umbraInstagramBehavior = {
         idleSince: null,
 
         intervalFunc: function() {
-                if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
-                        window.scrollBy(0, 200);
-                        this.idleSince = null;
-                        return;
+                if (this.state === "loading-thumbs") {
+                        if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
+                                window.scrollBy(0, 200);
+                                this.idleSince = null;
+                                return;
+                        }
+
+                        var moreButtons = document.querySelectorAll("a._oidfu");
+                        if (moreButtons.length > 0) {
+                                console.log("clicking load more button");
+                                moreButtons[0].click();
+                                this.idleSince = null;
+                                return;
+                        }
+
+                        if (this.idleSince == null) {
+                                console.log("nothing to do at the moment, might be waiting for something to load, setting this.idleSince=Date.now()");
+                                this.idleSince = Date.now();
+                                return;
+                        } else {
+                                if ((Date.now() - this.idleSince) > 9000) {
+                                        console.log("finished loading-thumbs, it appears we have reached the bottom");
+                                        this.state = "clicking-first-thumb";
+                                        this.idleSince = null;
+                                        return;
+                                } else {
+                                        // console.log("still might be waiting for something to load...");
+                                        return;
+                                }
+                        }
                 }
 
-                var moreButtons = document.querySelectorAll("a._oidfu");
-                if (moreButtons.length > 0) {
-                        console.log("clicking load more button");
-                        moreButtons[0].click();
-                        this.idleSince = null;
-                        return;
-                }
+                if (this.state === "clicking-first-thumb") {
+                        var images = document.querySelectorAll("div._ovg3g");
+                        if (images && images !== "undefined") {
+                                this.imageCount = images.length;
+                                if (images.length > 0) {
+                                        console.log("clicking first thumbnail");
+                                        images[0].click();
+                                        this.idleSince = null;
+                                        this.state = "waiting-big-image";
+                                        this.bigImagesLoaded++;
+                                        return;
+                                }
+                        }
 
-                if (this.idleSince == null) {
-                        console.log("nothing to do at the moment, might be waiting for something to load, setting this.idleSince=Date.now()");
+                        console.log("no big images to load?");
                         this.idleSince = Date.now();
+                        return;
+                }
+
+                if (this.state === "waiting-big-image") {
+                        if(this.bigImagesLoaded < this.imageCount) {
+                                var rightArrow = document.querySelectorAll(".coreSpriteRightPaginationArrow");
+                                if (rightArrow.length > 0) {
+                                        // console.log("clicking right arrow");
+                                        rightArrow[0].click();
+                                        this.idleSince = null;
+                                        this.bigImagesLoaded++;
+                                }
+                        } else {
+                                console.log("looks like we're done, we've loaded all " + this.bigImagesLoaded + " of " + this.imageCount + " big images");
+                                this.state = "finished";
+                                this.idleSince = Date.now();
+                        }
                         return;
                 }
         },
 
         start: function() {
                 var that = this;
-                this.intervalId = setInterval(function(){ that.intervalFunc() }, 50);
+                this.intervalId = setInterval(function(){ that.intervalFunc() }, 300);
         },
 
         isFinished: function() {
