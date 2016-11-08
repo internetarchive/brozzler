@@ -15,8 +15,19 @@
     checksum: sha1:57ff41e99cb01b6a1c2b0999161589b726f0ec8b
 - name: extract pip-9.0.1.tar.gz
   unarchive: src=/tmp/pip-9.0.1.tar.gz dest=/tmp copy=no
+
+# this clause is a workaround for travis-ci, which only wants to install in /usr
+# see https://travis-ci.org/internetarchive/brozzler/builds/174338601
+# but it complains that /usr/lib/python3.4/site-packages doesn't exist
+# see https://travis-ci.org/internetarchive/brozzler/builds/174094831
+- file: path={{item}} state=directory
+  with_items:
+  - /usr/lib/python3.4/site-packages
+  - /usr/lib/python3.4/dist-packages
+  become: true
+
 - name: run "python3 setup.py install" in /tmp/pip-9.0.1
-  command: python3 setup.py install --prefix=/usr/local
+  command: python3 setup.py install
            chdir=/tmp/pip-9.0.1
            creates=/usr/local/lib/python3.4/dist-packages/pip-9.0.1-py3.4.egg/pip/__init__.py
   become: true
