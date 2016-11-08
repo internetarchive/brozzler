@@ -8,16 +8,17 @@
   with_items:
   - python-setuptools
   - python3-setuptools
-- name: download pip-8.1.2.tar.gz
+- name: download pip-9.0.1.tar.gz
   get_url:
-    url: https://pypi.python.org/packages/e7/a8/7556133689add8d1a54c0b14aeff0acb03c64707ce100ecd53934da1aa13/pip-8.1.2.tar.gz
+    url: https://pypi.python.org/packages/11/b6/abcb525026a4be042b486df43905d6893fb04f05aac21c32c638e939e447/pip-9.0.1.tar.gz
     dest: /tmp
-    checksum: sha1:1c13c247967ec5bee6de5fd104c5d78ba30951c7
-- name: extract pip-8.1.2.tar.gz
-  unarchive: src=/tmp/pip-8.1.2.tar.gz dest=/tmp copy=no
-- name: run "python3 setup.py install" in /tmp/pip-8.1.2
-  command: python3 setup.py install chdir=/tmp/pip-8.1.2
-           creates=/usr/local/lib/python2.7/dist-packages/pip-8.1.2-py2.7.egg/pip/__init__.py
+    checksum: sha1:57ff41e99cb01b6a1c2b0999161589b726f0ec8b
+- name: extract pip-9.0.1.tar.gz
+  unarchive: src=/tmp/pip-9.0.1.tar.gz dest=/tmp copy=no
+- name: run "python3 setup.py install" in /tmp/pip-9.0.1
+  command: python3 setup.py install --prefix=/usr/local
+           chdir=/tmp/pip-9.0.1
+           creates=/usr/local/lib/python3.4/dist-packages/pip-9.0.1-py3.4.egg/pip/__init__.py
   become: true
 - name: run "pip install virtualenv"
   command: pip install virtualenv
