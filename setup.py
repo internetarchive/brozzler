@@ -32,17 +32,17 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.1b7.dev109',
+        version='1.1b7.dev113',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
         author_email='nlevitt@archive.org',
         long_description=open('README.rst', mode='rb').read().decode('UTF-8'),
         license='Apache License 2.0',
-        packages=['brozzler', 'brozzler.webconsole'],
+        packages=['brozzler', 'brozzler.dashboard'],
         package_data={
             'brozzler': ['behaviors.d/*.js*', 'behaviors.yaml', 'job_schema.yaml'],
-            'brozzler.webconsole': find_package_data('brozzler.webconsole'),
+            'brozzler.dashboard': find_package_data('brozzler.dashboard'),
         },
         entry_points={
             'console_scripts': [
@@ -51,7 +51,7 @@ setuptools.setup(
                 'brozzler-new-site=brozzler.cli:brozzler_new_site',
                 'brozzler-worker=brozzler.cli:brozzler_worker',
                 'brozzler-ensure-tables=brozzler.cli:brozzler_ensure_tables',
-                'brozzler-webconsole=brozzler.webconsole:main',
+                'brozzler-dashboard=brozzler.dashboard:main',
                 'brozzler-easy=brozzler.easy:main',
                 'brozzler-wayback=brozzler.pywb:main',
             ],
@@ -70,7 +70,7 @@ setuptools.setup(
             'cerberus==1.0.1',
         ],
         extras_require={
-            'webconsole': ['flask>=0.11', 'gunicorn'],
+            'dashboard': ['flask>=0.11', 'gunicorn'],
             'easy': ['warcprox>=2.0b1', 'pywb', 'flask>=0.11', 'gunicorn'],
         },
         zip_safe=False,

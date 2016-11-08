@@ -86,7 +86,7 @@ def test_services_up():
         # if the connect fails an exception is raised and the test fails
         s.connect(('localhost', 8880))
 
-    # check that brozzler webconsole is listening
+    # check that brozzler dashboard is listening
     with socket.socket() as s:
         # if the connect fails an exception is raised and the test fails
         s.connect(('localhost', 8881))

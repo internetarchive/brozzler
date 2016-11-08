@@ -1,4 +1,0 @@
----
-- name: restart brozzler-webconsole
-  service: name=brozzler-webconsole state=restarted
-  become: true

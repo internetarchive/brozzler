@@ -273,6 +273,7 @@ class BrozzlerWorker:
                 browser.start(proxy=self._proxy(site), cookie_db=site.cookie_db)
             outlinks = browser.browse_page(
                     page.url, extra_headers=site.extra_headers(),
+                    behavior_parameters=site.behavior_parameters,
                     user_agent=site.user_agent,
                     on_screenshot=_on_screenshot,
                     on_url_change=page.note_redirect)
@@ -388,7 +389,9 @@ class BrozzlerWorker:
                     try:
                         site = self._frontier.claim_site("{}:{}".format(
                             socket.gethostname(), browser.chrome_port))
-                        self.logger.info("brozzling site %s", site)
+                        self.logger.info(
+                                "brozzling site (proxy=%s) %s",
+                                repr(self._proxy(site)), site)
                         th = threading.Thread(
                                 target=lambda: self._brozzle_site(
                                     browser, site),

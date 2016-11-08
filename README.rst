@@ -33,7 +33,7 @@ Getting Started
 
 The easiest way to get started with brozzler for web archiving is with
 ``brozzler-easy``. Brozzler-easy runs brozzler-worker, warcprox,
-`pywb <https://github.com/ikreymer/pywb>`_, and brozzler-webconsole, configured
+`pywb <https://github.com/ikreymer/pywb>`_, and brozzler-dashboard, configured
 to work with each other, in a single process.
 
 Mac instructions:
@@ -118,24 +118,24 @@ must be specified, everything else is optional. For details, see
         scope:
           surt: http://(org,example,
 
-Brozzler Web Console
---------------------
+Brozzler Dashboard
+------------------
 
 Brozzler comes with a rudimentary web application for viewing crawl job status.
 To install the brozzler with dependencies required to run this app, run
 
 ::
 
-    pip install brozzler[webconsole]
+    pip install brozzler[dashboard]
 
 
 To start the app, run
 
 ::
 
-    brozzler-webconsole
+    brozzler-dashboard
 
-See ``brozzler-webconsole --help`` for configuration options.
+See ``brozzler-dashboard --help`` for configuration options.
 
 Headless Chromium
 -----------------

@@ -9,7 +9,7 @@ localhost
 [brozzler-worker]
 localhost
 
-[brozzler-webconsole]
+[brozzler-dashboard]
 localhost
 
 [pywb]

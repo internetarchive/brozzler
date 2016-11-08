@@ -6,7 +6,7 @@ echo service status:
 vagrant ssh -- 'status warcprox ;
                 status Xvnc ;
                 status brozzler-worker ;
-                status brozzler-webconsole ;
+                status brozzler-dashboard ;
                 status vnc-websock'
 echo
 

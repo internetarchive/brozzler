@@ -1,3 +1,3 @@
-[submodule "brozzler/webconsole/static/noVNC"]
-	path = brozzler/webconsole/static/noVNC
+[submodule "noVNC"]
+	path = brozzler/dashboard/static/noVNC
 	url = https://github.com/kanaka/noVNC.git

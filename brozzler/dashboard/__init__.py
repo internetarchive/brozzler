@@ -1,6 +1,6 @@
 '''
-brozzler/webconsole/__init__.py - flask app for brozzler web console, defines
-api endspoints etc
+brozzler/dashboard/__init__.py - flask app for brozzler dashboard, defines api
+endspoints etc
 
 Copyright (C) 2014-2016 Internet Archive
 
@@ -24,7 +24,7 @@ try:
 except ImportError as e:
     logging.critical(
             '%s: %s\n\nYou might need to run "pip install '
-            'brozzler[webconsole]".\nSee README.rst for more information.',
+            'brozzler[dashboard]".\nSee README.rst for more information.',
             type(e).__name__, e)
     sys.exit(1)
 import rethinkstuff
@@ -210,11 +210,11 @@ try:
     import gunicorn.app.base
     from gunicorn.six import iteritems
 
-    class GunicornBrozzlerWebConsole(gunicorn.app.base.BaseApplication):
+    class GunicornBrozzlerDashboard(gunicorn.app.base.BaseApplication):
         def __init__(self, app, options=None):
             self.options = options or {}
             self.application = app
-            super(GunicornBrozzlerWebConsole, self).__init__()
+            super(GunicornBrozzlerDashboard, self).__init__()
 
         def load_config(self):
             config = dict(
@@ -227,12 +227,12 @@ try:
             return self.application
 
     def run(**options):
-        logging.info('running brozzler-webconsole using gunicorn')
-        GunicornBrozzlerWebConsole(app, options).run()
+        logging.info('running brozzler-dashboard using gunicorn')
+        GunicornBrozzlerDashboard(app, options).run()
 
 except ImportError:
     def run():
-        logging.info('running brozzler-webconsole using simple flask app.run')
+        logging.info('running brozzler-dashboard using simple flask app.run')
         app.run()
 
 def main():
@@ -241,10 +241,10 @@ def main():
             prog=os.path.basename(sys.argv[0]),
             formatter_class=argparse.RawDescriptionHelpFormatter,
             description=(
-                'brozzler-webconsole - web application for viewing brozzler '
+                'brozzler-dashboard - web application for viewing brozzler '
                 'crawl status'),
             epilog=(
-                'brozzler-webconsole has no command line options, but can be '
+                'brozzler-dashboard has no command line options, but can be '
                 'configured using the following environment variables:\n\n'
                 '  RETHINKDB_SERVERS   rethinkdb servers, e.g. db0.foo.org,'
                 'db0.foo.org:38015,db1.foo.org (default: localhost)\n'

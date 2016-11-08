@@ -1,5 +1,5 @@
 /*
- * brozzler-webconsole/static/js/app.js - brozzler console angularjs code
+ * brozzler/dashboard/static/js/app.js - brozzler dashboard angularjs code
  *
  * Copyright (C) 2014-2016 Internet Archive
  *
@@ -18,12 +18,12 @@
 
 "use strict";
 
-var brozzlerConsoleApp = angular.module("brozzlerConsoleApp", [
+var brozzlerDashboardApp = angular.module("brozzlerDashboardApp", [
     "ngRoute",
     "brozzlerControllers",
 ]);
 
-brozzlerConsoleApp.config(["$routeProvider", "$locationProvider",
+brozzlerDashboardApp.config(["$routeProvider", "$locationProvider",
     function($routeProvider, $locationProvider) {
         $routeProvider.
             when("/workers", {
@@ -53,7 +53,7 @@ brozzlerConsoleApp.config(["$routeProvider", "$locationProvider",
     }]);
 
 // copied from https://bitbucket.org/webarchive/ait5/src/master/archiveit/static/app/js/filters/ByteFormat.js
-brozzlerConsoleApp.filter("byteformat", function() {
+brozzlerDashboardApp.filter("byteformat", function() {
     return function(bytes, precision) {
         var bytes_f = parseFloat(bytes);
         if (bytes_f == 0 || isNaN(bytes_f) || !isFinite(bytes_f)) return "0";
