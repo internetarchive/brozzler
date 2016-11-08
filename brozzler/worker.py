@@ -269,10 +269,17 @@ class BrozzlerWorker:
 
         if self._needs_browsing(page, ydl_spy):
             self.logger.info('needs browsing: %s', page)
+            behavior_parameters = {}
+            if "login" in site.metadata:
+                behavior_parameters["parameter_username"] = site.metadata["login"]["username"]
+                behavior_parameters["parameter_password"] = site.metadata["login"]["password"]
+            if "behavior_parameters" in site.metadata:
+                behavior_parameters.update(site.metadata["behavior_parameters"])
             if not browser.is_running():
                 browser.start(proxy=self._proxy(site), cookie_db=site.cookie_db)
             outlinks = browser.browse_page(
                     page.url, extra_headers=site.extra_headers(),
+                    behavior_parameters=behavior_parameters,
                     user_agent=site.user_agent,
                     on_screenshot=_on_screenshot,
                     on_url_change=page.note_redirect)
