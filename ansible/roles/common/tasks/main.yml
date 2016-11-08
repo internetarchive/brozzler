@@ -19,6 +19,10 @@
   command: python3 setup.py install chdir=/tmp/pip-8.1.2
            creates=/usr/local/lib/python2.7/dist-packages/pip-8.1.2-py2.7.egg/pip/__init__.py
   become: true
+- name: run "pip install virtualenv"
+  command: pip install virtualenv
+           creates=/usr/local/lib/python3.4/dist-packages/virtualenv.py
+  become: true
 - command: id {{user}}
   register: id_user
   ignore_errors: true

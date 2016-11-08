@@ -4,7 +4,6 @@
   apt: name={{item}} state=present
   with_items:
   - gcc
-  - python-virtualenv
   - python3.4
   - libpython3.4-dev
   - libffi-dev
