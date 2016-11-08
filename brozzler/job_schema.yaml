@@ -69,6 +69,9 @@ id:
   user_agent:
     type: string
 
+  behavior_parameters:
+    type: dict
+
 seeds:
   type: list
   required: true
