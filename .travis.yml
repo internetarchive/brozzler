@@ -4,6 +4,11 @@ python:
 sudo: required
 dist: trusty
 before_install:
+- lsb_release -a
+- echo $PATH
+- find / -ls
+- id
+- sudo id
 - sudo apt-add-repository -y ppa:ansible/ansible
 - sudo apt-get -qq update
 - sudo apt-get install -y ansible
@@ -13,6 +18,7 @@ install:
 script:
 - py.test -v -s tests
 after_failure:
+- ls -l /opt
 - sudo cat /var/log/upstart/warcprox.log
 - sudo cat /var/log/upstart/brozzler-worker.log
 - sudo cat /var/log/upstart/pywb.log
