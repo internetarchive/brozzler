@@ -224,6 +224,12 @@ def brozzler_new_site():
                 'Warcprox-Meta http request header to send with each request; '
                 'must be a json blob, ignored unless warcprox features are '
                 'enabled'))
+    arg_parser.add_argument(
+            '--behavior-parameters', dest='behavior_parameters',
+            default=None, help=(
+                'json blob of parameters to populate the javascript behavior '
+                'template, e.g. {"parameter_username":"x",'
+                '"parameter_password":"y"}'))
     _add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])
@@ -234,8 +240,10 @@ def brozzler_new_site():
             time_limit=int(args.time_limit) if args.time_limit else None,
             ignore_robots=args.ignore_robots,
             enable_warcprox_features=args.enable_warcprox_features,
-            warcprox_meta=(
-                json.loads(args.warcprox_meta) if args.warcprox_meta else None))
+            warcprox_meta=json.loads(
+                args.warcprox_meta) if args.warcprox_meta else None,
+            behavior_parameters=json.loads(
+                args.behavior_parameters) if args.behavior_parameters else None)
 
     r = rethinkstuff.Rethinker(
             args.rethinkdb_servers.split(","), args.rethinkdb_db)
