@@ -6,7 +6,6 @@ dist: trusty
 before_install:
 - lsb_release -a
 - echo $PATH
-- find / -ls
 - id
 - sudo id
 - sudo apt-add-repository -y ppa:ansible/ansible
@@ -15,6 +14,10 @@ before_install:
 install:
 - ansible-playbook --extra-vars="brozzler_pip_name=file://$TRAVIS_BUILD_DIR#egg=brozzler user=travis" --inventory-file=ansible/hosts-localhost ansible/playbook.yml
 - pip install $TRAVIS_BUILD_DIR pytest
+- ls -l /opt /opt/*/bin
+- cat /etc/init/warcprox.conf
+- cat /etc/init/brozzler-worker.conf
+- cat /etc/init/pywb.conf
 script:
 - py.test -v -s tests
 after_failure:
