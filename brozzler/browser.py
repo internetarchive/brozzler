@@ -343,8 +343,6 @@ __brzl_compileOutlinks(window).join(' ');
         def callback(message):
             if timer:
                 timer.cancel()
-            if message["id"] in self._waiting_on_result_messages:
-                del self._waiting_on_result_messages[message["id"]]
             if "callback" in chain[0]:
                 chain[0]["callback"](message)
             self._chain_chrome_messages(chain[1:])
@@ -505,11 +503,18 @@ __brzl_compileOutlinks(window).join(' ');
             self.on_response(message)
 
     def _page_load_event_fired(self, message):
+        def page_url_after_load_event(message):
+            if message["result"]["result"]["value"] != self.url:
+                if self.on_url_change:
+                    self.on_url_change(message["result"]["result"]["value"])
+        msg_id = self.send_to_chrome(
+                method="Runtime.evaluate",
+                params={"expression":"document.URL"})
+        self._waiting_on_result_messages[msg_id] = page_url_after_load_event
+
         self.logger.info("Page.loadEventFired, moving on to starting behaviors url={}".format(self.url))
         self._behavior = Behavior(self.url, self)
         self._behavior.start(self.behavior_parameters)
-
-        self._waiting_on_document_url_msg_id = self.send_to_chrome(method="Runtime.evaluate", params={"expression":"document.URL"})
 
     def _console_message_added(self, message):
         self.logger.debug("%s console.%s %s", self._websock.url,
@@ -552,6 +557,7 @@ __brzl_compileOutlinks(window).join(' ');
         elif "result" in message:
             if message["id"] in self._waiting_on_result_messages:
                 callback = self._waiting_on_result_messages[message["id"]]
+                del self._waiting_on_result_messages[message["id"]]
                 self.logger.debug(
                         "received result for message id=%s, calling %s",
                         message["id"], callback)
