@@ -48,6 +48,7 @@ class ExtraHeaderAdder(urllib.request.BaseHandler):
 
 class YoutubeDLSpy(urllib.request.BaseHandler):
     Transaction = collections.namedtuple('Transaction', ['request', 'response'])
+    logger = logging.getLogger(__module__ + "." + __qualname__)
 
     def __init__(self):
         self.reset()
@@ -62,17 +63,17 @@ class YoutubeDLSpy(urllib.request.BaseHandler):
         self.transactions = []
 
     def final_bounces(self, url):
-        """Resolves redirect chains in self.transactions, returns a list of
+        """
+        Resolves redirect chains in self.transactions, returns a list of
         Transaction representing the final redirect destinations of the given
         url. There could be more than one if for example youtube-dl hit the
-        same url with HEAD and then GET requests."""
+        same url with HEAD and then GET requests.
+        """
         redirects = {}
         for txn in self.transactions:
              # XXX check http status 301,302,303,307? check for "uri" header
              # as well as "location"? see urllib.request.HTTPRedirectHandler
-             if ((txn.request.full_url == url
-                     or txn.request.full_url in redirects)
-                     and 'location' in txn.response.headers):
+             if 'location' in txn.response.headers:
                  redirects[txn.request.full_url] = txn
 
         final_url = url

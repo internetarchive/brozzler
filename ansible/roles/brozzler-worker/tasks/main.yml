@@ -31,6 +31,7 @@
   - libjpeg-turbo8-dev
   - zlib1g-dev
   - gcc
+  - g++
   - libpython3.4-dev
   - adobe-flashplugin
 - name: install Xvnc upstart config /etc/init/Xvnc.conf
