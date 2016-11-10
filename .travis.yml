@@ -18,6 +18,13 @@ before_install:
 install:
 - type -a virtualenv
 - virtualenv --version
+- type -a deactivate
+- deactivate  # try disabling the virtualenv
+- type -a python
+- type -a python3
+- type -a virtualenv
+- virtualenv --version
+- env
 - ansible-playbook -vvv --extra-vars="brozzler_pip_name=file://$TRAVIS_BUILD_DIR#egg=brozzler user=travis" --inventory-file=ansible/hosts-localhost ansible/playbook.yml
 - pip install $TRAVIS_BUILD_DIR pytest
 - type -a virtualenv
