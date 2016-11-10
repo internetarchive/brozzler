@@ -17,11 +17,11 @@ before_install:
 - sudo apt-get install -y ansible
 install:
 - type -a virtualenv
-- virtualenv -- version
+- virtualenv --version
 - ansible-playbook -vvv --extra-vars="brozzler_pip_name=file://$TRAVIS_BUILD_DIR#egg=brozzler user=travis" --inventory-file=ansible/hosts-localhost ansible/playbook.yml
 - pip install $TRAVIS_BUILD_DIR pytest
 - type -a virtualenv
-- virtualenv -- version
+- virtualenv --version
 - ls -l /opt /opt/*/bin /opt/*/lib/python3.4/site-packages
 - cat /etc/init/warcprox.conf
 - cat /etc/init/brozzler-worker.conf
