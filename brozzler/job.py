@@ -88,7 +88,8 @@ def new_job(frontier, job_conf):
                 warcprox_meta=merged_conf.get("warcprox_meta"),
                 metadata=merged_conf.get("metadata"),
                 remember_outlinks=merged_conf.get("remember_outlinks"),
-                user_agent=merged_conf.get("user_agent"))
+                user_agent=merged_conf.get("user_agent"),
+                behavior_parameters=merged_conf.get("behavior_parameters"))
         sites.append(site)
 
     # insert all the sites into database before the job
