@@ -18,6 +18,17 @@ install:
 - cat /etc/init/warcprox.conf
 - cat /etc/init/brozzler-worker.conf
 - cat /etc/init/pywb.conf
+- sudo cat /var/log/upstart/warcprox.log
+- sudo cat /var/log/upstart/brozzler-worker.log
+- sudo cat /var/log/upstart/pywb.log
+- sudo initctl reload-configuration
+- sudo service Xvnc restart
+- sudo service vnc-websock restart
+- sudo service brozzler-worker restart
+- sudo service brozzler-dashboard restart
+- sudo cat /var/log/upstart/warcprox.log
+- sudo cat /var/log/upstart/brozzler-worker.log
+- sudo cat /var/log/upstart/pywb.log
 script:
 - py.test -v -s tests
 after_failure:
