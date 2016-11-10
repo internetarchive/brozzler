@@ -18,6 +18,6 @@ stop on stopping Xvnc
 
 kill timeout 60
 
-exec nice brozzler-worker \
+exec nice {{venv_root}}/brozzler-ve34/bin/brozzler-worker \
     --rethinkdb-servers={{groups['rethinkdb'] | join(',')}} \
     --max-browsers=4

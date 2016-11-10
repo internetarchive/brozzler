@@ -15,4 +15,4 @@ setuid {{user}}
 
 console log
 
-exec gunicorn --bind=0.0.0.0:8881 brozzler.dashboard:app
+exec {{venv_root}}/brozzler-dashboard-ve34/bin/gunicorn --bind=0.0.0.0:8881 brozzler.dashboard:app

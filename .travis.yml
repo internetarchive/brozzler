@@ -8,6 +8,7 @@ before_install:
 - echo $PATH
 - id
 - sudo id
+- sudo initctl list-env
 - sudo apt-add-repository -y ppa:ansible/ansible
 - sudo apt-get -qq update
 - sudo apt-get install -y ansible
