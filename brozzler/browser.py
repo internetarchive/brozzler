@@ -302,7 +302,7 @@ class Browser:
 
             self._behavior = None
 
-    OUTLINKS_JS = """
+    OUTLINKS_JS = r"""
 var __brzl_framesDone = new Set();
 var __brzl_compileOutlinks = function(frame) {
     __brzl_framesDone.add(frame);
@@ -317,7 +317,7 @@ var __brzl_compileOutlinks = function(frame) {
     }
     return outlinks;
 }
-__brzl_compileOutlinks(window).join(' ');
+__brzl_compileOutlinks(window).join('\n');
 """
 
     def _chain_chrome_messages(self, chain):
@@ -386,7 +386,7 @@ __brzl_compileOutlinks(window).join(' ');
 
         def set_outlinks(message):
             self._outlinks = frozenset(
-                    message["result"]["result"]["value"].split())
+                    message["result"]["result"]["value"].split("\n"))
 
         chain.append({
             "info": "retrieving outlinks",
