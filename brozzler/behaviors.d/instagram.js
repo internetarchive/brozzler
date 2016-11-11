@@ -16,10 +16,14 @@
  * limitations under the License.
  */
 
-
 var umbraInstagramBehavior = {
         IDLE_TIMEOUT_SEC: 20,
         idleSince: null,
+        state: "loading-thumbs",
+        imageCount: null,
+        bigImagesLoaded: 0,
+        currentBigImage: null,
+        previousBigImage: null,
 
         intervalFunc: function() {
                 if (this.state === "loading-thumbs") {
