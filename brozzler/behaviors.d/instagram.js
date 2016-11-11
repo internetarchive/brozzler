@@ -37,7 +37,7 @@ var umbraInstagramBehavior = {
                                 return;
                         }
 
-                        if (this.idleSince == null) {
+                        if (this.idleSince === null) {
                                 console.log("nothing to do at the moment, might be waiting for something to load, setting this.idleSince=Date.now()");
                                 this.idleSince = Date.now();
                                 return;
@@ -46,11 +46,8 @@ var umbraInstagramBehavior = {
                                         console.log("finished loading-thumbs, it appears we have reached the bottom");
                                         this.state = "clicking-first-thumb";
                                         this.idleSince = null;
-                                        return;
-                                } else {
-                                        // console.log("still might be waiting for something to load...");
-                                        return;
                                 }
+                                return;
                         }
                 }
 
@@ -93,11 +90,11 @@ var umbraInstagramBehavior = {
 
         start: function() {
                 var that = this;
-                this.intervalId = setInterval(function(){ that.intervalFunc() }, 300);
+                this.intervalId = setInterval(function(){ that.intervalFunc(); }, 300);
         },
 
         isFinished: function() {
-                if (this.idleSince != null) {
+                if (this.idleSince !== null) {
                         var idleTimeMs = Date.now() - this.idleSince;
                         if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
                                 clearInterval(this.intervalId);
@@ -105,10 +102,10 @@ var umbraInstagramBehavior = {
                         }
                 }
                 return false;
-        },
+        }
 };
 
 // Called from outside of this script.
-var umbraBehaviorFinished = function() { return umbraInstagramBehavior.isFinished() };
+var umbraBehaviorFinished = function() { return umbraInstagramBehavior.isFinished(); };
 
 umbraInstagramBehavior.start();
