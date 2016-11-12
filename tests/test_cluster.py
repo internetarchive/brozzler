@@ -169,6 +169,7 @@ def test_warcprox_selection(httpd):
         time.sleep(0.5)
         site = frontier.site(site.id)
     assert site.proxy[-5:] == ':8000'
+    logging.info('site.proxy=%s', site.proxy)
 
     # the site should be brozzled fairly quickly
     start = time.time()
