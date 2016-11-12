@@ -12,9 +12,7 @@ before_install:
 - id
 - sudo id
 - sudo initctl list-env
-- sudo apt-add-repository -y ppa:ansible/ansible
-- sudo apt-get -qq update
-- sudo apt-get install -y ansible
+- sudo pip install ansible==2.1.3.0
 install:
 - type -a virtualenv
 - virtualenv --version
