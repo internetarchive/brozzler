@@ -4,13 +4,9 @@ python:
 sudo: required
 dist: trusty
 before_install:
-- hostname
-- hostname -f
-- ping -c3 `hostname`
-- ping -c3 `hostname -f`
 - sudo pip install ansible==2.1.3.0
 install:
-- ansible-playbook -vvv --extra-vars="brozzler_pip_name=file://$TRAVIS_BUILD_DIR#egg=brozzler user=travis" --inventory-file=ansible/hosts-localhost ansible/playbook.yml
+- ansible-playbook --extra-vars="brozzler_pip_name=file://$TRAVIS_BUILD_DIR#egg=brozzler user=travis" --inventory-file=ansible/hosts-localhost ansible/playbook.yml
 - pip install $TRAVIS_BUILD_DIR pytest
 script:
 - py.test -v -s tests
