@@ -33,7 +33,7 @@ var umbraInstagramBehavior = {
                                 return;
                         }
 
-                        var moreButtons = document.querySelectorAll(".PhotoGridMoreButton:not(.pgmbDisabled)");
+                        var moreButtons = document.querySelectorAll("a._oidfu");
                         if (moreButtons.length > 0) {
                                 console.log("clicking load more button");
                                 moreButtons[0].click();
@@ -41,26 +41,22 @@ var umbraInstagramBehavior = {
                                 return;
                         }
 
-                        if (this.idleSince == null) {
+                        if (this.idleSince === null) {
                                 console.log("nothing to do at the moment, might be waiting for something to load, setting this.idleSince=Date.now()");
                                 this.idleSince = Date.now();
                                 return;
                         } else {
-                                var doneButtons = document.querySelectorAll(".PhotoGridMoreButton.pgmbDisabled");
-                                if (Date.now() - this.idleSince > 9000 || (doneButtons.length > 0 && doneButtons[0].innerText === "All items loaded") ) {
+                                if ((Date.now() - this.idleSince) > 9000) {
                                         console.log("finished loading-thumbs, it appears we have reached the bottom");
                                         this.state = "clicking-first-thumb";
                                         this.idleSince = null;
-                                        return;
-                                } else {
-                                        // console.log("still might be waiting for something to load...");
-                                        return;
                                 }
+                                return;
                         }
                 }
 
                 if (this.state === "clicking-first-thumb") {
-                        var images = document.querySelectorAll("a.pgmiImageLink");
+                        var images = document.querySelectorAll("div._ovg3g");
                         if (images && images !== "undefined") {
                                 this.imageCount = images.length;
                                 if (images.length > 0) {
@@ -68,6 +64,7 @@ var umbraInstagramBehavior = {
                                         images[0].click();
                                         this.idleSince = null;
                                         this.state = "waiting-big-image";
+                                        this.bigImagesLoaded++;
                                         return;
                                 }
                         }
@@ -78,63 +75,30 @@ var umbraInstagramBehavior = {
                 }
 
                 if (this.state === "waiting-big-image") {
-                        if(this.currentBigImage == null) {
-                                var imageFrame = document.querySelectorAll("div.Modal div.Item div.iMedia div.Image");
-                                if (imageFrame.length > 0 && imageFrame[0].getAttribute("src") !== this.previousBigImage ) {
-                                        this.currentBigImage = new Image();
-                                        this.currentBigImage.src = imageFrame[0].getAttribute("src");
-                                        //console.log("this.currentBigImage.naturalWidth=" + this.currentBigImage.naturalWidth + " this.currentBigImage.src=" + this.currentBigImage.src);
-                                        return;
-                                } else if(this.idleSince == null ) {
-                                        console.log("waiting for image frame to load");
-                                        this.idleSince = Date.now();
-                                        return;
+                        if(this.bigImagesLoaded < this.imageCount) {
+                                var rightArrow = document.querySelectorAll(".coreSpriteRightPaginationArrow");
+                                if (rightArrow.length > 0) {
+                                        // console.log("clicking right arrow");
+                                        rightArrow[0].click();
+                                        this.idleSince = null;
+                                        this.bigImagesLoaded++;
                                 }
-                        } else if (this.currentBigImage.src !== this.previousBigImage && this.currentBigImage.naturalWidth !== 0) {
-                                console.log("next big image appears loaded, will click right arrow next time");
-                                this.state = "click-next-big-image";
-                                this.previousBigImage = this.currentBigImage.src;
-                                this.currentBigImage = null;
-                                this.bigImagesLoaded++;
-                                this.idleSince = null;
-
-                                if (this.bigImagesLoaded >= this.imageCount) {
-                                        console.log("looks like we're done, we've loaded all " + this.bigImagesLoaded + " of " + this.imageCount + " big images");
-                                        this.state = "finished";
-                                        this.idleSince = Date.now();
-                                }
-                                return;
-                        } else if(this.idleSince == null) {
-                                console.log("Waiting for big image to load");
-                                this.idleSince = Date.now();
-                                return;
-                        }
-
-                }
-
-                if (this.state === "click-next-big-image") {
-                        var rightArrow = document.querySelectorAll("a.mmRightArrow");
-                        if (rightArrow.length > 0) {
-                                // console.log("clicking right arrow");
-                                rightArrow[0].click();
-                                this.state = "waiting-big-image";
-                                this.idleSince = null;
-                                return;
                         } else {
-                                console.warn("no right arrow to click?? weird");
+                                console.log("looks like we're done, we've loaded all " + this.bigImagesLoaded + " of " + this.imageCount + " big images");
+                                this.state = "finished";
                                 this.idleSince = Date.now();
-                                return;
                         }
+                        return;
                 }
         },
 
         start: function() {
                 var that = this;
-                this.intervalId = setInterval(function(){ that.intervalFunc() }, 50);
+                this.intervalId = setInterval(function(){ that.intervalFunc(); }, 300);
         },
 
         isFinished: function() {
-                if (this.idleSince != null) {
+                if (this.idleSince !== null) {
                         var idleTimeMs = Date.now() - this.idleSince;
                         if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
                                 clearInterval(this.intervalId);
@@ -142,10 +106,10 @@ var umbraInstagramBehavior = {
                         }
                 }
                 return false;
-        },
+        }
 };
 
 // Called from outside of this script.
-var umbraBehaviorFinished = function() { return umbraInstagramBehavior.isFinished() };
+var umbraBehaviorFinished = function() { return umbraInstagramBehavior.isFinished(); };
 
 umbraInstagramBehavior.start();
