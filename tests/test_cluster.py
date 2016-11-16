@@ -29,6 +29,13 @@ import time
 import brozzler
 import datetime
 import requests
+import subprocess
+
+def start_service(service):
+    subprocess.check_call(['sudo', 'service', service, 'start'])
+
+def stop_service(service):
+    subprocess.check_call(['sudo', 'service', service, 'stop'])
 
 @pytest.fixture(scope='module')
 def httpd(request):
@@ -102,12 +109,18 @@ def test_brozzle_site(httpd):
     page1 = 'http://localhost:%s/' % httpd.server_port
     page2 = 'http://localhost:%s/file1.txt' % httpd.server_port
 
-    assert site.id is None
-    r = rethinkstuff.Rethinker('localhost', db='brozzler')
-    frontier = brozzler.RethinkDbFrontier(r)
-    brozzler.new_site(frontier, site)
-    assert site.id is not None
-    assert len(list(frontier.site_pages(site.id))) == 1
+    # so we can examine rethinkdb before it does anything
+    try:
+        stop_service('brozzler-worker')
+
+        assert site.id is None
+        r = rethinkstuff.Rethinker('localhost', db='brozzler')
+        frontier = brozzler.RethinkDbFrontier(r)
+        brozzler.new_site(frontier, site)
+        assert site.id is not None
+        assert len(list(frontier.site_pages(site.id))) == 1
+    finally:
+        start_service('brozzler-worker')
 
     # the site should be brozzled fairly quickly
     start = time.time()
@@ -118,14 +131,17 @@ def test_brozzle_site(httpd):
 
     # check that we got the two pages we expected
     pages = list(frontier.site_pages(site.id))
-    assert len(pages) == 2
+    assert len(pages) == 3
     assert {page.url for page in pages} == {
             'http://localhost:%s/' % httpd.server_port,
+            'http://localhost:%s/robots.txt' % httpd.server_port,
             'http://localhost:%s/file1.txt' % httpd.server_port}
 
+    time.sleep(2)   # in case warcprox hasn't finished processing urls
     # take a look at the captures table
     captures = r.table('captures').filter({'test_id':test_id}).run()
-    captures_by_url = {c['url']:c for c in captures if c['http_method'] != 'HEAD'}
+    captures_by_url = {
+            c['url']: c for c in captures if c['http_method'] != 'HEAD'}
     assert page1 in captures_by_url
     assert '%srobots.txt' % page1 in captures_by_url
     assert page2 in captures_by_url
@@ -139,7 +155,6 @@ def test_brozzle_site(httpd):
     expected_payload = open(os.path.join(
         os.path.dirname(__file__), 'htdocs', 'file1.txt'), 'rb').read()
     assert requests.get(wb_url).content == expected_payload
-
 
 def test_warcprox_selection(httpd):
     ''' When enable_warcprox_features is true, brozzler is expected to choose
@@ -156,12 +171,17 @@ def test_warcprox_selection(httpd):
             enable_warcprox_features=True,
             warcprox_meta={'captures-table-extra-fields':{'test_id':test_id}})
 
-    assert site.id is None
-    r = rethinkstuff.Rethinker('localhost', db='brozzler')
-    frontier = brozzler.RethinkDbFrontier(r)
-    brozzler.new_site(frontier, site)
-    assert site.id is not None
-    assert len(list(frontier.site_pages(site.id))) == 1
+    # so we can examine rethinkdb before it does anything
+    try:
+        stop_service('brozzler-worker')
+        assert site.id is None
+        r = rethinkstuff.Rethinker('localhost', db='brozzler')
+        frontier = brozzler.RethinkDbFrontier(r)
+        brozzler.new_site(frontier, site)
+        assert site.id is not None
+        assert len(list(frontier.site_pages(site.id))) == 1
+    finally:
+        start_service('brozzler-worker')
 
     # check proxy is set in rethink
     start = time.time()
@@ -179,14 +199,17 @@ def test_warcprox_selection(httpd):
 
     # check that we got the two pages we expected
     pages = list(frontier.site_pages(site.id))
-    assert len(pages) == 2
+    assert len(pages) == 3
     assert {page.url for page in pages} == {
             'http://localhost:%s/' % httpd.server_port,
+            'http://localhost:%s/robots.txt' % httpd.server_port,
             'http://localhost:%s/file1.txt' % httpd.server_port}
 
+    time.sleep(2)   # in case warcprox hasn't finished processing urls
     # take a look at the captures table
     captures = r.table('captures').filter({'test_id':test_id}).run()
-    captures_by_url = {c['url']:c for c in captures if c['http_method'] != 'HEAD'}
+    captures_by_url = {
+            c['url']:c for c in captures if c['http_method'] != 'HEAD'}
     assert page1 in captures_by_url
     assert '%srobots.txt' % page1 in captures_by_url
     assert page2 in captures_by_url
@@ -199,4 +222,57 @@ def test_warcprox_selection(httpd):
     wb_url = 'http://localhost:8880/brozzler/%s/%s' % (t14, page2)
     expected_payload = open(os.path.join(
         os.path.dirname(__file__), 'htdocs', 'file1.txt'), 'rb').read()
-    assert requests.get(wb_url).content == expected_payload
+    assert requests.get(
+            wb_url, allow_redirects=False).content == expected_payload
+
+def test_obey_robots(httpd):
+    test_id = 'test_obey_robots-%s' % datetime.datetime.utcnow().isoformat()
+    site = brozzler.Site(
+            seed='http://localhost:%s/' % httpd.server_port,
+            proxy='localhost:8000', enable_warcprox_features=True,
+            user_agent='im a badbot',   # robots.txt blocks badbot
+            warcprox_meta={'captures-table-extra-fields':{'test_id':test_id}})
+
+    # so we can examine rethinkdb before it does anything
+    try:
+        stop_service('brozzler-worker')
+
+        assert site.id is None
+        r = rethinkstuff.Rethinker('localhost', db='brozzler')
+        frontier = brozzler.RethinkDbFrontier(r)
+        brozzler.new_site(frontier, site)
+        assert site.id is not None
+        site_pages = list(frontier.site_pages(site.id))
+        assert len(site_pages) == 1
+        assert site_pages[0].url == site.seed
+        assert site_pages[0].needs_robots_check
+    finally:
+        start_service('brozzler-worker')
+
+    # the site should be brozzled fairly quickly
+    start = time.time()
+    while site.status != 'FINISHED' and time.time() - start < 300:
+        time.sleep(0.5)
+        site = frontier.site(site.id)
+    assert site.status == 'FINISHED'
+
+    # check that we got the two pages we expected
+    pages = list(frontier.site_pages(site.id))
+    assert len(pages) == 1
+    assert {page.url for page in pages} == {
+            'http://localhost:%s/' % httpd.server_port}
+
+    # take a look at the captures table
+    time.sleep(2)   # in case warcprox hasn't finished processing urls
+    robots_url = 'http://localhost:%s/robots.txt' % httpd.server_port
+    captures = list(r.table('captures').filter({'test_id':test_id}).run())
+    assert len(captures) == 1
+    assert captures[0]['url'] == robots_url
+
+    # check pywb
+    t14 = captures[0]['timestamp'].strftime('%Y%m%d%H%M%S')
+    wb_url = 'http://localhost:8880/brozzler/%s/%s' % (t14, robots_url)
+    expected_payload = open(os.path.join(
+        os.path.dirname(__file__), 'htdocs', 'robots.txt'), 'rb').read()
+    assert requests.get(
+            wb_url, allow_redirects=False).content == expected_payload

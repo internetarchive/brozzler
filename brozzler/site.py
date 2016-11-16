@@ -80,9 +80,8 @@ class Url:
             pass
 
         # if we get here, we're looking at two hostnames
-        # XXX do we need to handle case of one punycoded idn, other not?
-        domain_parts = ip_or_domain.split(".")
-        host_parts = self.host.split(".")
+        domain_parts = ip_or_domain.encode("idna").decode("ascii").lower().split(".")
+        host_parts = self.host.encode("idna").decode("ascii").lower().split(".")
 
         return host_parts[-len(domain_parts):] == domain_parts
 
@@ -228,7 +227,7 @@ class Page(brozzler.BaseDictable):
             self, url, id=None, site_id=None, job_id=None, hops_from_seed=0,
             redirect_url=None, priority=None, claimed=False, brozzle_count=0,
             via_page_id=None, last_claimed_by=None, hops_off_surt=0,
-            outlinks=None):
+            outlinks=None, needs_robots_check=False):
         self.site_id = site_id
         self.job_id = job_id
         self.url = url
@@ -240,6 +239,7 @@ class Page(brozzler.BaseDictable):
         self.via_page_id = via_page_id
         self.hops_off_surt = hops_off_surt
         self.outlinks = outlinks
+        self.needs_robots_check = needs_robots_check
         self._canon_hurl = None
 
         if priority is not None:
