@@ -1,4 +1,9 @@
 #!/bin/bash
+#
+# any arguments are passed on to py.test
+# so for example to run only "test_obey_robots" you could run
+# ./run-tests.sh -k test_obey_robots
+#
 
 cd $(dirname "${BASH_SOURCE[0]}")
 
@@ -11,4 +16,4 @@ vagrant ssh -- 'status warcprox ;
 echo
 
 vagrant ssh -- 'source /opt/brozzler-ve34/bin/activate && pip install pytest'
-vagrant ssh -- 'source /opt/brozzler-ve34/bin/activate && py.test -v -s /brozzler/tests'
+vagrant ssh -- "source /opt/brozzler-ve34/bin/activate && py.test -v -s /brozzler/tests $@"

@@ -327,12 +327,18 @@ class BrozzlerWorker:
                 self._frontier.honor_stop_request(site.job_id)
                 page = self._frontier.claim_page(site, "%s:%s" % (
                     socket.gethostname(), browser.chrome_port))
-                outlinks = self.brozzle_page(browser, site, page)
-                if browser.is_running():
-                    site.cookie_db = browser.persist_and_read_cookie_db()
+
+                if (page.needs_robots_check and
+                        not brozzler.is_permitted_by_robots(site, page.url)):
+                    logging.warn("page %s is blocked by robots.txt", page.url)
+                else:
+                    outlinks = self.brozzle_page(browser, site, page)
+                    self._frontier.scope_and_schedule_outlinks(
+                            site, page, outlinks)
+                    if browser.is_running():
+                        site.cookie_db = browser.persist_and_read_cookie_db()
+
                 self._frontier.completed_page(site, page)
-                self._frontier.scope_and_schedule_outlinks(
-                        site, page, outlinks)
                 page = None
         except brozzler.NothingToClaim:
             self.logger.info("no pages left for site %s", site)
