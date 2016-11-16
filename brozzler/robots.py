@@ -1,6 +1,12 @@
 '''
 brozzler/robots.py - robots.txt support
 
+Uses the reppy library version 0.3.4. Monkey-patches reppy to support substring
+user-agent matching. We're sticking with 0.3.4 because later versions don't
+support supplying a custom requests.Session.
+
+See also https://github.com/seomoz/reppy/issues/37
+
 Copyright (C) 2014-2016 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,10 +25,26 @@ limitations under the License.
 import json
 import logging
 import brozzler
+import reppy
 import reppy.cache
+import reppy.parser
 import requests
 
 __all__ = ["is_permitted_by_robots"]
+
+# monkey-patch reppy to do substring user-agent matching, see top of file
+reppy.Utility.short_user_agent = lambda strng: strng
+def _reppy_rules_getitem(self, agent):
+    '''
+    Find the user-agent token matching the supplied full user-agent, using
+    a case-insensitive substring search.
+    '''
+    lc_agent = agent.lower()
+    for s in self.agents:
+        if s in lc_agent:
+            return self.agents[s]
+    return self.agents.get('*')
+reppy.parser.Rules.__getitem__ = _reppy_rules_getitem
 
 _robots_caches = {}  # {site_id:reppy.cache.RobotsCache}
 def _robots_cache(site):
@@ -55,7 +77,8 @@ def is_permitted_by_robots(site, url):
     tries_left = 10
     while True:
         try:
-            result = _robots_cache(site).allowed(url, "brozzler")
+            result = _robots_cache(site).allowed(
+                    url, site.user_agent or "brozzler")
             return result
         except BaseException as e:
             if isinstance(e, reppy.exceptions.ServerError) and isinstance(e.args[0], brozzler.ReachedLimit):
