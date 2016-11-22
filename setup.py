@@ -32,7 +32,7 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.1b8.dev127',
+        version='1.1b8.dev129',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
@@ -71,7 +71,7 @@ setuptools.setup(
         ],
         extras_require={
             'dashboard': ['flask>=0.11', 'gunicorn'],
-            'easy': ['warcprox>=2.0b1', 'pywb', 'flask>=0.11', 'gunicorn'],
+            'easy': ['warcprox>=2.0b2', 'pywb', 'flask>=0.11', 'gunicorn'],
         },
         zip_safe=False,
         classifiers=[

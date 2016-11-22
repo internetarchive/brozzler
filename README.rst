@@ -1,9 +1,11 @@
+.. image:: https://travis-ci.org/internetarchive/brozzler.svg?branch=master
+    :target: https://travis-ci.org/internetarchive/brozzler
+    
 .. |logo| image:: https://cdn.rawgit.com/internetarchive/brozzler/1.1b5/brozzler/webconsole/static/brozzler.svg
    :width: 7%
 
-brozzler |logo|
+|logo| brozzler 
 ===============
-
 "browser" \| "crawler" = "brozzler"
 
 Brozzler is a distributed web crawler (爬虫) that uses a real browser (chrome
