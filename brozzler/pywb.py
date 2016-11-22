@@ -65,7 +65,7 @@ class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
                 'url': record['url'],
                 'status': str(record['response_code']),
                 'digest': record['sha1base32'],
-                'length': str(record['length']), # XXX is this the right length?
+                'length': str(record['record_length']),
                 'offset': str(record['offset']),
                 'filename': record['filename'],
             }
