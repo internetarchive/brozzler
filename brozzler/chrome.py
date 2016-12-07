@@ -29,6 +29,7 @@ import signal
 import sqlite3
 import datetime
 import json
+import psutil
 
 class Chrome:
     logger = logging.getLogger(__module__ + '.' + __qualname__)
@@ -53,6 +54,24 @@ class Chrome:
     def __exit__(self, *args):
         self.stop()
 
+    def _find_available_port(self, default_port=9200):
+        try:
+            conns = psutil.net_connections(kind='tcp')
+        except psutil.AccessDenied:
+            return default_port
+
+        if any(conn.laddr[1] == default_port for conn in conns):
+            return default_port
+
+        for p in range(9999,8999,-1):
+            if not any(conn.laddr[1] == p for conn in conns):
+                self.logger.warn(
+                        'port %s already in use, using %s instead',
+                        default_port, p)
+                return p
+
+        return default_port
+
     def start(self):
         '''
         Returns websocket url to chrome window with about:blank loaded.
@@ -60,6 +79,7 @@ class Chrome:
         timeout_sec = 600
         new_env = os.environ.copy()
         new_env['HOME'] = self.user_home_dir
+        self.port = self._find_available_port(self.port)
         chrome_args = [
                 self.executable, '--use-mock-keychain', # mac thing
                 '--user-data-dir=%s' % self.user_data_dir,

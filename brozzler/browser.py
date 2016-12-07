@@ -30,7 +30,6 @@ from brozzler.chrome import Chrome
 from brozzler.behaviors import Behavior
 from requests.structures import CaseInsensitiveDict
 import base64
-import psutil
 import sqlite3
 import datetime
 
@@ -103,7 +102,9 @@ class Browser:
 
     HARD_TIMEOUT_SECONDS = 20 * 60
 
-    def __init__(self, chrome_port=9222, chrome_exe='chromium-browser', proxy=None, ignore_cert_errors=False):
+    def __init__(
+            self, chrome_port=9222, chrome_exe='chromium-browser', proxy=None,
+            ignore_cert_errors=False):
         self.command_id = itertools.count(1)
         self.chrome_port = chrome_port
         self.chrome_exe = chrome_exe
@@ -130,7 +131,6 @@ class Browser:
     def start(self, proxy=None, cookie_db=None):
         if not self._chrome_instance:
             # these can raise exceptions
-            self.chrome_port = self._find_available_port()
             self._work_dir = tempfile.TemporaryDirectory()
             if cookie_db is not None:
                 cookie_dir = os.path.join(
@@ -198,23 +198,6 @@ class Browser:
                     "exception reading from cookie DB file %s",
                     cookie_location, exc_info=True)
         return cookie_db
-
-    def _find_available_port(self):
-        port_available = False
-        port = self.chrome_port
-
-        try:
-            conns = psutil.net_connections(kind="tcp")
-        except psutil.AccessDenied:
-            return port
-
-        for p in range(port, 65535):
-            if any(connection.laddr[1] == p for connection in conns):
-                self.logger.warn("port %s already open, will try %s", p, p+1)
-            else:
-                port = p
-                break
-        return port
 
     def is_running(self):
         return bool(self._websocket_url)
