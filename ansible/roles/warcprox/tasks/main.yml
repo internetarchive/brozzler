@@ -14,7 +14,7 @@
   become: true
   file: path={{venv_root}}/warcprox-ve34 state=directory owner={{user}}
 - name: install warcprox in virtualenv
-  pip: name=git+https://github.com/internetarchive/warcprox.git@2.x#egg=warcprox
+  pip: name=git+https://github.com/internetarchive/warcprox.git#egg=warcprox
        virtualenv={{venv_root}}/warcprox-ve34
        virtualenv_python=python3.4
        extra_args='--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
