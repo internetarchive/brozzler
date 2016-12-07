@@ -27,22 +27,21 @@ import select
 import re
 import signal
 import sqlite3
-import datetime
 import json
 import psutil
+import tempfile
 
 class Chrome:
     logger = logging.getLogger(__module__ + '.' + __qualname__)
 
     def __init__(
-            self, port, executable, user_home_dir, user_data_dir, proxy=None,
-            ignore_cert_errors=False):
+            self, port, executable, proxy=None, ignore_cert_errors=False,
+            cookie_db=None):
         self.port = port
         self.executable = executable
-        self.user_home_dir = user_home_dir
-        self.user_data_dir = user_data_dir
         self.proxy = proxy
         self.ignore_cert_errors = ignore_cert_errors
+        self.cookie_db = cookie_db
         self._shutdown = threading.Event()
 
     def __enter__(self):
@@ -72,17 +71,61 @@ class Chrome:
 
         return default_port
 
+    def _init_cookie_db(self):
+        if self.cookie_db is not None:
+            cookie_dir = os.path.join(self._chrome_user_data_dir, 'Default')
+            cookie_location = os.path.join(cookie_dir, 'Cookies')
+            self.logger.debug(
+                    'cookie DB provided, writing to %s', cookie_location)
+            os.makedirs(cookie_dir, exist_ok=True)
+
+            try:
+                with open(cookie_location, 'wb') as cookie_file:
+                    cookie_file.write(self.cookie_db)
+            except OSError:
+                self.logger.error(
+                        'exception writing cookie file at %s',
+                        cookie_location, exc_info=True)
+
+    def persist_and_read_cookie_db(self):
+        cookie_location = os.path.join(
+                self._chrome_user_data_dir, 'Default', 'Cookies')
+        self.logger.debug(
+                'marking cookies persistent then reading file into memory: %s',
+                cookie_location)
+        try:
+            with sqlite3.connect(cookie_location) as conn:
+                cur = conn.cursor()
+                cur.execute('UPDATE cookies SET persistent = 1')
+        except sqlite3.Error:
+            self.logger.error('exception updating cookie DB', exc_info=True)
+
+        cookie_db = None
+        try:
+            with open(cookie_location, 'rb') as cookie_file:
+                cookie_db = cookie_file.read()
+        except OSError:
+            self.logger.error(
+                    'exception reading from cookie DB file %s',
+                    cookie_location, exc_info=True)
+        return cookie_db
+
     def start(self):
         '''
         Returns websocket url to chrome window with about:blank loaded.
         '''
-        timeout_sec = 600
+        # these can raise exceptions
+        self._home_tmpdir = tempfile.TemporaryDirectory()
+        self._chrome_user_data_dir = os.path.join(
+            self._home_tmpdir.name, 'chrome-user-data'),
+        self._init_cookie_db()
+
         new_env = os.environ.copy()
-        new_env['HOME'] = self.user_home_dir
+        new_env['HOME'] = self._home_tmpdir.name
         self.port = self._find_available_port(self.port)
         chrome_args = [
                 self.executable, '--use-mock-keychain', # mac thing
-                '--user-data-dir=%s' % self.user_data_dir,
+                '--user-data-dir=%s' % self._chrome_user_data_dir,
                 '--remote-debugging-port=%s' % self.port,
                 '--disable-web-sockets', '--disable-cache',
                 '--window-size=1100,900', '--no-default-browser-check',
@@ -96,7 +139,7 @@ class Chrome:
             chrome_args.append('--proxy-server=%s' % self.proxy)
         chrome_args.append('about:blank')
         self.logger.info(
-                'running: %s' % repr(subprocess.list2cmdline(chrome_args)))
+                'running: %s', repr(subprocess.list2cmdline(chrome_args)))
         # start_new_session - new process group so we can kill the whole group
         self.chrome_process = subprocess.Popen(
                 chrome_args, env=new_env, start_new_session=True,
@@ -106,11 +149,14 @@ class Chrome:
                 name='ChromeOutReaderThread(pid=%s)' % self.chrome_process.pid)
         self._out_reader_thread.start()
         self.logger.info('chrome running, pid %s' % self.chrome_process.pid)
+
+        return self._websocket_url()
+
+    def _websocket_url(self):
+        timeout_sec = 600
+        json_url = 'http://localhost:%s/json' % self.port
         # make this a member variable so that kill -QUIT reports it
         self._start = time.time()
-
-        json_url = 'http://localhost:%s/json' % self.port
-
         while True:
             try:
                 raw_json = urllib.request.urlopen(json_url, timeout=30).read()
@@ -134,7 +180,7 @@ class Chrome:
             finally:
                 if time.time() - self._start > timeout_sec:
                     self.logger.error(
-                            'killing chrome, failed to retrieve %s after %s '
+                            'killing chrome, failed to retrieve %s after % '
                             'seconds', json_url, time.time() - self._start)
                     self.stop()
                     raise Exception(
@@ -228,6 +274,13 @@ class Chrome:
             self.logger.warn(
                     'chrome pid %s reaped (status=%s) after killing with '
                     'SIGKILL', self.chrome_process.pid, status)
+
+            try:
+                self._home_tmpdir.cleanup()
+            except:
+                self.logger.error(
+                        "exception deleting %s", self._home_tmpdir,
+                        exc_info=True)
         finally:
             self._out_reader_thread.join()
             self.chrome_process = None

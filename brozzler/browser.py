@@ -22,7 +22,6 @@ import itertools
 import websocket
 import time
 import threading
-import tempfile
 import os
 import random
 import brozzler
@@ -130,31 +129,10 @@ class Browser:
 
     def start(self, proxy=None, cookie_db=None):
         if not self._chrome_instance:
-            # these can raise exceptions
-            self._work_dir = tempfile.TemporaryDirectory()
-            if cookie_db is not None:
-                cookie_dir = os.path.join(
-                        self._work_dir.name, "chrome-user-data", "Default")
-                cookie_location = os.path.join(cookie_dir, "Cookies")
-                self.logger.debug(
-                        "cookie DB provided, writing to %s", cookie_location)
-                os.makedirs(cookie_dir, exist_ok=True)
-
-                try:
-                    with open(cookie_location, 'wb') as cookie_file:
-                        cookie_file.write(cookie_db)
-                except OSError:
-                    self.logger.error(
-                            "exception writing cookie file at %s",
-                            cookie_location, exc_info=True)
-
             self._chrome_instance = Chrome(
                     port=self.chrome_port, executable=self.chrome_exe,
-                    user_home_dir=self._work_dir.name,
-                    user_data_dir=os.sep.join([
-                        self._work_dir.name, "chrome-user-data"]),
                     ignore_cert_errors=self.ignore_cert_errors,
-                    proxy=proxy or self.proxy)
+                    proxy=proxy or self.proxy, cookie_db=None)
             try:
                 self._websocket_url = self._chrome_instance.start()
             except:
@@ -166,44 +144,21 @@ class Browser:
             if self.is_running():
                 self._chrome_instance.stop()
                 self._chrome_instance = None
-                try:
-                    self._work_dir.cleanup()
-                except:
-                    self.logger.error("exception deleting %s", self._work_dir,
-                                      exc_info=True)
-                self._work_dir = None
                 self._websocket_url = None
         except:
             self.logger.error("problem stopping", exc_info=True)
-
-    def persist_and_read_cookie_db(self):
-        cookie_location = os.path.join(
-                self._work_dir.name, "chrome-user-data", "Default", "Cookies")
-        self.logger.debug(
-                "marking cookies persistent then reading file into memory: %s",
-                cookie_location)
-        try:
-            with sqlite3.connect(cookie_location) as conn:
-                cur = conn.cursor()
-                cur.execute("UPDATE cookies SET persistent = 1")
-        except sqlite3.Error:
-            self.logger.error("exception updating cookie DB", exc_info=True)
-
-        cookie_db=None
-        try:
-            with open(cookie_location, "rb") as cookie_file:
-                cookie_db = cookie_file.read()
-        except OSError:
-            self.logger.error(
-                    "exception reading from cookie DB file %s",
-                    cookie_location, exc_info=True)
-        return cookie_db
 
     def is_running(self):
         return bool(self._websocket_url)
 
     def abort_browse_page(self):
         self._abort_browse_page = True
+
+    def persist_and_read_cookie_db(self):
+        if self._chrome_instance:
+            return self._chrome_instance.persist_and_read_cookie_db()
+        else:
+            return None
 
     def browse_page(
             self, url, extra_headers=None, behavior_parameters=None,
