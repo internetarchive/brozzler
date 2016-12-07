@@ -117,7 +117,7 @@ class Chrome:
         # these can raise exceptions
         self._home_tmpdir = tempfile.TemporaryDirectory()
         self._chrome_user_data_dir = os.path.join(
-            self._home_tmpdir.name, 'chrome-user-data'),
+            self._home_tmpdir.name, 'chrome-user-data')
         self._init_cookie_db()
 
         new_env = os.environ.copy()
@@ -279,7 +279,7 @@ class Chrome:
                 self._home_tmpdir.cleanup()
             except:
                 self.logger.error(
-                        "exception deleting %s", self._home_tmpdir,
+                        'exception deleting %s', self._home_tmpdir,
                         exc_info=True)
         finally:
             self._out_reader_thread.join()

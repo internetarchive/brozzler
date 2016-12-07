@@ -25,6 +25,7 @@ import brozzler
 import brozzler.chrome
 import socket
 import logging
+import psutil
 
 @pytest.fixture(scope='module')
 def httpd(request):
