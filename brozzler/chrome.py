@@ -59,7 +59,7 @@ class Chrome:
         except psutil.AccessDenied:
             return default_port
 
-        if any(conn.laddr[1] == default_port for conn in conns):
+        if not any(conn.laddr[1] == default_port for conn in conns):
             return default_port
 
         for p in range(9999,8999,-1):

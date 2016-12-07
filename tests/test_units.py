@@ -57,6 +57,7 @@ def test_robots(httpd):
     assert not brozzler.is_permitted_by_robots(site, url)
 
 def test_find_available_port():
+    x = brozzler.chrome.Chrome(None, None)
     try:
         psutil.net_connections(kind='tcp')
     except psutil.AccessDenied:
@@ -64,10 +65,11 @@ def test_find_available_port():
                 'skipping _find_available_port() test because '
                 'psutil.net_connections(kind="tcp") raised AccessDenied')
         return
-    assert brozzler.chrome.Chrome._find_available_port(None, 9800) == 9800
+    assert x._find_available_port(9800) == 9800
     sock = socket.socket()
     sock.bind(('localhost', 9800))
-    assert brozzler.chrome.Chrome._find_available_port(None, 9800) == 9999
+    sock.listen(0)
+    assert x._find_available_port(9800) == 9999
     sock.close()
-    assert brozzler.chrome.Chrome._find_available_port(None, 9800) == 9800
+    assert x._find_available_port(9800) == 9800
 
