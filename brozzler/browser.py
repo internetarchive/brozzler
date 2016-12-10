@@ -318,8 +318,11 @@ __brzl_compileOutlinks(window).join('\n');
             chain = []
 
         def set_outlinks(message):
-            self._outlinks = frozenset(
-                    message["result"]["result"]["value"].split("\n"))
+            if message["result"]["result"]["value"]:
+                self._outlinks = frozenset(
+                        message["result"]["result"]["value"].split("\n"))
+            else:
+                self._outlinks = frozenset()
 
         chain.append({
             "info": "retrieving outlinks",
