@@ -159,8 +159,8 @@ def brozzle_page():
             f.write(screenshot_png)
         logging.info('wrote screenshot to %s', filename)
 
-    browser = brozzler.Browser(chrome_exe=args.chrome_exe)
-    browser.start(proxy=site.proxy)
+    browser = brozzler.Browser(chrome_exe=args.chrome_exe, proxy=site.proxy)
+    browser.start()
     try:
         outlinks = worker.brozzle_page(
                 browser, site, page, on_screenshot=on_screenshot)

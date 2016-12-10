@@ -35,10 +35,26 @@ class Chrome:
     logger = logging.getLogger(__module__ + '.' + __qualname__)
 
     def __init__(
-            self, port, executable, proxy=None, ignore_cert_errors=False,
+            self, chrome_exe, port=9222, ignore_cert_errors=False, proxy=None,
             cookie_db=None):
+        '''
+        Initializes instance of this class.
+
+        Doesn't start the browser, start() does that.
+
+        Args:
+            chrome_exe: filesystem path to chrome/chromium executable
+            port: chrome debugging protocol port (default 9222)
+            ignore_cert_errors: configure chrome to accept all certs (default
+                False)
+            proxy: http proxy 'host:port' (default None)
+            cookie_db: raw bytes of chrome/chromium sqlite3 cookies database,
+                which, if supplied, will be written to
+                {chrome_user_data_dir}/Default/Cookies before running the
+                browser (default None)
+        '''
         self.port = port
-        self.executable = executable
+        self.chrome_exe = chrome_exe
         self.proxy = proxy
         self.ignore_cert_errors = ignore_cert_errors
         self.cookie_db = cookie_db
@@ -124,7 +140,7 @@ class Chrome:
         new_env['HOME'] = self._home_tmpdir.name
         self.port = self._find_available_port(self.port)
         chrome_args = [
-                self.executable, '--use-mock-keychain', # mac thing
+                self.chrome_exe, '--use-mock-keychain', # mac thing
                 '--user-data-dir=%s' % self._chrome_user_data_dir,
                 '--remote-debugging-port=%s' % self.port,
                 '--disable-web-sockets', '--disable-cache',
