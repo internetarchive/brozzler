@@ -26,12 +26,12 @@ var umbraBehavior = {
         var didSomething = false;
         var somethingLeftBelow = false;
         var somethingLeftAbove = false;
-        var cssSelector = "${sdo_css_selector}";
-        var doAction = "${sdo_action}"; // currently supports click, mouseover
-        var doUntilTimeout = "${sdo_until_hard_timeout}";
+        var sdoCssSelector = "${sdo_css_selector}";
+        var sdoAction = "${sdo_action}"; // currently supports click, mouseover
+        var sdoUntilTimeout = "${sdo_until_hard_timeout}";
 
         //handle Python to JavaScript boolean conversion
-        doUntilTimeout == "True" ? doUntilTimeout = true : doUntilTimeout = false;
+        sdoUntilTimeout == "True" ? sdoUntilTimeout = true : sdoUntilTimeout = false;
 
         var iframes = document.querySelectorAll("iframe");
         var documents = Array(iframes.length + 1);
@@ -43,34 +43,34 @@ var umbraBehavior = {
 
         for (var j = 0; j < documents.length; j++) {
 
-            var doTargets = documents[j].querySelectorAll(cssSelector);
+            var sdoTargets = documents[j].querySelectorAll(sdoCssSelector);
 
-            for ( var i = 0; i < doTargets.length; i++) {
-                if (doTargets[i].umbraDone && !doUntilTimeout) {
+            for ( var i = 0; i < sdoTargets.length; i++) {
+                if (sdoTargets[i].umbraDone && !sdoUntilTimeout) {
                     continue;
                 }
 
-                var where = this.aboveBelowOrOnScreen(doTargets[i]);
+                var where = this.aboveBelowOrOnScreen(sdoTargets[i]);
 
                 if (where == 0) {
-                    console.log("doing " + doAction + doTargets[i].outerHTML);
+                    console.log("doing " + sdoAction + " " + sdoTargets[i].outerHTML);
                     // do mouse over event on target
                     // since some urls are requsted only on
                     // this event - see
                     // https://webarchive.jira.com/browse/AITFIVE-451
-                    var mouseOverEvent = document.createEvent('Events');
-                    mouseOverEvent.initEvent('mouseover',true, false);
-                    doTargets[i].dispatchEvent(mouseOverEvent);
+                    var sdoMouseOverEvent = document.createEvent('Events');
+                    sdoMouseOverEvent.initEvent('mouseover',true, false);
+                    sdoTargets[i].dispatchEvent(sdoMouseOverEvent);
 
-                    if (doAction == 'click') {
-                        doTargets[i].click();
+                    if (sdoAction == 'click') {
+                        sdoTargets[i].click();
                     } // add new do's here!
 
                     didSomething = true;
                     this.idleSince = null;
-                    doTargets[i].umbraDone = true;
+                    sdoTargets[i].umbraDone = true;
 
-                    break; // break from doTargets loop (not from iframe loop)
+                    break; // break from sdoTargets loop (not from iframe loop)
                 } else if (where > 0) {
                     somethingLeftBelow = true;
                 } else if (where < 0) {
