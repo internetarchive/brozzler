@@ -29,6 +29,7 @@ from requests.structures import CaseInsensitiveDict
 import datetime
 import base64
 from brozzler.chrome import Chrome
+import surt
 
 class BrowsingException(Exception):
     pass
@@ -86,8 +87,10 @@ class BrowserPool:
             self._in_use.remove(browser)
 
     def shutdown_now(self):
-        for browser in self._in_use:
-            browser.abort_browse_page()
+        self.logger.info('shutting down browser pool')
+        with self._lock:
+            for browser in self._in_use:
+                browser.stop()
 
     def num_available(self):
         return len(self._available)
@@ -137,8 +140,9 @@ class Browser:
         '''
         try:
             if self.is_running():
-                self.chrome.stop()
+                self._browser_controller.stop()
                 self.websocket_url = None
+                self.chrome.stop()
         except:
             self.logger.error('problem stopping', exc_info=True)
 
@@ -191,27 +195,41 @@ class Browser:
         if self.is_browsing:
             raise BrowsingException('browser is already busy browsing a page')
         self.is_browsing = True
-        self._browser_controller.navigate_to_page(page_url, timeout=300)
-        ## if login_credentials:
-        ##     self._browser_controller.try_login(login_credentials) (5 min?)
-        behavior_script = brozzler.behavior_script(
-                page_url, behavior_parameters)
-        self._browser_controller.run_behavior(behavior_script, timeout=900)
-        if on_screenshot:
-            self._browser_controller.scroll_to_top()
-            jpeg_bytes = self._browser_controller.screenshot()
-            on_screenshot(jpeg_bytes)
-        outlinks = self._browser_controller.extract_outlinks()
-        ## for each hashtag not already visited:
-        ##     navigate_to_hashtag (nothing to wait for so no timeout?)
-        ##     if on_screenshot;
-        ##         take screenshot (30 sec)
-        ##     run behavior (3 min)
-        ##     outlinks += retrieve_outlinks (60 sec)
-        final_page_url = self._browser_controller.url()
-
-        self.is_browsing = False
-        return final_page_url, outlinks
+        try:
+            self._browser_controller.navigate_to_page(page_url, timeout=300)
+            ## if login_credentials:
+            ##     self._browser_controller.try_login(login_credentials) (5 min?)
+            behavior_script = brozzler.behavior_script(
+                    page_url, behavior_parameters)
+            self._browser_controller.run_behavior(behavior_script, timeout=900)
+            if on_screenshot:
+                self._browser_controller.scroll_to_top()
+                jpeg_bytes = self._browser_controller.screenshot()
+                on_screenshot(jpeg_bytes)
+            outlinks = self._browser_controller.extract_outlinks()
+            ## for each hashtag not already visited:
+            ##     navigate_to_hashtag (nothing to wait for so no timeout?)
+            ##     if on_screenshot;
+            ##         take screenshot (30 sec)
+            ##     run behavior (3 min)
+            ##     outlinks += retrieve_outlinks (60 sec)
+            final_page_url = self._browser_controller.url()
+            return final_page_url, outlinks
+        except brozzler.ShutdownRequested:
+            self.logger.info('shutdown requested')
+            raise
+        except websocket.WebSocketConnectionClosedException as e:
+            # import pdb; pdb.set_trace()
+            raise BrowsingException(e)
+            # if not self.is_running():
+            #     logging.info('appears shutdown was requested')
+            #     return None, None
+            # else:
+            #     raise BrowsingException(
+            #             "websocket closed, did chrome die? %s" % (
+            #                 self.websocket_url))
+        finally:
+            self.is_browsing = False
 
 class Counter:
     def __init__(self):
@@ -235,7 +253,6 @@ class BrowserController:
         self._command_id = Counter()
         self._websock_thread = None
         self._websock_open = None
-        self._got_page_load_event = None
         self._result_messages = {}
 
     def _wait_for(self, callback, timeout=None):
@@ -244,6 +261,7 @@ class BrowserController:
         '''
         start = time.time()
         while True:
+            brozzler.sleep(0.5)
             if callback():
                 return
             elapsed = time.time() - start
@@ -251,7 +269,6 @@ class BrowserController:
                 raise BrowsingTimeout(
                         'timed out after %.1fs waiting for: %s' % (
                             elapsed, callback))
-            time.sleep(0.5)
 
     def __enter__(self):
         self.start()
@@ -262,18 +279,28 @@ class BrowserController:
 
     def start(self):
         if not self._websock_thread:
+            calling_thread = threading.current_thread()
+
             def on_open(websock):
                 self._websock_open = datetime.datetime.utcnow()
+            def on_error(websock, e):
+                '''
+                Raises BrowsingException in the thread that called start()
+                '''
+                self.logger.error(
+                        'exception from websocket receiver thread', exc_info=1)
+                brozzler.thread_raise(calling_thread, BrowsingException)
 
             # open websocket, start thread that receives messages
             self._websock = websocket.WebSocketApp(
                     self.websocket_url, on_open=on_open,
-                    on_message=self._on_message)
+                    on_message=self._on_message, on_error=on_error)
             thread_name = 'WebsockThread:{}-{:%Y%m%d%H%M%S}'.format(
-                    self.websocket_url, datetime.datetime.utcnow())
+                    surt.handyurl.parse(self.websocket_url).port,
+                    datetime.datetime.utcnow())
             self._websock_thread = threading.Thread(
                     target=self._websock.run_forever, name=thread_name,
-                    kwargs={'ping_timeout': 0.5})
+                    daemon=True)
             self._websock_thread.start()
             self._wait_for(lambda: self._websock_open, timeout=10)
 
@@ -296,6 +323,7 @@ class BrowserController:
         if self._websock_thread:
             if (self._websock and self._websock.sock
                     and self._websock.sock.connected):
+                self.logger.info('shutting down websocket connection')
                 try:
                     self._websock.close()
                 except BaseException as e:
@@ -303,18 +331,19 @@ class BrowserController:
                             'exception closing websocket %s - %s',
                             self._websock, e)
 
-            self._websock_thread.join(timeout=30)
-            if self._websock_thread.is_alive():
-                self.logger.error(
-                        '%s still alive 30 seconds after closing %s, will '
-                        'forcefully nudge it again', self._websock_thread,
-                        self._websock)
-                self._websock.keep_running = False
+            if self._websock_thread != threading.current_thread():
                 self._websock_thread.join(timeout=30)
                 if self._websock_thread.is_alive():
-                    self.logger.critical(
-                            '%s still alive 60 seconds after closing %s',
-                                self._websock_thread, self._websock)
+                    self.logger.error(
+                            '%s still alive 30 seconds after closing %s, will '
+                            'forcefully nudge it again', self._websock_thread,
+                            self._websock)
+                    self._websock.keep_running = False
+                    self._websock_thread.join(timeout=30)
+                    if self._websock_thread.is_alive():
+                        self.logger.critical(
+                                '%s still alive 60 seconds after closing %s',
+                                    self._websock_thread, self._websock)
 
     def _on_message(self, websock, message):
         try:
@@ -323,18 +352,28 @@ class BrowserController:
             self.logger.error(
                     'uncaught exception in _handle_message message=%s',
                     message, exc_info=True)
-            self.abort = True
 
     def _handle_message(self, websock, json_message):
         message = json.loads(json_message)
         if 'method' in message:
             if message['method'] == 'Page.loadEventFired':
                 self._got_page_load_event = datetime.datetime.utcnow()
-            elif message["method"] == "Debugger.paused":
+            elif message['method'] == 'Debugger.paused':
                 self._debugger_paused(message)
+            elif message['method'] == 'Console.messageAdded':
+                self.logger.debug(
+                        '%s console.%s %s', self._websock.url,
+                        message['params']['message']['level'],
+                        message['params']['message']['text'])
+            else:
+                self.logger.debug("%s %s", message["method"], json_message)
         elif 'result' in message:
             if message['id'] in self._result_messages:
                 self._result_messages[message['id']] = message
+            else:
+                self.logger.debug("%s", json_message)
+        else:
+            self.logger.debug("%s", json_message)
 
     def _debugger_paused(self, message):
         # we hit the breakpoint set in start(), get rid of google analytics
@@ -363,12 +402,6 @@ class BrowserController:
             self, page_url, extra_headers=None, user_agent=None, timeout=300):
         '''
         '''
-        # navigate to about:blank here to avoid situation where we navigate to
-        # the same page that we're currently on, perhaps with a different
-        # #fragment, which prevents Page.loadEventFired from happening
-        self.send_to_chrome(
-                method='Page.navigate', params={'url': 'about:blank'})
-
         headers = extra_headers or {}
         headers['Accept-Encoding'] = 'identity'
         self.send_to_chrome(
@@ -382,9 +415,9 @@ class BrowserController:
 
         # navigate to the page!
         self.logger.info('navigating to page %s', page_url)
+        self._got_page_load_event = None
         self.send_to_chrome(method='Page.navigate', params={'url': page_url})
-
-        self._wait_for(lambda:self._got_page_load_event, timeout=timeout)
+        self._wait_for(lambda: self._got_page_load_event, timeout=timeout)
 
     OUTLINKS_JS = r'''
 var __brzl_framesDone = new Set();
@@ -464,7 +497,7 @@ __brzl_compileOutlinks(window).join('\n');
                         'behavior reached hard timeout after %.1fs', elapsed)
                 return
 
-            time.sleep(7)
+            brozzler.sleep(7)
 
             self._result_messages[self._command_id.peek_next()] = None
             msg_id = self.send_to_chrome(

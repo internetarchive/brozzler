@@ -68,7 +68,7 @@ def fixup(url):
     Does rudimentary canonicalization, such as converting IDN to punycode.
     '''
     import surt
-    hurl = _surt.handyurl.parse(url)
+    hurl = surt.handyurl.parse(url)
     # handyurl.parse() already lowercases the scheme via urlsplit
     if hurl.host:
         hurl.host = hurl.host.encode('idna').decode('ascii').lower()
@@ -115,21 +115,59 @@ def behavior_script(url, template_parameters=None):
                 logging.info(
                         'using behavior %s for %s',
                         behavior['behavior_js'], url)
+                return behavior['script']
             elif 'behavior_js_template' in behavior:
                 parameters = dict()
                 if 'default_parameters' in behavior:
                     parameters.update(behavior['default_parameters'])
                 if template_parameters:
                     parameters.update(template_parameters)
-                javascript = behavior['template'].safe_substitute(parameters)
-
+                script = behavior['template'].safe_substitute(parameters)
                 logging.info(
                         'using template=%s populated with parameters=%s for %s',
                         repr(behavior['behavior_js_template']), parameters, url)
-
-            return behavior['script']
-
+                return script
     return None
+
+def thread_raise(thread, exctype):
+    '''
+    Raises the exception exctype in the thread.
+
+    Adapted from http://tomerfiliba.com/recipes/Thread2/ which explains:
+    "The exception will be raised only when executing python bytecode. If your
+    thread calls a native/built-in blocking function, the exception will be
+    raised only when execution returns to the python code."
+    '''
+    import ctypes, inspect, threading
+    if not thread.is_alive():
+        raise threading.ThreadError('thread %s is not running' % thread)
+    if not inspect.isclass(exctype):
+        raise TypeError(
+                'cannot raise %s, only exception types can be raised (not '
+                'instances)' % exc_type)
+    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+            ctypes.c_long(thread.ident), ctypes.py_object(exctype))
+    if res == 0:
+        raise ValueError('invalid thread id? thread.ident=%s' % thread.ident)
+    elif res != 1:
+        # if it returns a number greater than one, you're in trouble,
+        # and you should call it again with exc=NULL to revert the effect
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(thread.ident, 0)
+        raise SystemError('PyThreadState_SetAsyncExc failed')
+
+def sleep(duration):
+    '''
+    Sleeps for duration seconds in increments of 0.5 seconds.
+
+    Use this so that the sleep can be interrupted by thread_raise().
+    '''
+    import time
+    start = time.time()
+    while True:
+        elapsed = time.time() - start
+        if elapsed >= duration:
+            break
+        time.sleep(min(duration - elapsed, 0.5))
 
 from brozzler.site import Page, Site
 from brozzler.worker import BrozzlerWorker

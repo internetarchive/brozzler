@@ -34,9 +34,7 @@ import tempfile
 class Chrome:
     logger = logging.getLogger(__module__ + '.' + __qualname__)
 
-    def __init__(
-            self, chrome_exe, port=9222, ignore_cert_errors=False, proxy=None,
-            cookie_db=None):
+    def __init__(self, chrome_exe, port=9222, ignore_cert_errors=False):
         '''
         Initializes instance of this class.
 
@@ -47,17 +45,10 @@ class Chrome:
             port: chrome debugging protocol port (default 9222)
             ignore_cert_errors: configure chrome to accept all certs (default
                 False)
-            proxy: http proxy 'host:port' (default None)
-            cookie_db: raw bytes of chrome/chromium sqlite3 cookies database,
-                which, if supplied, will be written to
-                {chrome_user_data_dir}/Default/Cookies before running the
-                browser (default None)
         '''
         self.port = port
         self.chrome_exe = chrome_exe
-        self.proxy = proxy
         self.ignore_cert_errors = ignore_cert_errors
-        self.cookie_db = cookie_db
         self._shutdown = threading.Event()
 
     def __enter__(self):
@@ -87,21 +78,19 @@ class Chrome:
 
         return default_port
 
-    def _init_cookie_db(self):
-        if self.cookie_db is not None:
-            cookie_dir = os.path.join(self._chrome_user_data_dir, 'Default')
-            cookie_location = os.path.join(cookie_dir, 'Cookies')
-            self.logger.debug(
-                    'cookie DB provided, writing to %s', cookie_location)
-            os.makedirs(cookie_dir, exist_ok=True)
+    def _init_cookie_db(self, cookie_db):
+        cookie_dir = os.path.join(self._chrome_user_data_dir, 'Default')
+        cookie_location = os.path.join(cookie_dir, 'Cookies')
+        self.logger.debug('cookie DB provided, writing to %s', cookie_location)
+        os.makedirs(cookie_dir, exist_ok=True)
 
-            try:
-                with open(cookie_location, 'wb') as cookie_file:
-                    cookie_file.write(self.cookie_db)
-            except OSError:
-                self.logger.error(
-                        'exception writing cookie file at %s',
-                        cookie_location, exc_info=True)
+        try:
+            with open(cookie_location, 'wb') as cookie_file:
+                cookie_file.write(cookie_db)
+        except OSError:
+            self.logger.error(
+                    'exception writing cookie file at %s',
+                    cookie_location, exc_info=True)
 
     def persist_and_read_cookie_db(self):
         cookie_location = os.path.join(
@@ -126,15 +115,26 @@ class Chrome:
                     cookie_location, exc_info=True)
         return cookie_db
 
-    def start(self):
+    def start(self, proxy=None, cookie_db=None):
         '''
-        Returns websocket url to chrome window with about:blank loaded.
+        Starts chrome/chromium process.
+
+        Args:
+            proxy: http proxy 'host:port' (default None)
+            cookie_db: raw bytes of chrome/chromium sqlite3 cookies database,
+                which, if supplied, will be written to
+                {chrome_user_data_dir}/Default/Cookies before running the
+                browser (default None)
+
+        Returns:
+            websocket url to chrome window with about:blank loaded
         '''
         # these can raise exceptions
         self._home_tmpdir = tempfile.TemporaryDirectory()
         self._chrome_user_data_dir = os.path.join(
             self._home_tmpdir.name, 'chrome-user-data')
-        self._init_cookie_db()
+        if cookie_db:
+            self._init_cookie_db(cookie_db)
 
         new_env = os.environ.copy()
         new_env['HOME'] = self._home_tmpdir.name
@@ -151,8 +151,8 @@ class Chrome:
                 '--disable-extensions', '--disable-save-password-bubble']
         if self.ignore_cert_errors:
             chrome_args.append('--ignore-certificate-errors')
-        if self.proxy:
-            chrome_args.append('--proxy-server=%s' % self.proxy)
+        if proxy:
+            chrome_args.append('--proxy-server=%s' % proxy)
         chrome_args.append('about:blank')
         self.logger.info(
                 'running: %s', repr(subprocess.list2cmdline(chrome_args)))
@@ -162,7 +162,8 @@ class Chrome:
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
         self._out_reader_thread = threading.Thread(
                 target=self._read_stderr_stdout,
-                name='ChromeOutReaderThread(pid=%s)' % self.chrome_process.pid)
+                name='ChromeOutReaderThread(pid=%s)' % self.chrome_process.pid,
+                daemon=True)
         self._out_reader_thread.start()
         self.logger.info('chrome running, pid %s' % self.chrome_process.pid)
 

@@ -159,8 +159,8 @@ def brozzle_page():
             f.write(screenshot_png)
         logging.info('wrote screenshot to %s', filename)
 
-    browser = brozzler.Browser(chrome_exe=args.chrome_exe, proxy=site.proxy)
-    browser.start()
+    browser = brozzler.Browser(chrome_exe=args.chrome_exe)
+    browser.start(proxy=site.proxy)
     try:
         outlinks = worker.brozzle_page(
                 browser, site, page, on_screenshot=on_screenshot)
@@ -276,9 +276,7 @@ def brozzler_worker():
     def sigint(signum, frame):
         raise brozzler.ShutdownRequested('shutdown requested (caught SIGINT)')
 
-    # do not print in signal handler to avoid RuntimeError: reentrant call
-    state_dump_msgs = []
-    def queue_state_dump(signum, frame):
+    def dump_state(signum, frame):
         signal.signal(signal.SIGQUIT, signal.SIG_IGN)
         try:
             state_strs = []
@@ -291,15 +289,15 @@ def brozzler_worker():
                     state_strs.append('<???:thread:ident=%s>' % ident)
                 stack = traceback.format_stack(frames[ident])
                 state_strs.append(''.join(stack))
-            state_dump_msgs.append(
+            logging.info(
                     'dumping state (caught signal %s)\n%s' % (
                         signum, '\n'.join(state_strs)))
         except BaseException as e:
-            state_dump_msgs.append('exception dumping state: %s' % e)
+            logging.error('exception dumping state: %s' % e)
         finally:
-            signal.signal(signal.SIGQUIT, queue_state_dump)
+            signal.signal(signal.SIGQUIT, dump_state)
 
-    signal.signal(signal.SIGQUIT, queue_state_dump)
+    signal.signal(signal.SIGQUIT, dump_state)
     signal.signal(signal.SIGTERM, sigterm)
     signal.signal(signal.SIGINT, sigint)
 
@@ -311,17 +309,7 @@ def brozzler_worker():
             frontier, service_registry, max_browsers=int(args.max_browsers),
             chrome_exe=args.chrome_exe)
 
-    worker.start()
-    try:
-        while worker.is_alive():
-            while state_dump_msgs:
-                logging.warn(state_dump_msgs.pop(0))
-            time.sleep(0.5)
-        logging.critical('worker thread has died, shutting down')
-    except brozzler.ShutdownRequested as e:
-        pass
-    finally:
-        worker.shutdown_now()
+    worker.run()
 
     logging.info('brozzler-worker is all done, exiting')
 
