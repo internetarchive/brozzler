@@ -104,12 +104,10 @@ class BrozzlerWorker:
         self._default_proxy = proxy
         self._default_enable_warcprox_features = enable_warcprox_features
 
-        self._browser_pool = brozzler.browser.BrowserPool(max_browsers,
-                chrome_exe=chrome_exe, ignore_cert_errors=True)
-        self._shutdown_requested = threading.Event()
-        self._thread = None
-        self._start_stop_lock = threading.Lock()
+        self._browser_pool = brozzler.browser.BrowserPool(
+                max_browsers, chrome_exe=chrome_exe, ignore_cert_errors=True)
         self._browsing_threads = set()
+        self._browsing_threads_lock = threading.Lock()
 
     def _proxy(self, site):
         if site.proxy:
@@ -203,6 +201,8 @@ class BrozzlerWorker:
                         content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                         payload=info_json.encode("utf-8"),
                         extra_headers=site.extra_headers())
+        except brozzler.ShutdownRequested as e:
+            raise
         except BaseException as e:
             if hasattr(e, "exc_info") and e.exc_info[0] == youtube_dl.utils.UnsupportedError:
                 pass
@@ -257,6 +257,8 @@ class BrozzlerWorker:
                 self._try_youtube_dl(ydl, site, page)
         except brozzler.ReachedLimit as e:
             raise
+        except brozzler.ShutdownRequested:
+            raise
         except Exception as e:
             if (hasattr(e, 'exc_info') and len(e.exc_info) >= 2
                     and hasattr(e.exc_info[1], 'code')
@@ -272,12 +274,13 @@ class BrozzlerWorker:
             self.logger.info('needs browsing: %s', page)
             if not browser.is_running():
                 browser.start(proxy=self._proxy(site), cookie_db=site.cookie_db)
-            outlinks = browser.browse_page(
+            final_page_url, outlinks = browser.browse_page(
                     page.url, extra_headers=site.extra_headers(),
                     behavior_parameters=site.behavior_parameters,
                     user_agent=site.user_agent,
-                    on_screenshot=_on_screenshot,
-                    on_url_change=page.note_redirect)
+                    on_screenshot=_on_screenshot)
+            if final_page_url != page.url:
+                page.note_redirect(final_page_url)
             return outlinks
         else:
             if not self._already_fetched(page, ydl_spy):
@@ -319,14 +322,13 @@ class BrozzlerWorker:
         return False
 
     def _brozzle_site(self, browser, site):
-        start = time.time()
         page = None
         try:
-            while (not self._shutdown_requested.is_set()
-                   and time.time() - start < 7 * 60):
+            start = time.time()
+            while time.time() - start < 7 * 60:
                 self._frontier.honor_stop_request(site.job_id)
                 page = self._frontier.claim_page(site, "%s:%s" % (
-                    socket.gethostname(), browser.chrome_port))
+                    socket.gethostname(), browser.chrome.port))
 
                 if (page.needs_robots_check and
                         not brozzler.is_permitted_by_robots(site, page.url)):
@@ -336,27 +338,28 @@ class BrozzlerWorker:
                     self._frontier.scope_and_schedule_outlinks(
                             site, page, outlinks)
                     if browser.is_running():
-                        site.cookie_db = browser.persist_and_read_cookie_db()
+                        site.cookie_db = browser.chrome.persist_and_read_cookie_db()
 
                 self._frontier.completed_page(site, page)
                 page = None
+        except brozzler.ShutdownRequested:
+            self.logger.info("shutdown requested")
         except brozzler.NothingToClaim:
             self.logger.info("no pages left for site %s", site)
         except brozzler.ReachedLimit as e:
             self._frontier.reached_limit(site, e)
         except brozzler.CrawlJobStopped:
             self._frontier.finished(site, "FINISHED_STOP_REQUESTED")
-        except brozzler.browser.BrowsingAborted:
-            self.logger.info("{} shut down".format(browser))
+        # except brozzler.browser.BrowsingAborted:
+        #     self.logger.info("{} shut down".format(browser))
         except:
             self.logger.critical("unexpected exception", exc_info=True)
         finally:
-            self.logger.info("finished session brozzling site, stopping "
-                             "browser and disclaiming site")
             browser.stop()
             self._frontier.disclaim_site(site, page)
             self._browser_pool.release(browser)
-            self._browsing_threads.remove(threading.current_thread())
+            with self._browsing_threads_lock:
+                self._browsing_threads.remove(threading.current_thread())
 
     def _service_heartbeat(self):
         if hasattr(self, "status_info"):
@@ -380,31 +383,39 @@ class BrozzlerWorker:
                     "failed to send heartbeat and update service registry "
                     "with info %s: %s", status_info, e)
 
+    def _service_heartbeat_if_due(self):
+        '''Sends service registry heartbeat if due'''
+        due = False
+        if self._service_registry:
+            if not hasattr(self, "status_info"):
+                due = True
+            else:
+                d = rethinkstuff.utcnow() - self.status_info["last_heartbeat"]
+                due = d.total_seconds() > self.HEARTBEAT_INTERVAL
+
+        if due:
+            self._service_heartbeat()
+
     def run(self):
         try:
             latest_state = None
-            while not self._shutdown_requested.is_set():
-                if self._service_registry and (
-                        not hasattr(self, "status_info")
-                        or (rethinkstuff.utcnow() -
-                            self.status_info["last_heartbeat"]).total_seconds()
-                        > self.HEARTBEAT_INTERVAL):
-                    self._service_heartbeat()
-
+            while True:
+                self._service_heartbeat_if_due()
                 try:
                     browser = self._browser_pool.acquire()
                     try:
-                        site = self._frontier.claim_site("{}:{}".format(
-                            socket.gethostname(), browser.chrome_port))
+                        site = self._frontier.claim_site("%s:%s" % (
+                            socket.gethostname(), browser.chrome.port))
                         self.logger.info(
                                 "brozzling site (proxy=%s) %s",
                                 repr(self._proxy(site)), site)
                         th = threading.Thread(
-                                target=lambda: self._brozzle_site(
-                                    browser, site),
-                                name="BrozzlingThread:%s" % site.seed)
+                                target=self._brozzle_site, args=(browser, site),
+                                name="BrozzlingThread:%s" % site.seed,
+                                daemon=True)
+                        with self._browsing_threads_lock:
+                            self._browsing_threads.add(th)
                         th.start()
-                        self._browsing_threads.add(th)
                     except:
                         self._browser_pool.release(browser)
                         raise
@@ -418,6 +429,8 @@ class BrozzlerWorker:
                         self.logger.info("no unclaimed sites to browse")
                         latest_state = "no-unclaimed-sites"
                 time.sleep(0.5)
+        except brozzler.ShutdownRequested:
+            self.logger.info("shutdown requested")
         except:
             self.logger.critical(
                     "thread exiting due to unexpected exception",
@@ -431,26 +444,16 @@ class BrozzlerWorker:
                             "failed to unregister from service registry",
                             exc_info=True)
 
-    def start(self):
-        with self._start_stop_lock:
-            if self._thread:
-                self.logger.warn(
-                        'ignoring start request because self._thread is '
-                        'not None')
-                return
-            self._thread = threading.Thread(
-                    target=self.run, name="BrozzlerWorker")
-            self._thread.start()
-
-    def shutdown_now(self):
-        with self._start_stop_lock:
-            self.logger.info("brozzler worker shutting down")
-            self._shutdown_requested.set()
+            self.logger.info(
+                    'shutting down %s brozzling threads',
+                    len(self._browsing_threads))
+            with self._browsing_threads_lock:
+                for th in self._browsing_threads:
+                    if th.is_alive():
+                        brozzler.thread_raise(th, brozzler.ShutdownRequested)
             self._browser_pool.shutdown_now()
-            while self._browsing_threads:
-                time.sleep(0.5)
-            self._thread = None
-
-    def is_alive(self):
-        return self._thread and self._thread.is_alive()
+            # copy to avoid "RuntimeError: Set changed size during iteration"
+            thredz = set(self._browsing_threads)
+            for th in thredz:
+                th.join()
 

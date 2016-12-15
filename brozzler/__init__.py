@@ -17,11 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import json as _json
-import logging as _logging
-import surt as _surt
 from pkg_resources import get_distribution as _get_distribution
-
 __version__ = _get_distribution('brozzler').version
 
 class ShutdownRequested(Exception):
@@ -35,9 +31,11 @@ class CrawlJobStopped(Exception):
 
 class ReachedLimit(Exception):
     def __init__(self, http_error=None, warcprox_meta=None, http_payload=None):
+        import json
         if http_error:
             if "warcprox-meta" in http_error.headers:
-                self.warcprox_meta = _json.loads(http_error.headers["warcprox-meta"])
+                self.warcprox_meta = json.loads(
+                        http_error.headers["warcprox-meta"])
             else:
                 self.warcprox_meta = None
             self.http_payload = http_error.read()
@@ -69,7 +67,8 @@ def fixup(url):
     '''
     Does rudimentary canonicalization, such as converting IDN to punycode.
     '''
-    hurl = _surt.handyurl.parse(url)
+    import surt
+    hurl = surt.handyurl.parse(url)
     # handyurl.parse() already lowercases the scheme via urlsplit
     if hurl.host:
         hurl.host = hurl.host.encode('idna').decode('ascii').lower()
@@ -77,6 +76,98 @@ def fixup(url):
 
 # logging level more fine-grained than logging.DEBUG==10
 TRACE = 5
+
+_behaviors = None
+def behaviors():
+    import os, yaml, string
+    global _behaviors
+    if _behaviors is None:
+        behaviors_yaml = os.path.join(
+                os.path.dirname(__file__), 'behaviors.yaml')
+        with open(behaviors_yaml) as fin:
+            conf = yaml.load(fin)
+        _behaviors = conf['behaviors']
+
+        for behavior in _behaviors:
+            if 'behavior_js' in behavior:
+                behavior_js = os.path.join(
+                        os.path.dirname(__file__), 'behaviors.d',
+                        behavior['behavior_js'])
+                with open(behavior_js, encoding='utf-8') as fin:
+                    behavior['script'] = fin.read()
+            elif 'behavior_js_template' in behavior:
+                behavior_js_template = os.path.join(
+                        os.path.dirname(__file__), 'behaviors.d',
+                        behavior['behavior_js_template'])
+                with open(behavior_js_template, encoding='utf-8') as fin:
+                    behavior['template'] = string.Template(fin.read())
+
+    return _behaviors
+
+def behavior_script(url, template_parameters=None):
+    '''
+    Returns the javascript behavior string populated with template_parameters.
+    '''
+    import re, logging
+    for behavior in behaviors():
+        if re.match(behavior['url_regex'], url):
+            if 'behavior_js' in behavior:
+                logging.info(
+                        'using behavior %s for %s',
+                        behavior['behavior_js'], url)
+                return behavior['script']
+            elif 'behavior_js_template' in behavior:
+                parameters = dict()
+                if 'default_parameters' in behavior:
+                    parameters.update(behavior['default_parameters'])
+                if template_parameters:
+                    parameters.update(template_parameters)
+                script = behavior['template'].safe_substitute(parameters)
+                logging.info(
+                        'using template=%s populated with parameters=%s for %s',
+                        repr(behavior['behavior_js_template']), parameters, url)
+                return script
+    return None
+
+def thread_raise(thread, exctype):
+    '''
+    Raises the exception exctype in the thread.
+
+    Adapted from http://tomerfiliba.com/recipes/Thread2/ which explains:
+    "The exception will be raised only when executing python bytecode. If your
+    thread calls a native/built-in blocking function, the exception will be
+    raised only when execution returns to the python code."
+    '''
+    import ctypes, inspect, threading
+    if not thread.is_alive():
+        raise threading.ThreadError('thread %s is not running' % thread)
+    if not inspect.isclass(exctype):
+        raise TypeError(
+                'cannot raise %s, only exception types can be raised (not '
+                'instances)' % exc_type)
+    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+            ctypes.c_long(thread.ident), ctypes.py_object(exctype))
+    if res == 0:
+        raise ValueError('invalid thread id? thread.ident=%s' % thread.ident)
+    elif res != 1:
+        # if it returns a number greater than one, you're in trouble,
+        # and you should call it again with exc=NULL to revert the effect
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(thread.ident, 0)
+        raise SystemError('PyThreadState_SetAsyncExc failed')
+
+def sleep(duration):
+    '''
+    Sleeps for duration seconds in increments of 0.5 seconds.
+
+    Use this so that the sleep can be interrupted by thread_raise().
+    '''
+    import time
+    start = time.time()
+    while True:
+        elapsed = time.time() - start
+        if elapsed >= duration:
+            break
+        time.sleep(min(duration - elapsed, 0.5))
 
 from brozzler.site import Page, Site
 from brozzler.worker import BrozzlerWorker
