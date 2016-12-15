@@ -364,15 +364,15 @@ class BrowserController:
                         '%s console.%s %s', self._websock.url,
                         message['params']['message']['level'],
                         message['params']['message']['text'])
-            else:
-                self.logger.debug("%s %s", message["method"], json_message)
+        #     else:
+        #         self.logger.debug("%s %s", message["method"], json_message)
         elif 'result' in message:
             if message['id'] in self._result_messages:
                 self._result_messages[message['id']] = message
-            else:
-                self.logger.debug("%s", json_message)
-        else:
-            self.logger.debug("%s", json_message)
+        #     else:
+        #         self.logger.debug("%s", json_message)
+        # else:
+        #     self.logger.debug("%s", json_message)
 
     def _debugger_paused(self, message):
         # we hit the breakpoint set in start(), get rid of google analytics
