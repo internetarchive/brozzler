@@ -77,7 +77,7 @@ class BrowserPool:
             try:
                 browser = self._available.pop()
             except KeyError:
-                raise NoBrowsersAvailable()
+                raise NoBrowsersAvailable
             self._in_use.add(browser)
             return browser
 
@@ -87,8 +87,12 @@ class BrowserPool:
             self._in_use.remove(browser)
 
     def shutdown_now(self):
-        self.logger.info('shutting down browser pool')
+        self.logger.info(
+                'shutting down browser pool (%s browsers in use)',
+                len(self._in_use))
         with self._lock:
+            for browser in self._available:
+                browser.stop()
             for browser in self._in_use:
                 browser.stop()
 
@@ -114,6 +118,7 @@ class Browser:
         self.chrome = Chrome(**kwargs)
         self.websocket_url = None
         self.is_browsing = False
+        self._browser_controller = None
 
     def __enter__(self):
         self.start()
@@ -139,10 +144,10 @@ class Browser:
         Stops chrome if it's running.
         '''
         try:
-            if self.is_running():
+            if self._browser_controller:
                 self._browser_controller.stop()
-                self.websocket_url = None
-                self.chrome.stop()
+            self.websocket_url = None
+            self.chrome.stop()
         except:
             self.logger.error('problem stopping', exc_info=True)
 
@@ -215,19 +220,9 @@ class Browser:
             ##     outlinks += retrieve_outlinks (60 sec)
             final_page_url = self._browser_controller.url()
             return final_page_url, outlinks
-        except brozzler.ShutdownRequested:
-            self.logger.info('shutdown requested')
-            raise
         except websocket.WebSocketConnectionClosedException as e:
-            # import pdb; pdb.set_trace()
+            self.logger.error('websocket closed, did chrome die?')
             raise BrowsingException(e)
-            # if not self.is_running():
-            #     logging.info('appears shutdown was requested')
-            #     return None, None
-            # else:
-            #     raise BrowsingException(
-            #             "websocket closed, did chrome die? %s" % (
-            #                 self.websocket_url))
         finally:
             self.is_browsing = False
 
@@ -287,8 +282,12 @@ class BrowserController:
                 '''
                 Raises BrowsingException in the thread that called start()
                 '''
-                self.logger.error(
-                        'exception from websocket receiver thread', exc_info=1)
+                if isinstance(e, websocket.WebSocketConnectionClosedException):
+                    self.logger.error('websocket closed, did chrome die?')
+                else:
+                    self.logger.error(
+                            'exception from websocket receiver thread',
+                            exc_info=1)
                 brozzler.thread_raise(calling_thread, BrowsingException)
 
             # open websocket, start thread that receives messages

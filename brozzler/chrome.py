@@ -50,6 +50,7 @@ class Chrome:
         self.chrome_exe = chrome_exe
         self.ignore_cert_errors = ignore_cert_errors
         self._shutdown = threading.Event()
+        self.chrome_process = None
 
     def __enter__(self):
         '''
@@ -188,6 +189,8 @@ class Chrome:
                             'got chrome window websocket debug url %s from %s',
                             url, json_url)
                     return url
+            except brozzler.ShutdownRequested:
+                raise
             except BaseException as e:
                 if int(time.time() - self._start) % 10 == 5:
                     self.logger.warn(
@@ -253,18 +256,18 @@ class Chrome:
     def stop(self):
         if not self.chrome_process or self._shutdown.is_set():
             return
+        self._shutdown.set()
 
         timeout_sec = 300
-        self._shutdown.set()
-        self.logger.info('terminating chrome pgid %s' % self.chrome_process.pid)
+        if self.chrome_process.poll() is None:
+            self.logger.info(
+                    'terminating chrome pgid %s', self.chrome_process.pid)
 
-        os.killpg(self.chrome_process.pid, signal.SIGTERM)
-        first_sigterm = time.time()
+            os.killpg(self.chrome_process.pid, signal.SIGTERM)
+        t0 = time.time()
 
         try:
-            while time.time() - first_sigterm < timeout_sec:
-                time.sleep(0.5)
-
+            while time.time() - t0 < timeout_sec:
                 status = self.chrome_process.poll()
                 if status is not None:
                     if status == 0:
@@ -281,11 +284,12 @@ class Chrome:
                     # around, but there's a chance I suppose that some other
                     # process could have started with the same pgid
                     return
+                time.sleep(0.5)
 
             self.logger.warn(
                     'chrome pid %s still alive %.1f seconds after sending '
                     'SIGTERM, sending SIGKILL', self.chrome_process.pid,
-                    time.time() - first_sigterm)
+                    time.time() - t0)
             os.killpg(self.chrome_process.pid, signal.SIGKILL)
             status = self.chrome_process.wait()
             self.logger.warn(
@@ -301,3 +305,4 @@ class Chrome:
         finally:
             self._out_reader_thread.join()
             self.chrome_process = None
+

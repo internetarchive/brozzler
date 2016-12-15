@@ -322,9 +322,9 @@ class BrozzlerWorker:
         return False
 
     def _brozzle_site(self, browser, site):
-        start = time.time()
         page = None
         try:
+            start = time.time()
             while time.time() - start < 7 * 60:
                 self._frontier.honor_stop_request(site.job_id)
                 page = self._frontier.claim_page(site, "%s:%s" % (
