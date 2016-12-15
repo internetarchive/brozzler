@@ -70,7 +70,7 @@ class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
                 'filename': record['filename'],
             }
             if record['warc_type'] != 'revisit':
-                blob['mime'] = record['content_type']
+                blob['mime'] = record['content_type'] or '-'
             else:
                 blob['mime'] = 'warc/revisit'
             # b'org,archive)/ 20160427215530 {"url": "https://archive.org/", "mime": "text/html", "status": "200", "digest": "VILUFXZD232SLUA6XROZQIMEVUPW6EIE", "length": "16001", "offset": "90144", "filename": "ARCHIVEIT-261-ONE_TIME-JOB209607-20160427215508135-00000.warc.gz"}'

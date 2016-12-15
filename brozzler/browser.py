@@ -1,6 +1,5 @@
 '''
-brozzler/browser.py - classes responsible for running web browsers
-(chromium/chromium) and browsing web pages in them
+brozzler/browser.py - manages the browsers for brozzler
 
 Copyright (C) 2014-2016 Internet Archive
 
@@ -19,23 +18,17 @@ limitations under the License.
 
 import logging
 import json
-import urllib.request
 import itertools
 import websocket
 import time
 import threading
-import subprocess
-import tempfile
 import os
 import random
 import brozzler
+from brozzler.chrome import Chrome
 from brozzler.behaviors import Behavior
 from requests.structures import CaseInsensitiveDict
-import select
-import re
 import base64
-import psutil
-import signal
 import sqlite3
 import datetime
 
@@ -108,7 +101,9 @@ class Browser:
 
     HARD_TIMEOUT_SECONDS = 20 * 60
 
-    def __init__(self, chrome_port=9222, chrome_exe='chromium-browser', proxy=None, ignore_cert_errors=False):
+    def __init__(
+            self, chrome_port=9222, chrome_exe='chromium-browser', proxy=None,
+            ignore_cert_errors=False):
         self.command_id = itertools.count(1)
         self.chrome_port = chrome_port
         self.chrome_exe = chrome_exe
@@ -134,33 +129,10 @@ class Browser:
 
     def start(self, proxy=None, cookie_db=None):
         if not self._chrome_instance:
-            # these can raise exceptions
-            self.chrome_port = self._find_available_port()
-            self._work_dir = tempfile.TemporaryDirectory()
-            data_dir = os.path.join(self._work_dir.name, "chrome-user-data")
-            os.makedirs(data_dir, exist_ok=True)
-            if cookie_db is not None:
-                cookie_dir = os.path.join(data_dir, "Default")
-                cookie_location = os.path.join(cookie_dir, "Cookies")
-                self.logger.debug(
-                        "cookie DB provided, writing to %s", cookie_location)
-                os.makedirs(cookie_dir, exist_ok=True)
-
-                try:
-                    with open(cookie_location, 'wb') as cookie_file:
-                        cookie_file.write(cookie_db)
-                except OSError:
-                    self.logger.error(
-                            "exception writing cookie file at %s",
-                            cookie_location, exc_info=True)
-
             self._chrome_instance = Chrome(
                     port=self.chrome_port, executable=self.chrome_exe,
-                    user_home_dir=self._work_dir.name,
-                    user_data_dir=os.sep.join([
-                        self._work_dir.name, "chrome-user-data"]),
                     ignore_cert_errors=self.ignore_cert_errors,
-                    proxy=proxy or self.proxy)
+                    proxy=proxy or self.proxy, cookie_db=None)
             try:
                 self._websocket_url = self._chrome_instance.start()
             except:
@@ -172,55 +144,9 @@ class Browser:
             if self.is_running():
                 self._chrome_instance.stop()
                 self._chrome_instance = None
-                try:
-                    self._work_dir.cleanup()
-                except:
-                    self.logger.error("exception deleting %s", self._work_dir,
-                                      exc_info=True)
-                self._work_dir = None
                 self._websocket_url = None
         except:
             self.logger.error("problem stopping", exc_info=True)
-
-    def persist_and_read_cookie_db(self):
-        cookie_location = os.path.join(
-                self._work_dir.name, "chrome-user-data", "Default", "Cookies")
-        self.logger.debug(
-                "marking cookies persistent then reading file into memory: %s",
-                cookie_location)
-        try:
-            with sqlite3.connect(cookie_location) as conn:
-                cur = conn.cursor()
-                cur.execute("UPDATE cookies SET persistent = 1")
-        except sqlite3.Error:
-            self.logger.error("exception updating cookie DB", exc_info=True)
-
-        cookie_db=None
-        try:
-            with open(cookie_location, "rb") as cookie_file:
-                cookie_db = cookie_file.read()
-        except OSError:
-            self.logger.error(
-                    "exception reading from cookie DB file %s",
-                    cookie_location, exc_info=True)
-        return cookie_db
-
-    def _find_available_port(self):
-        port_available = False
-        port = self.chrome_port
-
-        try:
-            conns = psutil.net_connections(kind="tcp")
-        except psutil.AccessDenied:
-            return port
-
-        for p in range(port, 65535):
-            if any(connection.laddr[1] == p for connection in conns):
-                self.logger.warn("port %s already open, will try %s", p, p+1)
-            else:
-                port = p
-                break
-        return port
 
     def is_running(self):
         return bool(self._websocket_url)
@@ -228,13 +154,19 @@ class Browser:
     def abort_browse_page(self):
         self._abort_browse_page = True
 
+    def persist_and_read_cookie_db(self):
+        if self._chrome_instance:
+            return self._chrome_instance.persist_and_read_cookie_db()
+        else:
+            return None
+
     def browse_page(
             self, url, extra_headers=None, behavior_parameters=None,
             user_agent=None,
             on_request=None, on_response=None, on_screenshot=None,
             on_url_change=None):
         """
-        Synchronously loads a page, takes a screenshot, and runs behaviors.
+        Synchronously loads a page, runs behaviors, and takes a screenshot.
 
         Raises BrowsingException if browsing the page fails in a non-critical
         way.
@@ -264,10 +196,10 @@ class Browser:
                 self._websocket_url, on_open=self._visit_page,
                 on_message=self._wrap_handle_message)
 
-        threadName = "WebsockThread:{}-{:%Y%m%d%H%M%S}".format(
+        thread_name = "WebsockThread:{}-{:%Y%m%d%H%M%S}".format(
                 self.chrome_port, datetime.datetime.utcnow())
         websock_thread = threading.Thread(
-                target=self._websock.run_forever, name=threadName,
+                target=self._websock.run_forever, name=thread_name,
                 kwargs={'ping_timeout':0.5})
         websock_thread.start()
         self._start = time.time()
@@ -386,8 +318,11 @@ __brzl_compileOutlinks(window).join('\n');
             chain = []
 
         def set_outlinks(message):
-            self._outlinks = frozenset(
-                    message["result"]["result"]["value"].split("\n"))
+            if message["result"]["result"]["value"]:
+                self._outlinks = frozenset(
+                        message["result"]["result"]["value"].split("\n"))
+            else:
+                self._outlinks = frozenset()
 
         chain.append({
             "info": "retrieving outlinks",
@@ -571,171 +506,3 @@ __brzl_compileOutlinks(window).join('\n');
         # else:
         #     self.logger.debug("%s", json_message)
 
-class Chrome:
-    logger = logging.getLogger(__module__ + "." + __qualname__)
-
-    def __init__(self, port, executable, user_home_dir, user_data_dir, proxy=None, ignore_cert_errors=False):
-        self.port = port
-        self.executable = executable
-        self.user_home_dir = user_home_dir
-        self.user_data_dir = user_data_dir
-        self.proxy = proxy
-        self.ignore_cert_errors = ignore_cert_errors
-        self._shutdown = threading.Event()
-
-    def __enter__(self):
-        '''
-        Returns websocket url to chrome window with about:blank loaded.
-        '''
-        return self.start()
-
-    def __exit__(self, *args):
-        self.stop()
-
-    def start(self):
-        '''
-        Returns websocket url to chrome window with about:blank loaded.
-        '''
-        timeout_sec = 600
-        new_env = os.environ.copy()
-        new_env["HOME"] = self.user_home_dir
-        chrome_args = [
-                self.executable, "--use-mock-keychain", # mac thing
-                "--user-data-dir={}".format(self.user_data_dir),
-                "--remote-debugging-port={}".format(self.port),
-                "--disable-web-sockets", "--disable-cache",
-                "--window-size=1100,900", "--no-default-browser-check",
-                "--disable-first-run-ui", "--no-first-run",
-                "--homepage=about:blank", "--disable-direct-npapi-requests",
-                "--disable-web-security", "--disable-notifications",
-                "--disable-extensions",
-                "--disable-save-password-bubble"]
-        if self.ignore_cert_errors:
-            chrome_args.append("--ignore-certificate-errors")
-        if self.proxy:
-            chrome_args.append("--proxy-server={}".format(self.proxy))
-        chrome_args.append("about:blank")
-        self.logger.info("running: {}".format(" ".join(chrome_args)))
-        # start_new_session - new process group so we can kill the whole group
-        self.chrome_process = subprocess.Popen(chrome_args, env=new_env,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0,
-                start_new_session=True)
-        self._out_reader_thread = threading.Thread(target=self._read_stderr_stdout,
-                name="ChromeOutReaderThread(pid={})".format(self.chrome_process.pid))
-        self._out_reader_thread.start()
-        self.logger.info("chrome running, pid {}".format(self.chrome_process.pid))
-        self._start = time.time()   # member variable just so that kill -QUIT reports it
-
-        json_url = "http://localhost:%s/json" % self.port
-
-        while True:
-            try:
-                raw_json = urllib.request.urlopen(json_url, timeout=30).read()
-                all_debug_info = json.loads(raw_json.decode('utf-8'))
-                debug_info = [x for x in all_debug_info if x['url'] == 'about:blank']
-
-                if debug_info and 'webSocketDebuggerUrl' in debug_info[0]:
-                    self.logger.debug("{} returned {}".format(json_url, raw_json))
-                    url = debug_info[0]['webSocketDebuggerUrl']
-                    self.logger.info('got chrome window websocket debug url {} from {}'.format(url, json_url))
-                    return url
-            except BaseException as e:
-                if int(time.time() - self._start) % 10 == 5:
-                    self.logger.warn("problem with %s (will keep trying until timeout of %d seconds): %s", json_url, timeout_sec, e)
-                pass
-            finally:
-                if time.time() - self._start > timeout_sec:
-                    self.logger.error("killing chrome, failed to retrieve %s after %s seconds", json_url, time.time() - self._start)
-                    self.stop()
-                    raise Exception("killed chrome, failed to retrieve {} after {} seconds".format(json_url, time.time() - self._start))
-                else:
-                    time.sleep(0.5)
-
-    def _read_stderr_stdout(self):
-        # XXX select doesn't work on windows
-        def readline_nonblock(f):
-            buf = b""
-            while not self._shutdown.is_set() and (
-                    len(buf) == 0 or buf[-1] != 0xa) and select.select(
-                            [f],[],[],0.5)[0]:
-                buf += f.read(1)
-            return buf
-
-        try:
-            while not self._shutdown.is_set():
-                buf = readline_nonblock(self.chrome_process.stdout)
-                if buf:
-                    if re.search(
-                            b"Xlib:  extension|"
-                            b"CERT_PKIXVerifyCert for [^ ]* failed|"
-                            b"^ALSA lib|ERROR:gl_surface_glx.cc|"
-                            b"ERROR:gpu_child_thread.cc", buf):
-                        logging.log(
-                                brozzler.TRACE, "chrome pid %s STDOUT %s",
-                                self.chrome_process.pid, buf)
-                    else:
-                        logging.debug(
-                                "chrome pid %s STDOUT %s",
-                                self.chrome_process.pid, buf)
-
-                buf = readline_nonblock(self.chrome_process.stderr)
-                if buf:
-                    if re.search(
-                            b"Xlib:  extension|"
-                            b"CERT_PKIXVerifyCert for [^ ]* failed|"
-                            b"^ALSA lib|ERROR:gl_surface_glx.cc|"
-                            b"ERROR:gpu_child_thread.cc", buf):
-                        logging.log(
-                                brozzler.TRACE, "chrome pid %s STDOUT %s",
-                                self.chrome_process.pid, buf)
-                    else:
-                        logging.debug(
-                                "chrome pid %s STDERR %s",
-                                self.chrome_process.pid, buf)
-        except:
-            logging.error("unexpected exception", exc_info=True)
-
-    def stop(self):
-        if not self.chrome_process or self._shutdown.is_set():
-            return
-
-        timeout_sec = 300
-        self._shutdown.set()
-        self.logger.info("terminating chrome pgid %s" % self.chrome_process.pid)
-
-        os.killpg(self.chrome_process.pid, signal.SIGTERM)
-        first_sigterm = time.time()
-
-        try:
-            while time.time() - first_sigterm < timeout_sec:
-                time.sleep(0.5)
-
-                status = self.chrome_process.poll()
-                if status is not None:
-                    if status == 0:
-                        self.logger.info(
-                                "chrome pid %s exited normally",
-                                self.chrome_process.pid)
-                    else:
-                        self.logger.warn(
-                                "chrome pid %s exited with nonzero status %s",
-                                self.chrome_process.pid, status)
-
-                    # XXX I would like to forcefully kill the process group
-                    # here to guarantee no orphaned chromium subprocesses hang
-                    # around, but there's a chance I suppose that some other
-                    # process could have started with the same pgid
-                    return
-
-            self.logger.warn(
-                    "chrome pid %s still alive %.1f seconds after sending "
-                    "SIGTERM, sending SIGKILL", self.chrome_process.pid,
-                    time.time() - first_sigterm)
-            os.killpg(self.chrome_process.pid, signal.SIGKILL)
-            status = self.chrome_process.wait()
-            self.logger.warn(
-                    "chrome pid %s reaped (status=%s) after killing with "
-                    "SIGKILL", self.chrome_process.pid, status)
-        finally:
-            self._out_reader_thread.join()
-            self.chrome_process = None

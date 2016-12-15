@@ -78,7 +78,7 @@ class YoutubeDLSpy(urllib.request.BaseHandler):
 
         final_url = url
         while final_url in redirects:
-            final_url = redirects[final_url].response.headers['location']
+            final_url = redirects.pop(final_url).response.headers['location']
 
         final_bounces = []
         for txn in self.transactions:

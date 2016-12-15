@@ -22,6 +22,10 @@ import http.server
 import threading
 import os
 import brozzler
+import brozzler.chrome
+import socket
+import logging
+import psutil
 
 @pytest.fixture(scope='module')
 def httpd(request):
@@ -51,4 +55,21 @@ def test_robots(httpd):
 
     site = brozzler.Site(seed=url, user_agent='im/a bAdBOt/uh huh')
     assert not brozzler.is_permitted_by_robots(site, url)
+
+def test_find_available_port():
+    x = brozzler.chrome.Chrome(None, None)
+    try:
+        psutil.net_connections(kind='tcp')
+    except psutil.AccessDenied:
+        logging.warn(
+                'skipping _find_available_port() test because '
+                'psutil.net_connections(kind="tcp") raised AccessDenied')
+        return
+    assert x._find_available_port(9800) == 9800
+    sock = socket.socket()
+    sock.bind(('localhost', 9800))
+    sock.listen(0)
+    assert x._find_available_port(9800) == 9999
+    sock.close()
+    assert x._find_available_port(9800) == 9800
 

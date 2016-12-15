@@ -350,3 +350,69 @@ def brozzler_ensure_tables():
 
     # sites, pages, jobs tables
     brozzler.frontier.RethinkDbFrontier(r)
+
+def brozzler_list_captures():
+    '''
+    Handy utility for looking up entries in the rethinkdb "captures" table by
+    url or sha1.
+    '''
+    import surt
+    import rethinkdb
+
+    arg_parser = argparse.ArgumentParser(
+            prog=os.path.basename(sys.argv[0]),
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    _add_rethinkdb_options(arg_parser)
+    _add_common_options(arg_parser)
+    arg_parser.add_argument(
+            'url_or_sha1', metavar='URL_or_SHA1',
+            help='url or sha1 to look up in captures table')
+
+    args = arg_parser.parse_args(args=sys.argv[1:])
+    _configure_logging(args)
+
+    r = rethinkstuff.Rethinker(
+            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+
+    class Jsonner(json.JSONEncoder):
+        def default(self, o):
+            if isinstance(o, datetime.datetime):
+                return o.isoformat()
+            return json.JSONEncoder.default(self, o)
+
+    if args.url_or_sha1[:5] == 'sha1:':
+        raise Exception('not implemented')
+        # def find_response_by_digest(self, algo, raw_digest, bucket="__unspecified__"):
+        #     if algo != "sha1":
+        #         raise Exception(
+        #                 "digest type is %s but big captures table is indexed by "
+        #                 "sha1" % algo)
+        #     sha1base32 = base64.b32encode(raw_digest).decode("utf-8")
+        #     results_iter = self.r.table(self.table).get_all([sha1base32, "response", bucket], index="sha1_warc_type").run()
+        #     results = list(results_iter)
+        #     if len(results) > 0:
+        #         if len(results) > 1:
+        #             self.logger.debug("expected 0 or 1 but found %s results for sha1base32=%s bucket=%s (will use first result)", len(results), sha1base32, bucket)
+        #         result = results[0]
+        #     else:
+        #         result = None
+        #     self.logger.debug("returning %s for sha1base32=%s bucket=%s",
+        #                       result, sha1base32, bucket)
+        #     return result
+    else:
+        key = surt.surt(
+                args.url_or_sha1, trailing_comma=True, host_massage=False,
+                with_scheme=True)
+        reql = r.table('captures').between(
+                [key[:150], rethinkdb.minval],
+                [key[:150]+'!', rethinkdb.maxval],
+                index='abbr_canon_surt_timestamp')
+        reql = reql.order_by(index='abbr_canon_surt_timestamp')
+        reql = reql.filter(
+                lambda capture: (capture['canon_surt'] >= key)
+                                 & (capture['canon_surt'] <= key))
+        logging.debug('rethinkdb query: %s', reql)
+        results = reql.run()
+        for result in results:
+            print(json.dumps(result, cls=Jsonner, indent=2))
+
