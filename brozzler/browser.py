@@ -561,7 +561,15 @@ var __brzl_tryLogin = function() {
             passwordField.value = {{password|json}};
             console.log('submitting username=' + usernameField.value
                         + ' password=*** to detected login form');
-            form.submit();
+            try {
+                form.submit();
+            } catch (e) {
+                // "If a form control (such as a submit button) has a name or
+                // id of 'submit' it will mask the form's submit method." -MDN
+                // http://stackoverflow.com/a/2000021
+                var pseudoForm = document.createElement('form');
+                pseudoForm.submit.apply(form);
+            }
             __brzl_tryLoginState = 'submitted-form';
             return;
         }
