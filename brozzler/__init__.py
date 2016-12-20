@@ -44,7 +44,8 @@ class ReachedLimit(Exception):
             self.http_payload = http_payload
 
     def __repr__(self):
-        return "ReachedLimit(warcprox_meta={},http_payload={})".format(repr(self.warcprox_meta), repr(self.http_payload))
+        return "ReachedLimit(warcprox_meta=%s,http_payload=%s)" % (
+                repr(self.warcprox_meta), repr(self.http_payload))
 
     def __str__(self):
         return self.__repr__()
@@ -168,6 +169,16 @@ def sleep(duration):
         if elapsed >= duration:
             break
         time.sleep(min(duration - elapsed, 0.5))
+
+_jinja2_env = None
+def jinja2_environment():
+    global _jinja2_env
+    if not _jinja2_env:
+        import jinja2, json
+        _jinja2_env = jinja2.Environment(
+                loader=jinja2.PackageLoader('brozzler', 'js-templates'))
+        _jinja2_env.filters['json'] = json.dumps
+    return _jinja2_env
 
 from brozzler.site import Page, Site
 from brozzler.worker import BrozzlerWorker

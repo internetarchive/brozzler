@@ -127,6 +127,12 @@ def brozzle_page():
                 'template, e.g. {"parameter_username":"x",'
                 '"parameter_password":"y"}'))
     arg_parser.add_argument(
+            '--username', dest='username', default=None,
+            help='use this username to try to log in if a login form is found')
+    arg_parser.add_argument(
+            '--password', dest='password', default=None,
+            help='use this password to try to log in if a login form is found')
+    arg_parser.add_argument(
             '--proxy', dest='proxy', default=None,
             help='http proxy')
     arg_parser.add_argument(
@@ -145,7 +151,8 @@ def brozzle_page():
     site = brozzler.Site(
             id=-1, seed=args.url, proxy=args.proxy,
             enable_warcprox_features=args.enable_warcprox_features,
-            behavior_parameters=behavior_parameters)
+            behavior_parameters=behavior_parameters, username=args.username,
+            password=args.password)
     page = brozzler.Page(url=args.url, site_id=site.id)
     worker = brozzler.BrozzlerWorker(frontier=None)
 
@@ -230,6 +237,12 @@ def brozzler_new_site():
                 'json blob of parameters to populate the javascript behavior '
                 'template, e.g. {"parameter_username":"x",'
                 '"parameter_password":"y"}'))
+    arg_parser.add_argument(
+            '--username', dest='username', default=None,
+            help='use this username to try to log in if a login form is found')
+    arg_parser.add_argument(
+            '--password', dest='password', default=None,
+            help='use this password to try to log in if a login form is found')
     _add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])
@@ -243,7 +256,8 @@ def brozzler_new_site():
             warcprox_meta=json.loads(
                 args.warcprox_meta) if args.warcprox_meta else None,
             behavior_parameters=json.loads(
-                args.behavior_parameters) if args.behavior_parameters else None)
+                args.behavior_parameters) if args.behavior_parameters else None,
+            username=args.username, password=args.password)
 
     r = rethinkstuff.Rethinker(
             args.rethinkdb_servers.split(","), args.rethinkdb_db)

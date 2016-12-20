@@ -277,6 +277,7 @@ class BrozzlerWorker:
             final_page_url, outlinks = browser.browse_page(
                     page.url, extra_headers=site.extra_headers(),
                     behavior_parameters=site.behavior_parameters,
+                    username=site.username, password=site.password,
                     user_agent=site.user_agent,
                     on_screenshot=_on_screenshot)
             if final_page_url != page.url:

@@ -62,14 +62,13 @@ def test_httpd(httpd):
     deduplication.
     '''
     payload1 = content2 = None
-    with urllib.request.urlopen(
-            'http://localhost:%s/file1.txt' % httpd.server_port) as response:
+    url = 'http://localhost:%s/site1/file1.txt' % httpd.server_port
+    with urllib.request.urlopen(url) as response:
         assert response.status == 200
         payload1 = response.read()
         assert payload1
 
-    with urllib.request.urlopen(
-            'http://localhost:%s/file1.txt' % httpd.server_port) as response:
+    with urllib.request.urlopen(url) as response:
         assert response.status == 200
         payload2 = response.read()
         assert payload2
@@ -101,13 +100,14 @@ def test_services_up():
 def test_brozzle_site(httpd):
     test_id = 'test_brozzle_site-%s' % datetime.datetime.utcnow().isoformat()
     site = brozzler.Site(
-            seed='http://localhost:%s/' % httpd.server_port,
+            seed='http://localhost:%s/site1/' % httpd.server_port,
             proxy='localhost:8000', enable_warcprox_features=True,
             warcprox_meta={'captures-table-extra-fields':{'test_id':test_id}})
 
     # the two pages we expect to be crawled
-    page1 = 'http://localhost:%s/' % httpd.server_port
-    page2 = 'http://localhost:%s/file1.txt' % httpd.server_port
+    page1 = 'http://localhost:%s/site1/' % httpd.server_port
+    page2 = 'http://localhost:%s/site1/file1.txt' % httpd.server_port
+    robots = 'http://localhost:%s/robots.txt' % httpd.server_port
 
     # so we can examine rethinkdb before it does anything
     try:
@@ -131,19 +131,18 @@ def test_brozzle_site(httpd):
 
     # check that we got the two pages we expected
     pages = list(frontier.site_pages(site.id))
-    assert len(pages) == 3
+    assert len(pages) == 2
     assert {page.url for page in pages} == {
-            'http://localhost:%s/' % httpd.server_port,
-            'http://localhost:%s/robots.txt' % httpd.server_port,
-            'http://localhost:%s/file1.txt' % httpd.server_port}
+            'http://localhost:%s/site1/' % httpd.server_port,
+            'http://localhost:%s/site1/file1.txt' % httpd.server_port}
 
     time.sleep(2)   # in case warcprox hasn't finished processing urls
     # take a look at the captures table
     captures = r.table('captures').filter({'test_id':test_id}).run()
     captures_by_url = {
             c['url']: c for c in captures if c['http_method'] != 'HEAD'}
+    assert robots in captures_by_url
     assert page1 in captures_by_url
-    assert '%srobots.txt' % page1 in captures_by_url
     assert page2 in captures_by_url
     assert 'screenshot:%s' % page1 in captures_by_url
     assert 'thumbnail:%s' % page1 in captures_by_url
@@ -153,7 +152,7 @@ def test_brozzle_site(httpd):
     t14 = captures_by_url[page2]['timestamp'].strftime('%Y%m%d%H%M%S')
     wb_url = 'http://localhost:8880/brozzler/%s/%s' % (t14, page2)
     expected_payload = open(os.path.join(
-        os.path.dirname(__file__), 'htdocs', 'file1.txt'), 'rb').read()
+        os.path.dirname(__file__), 'htdocs', 'site1', 'file1.txt'), 'rb').read()
     assert requests.get(wb_url).content == expected_payload
 
 def test_warcprox_selection(httpd):
@@ -163,11 +162,12 @@ def test_warcprox_selection(httpd):
     test_id = 'test_warcprox_selection-%s' % datetime.datetime.utcnow().isoformat()
 
     # the two pages we expect to be crawled
-    page1 = 'http://localhost:%s/' % httpd.server_port
-    page2 = 'http://localhost:%s/file1.txt' % httpd.server_port
+    page1 = 'http://localhost:%s/site1/' % httpd.server_port
+    page2 = 'http://localhost:%s/site1/file1.txt' % httpd.server_port
+    robots = 'http://localhost:%s/robots.txt' % httpd.server_port
 
     site = brozzler.Site(
-            seed='http://localhost:%s/' % httpd.server_port,
+            seed='http://localhost:%s/site1/' % httpd.server_port,
             enable_warcprox_features=True,
             warcprox_meta={'captures-table-extra-fields':{'test_id':test_id}})
 
@@ -199,19 +199,18 @@ def test_warcprox_selection(httpd):
 
     # check that we got the two pages we expected
     pages = list(frontier.site_pages(site.id))
-    assert len(pages) == 3
+    assert len(pages) == 2
     assert {page.url for page in pages} == {
-            'http://localhost:%s/' % httpd.server_port,
-            'http://localhost:%s/robots.txt' % httpd.server_port,
-            'http://localhost:%s/file1.txt' % httpd.server_port}
+            'http://localhost:%s/site1/' % httpd.server_port,
+            'http://localhost:%s/site1/file1.txt' % httpd.server_port}
 
     time.sleep(2)   # in case warcprox hasn't finished processing urls
     # take a look at the captures table
     captures = r.table('captures').filter({'test_id':test_id}).run()
     captures_by_url = {
-            c['url']:c for c in captures if c['http_method'] != 'HEAD'}
+            c['url']: c for c in captures if c['http_method'] != 'HEAD'}
+    assert robots in captures_by_url
     assert page1 in captures_by_url
-    assert '%srobots.txt' % page1 in captures_by_url
     assert page2 in captures_by_url
     assert 'screenshot:%s' % page1 in captures_by_url
     assert 'thumbnail:%s' % page1 in captures_by_url
@@ -221,14 +220,13 @@ def test_warcprox_selection(httpd):
     t14 = captures_by_url[page2]['timestamp'].strftime('%Y%m%d%H%M%S')
     wb_url = 'http://localhost:8880/brozzler/%s/%s' % (t14, page2)
     expected_payload = open(os.path.join(
-        os.path.dirname(__file__), 'htdocs', 'file1.txt'), 'rb').read()
-    assert requests.get(
-            wb_url, allow_redirects=False).content == expected_payload
+        os.path.dirname(__file__), 'htdocs', 'site1', 'file1.txt'), 'rb').read()
+    assert requests.get(wb_url).content == expected_payload
 
 def test_obey_robots(httpd):
     test_id = 'test_obey_robots-%s' % datetime.datetime.utcnow().isoformat()
     site = brozzler.Site(
-            seed='http://localhost:%s/' % httpd.server_port,
+            seed='http://localhost:%s/site1/' % httpd.server_port,
             proxy='localhost:8000', enable_warcprox_features=True,
             user_agent='im a badbot',   # robots.txt blocks badbot
             warcprox_meta={'captures-table-extra-fields':{'test_id':test_id}})
@@ -256,11 +254,11 @@ def test_obey_robots(httpd):
         site = frontier.site(site.id)
     assert site.status == 'FINISHED'
 
-    # check that we got the two pages we expected
+    # check that only the one page is in rethinkdb
     pages = list(frontier.site_pages(site.id))
     assert len(pages) == 1
     assert {page.url for page in pages} == {
-            'http://localhost:%s/' % httpd.server_port}
+            'http://localhost:%s/site1/' % httpd.server_port}
 
     # take a look at the captures table
     time.sleep(2)   # in case warcprox hasn't finished processing urls
@@ -276,3 +274,44 @@ def test_obey_robots(httpd):
         os.path.dirname(__file__), 'htdocs', 'robots.txt'), 'rb').read()
     assert requests.get(
             wb_url, allow_redirects=False).content == expected_payload
+
+def test_login(httpd):
+    test_id = 'test_login-%s' % datetime.datetime.utcnow().isoformat()
+    site = brozzler.Site(
+            seed='http://localhost:%s/site2/' % httpd.server_port,
+            proxy='localhost:8000', enable_warcprox_features=True,
+            warcprox_meta={'captures-table-extra-fields':{'test_id':test_id}},
+            username='test_username', password='test_password')
+
+    r = rethinkstuff.Rethinker('localhost', db='brozzler')
+    frontier = brozzler.RethinkDbFrontier(r)
+    brozzler.new_site(frontier, site)
+
+    # the site should be brozzled fairly quickly
+    start = time.time()
+    while site.status != 'FINISHED' and time.time() - start < 300:
+        time.sleep(0.5)
+        site = frontier.site(site.id)
+    assert site.status == 'FINISHED'
+
+    # take a look at the captures table
+    time.sleep(2)   # in case warcprox hasn't finished processing urls
+    robots_url = 'http://localhost:%s/robots.txt' % httpd.server_port
+    captures = list(r.table('captures').filter(
+                {'test_id':test_id}).order_by('timestamp').run())
+    meth_url = ['%s %s' % (c['http_method'], c['url']) for c in captures]
+
+    # there are several forms in in htdocs/site2/login.html but only one
+    # that brozzler's heuristic should match and try to submit, and it has
+    # action='00', so we can check for that here
+    assert ('POST http://localhost:%s/site2/00' % httpd.server_port) in meth_url
+
+    # sanity check the rest of the crawl
+    assert ('GET http://localhost:%s/robots.txt' % httpd.server_port) in meth_url
+    assert ('GET http://localhost:%s/site2/' % httpd.server_port) in meth_url
+    assert ('WARCPROX_WRITE_RECORD screenshot:http://localhost:%s/site2/' % httpd.server_port) in meth_url
+    assert ('WARCPROX_WRITE_RECORD thumbnail:http://localhost:%s/site2/' % httpd.server_port) in meth_url
+    assert ('GET http://localhost:%s/site2/login.html' % httpd.server_port) in meth_url
+    assert ('WARCPROX_WRITE_RECORD screenshot:http://localhost:%s/site2/login.html' % httpd.server_port) in meth_url
+    assert ('WARCPROX_WRITE_RECORD thumbnail:http://localhost:%s/site2/login.html' % httpd.server_port) in meth_url
+

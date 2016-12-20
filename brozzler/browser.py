@@ -179,7 +179,6 @@ class WebsockReceiverThread(threading.Thread):
         self.websock.send(json.dumps(dict(id=0, method='Debugger.resume')))
 
     def _handle_message(self, websock, json_message):
-        self.logger.debug("%s", json_message)
         message = json.loads(json_message)
         if 'method' in message:
             if message['method'] == 'Page.loadEventFired':
@@ -191,16 +190,15 @@ class WebsockReceiverThread(threading.Thread):
                         '%s console.%s %s', self.websock.url,
                         message['params']['message']['level'],
                         message['params']['message']['text'])
-        #     else:
-        #         self.logger.debug("%s %s", message["method"], json_message)
+            # else:
+            #     self.logger.debug("%s %s", message["method"], json_message)
         elif 'result' in message:
             if message['id'] in self._result_messages:
                 self._result_messages[message['id']] = message
-        #     else:
-        #         self.logger.debug("%s", json_message)
-        # else:
-        #     self.logger.debug("%s", json_message)
-
+       #      else:
+       #          self.logger.debug("%s", json_message)
+       #  else:
+       #      self.logger.debug("%s", json_message)
 
 class Browser:
     '''
@@ -235,7 +233,6 @@ class Browser:
         '''
         start = time.time()
         while True:
-            brozzler.sleep(0.5)
             if callback():
                 return
             elapsed = time.time() - start
@@ -243,6 +240,7 @@ class Browser:
                 raise BrowsingTimeout(
                         'timed out after %.1fs waiting for: %s' % (
                             elapsed, callback))
+            brozzler.sleep(0.5)
 
     def send_to_chrome(self, suppress_logging=False, **kwargs):
         msg_id = next(self._command_id)
@@ -329,7 +327,8 @@ class Browser:
     def browse_page(
             self, page_url, ignore_cert_errors=False, extra_headers=None,
             user_agent=None, behavior_parameters=None,
-            on_request=None, on_response=None, on_screenshot=None):
+            on_request=None, on_response=None, on_screenshot=None,
+            username=None, password=None):
         '''
         Browses page in browser.
 
@@ -373,9 +372,11 @@ class Browser:
             raise BrowsingException('browser is already busy browsing a page')
         self.is_browsing = True
         try:
-            self.navigate_to_page(page_url, timeout=300)
-            ## if login_credentials:
-            ##     self.try_login(login_credentials) (5 min?)
+            self.navigate_to_page(
+                    page_url, extra_headers=extra_headers,
+                    user_agent=user_agent, timeout=300)
+            if password:
+                self.try_login(username, password, timeout=300)
             behavior_script = brozzler.behavior_script(
                     page_url, behavior_parameters)
             self.run_behavior(behavior_script, timeout=900)
@@ -450,7 +451,7 @@ __brzl_compileOutlinks(window).join('\n');
         if message['result']['result']['value']:
             return frozenset(message['result']['result']['value'].split('\n'))
         else:
-            self._outlinks = frozenset()
+            return frozenset()
 
     def screenshot(self, timeout=30):
         self.logger.info('taking screenshot')
@@ -522,6 +523,101 @@ __brzl_compileOutlinks(window).join('\n');
                     return
             except BrowsingTimeout:
                 pass
+
+    TRY_LOGIN_JS_J2 = '''
+var __brzl_tryLoginState = 'trying';
+
+var __brzl_tryLogin = function() {
+    for (var i = 0; i < document.forms.length; i++) {
+        var form = document.forms[i];
+        if (form.method != 'post') {
+            continue;
+        }
+        var usernameField, passwordField;
+        for (var j = 0; j < form.elements.length; j++) {
+            var field = form.elements[j];
+            if (field.type == 'text') {
+                if (!usernameField) {
+                    usernameField = field;
+                } else {
+                    usernameField = undefined;
+                    break;
+                }
+            } else if (field.type == 'password') {
+                if (!passwordField) {
+                    passwordField = field;
+                } else {
+                    passwordField = undefined;
+                    break;
+                }
+            } else if (field.type == 'textarea') {
+                usernameField = undefined;
+                passwordField = undefined;
+                break;
+            }
+
+        }
+        if (usernameField && passwordField) {
+            usernameField.value = {{username|json}};
+            passwordField.value = {{password|json}};
+            form.submit()
+            __brzl_tryLoginState = 'submitted-form';
+            return
+        }
+    }
+    __brzl_tryLoginState = 'login-form-not-found';
+};
+
+__brzl_tryLogin();
+'''
+    def try_login(self, username, password, timeout=300):
+        try_login_js = brozzler.jinja2_environment().from_string(
+                self.TRY_LOGIN_JS_J2).render(
+                        username=username, password=password)
+
+        self.websock_thread.got_page_load_event = None
+        self.send_to_chrome(
+                method='Runtime.evaluate', suppress_logging=True,
+                params={'expression': try_login_js})
+
+        # wait for tryLogin to finish trying (should be very very quick)
+        start = time.time()
+        while True:
+            self.websock_thread.expect_result(self._command_id.peek())
+            msg_id = self.send_to_chrome(
+                method='Runtime.evaluate',
+                params={'expression': 'try { __brzl_tryLoginState } catch (e) { "maybe-submitted-form" }'})
+            try:
+                self._wait_for(
+                        lambda: self.websock_thread.received_result(msg_id),
+                        timeout=5)
+                msg = self.websock_thread.pop_result(msg_id)
+                if (msg and 'result' in msg
+                        and 'result' in msg['result']):
+                    result = msg['result']['result']['value']
+                    if result == 'login-form-not-found':
+                        # we're done
+                        return
+                    elif result in ('submitted-form', 'maybe-submitted-form'):
+                        # wait for page load event below
+                        self.logger.info(
+                                'submitted a login form, waiting for another '
+                                'page load event')
+                        break
+                    # else try again to get __brzl_tryLoginState
+
+            except BrowsingTimeout:
+                pass
+
+            if time.time() - start > 30:
+                raise BrowsingException(
+                        'timed out trying to check if tryLogin finished')
+
+        # if we get here, we submitted a form, now we wait for another page
+        # load event
+        self._wait_for(
+                lambda: self.websock_thread.got_page_load_event,
+                timeout=timeout)
 
 class Counter:
     def __init__(self):
