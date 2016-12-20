@@ -536,7 +536,7 @@ var __brzl_tryLogin = function() {
         var usernameField, passwordField;
         for (var j = 0; j < form.elements.length; j++) {
             var field = form.elements[j];
-            if (field.type == 'text') {
+            if (field.type == 'text' || field.type == 'email') {
                 if (!usernameField) {
                     usernameField = field;
                 } else {
@@ -555,14 +555,15 @@ var __brzl_tryLogin = function() {
                 passwordField = undefined;
                 break;
             }
-
         }
         if (usernameField && passwordField) {
             usernameField.value = {{username|json}};
             passwordField.value = {{password|json}};
-            form.submit()
+            console.log('submitting username=' + usernameField.value
+                        + ' password=*** to detected login form');
+            form.submit();
             __brzl_tryLoginState = 'submitted-form';
-            return
+            return;
         }
     }
     __brzl_tryLoginState = 'login-form-not-found';
