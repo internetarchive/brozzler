@@ -185,6 +185,10 @@ class WebsockReceiverThread(threading.Thread):
                 self.got_page_load_event = datetime.datetime.utcnow()
             elif message['method'] == 'Debugger.paused':
                 self._debugger_paused(message)
+            elif message["method"] == "Inspector.targetCrashed":
+                self.logger.error(
+                        '''chrome tab went "aw snap" or "he's dead jim"!''')
+                brozzler.thread_raise(self.calling_thread, BrowsingException)
             elif message['method'] == 'Console.messageAdded':
                 self.logger.debug(
                         '%s console.%s %s', self.websock.url,

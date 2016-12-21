@@ -164,6 +164,7 @@ from brozzler.site import Page, Site
 from brozzler.worker import BrozzlerWorker
 from brozzler.robots import is_permitted_by_robots
 from brozzler.frontier import RethinkDbFrontier
-from brozzler.browser import Browser, BrowserPool
+from brozzler.browser import Browser, BrowserPool, BrowsingException
 from brozzler.job import new_job, new_site, Job
+from brozzler.cli import suggest_default_chrome_exe
 
