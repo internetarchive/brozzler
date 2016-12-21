@@ -420,30 +420,13 @@ class Browser:
                 lambda: self.websock_thread.got_page_load_event,
                 timeout=timeout)
 
-    OUTLINKS_JS = r'''
-var __brzl_framesDone = new Set();
-var __brzl_compileOutlinks = function(frame) {
-    __brzl_framesDone.add(frame);
-    if (frame && frame.document) {
-        var outlinks = Array.prototype.slice.call(
-                frame.document.querySelectorAll('a[href]'));
-        for (var i = 0; i < frame.frames.length; i++) {
-            if (frame.frames[i] && !__brzl_framesDone.has(frame.frames[i])) {
-                outlinks = outlinks.concat(
-                            __brzl_compileOutlinks(frame.frames[i]));
-            }
-        }
-    }
-    return outlinks;
-}
-__brzl_compileOutlinks(window).join('\n');
-'''
     def extract_outlinks(self, timeout=60):
         self.logger.info('extracting outlinks')
         self.websock_thread.expect_result(self._command_id.peek())
+        js = brozzler.jinja2_environment().get_template(
+                'extract-outlinks.js').render()
         msg_id = self.send_to_chrome(
-                method='Runtime.evaluate',
-                params={'expression': self.OUTLINKS_JS})
+                method='Runtime.evaluate', params={'expression': js})
         self._wait_for(
                 lambda: self.websock_thread.received_result(msg_id),
                 timeout=timeout)
@@ -524,64 +507,9 @@ __brzl_compileOutlinks(window).join('\n');
             except BrowsingTimeout:
                 pass
 
-    TRY_LOGIN_JS_J2 = '''
-var __brzl_tryLoginState = 'trying';
-
-var __brzl_tryLogin = function() {
-    for (var i = 0; i < document.forms.length; i++) {
-        var form = document.forms[i];
-        if (form.method != 'post') {
-            continue;
-        }
-        var usernameField, passwordField;
-        for (var j = 0; j < form.elements.length; j++) {
-            var field = form.elements[j];
-            if (field.type == 'text' || field.type == 'email') {
-                if (!usernameField) {
-                    usernameField = field;
-                } else {
-                    usernameField = undefined;
-                    break;
-                }
-            } else if (field.type == 'password') {
-                if (!passwordField) {
-                    passwordField = field;
-                } else {
-                    passwordField = undefined;
-                    break;
-                }
-            } else if (field.type == 'textarea') {
-                usernameField = undefined;
-                passwordField = undefined;
-                break;
-            }
-        }
-        if (usernameField && passwordField) {
-            usernameField.value = {{username|json}};
-            passwordField.value = {{password|json}};
-            console.log('submitting username=' + usernameField.value
-                        + ' password=*** to detected login form');
-            try {
-                form.submit();
-            } catch (e) {
-                // "If a form control (such as a submit button) has a name or
-                // id of 'submit' it will mask the form's submit method." -MDN
-                // http://stackoverflow.com/a/2000021
-                var pseudoForm = document.createElement('form');
-                pseudoForm.submit.apply(form);
-            }
-            __brzl_tryLoginState = 'submitted-form';
-            return;
-        }
-    }
-    __brzl_tryLoginState = 'login-form-not-found';
-};
-
-__brzl_tryLogin();
-'''
     def try_login(self, username, password, timeout=300):
-        try_login_js = brozzler.jinja2_environment().from_string(
-                self.TRY_LOGIN_JS_J2).render(
+        try_login_js = brozzler.jinja2_environment().get_template(
+                'try-login.js.j2').render(
                         username=username, password=password)
 
         self.websock_thread.got_page_load_event = None

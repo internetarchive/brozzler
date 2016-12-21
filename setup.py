@@ -32,7 +32,7 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.1b9.dev148',
+        version='1.1b9.dev149',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
@@ -41,7 +41,8 @@ setuptools.setup(
         license='Apache License 2.0',
         packages=['brozzler', 'brozzler.dashboard'],
         package_data={
-            'brozzler': ['behaviors.d/*.js*', 'behaviors.yaml', 'job_schema.yaml'],
+            'brozzler': [
+                'js-templates/*.js*', 'behaviors.yaml', 'job_schema.yaml'],
             'brozzler.dashboard': find_package_data('brozzler.dashboard'),
         },
         entry_points={

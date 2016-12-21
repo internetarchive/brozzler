@@ -86,23 +86,7 @@ def behaviors():
         behaviors_yaml = os.path.join(
                 os.path.dirname(__file__), 'behaviors.yaml')
         with open(behaviors_yaml) as fin:
-            conf = yaml.load(fin)
-        _behaviors = conf['behaviors']
-
-        for behavior in _behaviors:
-            if 'behavior_js' in behavior:
-                behavior_js = os.path.join(
-                        os.path.dirname(__file__), 'behaviors.d',
-                        behavior['behavior_js'])
-                with open(behavior_js, encoding='utf-8') as fin:
-                    behavior['script'] = fin.read()
-            elif 'behavior_js_template' in behavior:
-                behavior_js_template = os.path.join(
-                        os.path.dirname(__file__), 'behaviors.d',
-                        behavior['behavior_js_template'])
-                with open(behavior_js_template, encoding='utf-8') as fin:
-                    behavior['template'] = string.Template(fin.read())
-
+            _behaviors = yaml.load(fin)
     return _behaviors
 
 def behavior_script(url, template_parameters=None):
@@ -112,22 +96,18 @@ def behavior_script(url, template_parameters=None):
     import re, logging
     for behavior in behaviors():
         if re.match(behavior['url_regex'], url):
-            if 'behavior_js' in behavior:
-                logging.info(
-                        'using behavior %s for %s',
-                        behavior['behavior_js'], url)
-                return behavior['script']
-            elif 'behavior_js_template' in behavior:
-                parameters = dict()
-                if 'default_parameters' in behavior:
-                    parameters.update(behavior['default_parameters'])
-                if template_parameters:
-                    parameters.update(template_parameters)
-                script = behavior['template'].safe_substitute(parameters)
-                logging.info(
-                        'using template=%s populated with parameters=%s for %s',
-                        repr(behavior['behavior_js_template']), parameters, url)
-                return script
+            parameters = dict()
+            if 'default_parameters' in behavior:
+                parameters.update(behavior['default_parameters'])
+            if template_parameters:
+                parameters.update(template_parameters)
+            template = jinja2_environment().get_template(
+                    behavior['behavior_js_template'])
+            script = template.render(parameters)
+            logging.info(
+                    'using template=%s populated with parameters=%s for %s',
+                    repr(behavior['behavior_js_template']), parameters, url)
+            return script
     return None
 
 def thread_raise(thread, exctype):
