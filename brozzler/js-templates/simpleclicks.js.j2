@@ -26,11 +26,8 @@ var umbraBehavior = {
 		var clickedSomething = false;
 		var somethingLeftBelow = false;
 		var somethingLeftAbove = false;
-		var cssSelector = "${click_css_selector}";
-		var clickUntilTimeout = "${click_until_hard_timeout}";
-
-		//handle Python to JavaScript boolean conversion
-		clickUntilTimeout == "True" ? clickUntilTimeout = true : clickUntilTimeout = false;
+		var cssSelector = {{click_css_selector|json}};
+		var clickUntilTimeout = {{click_until_hard_timeout|json}};
 
 		var iframes = document.querySelectorAll("iframe");
 		var documents = Array(iframes.length + 1);
