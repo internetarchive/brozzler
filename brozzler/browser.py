@@ -120,6 +120,9 @@ class WebsockReceiverThread(threading.Thread):
         self.is_open = False
         self.got_page_load_event = None
 
+        self.on_request = None
+        self.on_response = None
+
         self._result_messages = {}
 
     def expect_result(self, msg_id):
@@ -178,14 +181,32 @@ class WebsockReceiverThread(threading.Thread):
         # resume execution
         self.websock.send(json.dumps(dict(id=0, method='Debugger.resume')))
 
+    def _network_response_received(self, message):
+        # if (not self._reached_limit
+        #         and message['params']['response']['status'] == 420
+        #         and 'Warcprox-Meta' in CaseInsensitiveDict(
+        #             message['params']['response']['headers'])):
+        #     warcprox_meta = json.loads(CaseInsensitiveDict(
+        #         message['params']['response']['headers'])['Warcprox-Meta'])
+        #     self._reached_limit = brozzler.ReachedLimit(
+        #             warcprox_meta=warcprox_meta)
+        #     self.logger.info('reached limit %s', self._reached_limit)
+        if self.on_response:
+            self.on_response(message)
+
     def _handle_message(self, websock, json_message):
         message = json.loads(json_message)
         if 'method' in message:
             if message['method'] == 'Page.loadEventFired':
                 self.got_page_load_event = datetime.datetime.utcnow()
+            elif message['method'] == 'Network.responseReceived':
+                self._network_response_received(message)
+            elif message['method'] == 'Network.requestWillBeSent':
+                if self.on_request:
+                    self.on_request(message)
             elif message['method'] == 'Debugger.paused':
                 self._debugger_paused(message)
-            elif message["method"] == "Inspector.targetCrashed":
+            elif message['method'] == 'Inspector.targetCrashed':
                 self.logger.error(
                         '''chrome tab went "aw snap" or "he's dead jim"!''')
                 brozzler.thread_raise(self.calling_thread, BrowsingException)
@@ -375,6 +396,10 @@ class Browser:
         if self.is_browsing:
             raise BrowsingException('browser is already busy browsing a page')
         self.is_browsing = True
+        if on_request:
+            self.websock_thread.on_request = on_request
+        if on_response:
+            self.websock_thread.on_response = on_response
         try:
             self.navigate_to_page(
                     page_url, extra_headers=extra_headers,
@@ -402,6 +427,8 @@ class Browser:
             raise BrowsingException(e)
         finally:
             self.is_browsing = False
+            self.websock_thread.on_request = None
+            self.websock_thread.on_response = None
 
     def navigate_to_page(
             self, page_url, extra_headers=None, user_agent=None, timeout=300):
