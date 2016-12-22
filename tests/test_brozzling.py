@@ -25,18 +25,44 @@ import http.server
 import threading
 import argparse
 import urllib
+import json
 
 args = argparse.Namespace()
 args.log_level = logging.INFO
 brozzler.cli._configure_logging(args)
 
+WARCPROX_META_420 = {
+    'stats': {
+        'test_limits_bucket': {
+            'total': {'urls': 0, 'wire_bytes': 0},
+            'new': {'urls': 0, 'wire_bytes': 0},
+            'revisit': {'urls': 0, 'wire_bytes': 0},
+            'bucket': 'test_limits_bucket'
+        }
+    },
+    'reached-limit': {'test_limits_bucket/total/urls': 0}
+}
+
 @pytest.fixture(scope='module')
 def httpd(request):
+    class RequestHandler(http.server.SimpleHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == '/420':
+                self.send_response(420, 'Reached limit')
+                self.send_header('Connection', 'close')
+                self.send_header('Warcprox-Meta', json.dumps(WARCPROX_META_420))
+                payload = b'request rejected by warcprox: reached limit test_limits_bucket/total/urls=0\n'
+                self.send_header('Content-Type', 'text/plain;charset=utf-8')
+                self.send_header('Content-Length', len(payload))
+                self.end_headers()
+                self.wfile.write(payload)
+            else:
+                super().do_GET()
+
     # SimpleHTTPRequestHandler always uses CWD so we have to chdir
     os.chdir(os.path.join(os.path.dirname(__file__), 'htdocs'))
 
-    httpd = http.server.HTTPServer(
-            ('localhost', 0), http.server.SimpleHTTPRequestHandler)
+    httpd = http.server.HTTPServer(('localhost', 0), RequestHandler)
     httpd_thread = threading.Thread(name='httpd', target=httpd.serve_forever)
     httpd_thread.start()
 
@@ -68,6 +94,11 @@ def test_httpd(httpd):
 
     assert payload1 == payload2
 
+    url = 'http://localhost:%s/420' % httpd.server_port
+    with pytest.raises(urllib.error.HTTPError) as excinfo:
+        urllib.request.urlopen(url)
+    assert excinfo.value.getcode() == 420
+
 def test_aw_snap_hes_dead_jim():
     chrome_exe = brozzler.suggest_default_chrome_exe()
     with brozzler.Browser(chrome_exe=chrome_exe) as browser:
@@ -88,3 +119,10 @@ def test_on_response(httpd):
     assert response_urls[1] == 'http://localhost:%s/site3/brozzler.svg' % httpd.server_port
     assert response_urls[2] == 'http://localhost:%s/favicon.ico' % httpd.server_port
 
+def test_420(httpd):
+    chrome_exe = brozzler.suggest_default_chrome_exe()
+    url = 'http://localhost:%s/420' % httpd.server_port
+    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        with pytest.raises(brozzler.ReachedLimit) as excinfo:
+            browser.browse_page(url)
+        assert excinfo.value.warcprox_meta == WARCPROX_META_420
