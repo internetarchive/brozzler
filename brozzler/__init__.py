@@ -44,7 +44,8 @@ class ReachedLimit(Exception):
             self.http_payload = http_payload
 
     def __repr__(self):
-        return "ReachedLimit(warcprox_meta={},http_payload={})".format(repr(self.warcprox_meta), repr(self.http_payload))
+        return "ReachedLimit(warcprox_meta=%s,http_payload=%s)" % (
+                repr(self.warcprox_meta), repr(self.http_payload))
 
     def __str__(self):
         return self.__repr__()
@@ -85,23 +86,7 @@ def behaviors():
         behaviors_yaml = os.path.join(
                 os.path.dirname(__file__), 'behaviors.yaml')
         with open(behaviors_yaml) as fin:
-            conf = yaml.load(fin)
-        _behaviors = conf['behaviors']
-
-        for behavior in _behaviors:
-            if 'behavior_js' in behavior:
-                behavior_js = os.path.join(
-                        os.path.dirname(__file__), 'behaviors.d',
-                        behavior['behavior_js'])
-                with open(behavior_js, encoding='utf-8') as fin:
-                    behavior['script'] = fin.read()
-            elif 'behavior_js_template' in behavior:
-                behavior_js_template = os.path.join(
-                        os.path.dirname(__file__), 'behaviors.d',
-                        behavior['behavior_js_template'])
-                with open(behavior_js_template, encoding='utf-8') as fin:
-                    behavior['template'] = string.Template(fin.read())
-
+            _behaviors = yaml.load(fin)
     return _behaviors
 
 def behavior_script(url, template_parameters=None):
@@ -111,22 +96,18 @@ def behavior_script(url, template_parameters=None):
     import re, logging
     for behavior in behaviors():
         if re.match(behavior['url_regex'], url):
-            if 'behavior_js' in behavior:
-                logging.info(
-                        'using behavior %s for %s',
-                        behavior['behavior_js'], url)
-                return behavior['script']
-            elif 'behavior_js_template' in behavior:
-                parameters = dict()
-                if 'default_parameters' in behavior:
-                    parameters.update(behavior['default_parameters'])
-                if template_parameters:
-                    parameters.update(template_parameters)
-                script = behavior['template'].safe_substitute(parameters)
-                logging.info(
-                        'using template=%s populated with parameters=%s for %s',
-                        repr(behavior['behavior_js_template']), parameters, url)
-                return script
+            parameters = dict()
+            if 'default_parameters' in behavior:
+                parameters.update(behavior['default_parameters'])
+            if template_parameters:
+                parameters.update(template_parameters)
+            template = jinja2_environment().get_template(
+                    behavior['behavior_js_template'])
+            script = template.render(parameters)
+            logging.info(
+                    'using template=%s populated with parameters=%s for %s',
+                    repr(behavior['behavior_js_template']), parameters, url)
+            return script
     return None
 
 def thread_raise(thread, exctype):
@@ -169,10 +150,21 @@ def sleep(duration):
             break
         time.sleep(min(duration - elapsed, 0.5))
 
+_jinja2_env = None
+def jinja2_environment():
+    global _jinja2_env
+    if not _jinja2_env:
+        import jinja2, json
+        _jinja2_env = jinja2.Environment(
+                loader=jinja2.PackageLoader('brozzler', 'js-templates'))
+        _jinja2_env.filters['json'] = json.dumps
+    return _jinja2_env
+
 from brozzler.site import Page, Site
 from brozzler.worker import BrozzlerWorker
 from brozzler.robots import is_permitted_by_robots
 from brozzler.frontier import RethinkDbFrontier
-from brozzler.browser import Browser, BrowserPool
+from brozzler.browser import Browser, BrowserPool, BrowsingException
 from brozzler.job import new_job, new_site, Job
+from brozzler.cli import suggest_default_chrome_exe
 

@@ -39,8 +39,6 @@ var UMBRA_THINGS_TO_CLICK_SELECTOR = 'a[href^="/browse/likes"], *[rel="theater"]
 //div[class="phm pluginLikeboxStream"] = facebook widget embedded in 3rd party pages
 var UMBRA_THINGS_TO_SCROLL_SELECTOR = 'div[class="phm pluginLikeboxStream"]';
 var NUMBER_FAILED_SCROLL_ATTEMPTS_ON_THING_TO_SCROLL_BEFORE_STOP_SCROLLING = 5;
-var UMBRA_FB_USER_NAME = "${parameter_username}";
-var UMBRA_FB_PASSWORD = "${parameter_password}";
 var umbraAlreadyClicked = {};
 var umbraAlreadyScrolledThing = {};
 var umbraScrolledThingFailedScrollAttempts = {};
@@ -172,15 +170,6 @@ var umbraIntervalFunc = function() {
         }
 }
 
-var umbraFacebookLogin = function() {
-        var emailInput = document.querySelector("form#login_form input#email");
-        var passwordInput = document.querySelector("form#login_form input#pass");
-        var loginButton = document.querySelector("form#login_form label#loginbutton > input");
-        emailInput.value=UMBRA_FB_USER_NAME;
-        passwordInput.value=UMBRA_FB_PASSWORD;
-        loginButton.click();
-}
-
 // If we haven't had anything to do (scrolled, clicked, etc) in this amount of
 // time, then we consider ourselves finished with the page.
 var UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC = 10;
@@ -202,11 +191,4 @@ if (document.querySelector("div.captcha_interstitial") != null) { // found a cap
         console.log("captcha found for " + location.href);
 }
 
-if (document.getElementById("login_form") == null || UMBRA_FB_USER_NAME.indexOf("parameter")>0 || UMBRA_FB_PASSWORD.indexOf("parameter")>0 ) {//check for unset parameters
-        console.log("missing #login_form or login credentials; maybe already logged in for " + location.href);
-        var umbraIntervalId = setInterval(umbraIntervalFunc, 200);
-}
-else {//login
-        console.log("#login_form and credentials found for " + location.href);
-        umbraFacebookLogin();
-}
+var umbraIntervalId = setInterval(umbraIntervalFunc, 200);

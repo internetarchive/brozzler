@@ -84,4 +84,10 @@ seeds:
         type: url
         required: true
 
+      username:
+        type: string
+
+      password:
+        type: string
+
       <<: *multi_level_options

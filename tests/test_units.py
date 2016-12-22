@@ -69,7 +69,7 @@ def test_find_available_port():
     sock = socket.socket()
     sock.bind(('localhost', 9800))
     sock.listen(0)
-    assert x._find_available_port(9800) == 9999
+    assert x._find_available_port(9800) >= 9990
     sock.close()
     assert x._find_available_port(9800) == 9800
 

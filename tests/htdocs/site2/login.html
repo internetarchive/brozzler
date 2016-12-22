@@ -1,0 +1,102 @@
+<html>
+    <head>
+        <title>brozzler login form test</title>
+    </head>
+    <body>
+        <form method='GET' action='01'>
+            <h3>this is a form with method=GET</h3>
+            <div>
+                <label for='01-user'>username</label>
+                <input id='01-user' type='text' name='user'>
+            </div>
+            <div>
+                <label for='01-password'>password</label>
+                <input id='01-password' type='password' name='password'>
+            </div>
+            <div><input type='submit'></div>
+        </form>
+
+        <form method='POST' action='02'>
+            <h3>this is a form with two password fields</h3>
+            <div>
+                <label for='02-user'>username</label>
+                <input id='02-user' type='text' name='user'>
+            </div>
+            <div>
+                <label for='02-password1'>password</label>
+                <input id='02-password1' type='password' name='password1'>
+            </div>
+            <div>
+                <label for='02-password2'>retype password</label>
+                <input id='02-password2' type='password' name='password2'>
+            </div>
+            <div><input type='submit'></div>
+        </form>
+
+        <form method='POST' action='03'>
+            <h3>this is a form with an extra text field</h3>
+            <div>
+                <label for='03-user'>username</label>
+                <input id='03-user' type='text' name='user'>
+            </div>
+            <div>
+                <label for='03-password'>password</label>
+                <input id='03-password' type='password' name='password'>
+            </div>
+            <div>
+                <label for='03-color'>favorite color</label>
+                <input id='03-color' type='text' name='color'>
+            </div>
+            <div><input type='submit'></div>
+        </form>
+
+        <form method='POST' action='04'>
+            <h3>this is a form with an extra textarea field</h3>
+            <div>
+                <label for='04-user'>username</label>
+                <input id='04-user' type='text' name='user'>
+            </div>
+            <div>
+                <label for='04-password'>password</label>
+                <input id='04-password' type='password' name='password'>
+            </div>
+            <div>
+                <label for='04-color'>favorite color</label>
+                <textarea id='04-color' name='color' rows='5' cols='40'>you have room for a very long favorite color here, dum dum!</textarea>
+            </div>
+            <div><input type='submit'></div>
+        </form>
+
+        <form method='POST' action='00'>
+            <h3>login with this form</h3>
+            <div>
+                <label for='00-user'>username</label>
+                <input id='00-user' type='text' name='user'>
+            </div>
+            <div>
+                <label for='00-password'>password</label>
+                <input id='00-password' type='password' name='password'>
+            </div>
+            <div>
+                radio button group with none checked
+                <label> <input type='radio' name='00-radio-unchecked' value='milk'> milk</label>
+                <label> <input type='radio' name='00-radio-unchecked' value='butter'> butter</label>
+            </div>
+            <div>
+                radio button group with one checked
+                <label><input type='radio' name='00-radio-checked' value='milk'> milk </label>
+                <label><input type='radio' name='00-radio-checked' value='butter' checked> butter</label>
+            </div>
+            <div>
+                checkboxes, one checked, one not
+                <label> <input type='checkbox' name='00-checkbox' value='milk'> milk</label>
+                <label> <input type='checkbox' name='00-checkbox' value='butter' checked> butter</label>
+            </div>
+            <input type='hidden' name='00-hidden' value='i-am-a-hidden-field-value'>
+            <div><input type='submit' name='00-submit' value='submit'></div>
+            <div><button name='00-button-button' type='button' value='button-button-value' >this is a &lt;button type='button'&gt;</button></div>
+            <div><button name='00-button-submit' type='button-submit-value'>this is a &lt;button type='submit'&gt;</button></div>
+        </form>
+
+    </body>
+</html>

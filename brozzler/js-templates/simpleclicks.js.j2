@@ -1,6 +1,6 @@
 /*
- * brozzler/behaviors.d/mouseovers.js.in - mouseovers behavior template,
- * mouseovers on elements matching templatized css selector
+ * brozzler/behaviors.d/simpleclicks.js.in - simpleclicks behavior template,
+ * clicks on elements matching templatized css selector
  *
  * Copyright (C) 2014-2016 Internet Archive
  *
@@ -20,17 +20,14 @@
 var umbraBehavior = {
 	IDLE_TIMEOUT_SEC : 10,
 	idleSince : null,
-	alreadyMouseovered : {},
+	alreadyClicked : {},
 
 	intervalFunc : function() {
-		var mouseoveredSomething = false;
+		var clickedSomething = false;
 		var somethingLeftBelow = false;
 		var somethingLeftAbove = false;
-		var cssSelector = "${mouseover_css_selector}";
-		var mouseoverUntilTimeout = "${mouseover_until_hard_timeout}";
-
-		//handle Python to JavaScript boolean conversion
-		mouseoverUntilTimeout == "True" ? mouseoverUntilTimeout = true : mouseoverUntilTimeout = false;
+		var cssSelector = {{click_css_selector|json}};
+		var clickUntilTimeout = {{click_until_hard_timeout|json}};
 
 		var iframes = document.querySelectorAll("iframe");
 		var documents = Array(iframes.length + 1);
@@ -42,29 +39,30 @@ var umbraBehavior = {
 
 		for (var j = 0; j < documents.length; j++) {
 
-			var mouseoverTargets = documents[j].querySelectorAll(cssSelector);
+			var clickTargets = documents[j].querySelectorAll(cssSelector);
 
-			for ( var i = 0; i < mouseoverTargets.length; i++) {
-				if (mouseoverTargets[i].umbraMouseovered && !mouseoverUntilTimeout) {
+			for ( var i = 0; i < clickTargets.length; i++) {
+				if (clickTargets[i].umbraClicked && !clickUntilTimeout) {
 					continue;
 				}
 
-				var where = this.aboveBelowOrOnScreen(mouseoverTargets[i]);
+				var where = this.aboveBelowOrOnScreen(clickTargets[i]);
 
 				if (where == 0) {
-					console.log("mouseovering on " + mouseoverTargets[i].outerHTML);
-					// do mouse over event on mouseover target
+					console.log("clicking on " + clickTargets[i].outerHTML);
+					// do mouse over event on click target
 					// since some urls are requsted only on
 					// this event - see
 					// https://webarchive.jira.com/browse/AITFIVE-451
 					var mouseOverEvent = document.createEvent('Events');
 					mouseOverEvent.initEvent("mouseover",true, false);
-					mouseoverTargets[i].dispatchEvent(mouseOverEvent);
-					mouseoveredSomething = true;
+					clickTargets[i].dispatchEvent(mouseOverEvent);
+					clickTargets[i].click();
+					clickedSomething = true;
 					this.idleSince = null;
-					mouseoverTargets[i].umbraMouseovered = true;
+					clickTargets[i].umbraClicked = true;
 
-					break; //break from mouseoverTargets loop, but not from iframe loop
+					break; //break from clickTargets loop, but not from iframe loop
 				} else if (where > 0) {
 					somethingLeftBelow = true;
 				} else if (where < 0) {
@@ -73,13 +71,13 @@ var umbraBehavior = {
 			}
 		}
 
-		if (!mouseoveredSomething) {
+		if (!clickedSomething) {
 			if (somethingLeftAbove) {
-				// console.log("scrolling UP because everything on this screen has been mouseovered but we missed something above");
+				// console.log("scrolling UP because everything on this screen has been clicked but we missed something above");
 				window.scrollBy(0, -500);
 				this.idleSince = null;
 			} else if (somethingLeftBelow) {
-				// console.log("scrolling because everything on this screen has been mouseovered but there's more below document.body.clientHeight="
+				// console.log("scrolling because everything on this screen has been clicked but there's more below document.body.clientHeight="
 				// 				+ document.body.clientHeight);
 				window.scrollBy(0, 200);
 				this.idleSince = null;

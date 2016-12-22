@@ -17,95 +17,98 @@
 #
 
 # first matched behavior is used, so order matters here
-behaviors:
- -
-   url_regex: '^https?://(?:www\.)?facebook\.com/.*$'
-   behavior_js_template: facebook.js.template
-   # default_parameters:
-   #    parameter_username: jdoe@example.com
-   #    parameter_password: abcd1234
-   request_idle_timeout_sec: 30
- -
-   url_regex: '^https?://(?:www\.)?marquette\.edu/.*$'
-   behavior_js: marquette_edu.js
-   request_idle_timeout_sec: 10
- -
-   url_regex: '^https?://(?:www\.)?vimeo\.com/.*$'
-   behavior_js: vimeo.js
-   request_idle_timeout_sec: 10
- -
-   url_regex: '^https?://(?:www\.)?psu24.psu.edu/.*$'
-   behavior_js: psu24.js
-   request_idle_timeout_sec: 10
- -
-   url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
-   behavior_js: instagram.js
-   request_idle_timeout_sec: 10
- -
-   url_regex: '^https?://catalogue\.noguchi\.org/index.php/LoginReg/form$'
-   behavior_js_template: noguchi.js.template
-   request_idle_timeout_sec: 10
- -
-   url_regex: '^https?://catalogue\.noguchi\.org/index.php/Search/Index/search/.*/target/ca_.*$'
-   behavior_js_template: noguchi.js.template
-   request_idle_timeout_sec: 10
- -
-   url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
-   behavior_js_template: huffpostslides.js
-   request_idle_timeout_sec: 10
- -
-   url_regex: '^https?://(?:www\.)?brooklynmuseum\.org/exhibitions/.*$'
-   behavior_js_template: simpleclicks.js.template
-   default_parameters:
-      click_css_selector: img.img-responsive
-   request_idle_timeout_sec: 10
- - # acalog https://webarchive.jira.com/browse/ARI-3775
-   url_regex: '^https?://.*[?&]catoid=[^?]*$'
-   behavior_js_template: simpleclicks.js.template
-   default_parameters:
-      click_css_selector: a[onclick]
-   request_idle_timeout_sec: 10
- - # https://webarchive.jira.com/browse/ARI-3956
-   url_regex: '^https?://(?:www\.)?usask.ca/.*$'
-   behavior_js_template: simpleclicks.js.template
-   default_parameters:
-      click_css_selector: a[id='feature-next']
-   request_idle_timeout_sec: 10
- - # https://webarchive.jira.com/browse/AITFIVE-451
-   url_regex: '^https?://(?:www\.)?soundcloud.com/.*$'
-   behavior_js_template: simpleclicks.js.template
-   default_parameters:
-      click_css_selector: button.sc-button-play, button.playButton
-   request_idle_timeout_sec: 10
- - # https://webarchive.jira.com/browse/AITFIVE-463
-   url_regex: '^https?://(?:www\.)?christophercerrone.com/.*$'
-   behavior_js_template: simpleclicks.js.template
-   default_parameters:
-      click_css_selector: button.playButton.medium
-   request_idle_timeout_sec: 10
- - # https://webarchive.jira.com/browse/ARI-4690
-   url_regex: '^https?://(?:www\.)?youtube.com/.*$'
-   behavior_js_template: simpleclicks.js.template
-   default_parameters:
-      click_css_selector: span.load-more-text
-   request_idle_timeout_sec: 10
- - # https://webarchive.jira.com/browse/ARI-4725
-   url_regex: '^https?://(?:www\.)?moma.org/.*$'
-   behavior_js_template: simpleclicks.js.template
-   default_parameters:
-      click_css_selector: button[data-more-results-bottom-button]
-      click_until_hard_timeout: True
-   request_idle_timeout_sec: 10
- - # https://webarchive.jira.com/browse/ARI-4692
-   url_regex: '^https?://(?:www\.)?fec.gov/data/.*$'
-   behavior_js: fec_gov.js
-   request_idle_timeout_sec: 10
- - url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
-   behavior_js_template: mouseovers.js.template
-   default_parameters:
-      mouseover_css_selector: .menu-item a
-   request_idle_timeout_sec: 10
- - # default fallback behavior
-   url_regex: '^.*$'
-   request_idle_timeout_sec: 10
-   behavior_js: default.js
+-
+  url_regex: '^https?://(?:www\.)?facebook\.com/.*$'
+  behavior_js_template: facebook.js
+  request_idle_timeout_sec: 30
+-
+  url_regex: '^https?://(?:www\.)?marquette\.edu/.*$'
+  behavior_js_template: marquette_edu.js
+  request_idle_timeout_sec: 10
+-
+  url_regex: '^https?://(?:www\.)?vimeo\.com/.*$'
+  behavior_js_template: vimeo.js
+  request_idle_timeout_sec: 10
+-
+  url_regex: '^https?://(?:www\.)?psu24.psu.edu/.*$'
+  behavior_js_template: psu24.js
+  request_idle_timeout_sec: 10
+-
+  url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
+  behavior_js_template: instagram.js
+  request_idle_timeout_sec: 10
+-
+  url_regex: '^https?://catalogue\.noguchi\.org/index.php/LoginReg/form$'
+  behavior_js_template: noguchi.js.template
+  request_idle_timeout_sec: 10
+-
+  url_regex: '^https?://catalogue\.noguchi\.org/index.php/Search/Index/search/.*/target/ca_.*$'
+  behavior_js_template: noguchi.js.template
+  request_idle_timeout_sec: 10
+-
+  url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
+  behavior_js_template: huffpostslides.js
+  request_idle_timeout_sec: 10
+-
+  url_regex: '^https?://(?:www\.)?brooklynmuseum\.org/exhibitions/.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: img.img-responsive
+     click_until_hard_timeout: False
+  request_idle_timeout_sec: 10
+- # acalog https://webarchive.jira.com/browse/ARI-3775
+  url_regex: '^https?://.*[?&]catoid=[^?]*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: a[onclick]
+     click_until_hard_timeout: False
+  request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-3956
+  url_regex: '^https?://(?:www\.)?usask.ca/.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: a[id='feature-next']
+     click_until_hard_timeout: False
+  request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/AITFIVE-451
+  url_regex: '^https?://(?:www\.)?soundcloud.com/.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: button.sc-button-play, button.playButton
+     click_until_hard_timeout: False
+  request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/AITFIVE-463
+  url_regex: '^https?://(?:www\.)?christophercerrone.com/.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: button.playButton.medium
+     click_until_hard_timeout: False
+  request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-4690
+  url_regex: '^https?://(?:www\.)?youtube.com/.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: span.load-more-text
+     click_until_hard_timeout: False
+  request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-4725
+  url_regex: '^https?://(?:www\.)?moma.org/.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: button[data-more-results-bottom-button]
+     click_until_hard_timeout: True
+  request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-4692
+  url_regex: '^https?://(?:www\.)?fec.gov/data/.*$'
+  behavior_js_template: fec_gov.js
+  request_idle_timeout_sec: 10
+- url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
+  behavior_js_template: mouseovers.js.j2
+  default_parameters:
+     mouseover_css_selector: .menu-item a
+     mouseover_until_hard_timeout: False
+  request_idle_timeout_sec: 10
+- # default fallback behavior
+  url_regex: '^.*$'
+  request_idle_timeout_sec: 10
+  behavior_js_template: default.js

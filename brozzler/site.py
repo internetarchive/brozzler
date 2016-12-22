@@ -95,7 +95,8 @@ class Site(brozzler.BaseDictable):
             status="ACTIVE", claimed=False, start_time=None,
             last_disclaimed=_EPOCH_UTC, last_claimed_by=None,
             last_claimed=_EPOCH_UTC, metadata={}, remember_outlinks=None,
-            cookie_db=None, user_agent=None, behavior_parameters=None):
+            cookie_db=None, user_agent=None, behavior_parameters=None,
+            username=None, password=None):
 
         self.seed = seed
         self.id = id
@@ -117,6 +118,8 @@ class Site(brozzler.BaseDictable):
         self.cookie_db = cookie_db
         self.user_agent = user_agent
         self.behavior_parameters = behavior_parameters
+        self.username = username
+        self.password = password
 
         self.scope = scope or {}
         if not "surt" in self.scope:
