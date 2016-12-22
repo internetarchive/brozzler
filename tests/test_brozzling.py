@@ -24,6 +24,7 @@ import os
 import http.server
 import threading
 import argparse
+import urllib
 
 args = argparse.Namespace()
 args.log_level = logging.INFO
