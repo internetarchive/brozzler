@@ -39,11 +39,11 @@
   request_idle_timeout_sec: 10
 -
   url_regex: '^https?://catalogue\.noguchi\.org/index.php/LoginReg/form$'
-  behavior_js_template: noguchi.js.template
+  behavior_js_template: noguchi.js.j2
   request_idle_timeout_sec: 10
 -
   url_regex: '^https?://catalogue\.noguchi\.org/index.php/Search/Index/search/.*/target/ca_.*$'
-  behavior_js_template: noguchi.js.template
+  behavior_js_template: noguchi.js.j2
   request_idle_timeout_sec: 10
 -
   url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'

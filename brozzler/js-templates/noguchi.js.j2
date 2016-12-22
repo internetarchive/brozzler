@@ -17,8 +17,8 @@
  * limitations under the License.
  */
 
-var UMBRA_N_USER_NAME = "${parameter_username}";
-var UMBRA_N_PASSWORD = "${parameter_password}";
+var UMBRA_N_USER_NAME = {{parameter_username|json}};
+var UMBRA_N_PASSWORD = {{parameter_password|json}};
 
 var umbraState = {'idleSince': null};
 var re = /(?:Previous){0,1}\s+(page\s(\d+)\/\d+)\s+(?:Next){0,1}/;
