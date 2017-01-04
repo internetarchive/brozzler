@@ -109,6 +109,9 @@ class BrozzlerWorker:
         self._browsing_threads = set()
         self._browsing_threads_lock = threading.Lock()
 
+        self._thread = None
+        self._start_stop_lock = threading.Lock()
+
     def _proxy(self, site):
         if site.proxy:
             return site.proxy
@@ -457,4 +460,29 @@ class BrozzlerWorker:
             thredz = set(self._browsing_threads)
             for th in thredz:
                 th.join()
+
+    def start(self):
+        with self._start_stop_lock:
+            if self._thread:
+                self.logger.warn(
+                        'ignoring start request because self._thread is '
+                        'not None')
+                return
+            self._thread = threading.Thread(
+                    target=self.run, name="BrozzlerWorker")
+            self._thread.start()
+
+    def shutdown_now(self):
+        self.stop()
+
+    def stop(self):
+        with self._start_stop_lock:
+            if self._thread and self._thread.is_alive():
+                self.logger.info("brozzler worker shutting down")
+                brozzler.thread_raise(self._thread, brozzler.ShutdownRequested)
+                self._thread.join()
+                self._thread = None
+
+    def is_alive(self):
+        return self._thread and self._thread.is_alive()
 
