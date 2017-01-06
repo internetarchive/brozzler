@@ -75,8 +75,6 @@ def new_job(frontier, job_conf):
     sites = []
     for seed_conf in job_conf["seeds"]:
         merged_conf = merge(seed_conf, job_conf)
-        if "login" in merged_conf and "metadata" in merged_conf:
-            merged_conf["metadata"]["login"] = merged_conf["login"]
         site = brozzler.Site(
                 job_id=job.id, seed=merged_conf["url"],
                 scope=merged_conf.get("scope"),
@@ -89,7 +87,9 @@ def new_job(frontier, job_conf):
                 metadata=merged_conf.get("metadata"),
                 remember_outlinks=merged_conf.get("remember_outlinks"),
                 user_agent=merged_conf.get("user_agent"),
-                behavior_parameters=merged_conf.get("behavior_parameters"))
+                behavior_parameters=merged_conf.get("behavior_parameters"),
+                username=merged_conf.get("username"),
+                password=merged_conf.get("password"))
         sites.append(site)
 
     # insert all the sites into database before the job

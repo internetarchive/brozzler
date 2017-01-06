@@ -119,6 +119,10 @@ class WebsockReceiverThread(threading.Thread):
 
         self.is_open = False
         self.got_page_load_event = None
+        self.reached_limit = None
+
+        self.on_request = None
+        self.on_response = None
 
         self._result_messages = {}
 
@@ -178,14 +182,39 @@ class WebsockReceiverThread(threading.Thread):
         # resume execution
         self.websock.send(json.dumps(dict(id=0, method='Debugger.resume')))
 
+    def _network_response_received(self, message):
+        if (message['params']['response']['status'] == 420
+                and 'Warcprox-Meta' in CaseInsensitiveDict(
+                    message['params']['response']['headers'])):
+            if not self.reached_limit:
+                warcprox_meta = json.loads(CaseInsensitiveDict(
+                    message['params']['response']['headers'])['Warcprox-Meta'])
+                self.reached_limit = brozzler.ReachedLimit(
+                        warcprox_meta=warcprox_meta)
+                self.logger.info('reached limit %s', self.reached_limit)
+                brozzler.thread_raise(
+                        self.calling_thread, brozzler.ReachedLimit)
+            else:
+                self.logger.info(
+                        'reached limit but self.reached_limit is already set, '
+                        'assuming the calling thread is already handling this',
+                        self.reached_limit)
+        if self.on_response:
+            self.on_response(message)
+
     def _handle_message(self, websock, json_message):
         message = json.loads(json_message)
         if 'method' in message:
             if message['method'] == 'Page.loadEventFired':
                 self.got_page_load_event = datetime.datetime.utcnow()
+            elif message['method'] == 'Network.responseReceived':
+                self._network_response_received(message)
+            elif message['method'] == 'Network.requestWillBeSent':
+                if self.on_request:
+                    self.on_request(message)
             elif message['method'] == 'Debugger.paused':
                 self._debugger_paused(message)
-            elif message["method"] == "Inspector.targetCrashed":
+            elif message['method'] == 'Inspector.targetCrashed':
                 self.logger.error(
                         '''chrome tab went "aw snap" or "he's dead jim"!''')
                 brozzler.thread_raise(self.calling_thread, BrowsingException)
@@ -375,6 +404,10 @@ class Browser:
         if self.is_browsing:
             raise BrowsingException('browser is already busy browsing a page')
         self.is_browsing = True
+        if on_request:
+            self.websock_thread.on_request = on_request
+        if on_response:
+            self.websock_thread.on_response = on_response
         try:
             self.navigate_to_page(
                     page_url, extra_headers=extra_headers,
@@ -397,11 +430,17 @@ class Browser:
             ##     outlinks += retrieve_outlinks (60 sec)
             final_page_url = self.url()
             return final_page_url, outlinks
+        except brozzler.ReachedLimit:
+            # websock_thread has stashed the ReachedLimit exception with
+            # more information, raise that one
+            raise self.websock_thread.reached_limit
         except websocket.WebSocketConnectionClosedException as e:
             self.logger.error('websocket closed, did chrome die?')
             raise BrowsingException(e)
         finally:
             self.is_browsing = False
+            self.websock_thread.on_request = None
+            self.websock_thread.on_response = None
 
     def navigate_to_page(
             self, page_url, extra_headers=None, user_agent=None, timeout=300):
