@@ -136,14 +136,16 @@ class Chrome:
             self._home_tmpdir.name, 'chrome-user-data')
         if cookie_db:
             self._init_cookie_db(cookie_db)
+        self._shutdown.clear()
 
         new_env = os.environ.copy()
         new_env['HOME'] = self._home_tmpdir.name
         self.port = self._find_available_port(self.port)
         chrome_args = [
-                self.chrome_exe, '--use-mock-keychain', # mac thing
-                '--user-data-dir=%s' % self._chrome_user_data_dir,
+                self.chrome_exe,
                 '--remote-debugging-port=%s' % self.port,
+                '--use-mock-keychain', # mac thing
+                '--user-data-dir=%s' % self._chrome_user_data_dir,
                 '--disable-web-sockets', '--disable-cache',
                 '--window-size=1100,900', '--no-default-browser-check',
                 '--disable-first-run-ui', '--no-first-run',
