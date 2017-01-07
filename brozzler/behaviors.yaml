@@ -93,7 +93,7 @@ behaviors:
    behavior_js_template: simpledo.js.template
    default_parameters:
       sdo_css_selector: .menu-item a
-	  sdo_action: mouseover
+      sdo_action: mouseover
    request_idle_timeout_sec: 10
  - # default fallback behavior
    url_regex: '^.*$'
