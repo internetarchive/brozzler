@@ -26,12 +26,9 @@ var umbraBehavior = {
 		var didSomething = false;
 		var somethingLeftBelow = false;
 		var somethingLeftAbove = false;
-		var cssSelector = "${sdo_css_selector}";
-		var doAction = "${sdo_action}"; // currently supports click, mouseover
-		var doUntilTimeout = "${sdo_until_hard_timeout}";
-
-		//handle Python to JavaScript boolean conversion
-		doUntilTimeout == "True" ? doUntilTimeout = true : doUntilTimeout = false;
+		var cssSelector = {{sdo_css_selector}};
+		var doAction = {{sdo_action}}; // currently supports click, mouseover
+		var doUntilTimeout = {{sdo_until_hard_timeout}};
 
 		var iframes = document.querySelectorAll("iframe");
 		var documents = Array(iframes.length + 1);
