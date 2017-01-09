@@ -6,7 +6,8 @@ var __brzl_tryLogin = function() {
         if (form.method != 'post') {
             continue;
         }
-        var usernameField, passwordField;
+        var usernameField = undefined;
+        var passwordField = undefined;
         for (var j = 0; j < form.elements.length; j++) {
             var field = form.elements[j];
             if (field.type == 'text' || field.type == 'email') {
