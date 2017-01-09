@@ -39,12 +39,15 @@ class Url:
     @property
     def surt(self):
         if not self._surt:
-            hurl = surt.handyurl.parse(self.url)
-            surt.GoogleURLCanonicalizer.canonicalize(hurl)
-            hurl.query = None
-            hurl.hash = None
-            # XXX chop off path after last slash??
-            self._surt = hurl.getURLString(surt=True, trailing_comma=True)
+            try:
+                hurl = surt.handyurl.parse(self.url)
+                surt.GoogleURLCanonicalizer.canonicalize(hurl)
+                hurl.query = None
+                hurl.hash = None
+                # XXX chop off path after last slash??
+                self._surt = hurl.getURLString(surt=True, trailing_comma=True)
+            except Exception as e:
+                logging.warn('problem surting %s - %s', repr(self.url), e)
         return self._surt
 
     @property
@@ -149,7 +152,9 @@ class Site(brozzler.BaseDictable):
             u = url
 
         might_accept = False
-        if not u.surt.startswith("http://") and not u.surt.startswith("https://"):
+        if not u.surt:
+            return False
+        elif not u.surt.startswith("http://") and not u.surt.startswith("https://"):
             # XXX doesn't belong here maybe (where? worker ignores unknown
             # schemes?)
             return False
