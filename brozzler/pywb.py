@@ -84,12 +84,9 @@ class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
         end_key = cdx_query.end_key.decode('utf-8')
         reql = self.r.table(self.table).between(
                 [start_key[:150], rethinkdb.minval],
-                [end_key[:150]+'!', rethinkdb.maxval],
-                index='abbr_canon_surt_timestamp')
+                [end_key[:150], rethinkdb.maxval],
+                index='abbr_canon_surt_timestamp', right_bound='closed')
         reql = reql.order_by(index='abbr_canon_surt_timestamp')
-
-        # filters have to come after order_by apparently
-
         # TODO support for POST, etc
         # http_method='WARCPROX_WRITE_RECORD' for screenshots, thumbnails
         reql = reql.filter(
@@ -99,10 +96,8 @@ class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
         reql = reql.filter(
                 lambda capture: (capture['canon_surt'] >= start_key)
                                  & (capture['canon_surt'] < end_key))
-
         if cdx_query.limit:
             reql = reql.limit(cdx_query.limit)
-
         logging.debug('rethinkdb query: %s', reql)
         results = reql.run()
         return results
