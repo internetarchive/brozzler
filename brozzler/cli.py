@@ -381,7 +381,7 @@ def brozzler_list_jobs():
     reql = r.table('jobs').order_by('id')
     if not args.all:
         reql = reql.filter({'status': 'ACTIVE'})
-    logging.debug('rethinkdb query: %s', reql)
+    logging.debug('querying rethinkdb: %s', reql)
     results = reql.run()
     for result in results:
         print(json.dumps(result, cls=Jsonner, indent=2))
@@ -399,7 +399,7 @@ def brozzler_list_sites():
                 'list only jobless sites'))
     group.add_argument(
             '--job', dest='job', metavar='JOB_ID', help=(
-                'list only sites for the given job'))
+                'list only sites for the supplied job'))
     _add_rethinkdb_options(arg_parser)
     _add_common_options(arg_parser)
 
@@ -420,13 +420,76 @@ def brozzler_list_sites():
         reql = reql.filter(~r.row.has_fields('job_id'))
     if not args.all:
         reql = reql.filter({'status': 'ACTIVE'})
-    logging.debug('rethinkdb query: %s', reql)
+    logging.debug('querying rethinkdb: %s', reql)
     results = reql.run()
     for result in results:
         print(json.dumps(result, cls=Jsonner, indent=2))
 
 def brozzler_list_pages():
-    raise Exception('not implemented')
+    arg_parser = argparse.ArgumentParser(
+            prog=os.path.basename(sys.argv[0]),
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    group = arg_parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+            '--job', dest='job', metavar='JOB_ID', help=(
+                'list pages for all sites of the supplied job'))
+    group.add_argument(
+            '--site', dest='site', metavar='SITE', help=(
+                'list pages of the supplied site'))
+    group = arg_parser.add_mutually_exclusive_group()
+    group.add_argument(
+            '--queued', dest='queued', action='store_true', help=(
+                'limit only queued pages'))
+    group.add_argument(
+            '--brozzled', dest='brozzled', action='store_true', help=(
+                'limit only pages that have already been brozzled'))
+    group.add_argument(
+            '--claimed', dest='claimed', action='store_true', help=(
+                'limit only pages that are currently claimed by a brozzler '
+                'worker'))
+    _add_rethinkdb_options(arg_parser)
+    _add_common_options(arg_parser)
+
+    args = arg_parser.parse_args(args=sys.argv[1:])
+    _configure_logging(args)
+
+    r = rethinkstuff.Rethinker(
+            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    if args.job:
+        try:
+            job_id = int(args.job)
+        except ValueError:
+            job_id = args.job
+        reql = r.table('sites').get_all(job_id, index='job_id')['id']
+        logging.debug('querying rethinkb: %s', reql)
+        site_ids = reql.run()
+    else:
+        try:
+            site_ids = [int(args.site)]
+        except ValueError:
+            site_ids = [args.site]
+
+    for site_id in site_ids:
+        reql = r.table('pages')
+        if args.queued:
+            reql = reql.between(
+                    [site_id, 0, r.minval], [site_id, 0, r.maxval],
+                    index='least_hops')
+        elif args.brozzled:
+            reql = reql.between(
+                    [site_id, 1, r.minval], [site_id, r.maxval, r.maxval],
+                    index='least_hops')
+        else:
+            reql = reql.between(
+                    [site_id, 0, r.minval], [site_id, r.maxval, r.maxval],
+                    index='least_hops')
+        reql = reql.order_by(index="least_hops")
+        if args.claimed:
+            reql = reql.filter({'claimed': True})
+        logging.debug('querying rethinkb: %s', reql)
+        results = reql.run()
+        for result in results:
+            print(json.dumps(result, cls=Jsonner, indent=2))
 
 def brozzler_list_captures():
     '''
@@ -467,7 +530,7 @@ def brozzler_list_captures():
                 [sha1base32, rethinkdb.minval, rethinkdb.minval],
                 [sha1base32, rethinkdb.maxval, rethinkdb.maxval],
                 index='sha1_warc_type')
-        logging.debug('rethinkdb query: %s', reql)
+        logging.debug('querying rethinkdb: %s', reql)
         results = reql.run()
         for result in results:
             print(json.dumps(result, cls=Jsonner, indent=2))
@@ -491,7 +554,7 @@ def brozzler_list_captures():
         reql = reql.filter(
                 lambda capture: (capture['canon_surt'] >= key)
                                  & (capture['canon_surt'] <= end_key))
-        logging.debug('rethinkdb query: %s', reql)
+        logging.debug('querying rethinkdb: %s', reql)
         results = reql.run()
         for result in results:
             print(json.dumps(result, cls=Jsonner, indent=2))
