@@ -36,6 +36,7 @@ import traceback
 import warnings
 import yaml
 import shutil
+import base64
 
 def _add_common_options(arg_parser):
     arg_parser.add_argument(
@@ -353,6 +354,80 @@ def brozzler_ensure_tables():
     # sites, pages, jobs tables
     brozzler.frontier.RethinkDbFrontier(r)
 
+class Jsonner(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
+            return o.isoformat()
+        elif isinstance(o, bytes):
+            return base64.b64encode(o).decode('ascii')
+        else:
+            return json.JSONEncoder.default(self, o)
+
+def brozzler_list_jobs():
+    arg_parser = argparse.ArgumentParser(
+            prog=os.path.basename(sys.argv[0]),
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    arg_parser.add_argument(
+            '-a', '--all', dest='all', action='store_true', help=(
+                'list all jobs (by default, only active jobs are listed)'))
+    _add_rethinkdb_options(arg_parser)
+    _add_common_options(arg_parser)
+
+    args = arg_parser.parse_args(args=sys.argv[1:])
+    _configure_logging(args)
+
+    r = rethinkstuff.Rethinker(
+            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    reql = r.table('jobs').order_by('id')
+    if not args.all:
+        reql = reql.filter({'status': 'ACTIVE'})
+    logging.debug('rethinkdb query: %s', reql)
+    results = reql.run()
+    for result in results:
+        print(json.dumps(result, cls=Jsonner, indent=2))
+
+def brozzler_list_sites():
+    arg_parser = argparse.ArgumentParser(
+            prog=os.path.basename(sys.argv[0]),
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    arg_parser.add_argument(
+            '-a', '--all', dest='all', action='store_true', help=(
+                'list all sites (by default, only active sites are listed)'))
+    group = arg_parser.add_mutually_exclusive_group()
+    group.add_argument(
+            '--jobless', dest='jobless', action='store_true', help=(
+                'list only jobless sites'))
+    group.add_argument(
+            '--job', dest='job', metavar='JOB_ID', help=(
+                'list only sites for the given job'))
+    _add_rethinkdb_options(arg_parser)
+    _add_common_options(arg_parser)
+
+    args = arg_parser.parse_args(args=sys.argv[1:])
+    _configure_logging(args)
+
+    r = rethinkstuff.Rethinker(
+            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+
+    reql = r.table('sites')
+    if args.job:
+        try:
+            job_id = int(args.job)
+        except ValueError:
+            job_id = args.job
+        reql = reql.get_all(job_id, index='job_id')
+    elif args.jobless:
+        reql = reql.filter(~r.row.has_fields('job_id'))
+    if not args.all:
+        reql = reql.filter({'status': 'ACTIVE'})
+    logging.debug('rethinkdb query: %s', reql)
+    results = reql.run()
+    for result in results:
+        print(json.dumps(result, cls=Jsonner, indent=2))
+
+def brozzler_list_pages():
+    raise Exception('not implemented')
+
 def brozzler_list_captures():
     '''
     Handy utility for looking up entries in the rethinkdb "captures" table by
@@ -380,12 +455,6 @@ def brozzler_list_captures():
 
     r = rethinkstuff.Rethinker(
             args.rethinkdb_servers.split(','), args.rethinkdb_db)
-
-    class Jsonner(json.JSONEncoder):
-        def default(self, o):
-            if isinstance(o, datetime.datetime):
-                return o.isoformat()
-            return json.JSONEncoder.default(self, o)
 
     if args.url_or_sha1[:5] == 'sha1:':
         if args.prefix:

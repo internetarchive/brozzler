@@ -32,7 +32,7 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.1b9.dev162',
+        version='1.1b9.dev163',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
@@ -53,6 +53,9 @@ setuptools.setup(
                 'brozzler-worker=brozzler.cli:brozzler_worker',
                 'brozzler-ensure-tables=brozzler.cli:brozzler_ensure_tables',
                 'brozzler-list-captures=brozzler.cli:brozzler_list_captures',
+                'brozzler-list-jobs=brozzler.cli:brozzler_list_jobs',
+                'brozzler-list-sites=brozzler.cli:brozzler_list_sites',
+                'brozzler-list-pages=brozzler.cli:brozzler_list_pages',
                 'brozzler-dashboard=brozzler.dashboard:main',
                 'brozzler-easy=brozzler.easy:main',
                 'brozzler-wayback=brozzler.pywb:main',
