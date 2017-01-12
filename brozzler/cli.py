@@ -364,6 +364,11 @@ def brozzler_list_captures():
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(sys.argv[0]),
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    arg_parser.add_argument(
+            '-p', '--prefix', dest='prefix', action='store_true', help=(
+                'use prefix match for url (n.b. may not work as expected if '
+                'searching key has query string because canonicalization can '
+                'reorder query parameters)'))
     _add_rethinkdb_options(arg_parser)
     _add_common_options(arg_parser)
     arg_parser.add_argument(
@@ -383,36 +388,40 @@ def brozzler_list_captures():
             return json.JSONEncoder.default(self, o)
 
     if args.url_or_sha1[:5] == 'sha1:':
-        raise Exception('not implemented')
-        # def find_response_by_digest(self, algo, raw_digest, bucket="__unspecified__"):
-        #     if algo != "sha1":
-        #         raise Exception(
-        #                 "digest type is %s but big captures table is indexed by "
-        #                 "sha1" % algo)
-        #     sha1base32 = base64.b32encode(raw_digest).decode("utf-8")
-        #     results_iter = self.r.table(self.table).get_all([sha1base32, "response", bucket], index="sha1_warc_type").run()
-        #     results = list(results_iter)
-        #     if len(results) > 0:
-        #         if len(results) > 1:
-        #             self.logger.debug("expected 0 or 1 but found %s results for sha1base32=%s bucket=%s (will use first result)", len(results), sha1base32, bucket)
-        #         result = results[0]
-        #     else:
-        #         result = None
-        #     self.logger.debug("returning %s for sha1base32=%s bucket=%s",
-        #                       result, sha1base32, bucket)
-        #     return result
+        if args.prefix:
+            logging.warn(
+                    'ignoring supplied --prefix option which does not apply '
+                    'to lookup by sha1')
+        # assumes it's already base32 (XXX could detect if hex and convert)
+        sha1base32 = args.url_or_sha1[5:].upper()
+        reql = r.table('captures').between(
+                [sha1base32, rethinkdb.minval, rethinkdb.minval],
+                [sha1base32, rethinkdb.maxval, rethinkdb.maxval],
+                index='sha1_warc_type')
+        logging.debug('rethinkdb query: %s', reql)
+        results = reql.run()
+        for result in results:
+            print(json.dumps(result, cls=Jsonner, indent=2))
     else:
         key = surt.surt(
                 args.url_or_sha1, trailing_comma=True, host_massage=False,
                 with_scheme=True)
+        abbr_start_key = key[:150]
+        if args.prefix:
+            # surt is necessarily ascii and \x7f is the last ascii character
+            abbr_end_key = key[:150] + '\x7f'
+            end_key = key + '\x7f'
+        else:
+            abbr_end_key = key[:150]
+            end_key = key
         reql = r.table('captures').between(
-                [key[:150], rethinkdb.minval],
-                [key[:150]+'!', rethinkdb.maxval],
-                index='abbr_canon_surt_timestamp')
+                [abbr_start_key, rethinkdb.minval],
+                [abbr_end_key, rethinkdb.maxval],
+                index='abbr_canon_surt_timestamp', right_bound='closed')
         reql = reql.order_by(index='abbr_canon_surt_timestamp')
         reql = reql.filter(
                 lambda capture: (capture['canon_surt'] >= key)
-                                 & (capture['canon_surt'] <= key))
+                                 & (capture['canon_surt'] <= end_key))
         logging.debug('rethinkdb query: %s', reql)
         results = reql.run()
         for result in results:
