@@ -202,6 +202,13 @@ class WebsockReceiverThread(threading.Thread):
         if self.on_response:
             self.on_response(message)
 
+    def _javascript_dialog_opening(self, message):
+        self.logger.info('javascript dialog opened: %s', message)
+        self.websock.send(
+                json.dumps(dict(
+                    id=0, method='Page.handleJavaScriptDialog',
+                    params={'accept': True})))
+
     def _handle_message(self, websock, json_message):
         message = json.loads(json_message)
         if 'method' in message:
@@ -223,6 +230,8 @@ class WebsockReceiverThread(threading.Thread):
                         '%s console.%s %s', self.websock.url,
                         message['params']['message']['level'],
                         message['params']['message']['text'])
+            elif message['method'] == 'Page.javascriptDialogOpening':
+                self._javascript_dialog_opening(message)
             # else:
             #     self.logger.debug("%s %s", message["method"], json_message)
         elif 'result' in message:
