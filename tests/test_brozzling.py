@@ -114,7 +114,6 @@ def test_on_response(httpd):
     url = 'http://localhost:%s/site3/page.html' % httpd.server_port
     with brozzler.Browser(chrome_exe=chrome_exe) as browser:
         browser.browse_page(url, on_response=on_response)
-        browser.browse_page(url)
     assert response_urls[0] == 'http://localhost:%s/site3/page.html' % httpd.server_port
     assert response_urls[1] == 'http://localhost:%s/site3/brozzler.svg' % httpd.server_port
     assert response_urls[2] == 'http://localhost:%s/favicon.ico' % httpd.server_port
@@ -126,3 +125,20 @@ def test_420(httpd):
         with pytest.raises(brozzler.ReachedLimit) as excinfo:
             browser.browse_page(url)
         assert excinfo.value.warcprox_meta == WARCPROX_META_420
+
+def test_js_dialogs(httpd):
+    chrome_exe = brozzler.suggest_default_chrome_exe()
+    url = 'http://localhost:%s/site4/alert.html' % httpd.server_port
+    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        # before commit d2ed6b97a24 these would hang and eventually raise
+        # brozzler.browser.BrowsingTimeout, which would cause this test to fail
+        browser.browse_page(
+                'http://localhost:%s/site4/alert.html' % httpd.server_port)
+        browser.browse_page(
+                'http://localhost:%s/site4/confirm.html' % httpd.server_port)
+        browser.browse_page(
+                'http://localhost:%s/site4/prompt.html' % httpd.server_port)
+        # XXX print dialog unresolved
+        # browser.browse_page(
+        #         'http://localhost:%s/site4/print.html' % httpd.server_port)
+
