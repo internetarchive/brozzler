@@ -52,8 +52,8 @@ app.logger.setLevel(logging.INFO)
 # configure with environment variables
 SETTINGS = {
     'RETHINKDB_SERVERS': os.environ.get(
-        'RETHINKDB_SERVERS', 'localhost').split(','),
-    'RETHINKDB_DB': os.environ.get('RETHINKDB_DB', 'brozzler'),
+        'BROZZLER_RETHINKDB_SERVERS', 'localhost').split(','),
+    'RETHINKDB_DB': os.environ.get('BROZZLER_RETHINKDB_DB', 'brozzler'),
     'WAYBACK_BASEURL': os.environ.get(
         'WAYBACK_BASEURL', 'http://localhost:8091/brozzler'),
 }
@@ -246,10 +246,11 @@ def main():
             epilog=(
                 'brozzler-dashboard has no command line options, but can be '
                 'configured using the following environment variables:\n\n'
-                '  RETHINKDB_SERVERS   rethinkdb servers, e.g. db0.foo.org,'
-                'db0.foo.org:38015,db1.foo.org (default: localhost)\n'
-                '  RETHINKDB_DB        rethinkdb database name (default: '
-                'brozzler)\n'
+                '  BROZZLER_RETHINKDB_SERVERS   rethinkdb servers, e.g. '
+                'db0.foo.org,db0.foo.org:38015,db1.foo.org (default: '
+                'localhost)\n'
+                '  BROZZLER_RETHINKDB_DB        rethinkdb database name '
+                '(default: brozzler)\n'
                 '  WAYBACK_BASEURL     base url for constructing wayback '
                 'links (default http://localhost:8091/brozzler)'))
     args = arg_parser.parse_args(args=sys.argv[1:])
