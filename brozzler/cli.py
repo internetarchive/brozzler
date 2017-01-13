@@ -58,13 +58,21 @@ def _add_common_options(arg_parser):
 
 def _add_rethinkdb_options(arg_parser):
     arg_parser.add_argument(
-            '--rethinkdb-servers', dest='rethinkdb_servers',
-            default='localhost', help=(
+            '--rethinkdb-servers', dest='rethinkdb_servers', help=(
                 'rethinkdb servers, e.g. '
-                'db0.foo.org,db0.foo.org:38015,db1.foo.org'))
+                'db0.foo.org,db0.foo.org:38015,db1.foo.org (takes precedence '
+                'over environment variable BROZZLER_RETHINKDB_SERVERS)'))
     arg_parser.add_argument(
-            '--rethinkdb-db', dest='rethinkdb_db', default='brozzler',
-            help='rethinkdb database name')
+            '--rethinkdb-db', dest='rethinkdb_db', help=(
+                'rethinkdb database name (takes precedence over '
+                'environment variable BROZZLER_RETHINKDB_DB)'))
+
+def rethinker(args):
+    servers = args.rethinkdb_servers or os.environ.get(
+            'BROZZLER_RETHINKDB_SERVERS') or 'localhost'
+    db = args.rethinkdb_db or os.environ.get(
+            'BROZZLER_RETHINKDB_DB') or 'brozzler'
+    return rethinkstuff.Rethinker(servers.split(','), db)
 
 def _add_proxy_options(arg_parser):
     arg_parser.add_argument(
@@ -197,8 +205,7 @@ def brozzler_new_job():
     args = arg_parser.parse_args(args=sys.argv[1:])
     _configure_logging(args)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(r)
     try:
         brozzler.job.new_job_file(frontier, args.job_conf_file)
@@ -260,8 +267,7 @@ def brozzler_new_site():
                 args.behavior_parameters) if args.behavior_parameters else None,
             username=args.username, password=args.password)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(","), args.rethinkdb_db)
+    r = rethinker()
     frontier = brozzler.RethinkDbFrontier(r)
     brozzler.new_site(frontier, site)
 
@@ -316,8 +322,7 @@ def brozzler_worker():
     signal.signal(signal.SIGTERM, sigterm)
     signal.signal(signal.SIGINT, sigint)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(r)
     service_registry = rethinkstuff.ServiceRegistry(r)
     worker = brozzler.worker.BrozzlerWorker(
@@ -345,8 +350,7 @@ def brozzler_ensure_tables():
     args = arg_parser.parse_args(args=sys.argv[1:])
     _configure_logging(args)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
 
     # services table
     rethinkstuff.ServiceRegistry(r)
@@ -376,8 +380,7 @@ def brozzler_list_jobs():
     args = arg_parser.parse_args(args=sys.argv[1:])
     _configure_logging(args)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
     reql = r.table('jobs').order_by('id')
     if not args.all:
         reql = reql.filter({'status': 'ACTIVE'})
@@ -406,8 +409,7 @@ def brozzler_list_sites():
     args = arg_parser.parse_args(args=sys.argv[1:])
     _configure_logging(args)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
 
     reql = r.table('sites')
     if args.job:
@@ -453,8 +455,7 @@ def brozzler_list_pages():
     args = arg_parser.parse_args(args=sys.argv[1:])
     _configure_logging(args)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
     if args.job:
         try:
             job_id = int(args.job)
@@ -516,8 +517,7 @@ def brozzler_list_captures():
     args = arg_parser.parse_args(args=sys.argv[1:])
     _configure_logging(args)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
 
     if args.url_or_sha1[:5] == 'sha1:':
         if args.prefix:
