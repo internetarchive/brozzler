@@ -204,10 +204,14 @@ class WebsockReceiverThread(threading.Thread):
 
     def _javascript_dialog_opening(self, message):
         self.logger.info('javascript dialog opened: %s', message)
+        if message['params']['type'] == 'alert':
+            accept = True
+        else:
+            accept = False
         self.websock.send(
                 json.dumps(dict(
                     id=0, method='Page.handleJavaScriptDialog',
-                    params={'accept': True})))
+                    params={'accept': accept})))
 
     def _handle_message(self, websock, json_message):
         message = json.loads(json_message)
