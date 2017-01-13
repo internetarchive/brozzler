@@ -553,6 +553,7 @@ class Browser:
                         timeout=5)
                 msg = self.websock_thread.pop_result(msg_id)
                 if (msg and 'result' in msg
+                        and not ('exceptionDetails' in msg['result'])
                         and not ('wasThrown' in msg['result']
                             and msg['result']['wasThrown'])
                         and 'result' in msg['result']
