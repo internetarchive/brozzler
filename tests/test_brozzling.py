@@ -29,7 +29,7 @@ import json
 
 args = argparse.Namespace()
 args.log_level = logging.INFO
-brozzler.cli._configure_logging(args)
+brozzler.cli.configure_logging(args)
 
 WARCPROX_META_420 = {
     'stats': {
