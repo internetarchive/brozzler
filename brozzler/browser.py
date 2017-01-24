@@ -157,7 +157,10 @@ class WebsockReceiverThread(threading.Thread):
         brozzler.thread_raise(self.calling_thread, BrowsingException)
 
     def run(self):
-        self.websock.run_forever()
+        # ping_timeout is used as the timeout for the call to select.select()
+        # in addition to its documented purpose, and must have a value to avoid
+        # hangs in certain situations
+        self.websock.run_forever(ping_timeout=0.5)
 
     def _on_message(self, websock, message):
         try:
