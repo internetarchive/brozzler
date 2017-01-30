@@ -1,7 +1,7 @@
 '''
 brozzler/site.py - classes representing sites and pages
 
-Copyright (C) 2014-2016 Internet Archive
+Copyright (C) 2014-2017 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -235,7 +235,7 @@ class Page(brozzler.BaseDictable):
             self, url, id=None, site_id=None, job_id=None, hops_from_seed=0,
             redirect_url=None, priority=None, claimed=False, brozzle_count=0,
             via_page_id=None, last_claimed_by=None, hops_off_surt=0,
-            outlinks=None, needs_robots_check=False):
+            outlinks=None, needs_robots_check=False, blocked_by_robots=None):
         self.site_id = site_id
         self.job_id = job_id
         self.url = url
@@ -248,6 +248,7 @@ class Page(brozzler.BaseDictable):
         self.hops_off_surt = hops_off_surt
         self.outlinks = outlinks
         self.needs_robots_check = needs_robots_check
+        self.blocked_by_robots = blocked_by_robots
         self._canon_hurl = None
 
         if priority is not None:
