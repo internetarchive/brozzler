@@ -2,7 +2,7 @@
 '''
 brozzler/cli.py - brozzler command line executables
 
-Copyright (C) 2014-2016 Internet Archive
+Copyright (C) 2014-2017 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,16 +38,19 @@ import yaml
 import shutil
 import base64
 
-def _add_common_options(arg_parser):
+def add_common_options(arg_parser):
     arg_parser.add_argument(
-            '-q', '--quiet', dest='log_level',
-            action='store_const', default=logging.INFO, const=logging.WARN)
+            '-q', '--quiet', dest='log_level', action='store_const',
+            default=logging.INFO, const=logging.WARN, help=(
+                'quiet logging, only warnings and errors'))
     arg_parser.add_argument(
-            '-v', '--verbose', dest='log_level',
-            action='store_const', default=logging.INFO, const=logging.DEBUG)
+            '-v', '--verbose', dest='log_level', action='store_const',
+            default=logging.INFO, const=logging.DEBUG, help=(
+                'verbose logging'))
     arg_parser.add_argument(
-            '--trace', dest='log_level',
-            action='store_const', default=logging.INFO, const=brozzler.TRACE)
+            '--trace', dest='log_level', action='store_const',
+            default=logging.INFO, const=brozzler.TRACE, help=(
+                'very verbose logging'))
     # arg_parser.add_argument(
     #         '-s', '--silent', dest='log_level', action='store_const',
     #         default=logging.INFO, const=logging.CRITICAL)
@@ -56,15 +59,26 @@ def _add_common_options(arg_parser):
             version='brozzler %s - %s' % (
                 brozzler.__version__, os.path.basename(sys.argv[0])))
 
-def _add_rethinkdb_options(arg_parser):
+def add_rethinkdb_options(arg_parser):
     arg_parser.add_argument(
             '--rethinkdb-servers', dest='rethinkdb_servers',
-            default='localhost', help=(
+            default=os.environ.get('BROZZLER_RETHINKDB_SERVERS', 'localhost'),
+            help=(
                 'rethinkdb servers, e.g. '
-                'db0.foo.org,db0.foo.org:38015,db1.foo.org'))
+                'db0.foo.org,db0.foo.org:38015,db1.foo.org (default is the '
+                'value of environment variable BROZZLER_RETHINKDB_SERVERS)'))
     arg_parser.add_argument(
-            '--rethinkdb-db', dest='rethinkdb_db', default='brozzler',
-            help='rethinkdb database name')
+            '--rethinkdb-db', dest='rethinkdb_db',
+            default=os.environ.get('BROZZLER_RETHINKDB_DB', 'brozzler'),
+            help=(
+                'rethinkdb database name (default is the value of environment '
+                'variable BROZZLER_RETHINKDB_DB)'))
+
+def rethinker(args):
+    servers = args.rethinkdb_servers or 'localhost'
+    db = args.rethinkdb_db or os.environ.get(
+            'BROZZLER_RETHINKDB_DB') or 'brozzler'
+    return rethinkstuff.Rethinker(servers.split(','), db)
 
 def _add_proxy_options(arg_parser):
     arg_parser.add_argument(
@@ -75,7 +89,7 @@ def _add_proxy_options(arg_parser):
                 'enable special features that assume the configured proxy is '
                 'warcprox'))
 
-def _configure_logging(args):
+def configure_logging(args):
     logging.basicConfig(
             stream=sys.stderr, level=args.log_level,
             format=(
@@ -107,6 +121,18 @@ def suggest_default_chrome_exe():
             return exe
     return 'chromium-browser'
 
+class BetterArgumentDefaultsHelpFormatter(
+        argparse.ArgumentDefaultsHelpFormatter):
+    '''
+    Like argparse.ArgumentDefaultsHelpFormatter but omits the default value
+    for arguments with action='store_const'.
+    '''
+    def _get_help_string(self, action):
+        if isinstance(action, argparse._StoreConstAction):
+            return action.help
+        else:
+            return super()._get_help_string(action)
+
 def brozzle_page():
     '''
     Command line utility entry point for brozzling a single page. Opens url in
@@ -115,7 +141,7 @@ def brozzle_page():
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(sys.argv[0]),
             description='brozzle-page - brozzle a single page',
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+            formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('url', metavar='URL', help='page url')
     arg_parser.add_argument(
             '-e', '--chrome-exe', dest='chrome_exe',
@@ -141,10 +167,10 @@ def brozzle_page():
             action='store_true', help=(
                 'enable special features that assume the configured proxy '
                 'is warcprox'))
-    _add_common_options(arg_parser)
+    add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])
-    _configure_logging(args)
+    configure_logging(args)
 
     behavior_parameters = {}
     if args.behavior_parameters:
@@ -191,14 +217,13 @@ def brozzler_new_job():
     arg_parser.add_argument(
             'job_conf_file', metavar='JOB_CONF_FILE',
             help='brozzler job configuration file in yaml')
-    _add_rethinkdb_options(arg_parser)
-    _add_common_options(arg_parser)
+    add_rethinkdb_options(arg_parser)
+    add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])
-    _configure_logging(args)
+    configure_logging(args)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(r)
     try:
         brozzler.job.new_job_file(frontier, args.job_conf_file)
@@ -218,7 +243,7 @@ def brozzler_new_site():
             description='brozzler-new-site - register site to brozzle',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('seed', metavar='SEED', help='seed url')
-    _add_rethinkdb_options(arg_parser)
+    add_rethinkdb_options(arg_parser)
     _add_proxy_options(arg_parser)
     arg_parser.add_argument(
             '--time-limit', dest='time_limit', default=None,
@@ -244,10 +269,10 @@ def brozzler_new_site():
     arg_parser.add_argument(
             '--password', dest='password', default=None,
             help='use this password to try to log in if a login form is found')
-    _add_common_options(arg_parser)
+    add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])
-    _configure_logging(args)
+    configure_logging(args)
 
     site = brozzler.Site(
             seed=args.seed, proxy=args.proxy,
@@ -260,8 +285,7 @@ def brozzler_new_site():
                 args.behavior_parameters) if args.behavior_parameters else None,
             username=args.username, password=args.password)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(","), args.rethinkdb_db)
+    r = rethinker()
     frontier = brozzler.RethinkDbFrontier(r)
     brozzler.new_site(frontier, site)
 
@@ -273,7 +297,7 @@ def brozzler_worker():
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(__file__),
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    _add_rethinkdb_options(arg_parser)
+    add_rethinkdb_options(arg_parser)
     arg_parser.add_argument(
             '-e', '--chrome-exe', dest='chrome_exe',
             default=suggest_default_chrome_exe(),
@@ -281,10 +305,10 @@ def brozzler_worker():
     arg_parser.add_argument(
             '-n', '--max-browsers', dest='max_browsers', default='1',
             help='max number of chrome instances simultaneously browsing pages')
-    _add_common_options(arg_parser)
+    add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])
-    _configure_logging(args)
+    configure_logging(args)
 
     def sigterm(signum, frame):
         raise brozzler.ShutdownRequested('shutdown requested (caught SIGTERM)')
@@ -316,8 +340,7 @@ def brozzler_worker():
     signal.signal(signal.SIGTERM, sigterm)
     signal.signal(signal.SIGINT, sigint)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(r)
     service_registry = rethinkstuff.ServiceRegistry(r)
     worker = brozzler.worker.BrozzlerWorker(
@@ -339,14 +362,13 @@ def brozzler_ensure_tables():
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(sys.argv[0]),
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    _add_rethinkdb_options(arg_parser)
-    _add_common_options(arg_parser)
+    add_rethinkdb_options(arg_parser)
+    add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])
-    _configure_logging(args)
+    configure_logging(args)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
 
     # services table
     rethinkstuff.ServiceRegistry(r)
@@ -370,14 +392,13 @@ def brozzler_list_jobs():
     arg_parser.add_argument(
             '-a', '--all', dest='all', action='store_true', help=(
                 'list all jobs (by default, only active jobs are listed)'))
-    _add_rethinkdb_options(arg_parser)
-    _add_common_options(arg_parser)
+    add_rethinkdb_options(arg_parser)
+    add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])
-    _configure_logging(args)
+    configure_logging(args)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
     reql = r.table('jobs').order_by('id')
     if not args.all:
         reql = reql.filter({'status': 'ACTIVE'})
@@ -400,14 +421,13 @@ def brozzler_list_sites():
     group.add_argument(
             '--job', dest='job', metavar='JOB_ID', help=(
                 'list only sites for the supplied job'))
-    _add_rethinkdb_options(arg_parser)
-    _add_common_options(arg_parser)
+    add_rethinkdb_options(arg_parser)
+    add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])
-    _configure_logging(args)
+    configure_logging(args)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
 
     reql = r.table('sites')
     if args.job:
@@ -447,14 +467,13 @@ def brozzler_list_pages():
             '--claimed', dest='claimed', action='store_true', help=(
                 'limit only pages that are currently claimed by a brozzler '
                 'worker'))
-    _add_rethinkdb_options(arg_parser)
-    _add_common_options(arg_parser)
+    add_rethinkdb_options(arg_parser)
+    add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])
-    _configure_logging(args)
+    configure_logging(args)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
     if args.job:
         try:
             job_id = int(args.job)
@@ -507,17 +526,16 @@ def brozzler_list_captures():
                 'use prefix match for url (n.b. may not work as expected if '
                 'searching key has query string because canonicalization can '
                 'reorder query parameters)'))
-    _add_rethinkdb_options(arg_parser)
-    _add_common_options(arg_parser)
+    add_rethinkdb_options(arg_parser)
+    add_common_options(arg_parser)
     arg_parser.add_argument(
             'url_or_sha1', metavar='URL_or_SHA1',
             help='url or sha1 to look up in captures table')
 
     args = arg_parser.parse_args(args=sys.argv[1:])
-    _configure_logging(args)
+    configure_logging(args)
 
-    r = rethinkstuff.Rethinker(
-            args.rethinkdb_servers.split(','), args.rethinkdb_db)
+    r = rethinker(args)
 
     if args.url_or_sha1[:5] == 'sha1:':
         if args.prefix:

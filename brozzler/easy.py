@@ -48,21 +48,14 @@ import socketserver
 
 def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
     arg_parser = argparse.ArgumentParser(
-            prog=prog, formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            description=(
+            formatter_class=brozzler.cli.BetterArgumentDefaultsHelpFormatter,
+            prog=prog, description=(
                 'brozzler-easy - easy deployment of brozzler, with '
                 'brozzler-worker, warcprox, pywb, and brozzler-dashboard all '
                 'running in a single process'))
 
     # common args
-    arg_parser.add_argument(
-            '--rethinkdb-servers', dest='rethinkdb_servers',
-            default='localhost', help=(
-                'rethinkdb servers, e.g. '
-                'db0.foo.org,db0.foo.org:38015,db1.foo.org'))
-    arg_parser.add_argument(
-            '--rethinkdb-db', dest='rethinkdb_db', default='brozzler',
-            help='rethinkdb database name')
+    brozzler.cli.add_rethinkdb_options(arg_parser)
     arg_parser.add_argument(
             '-d', '--warcs-dir', dest='warcs_dir', default='./warcs',
             help='where to write warcs')
@@ -114,18 +107,7 @@ def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
             type=int, default=8881, help='brozzler dashboard port')
 
     # common at the bottom args
-    arg_parser.add_argument(
-            '-v', '--verbose', dest='verbose', action='store_true',
-            help='verbose logging')
-    arg_parser.add_argument(
-            '-q', '--quiet', dest='quiet', action='store_true',
-            help='quiet logging (warnings and errors only)')
-    # arg_parser.add_argument(
-    #         '-s', '--silent', dest='log_level', action='store_const',
-    #         default=logging.INFO, const=logging.CRITICAL)
-    arg_parser.add_argument(
-            '--version', action='version',
-            version='brozzler %s - %s' % (brozzler.__version__, prog))
+    brozzler.cli.add_common_options(arg_parser)
 
     return arg_parser
 
@@ -284,17 +266,7 @@ class BrozzlerEasyController:
 def main():
     arg_parser = _build_arg_parser()
     args = arg_parser.parse_args(args=sys.argv[1:])
-    if args.verbose:
-        loglevel = logging.DEBUG
-    elif args.quiet:
-        loglevel = logging.WARNING
-    else:
-        loglevel = logging.INFO
-
-    logging.basicConfig(
-            level=loglevel, stream=sys.stderr, format=(
-                '%(asctime)s %(process)d %(levelname)s %(threadName)s '
-                '%(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s'))
+    brozzler.cli.configure_logging(args)
 
     controller = BrozzlerEasyController(args)
     signal.signal(signal.SIGTERM, lambda a,b: controller.stop.set())

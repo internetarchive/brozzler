@@ -177,6 +177,7 @@ class Chrome:
         json_url = 'http://localhost:%s/json' % self.port
         # make this a member variable so that kill -QUIT reports it
         self._start = time.time()
+        self._last_warning = self._start
         while True:
             try:
                 raw_json = urllib.request.urlopen(json_url, timeout=30).read()
@@ -194,11 +195,11 @@ class Chrome:
             except brozzler.ShutdownRequested:
                 raise
             except BaseException as e:
-                if int(time.time() - self._start) % 10 == 5:
+                if time.time() - self._last_warning > 30:
                     self.logger.warn(
                             'problem with %s (will keep trying until timeout '
                             'of %d seconds): %s', json_url, timeout_sec, e)
-                pass
+                    self._last_warning = time.time()
             finally:
                 if time.time() - self._start > timeout_sec:
                     self.logger.error(

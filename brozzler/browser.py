@@ -157,7 +157,10 @@ class WebsockReceiverThread(threading.Thread):
         brozzler.thread_raise(self.calling_thread, BrowsingException)
 
     def run(self):
-        self.websock.run_forever()
+        # ping_timeout is used as the timeout for the call to select.select()
+        # in addition to its documented purpose, and must have a value to avoid
+        # hangs in certain situations
+        self.websock.run_forever(ping_timeout=0.5)
 
     def _on_message(self, websock, message):
         try:
@@ -202,6 +205,17 @@ class WebsockReceiverThread(threading.Thread):
         if self.on_response:
             self.on_response(message)
 
+    def _javascript_dialog_opening(self, message):
+        self.logger.info('javascript dialog opened: %s', message)
+        if message['params']['type'] == 'alert':
+            accept = True
+        else:
+            accept = False
+        self.websock.send(
+                json.dumps(dict(
+                    id=0, method='Page.handleJavaScriptDialog',
+                    params={'accept': accept})))
+
     def _handle_message(self, websock, json_message):
         message = json.loads(json_message)
         if 'method' in message:
@@ -223,6 +237,8 @@ class WebsockReceiverThread(threading.Thread):
                         '%s console.%s %s', self.websock.url,
                         message['params']['message']['level'],
                         message['params']['message']['text'])
+            elif message['method'] == 'Page.javascriptDialogOpening':
+                self._javascript_dialog_opening(message)
             # else:
             #     self.logger.debug("%s %s", message["method"], json_message)
         elif 'result' in message:
@@ -540,6 +556,7 @@ class Browser:
                         timeout=5)
                 msg = self.websock_thread.pop_result(msg_id)
                 if (msg and 'result' in msg
+                        and not ('exceptionDetails' in msg['result'])
                         and not ('wasThrown' in msg['result']
                             and msg['result']['wasThrown'])
                         and 'result' in msg['result']

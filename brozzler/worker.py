@@ -3,7 +3,7 @@ brozzler/worker.py - BrozzlerWorker brozzles pages from the frontier, meaning
 it runs youtube-dl on them, browses them and runs behaviors if appropriate,
 scopes and adds outlinks to the frontier
 
-Copyright (C) 2014-2016 Internet Archive
+Copyright (C) 2014-2017 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -337,6 +337,7 @@ class BrozzlerWorker:
                 if (page.needs_robots_check and
                         not brozzler.is_permitted_by_robots(site, page.url)):
                     logging.warn("page %s is blocked by robots.txt", page.url)
+                    page.blocked_by_robots = True
                 else:
                     outlinks = self.brozzle_page(browser, site, page)
                     self._frontier.scope_and_schedule_outlinks(

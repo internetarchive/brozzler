@@ -1,7 +1,7 @@
 /*
  * brozzler/dashboard/static/js/app.js - brozzler dashboard angularjs code
  *
- * Copyright (C) 2014-2016 Internet Archive
+ * Copyright (C) 2014-2017 Internet Archive
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,16 +96,12 @@ brozzlerControllers.controller("WorkersListController", ["$scope", "$http",
 
 function statsSuccessCallback(site, bucket) {
     return function(data) {
-        // console.log("site = ", site);
-        // console.log("/api/stats/" + bucket + " = ", data);
         site.stats = data;
     }
 }
 
 function pageCountSuccessCallback(site, job) {
     return function(data) {
-        // console.log("site = ", site);
-        // console.log("/api/sites/" + site.id + "/page_count = ", data);
         site.page_count = data.count;
         if (job) {
             job.page_count += data.count;
@@ -115,8 +111,6 @@ function pageCountSuccessCallback(site, job) {
 
 function queuedCountSuccessCallback(site, job) {
     return function(data) {
-        // console.log("site = ", site);
-        // console.log("/api/sites/" + site.id + "/queued_count = ", data);
         site.queued_count = data.count;
         if (job) {
             job.queued_count += data.count;
@@ -129,41 +123,44 @@ function loadSiteStats($http, site, job) {
     $http.get("/api/sites/" + site.id + "/queued_count").success(queuedCountSuccessCallback(site, job));
 
     // look at Warcprox-Meta to find stats bucket
-    for (var j = 0; j < site.warcprox_meta.stats.buckets.length; j++) {
-        var bucket = site.warcprox_meta.stats.buckets[j];
-        if (typeof(bucket) == "object") {
-            bucket = bucket["bucket"];
+    try {
+        for (var j = 0; j < site.warcprox_meta.stats.buckets.length; j++) {
+            var bucket = site.warcprox_meta.stats.buckets[j];
+            if (typeof(bucket) == "object") {
+                bucket = bucket["bucket"];
+            }
+            if (bucket.indexOf("seed") >= 0) {
+                $http.get("/api/stats/" + bucket).success(statsSuccessCallback(site, bucket));
+            }
         }
-        if (bucket.indexOf("seed") >= 0) {
-            // console.log("warcprox_meta.stats.buckets[" + j + "]=" + bucket);
-            $http.get("/api/stats/" + bucket).success(statsSuccessCallback(site, bucket));
-        }
+    } catch (e) {
+        // no stats bucket for this site
     }
 }
 
 brozzlerControllers.controller("JobController", ["$scope", "$routeParams", "$http",
     function($scope, $routeParams, $http) {
         $scope.show_yaml = false;
-        // console.log('JobController');
         $http.get("/api/config").success(function(data) {
             $scope.config = data.config;
         });
         $http.get("/api/jobs/" + $routeParams.id).success(function(data) {
             $scope.job = data;
             $scope.job.page_count = $scope.job.queued_count = 0;
-            // console.log("job=", $scope.job);
-            var bucket = $scope.job.conf.warcprox_meta.stats.buckets[0];
-            if (typeof(bucket) == "object") {
-                bucket = bucket["bucket"];
+            try {
+                var bucket = $scope.job.conf.warcprox_meta.stats.buckets[0];
+                if (typeof(bucket) == "object") {
+                    bucket = bucket["bucket"];
+                }
+                $http.get("/api/stats/" + bucket).success(function(data) {
+                    $scope.job.stats = data;
+                });
+            } catch (e) {
+                // no stats bucket for this job
             }
-            $http.get("/api/stats/" + bucket).success(function(data) {
-                $scope.job.stats = data;
-                // console.log("job stats=", $scope.job.stats);
-            });
 
             $http.get("/api/jobs/" + $routeParams.id + "/sites").success(function(data) {
                 $scope.sites = data.sites;
-                // console.log("sites=", $scope.sites);
                 for (var i = 0; i < $scope.sites.length; i++) {
                     loadSiteStats($http, $scope.sites[i], $scope.job);
                 }
@@ -180,7 +177,6 @@ brozzlerControllers.controller("SiteController", ["$scope", "$routeParams", "$ht
         $scope.loading = false;
         $scope.pages = [];
         $window.addEventListener("scroll", function() {
-            // console.log("window.scrollTop=" + window.scrollTop + " window.offsetHeight=" + window.offsetHeight + " window.scrollHeight=" + window.scrollHeight);
             if ($window.innerHeight + $window.scrollY + 50 >= window.document.documentElement.scrollHeight) {
                 loadMorePages();
             }
@@ -191,10 +187,8 @@ brozzlerControllers.controller("SiteController", ["$scope", "$routeParams", "$ht
                 return;
             $scope.loading = true;
 
-            // console.log("load more! start=" + start);
             $http.get("/api/site/" + $routeParams.id + "/pages?start=" + start + "&end=" + (start+90)).then(function(response) {
                 $scope.pages = $scope.pages.concat(response.data.pages);
-                // console.log("pages = ", $scope.pages);
                 start += response.data.pages.length;
                 $scope.loading = false;
             }, function(reason) {
@@ -209,7 +203,6 @@ brozzlerControllers.controller("SiteController", ["$scope", "$routeParams", "$ht
         $http.get("/api/site/" + $routeParams.id).success(function(data) {
             $scope.site = data;
             loadSiteStats($http, $scope.site);
-            // console.log("site = ", $scope.site);
         });
         $http.get("/api/site/" + $routeParams.id + "/yaml").success(function(data) {
             $scope.site_yaml = data;

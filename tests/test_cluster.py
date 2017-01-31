@@ -3,7 +3,7 @@
 test_cluster.py - integration tests for a brozzler cluster, expects brozzler,
 warcprox, pywb, rethinkdb and other dependencies to be running already
 
-Copyright (C) 2016 Internet Archive
+Copyright (C) 2016-2017 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -257,8 +257,9 @@ def test_obey_robots(httpd):
     # check that only the one page is in rethinkdb
     pages = list(frontier.site_pages(site.id))
     assert len(pages) == 1
-    assert {page.url for page in pages} == {
-            'http://localhost:%s/site1/' % httpd.server_port}
+    page = pages[0]
+    assert page.url == 'http://localhost:%s/site1/' % httpd.server_port
+    assert page.blocked_by_robots
 
     # take a look at the captures table
     time.sleep(2)   # in case warcprox hasn't finished processing urls
