@@ -1,10 +1,10 @@
 .. image:: https://travis-ci.org/internetarchive/brozzler.svg?branch=master
     :target: https://travis-ci.org/internetarchive/brozzler
-    
+
 .. |logo| image:: https://cdn.rawgit.com/internetarchive/brozzler/1.1b5/brozzler/webconsole/static/brozzler.svg
    :width: 7%
 
-|logo| brozzler 
+|logo| brozzler
 ===============
 "browser" \| "crawler" = "brozzler"
 
@@ -139,6 +139,46 @@ To start the app, run
 
 See ``brozzler-dashboard --help`` for configuration options.
 
+Brozzler Wayback
+----------------
+
+Brozzler comes with a customized version of
+`pywb <https://github.com/ikreymer/pywb>`_ which supports using the rethinkdb
+"captures" table (populated by warcprox) as its index.
+
+To use, first install dependencies.
+
+::
+
+    pip install brozzler[easy]
+
+Write a configuration file pywb.yml.
+
+::
+
+    # 'archive_paths' should point to the output directory of warcprox
+    archive_paths: warcs/  # pywb will fail without a trailing slash
+    collections:
+      brozzler:
+        index_paths: !!python/object:brozzler.pywb.RethinkCDXSource
+          db: brozzler
+          table: captures
+          servers:
+          - localhost
+    enable_auto_colls: false
+    enable_cdx_api: true
+    framed_replay: true
+    port: 8880
+
+Run pywb like so:
+
+::
+
+    $ PYWB_CONFIG_FILE=pywb.yml brozzler-wayback
+
+Then browse http://localhost:8880/brozzler/.
+
+
 Headless Chromium
 -----------------
 
@@ -208,7 +248,7 @@ to load the plugin by adding this option to your wrapper script:
 License
 -------
 
-Copyright 2015-2016 Internet Archive
+Copyright 2015-2017 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may
 not use this software except in compliance with the License. You may

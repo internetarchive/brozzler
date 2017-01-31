@@ -285,7 +285,7 @@ def brozzler_new_site():
                 args.behavior_parameters) if args.behavior_parameters else None,
             username=args.username, password=args.password)
 
-    r = rethinker()
+    r = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(r)
     brozzler.new_site(frontier, site)
 

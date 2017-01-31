@@ -155,6 +155,20 @@ def test_brozzle_site(httpd):
         os.path.dirname(__file__), 'htdocs', 'site1', 'file1.txt'), 'rb').read()
     assert requests.get(wb_url).content == expected_payload
 
+    url = 'screenshot:%s' % page1
+    t14 = captures_by_url[url]['timestamp'].strftime('%Y%m%d%H%M%S')
+    wb_url = 'http://localhost:8880/brozzler/%s/%s' % (t14, url)
+    response = requests.get(wb_url)
+    assert response.status_code == 200
+    assert response.headers['content-type'] == 'image/jpeg'
+
+    url = 'thumbnail:%s' % page1
+    t14 = captures_by_url[url]['timestamp'].strftime('%Y%m%d%H%M%S')
+    wb_url = 'http://localhost:8880/brozzler/%s/%s' % (t14, url)
+    response = requests.get(wb_url)
+    assert response.status_code == 200
+    assert response.headers['content-type'] == 'image/jpeg'
+
 def test_warcprox_selection(httpd):
     ''' When enable_warcprox_features is true, brozzler is expected to choose
     and instance of warcprox '''
