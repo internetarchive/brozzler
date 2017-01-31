@@ -1,9 +1,9 @@
 '''
 brozzler/pywb.py - pywb customizations for brozzler including rethinkdb index,
-loading from warcs still being written to, and canonicalization rules matching
-brozzler conventions
+loading from warcs still being written to, canonicalization rules matching
+brozzler conventions, support for screenshot: and thumbnail: urls
 
-Copyright (C) 2016 Internet Archive
+Copyright (C) 2016-2017 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ try:
     import pywb.cdx.cdxobject
     import pywb.cdx.cdxserver
     import pywb.webapp.query_handler
+    import pywb.framework.basehandlers
+    import pywb.rewrite.wburl
 except ImportError as e:
     logging.critical(
             '%s: %s\n\nYou might need to run "pip install '
@@ -37,6 +39,7 @@ import rethinkdb
 import surt
 import json
 import brozzler
+import argparse
 
 class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
     def __init__(self, servers, db, table):
@@ -65,7 +68,7 @@ class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
                 'url': record['url'],
                 'status': str(record['response_code']),
                 'digest': record['sha1base32'],
-                'length': str(record['record_length']),
+                'length': str(record.get('record_length', '-')),
                 'offset': str(record['offset']),
                 'filename': record['filename'],
             }
@@ -120,8 +123,7 @@ class TheGoodUrlCanonicalizer(object):
             # logging.debug('%s -> %s', url, key)
             return key
         except Exception as e:
-            raise pywb.utils.canonicalize.UrlCanonicalizeException(
-                    'Invalid Url: ' + url)
+            return url
 
     def replace_default_canonicalizer():
         '''Replace parent class of CustomUrlCanonicalizer with this class.'''
@@ -193,11 +195,90 @@ def support_in_progress_warcs():
         return results
     pywb.warc.pathresolvers.PrefixResolver.__call__ = _prefix_resolver_call
 
+class SomeWbUrl(pywb.rewrite.wburl.WbUrl):
+    def __init__(self, orig_url):
+        import re
+        import six
+
+        from six.moves.urllib.parse import urlsplit, urlunsplit
+        from six.moves.urllib.parse import quote_plus, quote, unquote_plus
+
+        from pywb.utils.loaders import to_native_str
+        from pywb.rewrite.wburl import WbUrl
+
+        pywb.rewrite.wburl.BaseWbUrl.__init__(self)
+
+        if six.PY2 and isinstance(orig_url, six.text_type):
+            orig_url = orig_url.encode('utf-8')
+            orig_url = quote(orig_url)
+
+        self._original_url = orig_url
+
+        if not self._init_query(orig_url):
+            if not self._init_replay(orig_url):
+                raise Exception('Invalid WbUrl: ', orig_url)
+
+        new_uri = WbUrl.to_uri(self.url)
+
+        self._do_percent_encode = True
+
+        self.url = new_uri
+
+        # begin brozzler changes
+        if (self.url.startswith('urn:') or self.url.startswith('screenshot:')
+                or self.url.startswith('thumbnail:')):
+            return
+        # end brozzler changes
+
+        # protocol agnostic url -> http://
+        # no protocol -> http://
+        #inx = self.url.find('://')
+        inx = -1
+        m = self.SCHEME_RX.match(self.url)
+        if m:
+            inx = m.span(1)[0]
+
+        #if inx < 0:
+            # check for other partially encoded variants
+        #    m = self.PARTIAL_ENC_RX.match(self.url)
+        #    if m:
+        #        len_ = len(m.group(0))
+        #        self.url = (urllib.unquote_plus(self.url[:len_]) +
+        #                    self.url[len_:])
+        #        inx = self.url.find(':/')
+
+        if inx < 0:
+            self.url = self.DEFAULT_SCHEME + self.url
+        else:
+            inx += 2
+            if inx < len(self.url) and self.url[inx] != '/':
+                self.url = self.url[:inx] + '/' + self.url[inx:]
+
+def _get_wburl_type(self):
+    return SomeWbUrl
+
+def monkey_patch_wburl():
+    pywb.framework.basehandlers.WbUrlHandler.get_wburl_type = _get_wburl_type
+
+class BrozzlerWaybackCli(pywb.apps.cli.WaybackCli):
+    def _extend_parser(self, arg_parser):
+        super()._extend_parser(arg_parser)
+        arg_parser._actions[4].help = argparse.SUPPRESS # --autoindex
+        arg_parser.formatter_class = argparse.RawDescriptionHelpFormatter
+        arg_parser.epilog = '''
+Run pywb like so:
+
+    $ PYWB_CONFIG_FILE=pywb.yml brozzler-wayback
+
+See README.rst for more information.
+'''
+
 def main(argv=sys.argv):
     brozzler.pywb.TheGoodUrlCanonicalizer.replace_default_canonicalizer()
     brozzler.pywb.TheGoodUrlCanonicalizer.monkey_patch_dsrules_init()
     brozzler.pywb.support_in_progress_warcs()
-    wayback_cli = pywb.apps.cli.WaybackCli(
+    brozzler.pywb.monkey_patch_wburl()
+    wayback_cli = BrozzlerWaybackCli(
             args=argv[1:], default_port=8880,
             desc=('brozzler-wayback - pywb wayback (monkey-patched for use '
                   'with brozzler)'))
