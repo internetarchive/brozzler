@@ -64,12 +64,14 @@ class BaseDictable:
     def __repr__(self):
         return "{}(**{})".format(self.__class__.__name__, self.to_dict())
 
-def fixup(url):
+def fixup(url, hash_strip=False):
     '''
     Does rudimentary canonicalization, such as converting IDN to punycode.
     '''
     import surt
     hurl = surt.handyurl.parse(url)
+    if hash_strip:
+        hurl.hash = None
     # handyurl.parse() already lowercases the scheme via urlsplit
     if hurl.host:
         hurl.host = hurl.host.encode('idna').decode('ascii').lower()
