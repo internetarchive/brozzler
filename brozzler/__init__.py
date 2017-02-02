@@ -79,18 +79,18 @@ def fixup(url, hash_strip=False):
 
 # monkey-patch log level TRACE
 TRACE = 5
-import logging, sys
+import logging as _logging
 def _logging_trace(msg, *args, **kwargs):
-    if len(logging.root.handlers) == 0:
+    if len(_logging.root.handlers) == 0:
         basicConfig()
-    logging.root.trace(msg, *args, **kwargs)
+    _logging.root.trace(msg, *args, **kwargs)
 def _logger_trace(self, msg, *args, **kwargs):
     if self.isEnabledFor(TRACE):
         self._log(TRACE, msg, args, **kwargs)
-logging.trace = _logging_trace
-logging.Logger.trace = _logger_trace
-logging._levelToName[TRACE] = 'TRACE'
-logging._nameToLevel['TRACE'] = TRACE
+_logging.trace = _logging_trace
+_logging.Logger.trace = _logger_trace
+_logging._levelToName[TRACE] = 'TRACE'
+_logging._nameToLevel['TRACE'] = TRACE
 
 _behaviors = None
 def behaviors():
