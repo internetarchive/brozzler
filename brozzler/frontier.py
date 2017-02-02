@@ -119,7 +119,7 @@ class RethinkDbFrontier:
         self._vet_result(result, replaced=[0,1], unchanged=[0,1])
 
     def update_page(self, page):
-        self.logger.debug("updating 'pages' table entry %s", page)
+        self.logger.trace("updating 'pages' table entry %s", page)
         result = self.r.table("pages").get(page.id).replace(page.to_dict()).run()
         self._vet_result(result, replaced=[0,1], unchanged=[0,1])
 

@@ -91,8 +91,7 @@ def _add_proxy_options(arg_parser):
 
 def configure_logging(args):
     logging.basicConfig(
-            stream=sys.stderr, level=args.log_level,
-            format=(
+            stream=sys.stderr, level=args.log_level, format=(
                 '%(asctime)s %(process)d %(levelname)s %(threadName)s '
                 '%(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s'))
     logging.getLogger('requests.packages.urllib3').setLevel(logging.WARN)
