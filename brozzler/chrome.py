@@ -231,11 +231,11 @@ class Chrome:
                             b'CERT_PKIXVerifyCert for [^ ]* failed|'
                             b'^ALSA lib|ERROR:gl_surface_glx.cc|'
                             b'ERROR:gpu_child_thread.cc', buf):
-                        logging.log(
-                                brozzler.TRACE, 'chrome pid %s STDOUT %s',
+                        self.logger.trace(
+                                'chrome pid %s STDOUT %s',
                                 self.chrome_process.pid, buf)
                     else:
-                        logging.debug(
+                        self.logger.debug(
                                 'chrome pid %s STDOUT %s',
                                 self.chrome_process.pid, buf)
 
@@ -246,15 +246,15 @@ class Chrome:
                             b'CERT_PKIXVerifyCert for [^ ]* failed|'
                             b'^ALSA lib|ERROR:gl_surface_glx.cc|'
                             b'ERROR:gpu_child_thread.cc', buf):
-                        logging.log(
-                                brozzler.TRACE, 'chrome pid %s STDOUT %s',
+                        self.logger.trace(
+                                'chrome pid %s STDOUT %s',
                                 self.chrome_process.pid, buf)
                     else:
-                        logging.debug(
+                        self.logger.debug(
                                 'chrome pid %s STDERR %s',
                                 self.chrome_process.pid, buf)
         except:
-            logging.error('unexpected exception', exc_info=True)
+            self.logger.error('unexpected exception', exc_info=True)
 
     def stop(self):
         if not self.chrome_process or self._shutdown.is_set():

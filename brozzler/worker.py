@@ -383,9 +383,8 @@ class BrozzlerWorker:
 
         try:
             self.status_info = self._service_registry.heartbeat(status_info)
-            self.logger.log(
-                    brozzler.TRACE, "status in service registry: %s",
-                    self.status_info)
+            self.logger.trace(
+                    "status in service registry: %s", self.status_info)
         except rethinkdb.ReqlError as e:
             self.logger.error(
                     "failed to send heartbeat and update service registry "
