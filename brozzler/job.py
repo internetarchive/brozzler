@@ -2,7 +2,7 @@
 brozzler/job.py - Job class representing a brozzler crawl job, and functions
 for setting up a job with supplied configuration
 
-Copyright (C) 2014-2016 Internet Archive
+Copyright (C) 2014-2017 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -61,16 +61,21 @@ def merge(a, b):
         return a
 
 def new_job_file(frontier, job_conf_file):
+    '''Returns new Job.'''
     logging.info("loading %s", job_conf_file)
     with open(job_conf_file) as f:
         job_conf = yaml.load(f)
-        new_job(frontier, job_conf)
+        return new_job(frontier, job_conf)
 
 def new_job(frontier, job_conf):
+    '''Returns new Job.'''
     validate_conf(job_conf)
     job = Job(
             id=job_conf.get("id"), conf=job_conf, status="ACTIVE",
             started=rethinkstuff.utcnow())
+
+    # insert the job now to make sure it has an id
+    job = frontier.new_job(job)
 
     sites = []
     for seed_conf in job_conf["seeds"]:
@@ -92,11 +97,10 @@ def new_job(frontier, job_conf):
                 password=merged_conf.get("password"))
         sites.append(site)
 
-    # insert all the sites into database before the job
     for site in sites:
         new_site(frontier, site)
 
-    frontier.new_job(job)
+    return job
 
 def new_site(frontier, site):
     site.id = str(uuid.uuid4())

@@ -1,7 +1,7 @@
 '''
 brozzler/frontier.py - RethinkDbFrontier manages crawl jobs, sites and pages
 
-Copyright (C) 2014-2016 Internet Archive
+Copyright (C) 2014-2017 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -99,6 +99,7 @@ class RethinkDbFrontier:
         if not job.id:
             # only if "id" has not already been set
             job.id = result["generated_keys"][0]
+        return job
 
     def new_site(self, site):
         self.logger.info("inserting into 'sites' table %s", site)
