@@ -177,9 +177,10 @@ class RethinkDbFrontier:
 
     def _enforce_time_limit(self, site):
         if (site.time_limit and site.time_limit > 0
-                and (rethinkstuff.utcnow() - site.start_time).total_seconds() > site.time_limit):
-            self.logger.debug("site FINISHED_TIME_LIMIT! time_limit=%s start_time=%s elapsed=%s %s",
-                    site.time_limit, site.start_time, rethinkstuff.utcnow() - site.start_time, site)
+                and site.elapsed() > site.time_limit):
+            self.logger.debug(
+                    "site FINISHED_TIME_LIMIT! time_limit=%s elapsed=%s %s",
+                    site.time_limit, site.elapsed(), site)
             self.finished(site, "FINISHED_TIME_LIMIT")
             return True
         else:
@@ -277,14 +278,14 @@ class RethinkDbFrontier:
             n += 1
 
         self.logger.info("all %s sites finished, job %s is FINISHED!", n, job.id)
-        job.status = "FINISHED"
-        job.finished = rethinkstuff.utcnow()
+        job.finish()
         self.update_job(job)
         return True
 
     def finished(self, site, status):
         self.logger.info("%s %s", status, site)
         site.status = status
+        site.starts_and_stops[-1]["stop"] = rethinkstuff.utcnow()
         self.update_site(site)
         if site.job_id:
             self._maybe_finish_job(site.job_id)
@@ -300,6 +301,30 @@ class RethinkDbFrontier:
         if page:
             page.claimed = False
             self.update_page(page)
+
+    def resume_job(self, job):
+        job.status = "ACTIVE"
+        job.starts_and_stops.append(
+                {"start":rethinkstuff.utcnow(), "stop":None})
+        self.update_job(job)
+        for site in self.job_sites(job.id):
+            site.status = "ACTIVE"
+            site.starts_and_stops.append(
+                    {"start":rethinkstuff.utcnow(), "stop":None})
+            self.update_site(site)
+
+    def resume_site(self, site):
+        if site.job_id:
+            # can't call resume_job since that would resume jobs's other sites
+            job = self.job(site.job_id)
+            job.status = "ACTIVE"
+            job.starts_and_stops.append(
+                    {"start":rethinkstuff.utcnow(), "stop":None})
+            self.update_job(job)
+        site.status = "ACTIVE"
+        site.starts_and_stops.append(
+                {"start":rethinkstuff.utcnow(), "stop":None})
+        self.update_site(site)
 
     def scope_and_schedule_outlinks(self, site, parent_page, outlinks):
         if site.remember_outlinks:

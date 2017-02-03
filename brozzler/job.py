@@ -124,14 +124,29 @@ def new_site(frontier, site):
 class Job(brozzler.BaseDictable):
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    def __init__(self, id=None, conf=None, status="ACTIVE", started=None,
-                 finished=None, stop_requested=None):
+    def __init__(
+            self, id=None, conf=None, status="ACTIVE", started=None,
+            finished=None, stop_requested=None, starts_and_stops=None):
         self.id = id
         self.conf = conf
         self.status = status
-        self.started = started
-        self.finished = finished
         self.stop_requested = stop_requested
+        self.starts_and_stops = starts_and_stops
+        if not self.starts_and_stops:
+            if started:   # backward compatibility
+                self.starts_and_stops = [{"start":started,"stop":finished}]
+            else:
+                self.starts_and_stops = [
+                        {"start":rethinkstuff.utcnow(),"stop":None}]
+
+    def finish(self):
+        if self.status == "FINISHED" or self.starts_and_stops[-1]["stop"]:
+            self.logger.error(
+                    "job is already finished status=%s "
+                    "starts_and_stops[-1]['stop']=%s", self.status,
+                    self.starts_and_stops[-1]["stop"])
+        self.status = "FINISHED"
+        self.starts_and_stops[-1]["stop"] = rethinkstuff.utcnow()
 
     def __str__(self):
         return 'Job(id=%s)' % self.id
