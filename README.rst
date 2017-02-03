@@ -97,9 +97,8 @@ Job Configuration
 -----------------
 
 Jobs are defined using yaml files. Options may be specified either at the
-top-level or on individual seeds. A job id and at least one seed url
-must be specified, everything else is optional. For details, see
-`<job-conf.rst>`_.
+top-level or on individual seeds. At least one seed url must be specified,
+everything else is optional. For details, see `<job-conf.rst>`_.
 
 ::
 
@@ -238,7 +237,7 @@ option:
     brozzler-worker --chrome-exe ~/bin/headless_chromium.sh
 
 To render Flash content, `download <https://get.adobe.com/flashplayer/otherversions/>`_
-and extract the Linux (.tar.gz) PPAPI plugin.  Configure Headless Chromium 
+and extract the Linux (.tar.gz) PPAPI plugin.  Configure Headless Chromium
 to load the plugin by adding this option to your wrapper script:
 
 ::

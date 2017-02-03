@@ -2,7 +2,7 @@ id:
   type:
   - string
   - integer
-  required: true
+  required: false
 
 <<: &multi_level_options
   time_limit:
