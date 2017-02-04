@@ -285,6 +285,8 @@ class RethinkDbFrontier:
     def finished(self, site, status):
         self.logger.info("%s %s", status, site)
         site.status = status
+        site.claimed = False
+        site.last_disclaimed = rethinkstuff.utcnow()
         site.starts_and_stops[-1]["stop"] = rethinkstuff.utcnow()
         self.update_site(site)
         if site.job_id:

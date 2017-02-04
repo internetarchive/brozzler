@@ -160,12 +160,14 @@ def test_time_limit():
     assert site.starts_and_stops[1]['stop'] is None
 
     site.time_limit = 0.1
+    site.claimed = True
     frontier.update_site(site)
 
     time.sleep(0.1)
     frontier._enforce_time_limit(site)
 
     assert site.status == 'FINISHED_TIME_LIMIT'
+    assert not site.claimed
     assert len(site.starts_and_stops) == 2
     assert site.starts_and_stops[1]['start']
     assert site.starts_and_stops[1]['stop']
