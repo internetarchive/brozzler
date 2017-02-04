@@ -200,8 +200,7 @@ class WebsockReceiverThread(threading.Thread):
             else:
                 self.logger.info(
                         'reached limit but self.reached_limit is already set, '
-                        'assuming the calling thread is already handling this',
-                        self.reached_limit)
+                        'assuming the calling thread is already handling this')
         if self.on_response:
             self.on_response(message)
 
