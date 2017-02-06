@@ -1,7 +1,7 @@
 '''
 brozzler/frontier.py - RethinkDbFrontier manages crawl jobs, sites and pages
 
-Copyright (C) 2014-2016 Internet Archive
+Copyright (C) 2014-2017 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -99,6 +99,7 @@ class RethinkDbFrontier:
         if not job.id:
             # only if "id" has not already been set
             job.id = result["generated_keys"][0]
+        return job
 
     def new_site(self, site):
         self.logger.info("inserting into 'sites' table %s", site)
@@ -119,7 +120,7 @@ class RethinkDbFrontier:
         self._vet_result(result, replaced=[0,1], unchanged=[0,1])
 
     def update_page(self, page):
-        self.logger.debug("updating 'pages' table entry %s", page)
+        self.logger.trace("updating 'pages' table entry %s", page)
         result = self.r.table("pages").get(page.id).replace(page.to_dict()).run()
         self._vet_result(result, replaced=[0,1], unchanged=[0,1])
 
@@ -176,9 +177,10 @@ class RethinkDbFrontier:
 
     def _enforce_time_limit(self, site):
         if (site.time_limit and site.time_limit > 0
-                and (rethinkstuff.utcnow() - site.start_time).total_seconds() > site.time_limit):
-            self.logger.debug("site FINISHED_TIME_LIMIT! time_limit=%s start_time=%s elapsed=%s %s",
-                    site.time_limit, site.start_time, rethinkstuff.utcnow() - site.start_time, site)
+                and site.elapsed() > site.time_limit):
+            self.logger.debug(
+                    "site FINISHED_TIME_LIMIT! time_limit=%s elapsed=%s %s",
+                    site.time_limit, site.elapsed(), site)
             self.finished(site, "FINISHED_TIME_LIMIT")
             return True
         else:
@@ -276,14 +278,16 @@ class RethinkDbFrontier:
             n += 1
 
         self.logger.info("all %s sites finished, job %s is FINISHED!", n, job.id)
-        job.status = "FINISHED"
-        job.finished = rethinkstuff.utcnow()
+        job.finish()
         self.update_job(job)
         return True
 
     def finished(self, site, status):
         self.logger.info("%s %s", status, site)
         site.status = status
+        site.claimed = False
+        site.last_disclaimed = rethinkstuff.utcnow()
+        site.starts_and_stops[-1]["stop"] = rethinkstuff.utcnow()
         self.update_site(site)
         if site.job_id:
             self._maybe_finish_job(site.job_id)
@@ -299,6 +303,30 @@ class RethinkDbFrontier:
         if page:
             page.claimed = False
             self.update_page(page)
+
+    def resume_job(self, job):
+        job.status = "ACTIVE"
+        job.starts_and_stops.append(
+                {"start":rethinkstuff.utcnow(), "stop":None})
+        self.update_job(job)
+        for site in self.job_sites(job.id):
+            site.status = "ACTIVE"
+            site.starts_and_stops.append(
+                    {"start":rethinkstuff.utcnow(), "stop":None})
+            self.update_site(site)
+
+    def resume_site(self, site):
+        if site.job_id:
+            # can't call resume_job since that would resume jobs's other sites
+            job = self.job(site.job_id)
+            job.status = "ACTIVE"
+            job.starts_and_stops.append(
+                    {"start":rethinkstuff.utcnow(), "stop":None})
+            self.update_job(job)
+        site.status = "ACTIVE"
+        site.starts_and_stops.append(
+                {"start":rethinkstuff.utcnow(), "stop":None})
+        self.update_site(site)
 
     def scope_and_schedule_outlinks(self, site, parent_page, outlinks):
         if site.remember_outlinks:

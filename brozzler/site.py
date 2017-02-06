@@ -99,7 +99,7 @@ class Site(brozzler.BaseDictable):
             last_disclaimed=_EPOCH_UTC, last_claimed_by=None,
             last_claimed=_EPOCH_UTC, metadata={}, remember_outlinks=None,
             cookie_db=None, user_agent=None, behavior_parameters=None,
-            username=None, password=None):
+            username=None, password=None, starts_and_stops=None):
 
         self.seed = seed
         self.id = id
@@ -113,7 +113,6 @@ class Site(brozzler.BaseDictable):
         self.status = status
         self.claimed = bool(claimed)
         self.last_claimed_by = last_claimed_by
-        self.start_time = start_time or rethinkstuff.utcnow()
         self.last_disclaimed = last_disclaimed
         self.last_claimed = last_claimed
         self.metadata = metadata
@@ -123,10 +122,31 @@ class Site(brozzler.BaseDictable):
         self.behavior_parameters = behavior_parameters
         self.username = username
         self.password = password
+        self.starts_and_stops = starts_and_stops
+        if not self.starts_and_stops:
+            if start_time:   # backward compatibility
+                self.starts_and_stops = [{"start":start_time,"stop":None}]
+                if self.status != "ACTIVE":
+                    self.starts_and_stops[0]["stop"] = self.last_disclaimed
+            else:
+                self.starts_and_stops = [
+                        {"start":rethinkstuff.utcnow(),"stop":None}]
 
         self.scope = scope or {}
         if not "surt" in self.scope:
             self.scope["surt"] = Url(seed).surt
+
+    def elapsed(self):
+        '''Returns elapsed crawl time as a float in seconds.'''
+        dt = 0
+        for ss in self.starts_and_stops[:-1]:
+            dt += (ss['stop'] - ss['start']).total_seconds()
+        ss = self.starts_and_stops[-1]
+        if ss['stop']:
+            dt += (ss['stop'] - ss['start']).total_seconds()
+        else: # crawl is active
+            dt += (rethinkstuff.utcnow() - ss['start']).total_seconds()
+        return dt
 
     def __str__(self):
         return "Site-%s-%s" % (self.id, self.seed)

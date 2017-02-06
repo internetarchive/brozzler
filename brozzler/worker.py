@@ -237,17 +237,20 @@ class BrozzlerWorker:
             if on_screenshot:
                 on_screenshot(screenshot_png)
             elif self._proxy(site) and self._enable_warcprox_features(site):
-                self.logger.info("sending WARCPROX_WRITE_RECORD request "
-                                 "to warcprox with screenshot for %s", page)
+                self.logger.info(
+                        "sending WARCPROX_WRITE_RECORD request to %s with "
+                        "screenshot for %s", self._proxy(site), page)
                 screenshot_jpeg, thumbnail_jpeg = self.full_and_thumb_jpegs(
                         screenshot_png)
-                self._warcprox_write_record(warcprox_address=self._proxy(site),
-                        url="screenshot:%s" % brozzler.fixup(page.url),
+                self._warcprox_write_record(
+                        warcprox_address=self._proxy(site),
+                        url="screenshot:%s" % brozzler.fixup(page.url, True),
                         warc_type="resource", content_type="image/jpeg",
                         payload=screenshot_jpeg,
                         extra_headers=site.extra_headers())
-                self._warcprox_write_record(warcprox_address=self._proxy(site),
-                        url="thumbnail:%s" % brozzler.fixup(page.url),
+                self._warcprox_write_record(
+                        warcprox_address=self._proxy(site),
+                        url="thumbnail:%s" % brozzler.fixup(page.url, True),
                         warc_type="resource", content_type="image/jpeg",
                         payload=thumbnail_jpeg,
                         extra_headers=site.extra_headers())
@@ -380,9 +383,8 @@ class BrozzlerWorker:
 
         try:
             self.status_info = self._service_registry.heartbeat(status_info)
-            self.logger.log(
-                    brozzler.TRACE, "status in service registry: %s",
-                    self.status_info)
+            self.logger.trace(
+                    "status in service registry: %s", self.status_info)
         except rethinkdb.ReqlError as e:
             self.logger.error(
                     "failed to send heartbeat and update service registry "
