@@ -33,15 +33,9 @@ var umbraBehavior = {
 		var didSomething = false;
 		var somethingLeftBelow = false;
 		var somethingLeftAbove = false;
-<<<<<<< HEAD
-		var cssSelector = {{sdo_css_selector}};
-		var doAction = {{sdo_action}}; // currently supports click, mouseover
-		var doUntilTimeout = {{sdo_until_hard_timeout}};
-=======
 		var cssSelector = {{sdo_css_selector|json}};
 		var doAction = {{sdo_action|json}}; // currently supports click, mouseover
 		var doUntilTimeout = {{sdo_until_hard_timeout|json}};
->>>>>>> simpledo
 
 		var iframes = document.querySelectorAll("iframe");
 		var documents = Array(iframes.length + 1);
