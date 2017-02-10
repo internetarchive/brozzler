@@ -165,8 +165,7 @@ class Chrome:
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
         self._out_reader_thread = threading.Thread(
                 target=self._read_stderr_stdout,
-                name='ChromeOutReaderThread(pid=%s)' % self.chrome_process.pid,
-                daemon=True)
+                name='ChromeOutReaderThread:%s' % self.port, daemon=True)
         self._out_reader_thread.start()
         self.logger.info('chrome running, pid %s' % self.chrome_process.pid)
 

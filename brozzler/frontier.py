@@ -125,7 +125,7 @@ class RethinkDbFrontier:
         self._vet_result(result, replaced=[0,1], unchanged=[0,1])
 
     def new_page(self, page):
-        self.logger.debug("inserting into 'pages' table %s", page)
+        self.logger.trace("inserting into 'pages' table %s", page)
         result = self.r.table("pages").insert(page.to_dict()).run()
         self._vet_result(result, inserted=1)
 
