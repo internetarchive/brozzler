@@ -233,8 +233,7 @@ class WebsockReceiverThread(threading.Thread):
                 brozzler.thread_raise(self.calling_thread, BrowsingException)
             elif message['method'] == 'Console.messageAdded':
                 self.logger.debug(
-                        '%s console.%s %s', self.websock.url,
-                        message['params']['message']['level'],
+                        'console.%s %s', message['params']['message']['level'],
                         message['params']['message']['text'])
             elif message['method'] == 'Page.javascriptDialogOpening':
                 self._javascript_dialog_opening(message)
@@ -310,10 +309,8 @@ class Browser:
         if not self.is_running():
             self.websock_url = self.chrome.start(**kwargs)
             self.websock = websocket.WebSocketApp(self.websock_url)
-            thread_name = 'WebsockThread:{}-{:%Y%m%d%H%M%S}'.format(
-                    surt.handyurl.parse(self.websock_url).port,
-                    datetime.datetime.utcnow())
-            self.websock_thread = WebsockReceiverThread(self.websock)
+            self.websock_thread = WebsockReceiverThread(
+                    self.websock, name='WebsockThread:%s' % self.chrome.port)
             self.websock_thread.start()
 
             self._wait_for(lambda: self.websock_thread.is_open, timeout=10)

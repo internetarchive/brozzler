@@ -418,7 +418,7 @@ class BrozzlerWorker:
                                 repr(self._proxy(site)), site)
                         th = threading.Thread(
                                 target=self._brozzle_site, args=(browser, site),
-                                name="BrozzlingThread:%s" % site.seed,
+                                name="BrozzlingThread:%s" % browser.chrome.port,
                                 daemon=True)
                         with self._browsing_threads_lock:
                             self._browsing_threads.add(th)
@@ -432,9 +432,7 @@ class BrozzlerWorker:
                                 "all %s browsers are busy", self._max_browsers)
                         latest_state = "browsers-busy"
                 except brozzler.NothingToClaim:
-                    if latest_state != "no-unclaimed-sites":
-                        self.logger.info("no unclaimed sites to browse")
-                        latest_state = "no-unclaimed-sites"
+                    pass
                 time.sleep(0.5)
         except brozzler.ShutdownRequested:
             self.logger.info("shutdown requested")
