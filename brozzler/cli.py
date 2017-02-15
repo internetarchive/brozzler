@@ -212,7 +212,7 @@ def brozzler_new_job():
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(sys.argv[0]),
             description='brozzler-new-job - queue new job with brozzler',
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+            formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
             'job_conf_file', metavar='JOB_CONF_FILE',
             help='brozzler job configuration file in yaml')
@@ -240,7 +240,7 @@ def brozzler_new_site():
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(sys.argv[0]),
             description='brozzler-new-site - register site to brozzle',
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+            formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('seed', metavar='SEED', help='seed url')
     add_rethinkdb_options(arg_parser)
     _add_proxy_options(arg_parser)
@@ -295,7 +295,7 @@ def brozzler_worker():
     '''
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(__file__),
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+            formatter_class=BetterArgumentDefaultsHelpFormatter)
     add_rethinkdb_options(arg_parser)
     arg_parser.add_argument(
             '-e', '--chrome-exe', dest='chrome_exe',
@@ -360,7 +360,7 @@ def brozzler_ensure_tables():
     '''
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(sys.argv[0]),
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+            formatter_class=BetterArgumentDefaultsHelpFormatter)
     add_rethinkdb_options(arg_parser)
     add_common_options(arg_parser)
 
@@ -387,7 +387,7 @@ class Jsonner(json.JSONEncoder):
 def brozzler_list_jobs():
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(sys.argv[0]),
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+            formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
             '-a', '--all', dest='all', action='store_true', help=(
                 'list all jobs (by default, only active jobs are listed)'))
@@ -409,10 +409,13 @@ def brozzler_list_jobs():
 def brozzler_list_sites():
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(sys.argv[0]),
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+            formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
             '-a', '--all', dest='all', action='store_true', help=(
                 'list all sites (by default, only active sites are listed)'))
+    arg_parser.add_argument(
+            '--yaml', dest='yaml', action='store_true', help=(
+                'yaml output (default is json)'))
     group = arg_parser.add_mutually_exclusive_group()
     group.add_argument(
             '--jobless', dest='jobless', action='store_true', help=(
@@ -441,19 +444,27 @@ def brozzler_list_sites():
         reql = reql.filter({'status': 'ACTIVE'})
     logging.debug('querying rethinkdb: %s', reql)
     results = reql.run()
-    for result in results:
-        print(json.dumps(result, cls=Jsonner, indent=2))
+    if args.yaml:
+        yaml.dump_all(
+                results, stream=sys.stdout, explicit_start=True,
+                default_flow_style=False)
+    else:
+        for result in results:
+            print(json.dumps(result, cls=Jsonner, indent=2))
 
 def brozzler_list_pages():
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(sys.argv[0]),
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+            formatter_class=BetterArgumentDefaultsHelpFormatter)
+    arg_parser.add_argument(
+            '--yaml', dest='yaml', action='store_true', help=(
+                'yaml output (default is json)'))
     group = arg_parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
             '--job', dest='job', metavar='JOB_ID', help=(
                 'list pages for all sites of the supplied job'))
     group.add_argument(
-            '--site', dest='site', metavar='SITE', help=(
+            '--site', dest='site', metavar='SITE_ID', help=(
                 'list pages of the supplied site'))
     group = arg_parser.add_mutually_exclusive_group()
     group.add_argument(
@@ -506,8 +517,13 @@ def brozzler_list_pages():
             reql = reql.filter({'claimed': True})
         logging.debug('querying rethinkb: %s', reql)
         results = reql.run()
-        for result in results:
-            print(json.dumps(result, cls=Jsonner, indent=2))
+        if args.yaml:
+            yaml.dump_all(
+                    results, stream=sys.stdout, explicit_start=True,
+                    default_flow_style=False)
+        else:
+            for result in results:
+                print(json.dumps(result, cls=Jsonner, indent=2))
 
 def brozzler_list_captures():
     '''
@@ -519,12 +535,15 @@ def brozzler_list_captures():
 
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(sys.argv[0]),
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+            formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
             '-p', '--prefix', dest='prefix', action='store_true', help=(
                 'use prefix match for url (n.b. may not work as expected if '
                 'searching key has query string because canonicalization can '
                 'reorder query parameters)'))
+    arg_parser.add_argument(
+            '--yaml', dest='yaml', action='store_true', help=(
+                'yaml output (default is json)'))
     add_rethinkdb_options(arg_parser)
     add_common_options(arg_parser)
     arg_parser.add_argument(
@@ -549,8 +568,6 @@ def brozzler_list_captures():
                 index='sha1_warc_type')
         logging.debug('querying rethinkdb: %s', reql)
         results = reql.run()
-        for result in results:
-            print(json.dumps(result, cls=Jsonner, indent=2))
     else:
         key = surt.surt(
                 args.url_or_sha1, trailing_comma=True, host_massage=False,
@@ -573,6 +590,12 @@ def brozzler_list_captures():
                                  & (capture['canon_surt'] <= end_key))
         logging.debug('querying rethinkdb: %s', reql)
         results = reql.run()
+
+    if args.yaml:
+        yaml.dump_all(
+                results, stream=sys.stdout, explicit_start=True,
+                default_flow_style=False)
+    else:
         for result in results:
             print(json.dumps(result, cls=Jsonner, indent=2))
 
