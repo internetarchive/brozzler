@@ -426,13 +426,12 @@ class Browser:
                     user_agent=user_agent, timeout=300)
             if password:
                 self.try_login(username, password, timeout=300)
+            if on_screenshot:
+                jpeg_bytes = self.screenshot()
+                on_screenshot(jpeg_bytes)
             behavior_script = brozzler.behavior_script(
                     page_url, behavior_parameters)
             self.run_behavior(behavior_script, timeout=900)
-            if on_screenshot:
-                self.scroll_to_top()
-                jpeg_bytes = self.screenshot()
-                on_screenshot(jpeg_bytes)
             outlinks = self.extract_outlinks()
             ## for each hashtag not already visited:
             ##     navigate_to_hashtag (nothing to wait for so no timeout?)
@@ -501,17 +500,6 @@ class Browser:
         message = self.websock_thread.pop_result(msg_id)
         jpeg_bytes = base64.b64decode(message['result']['data'])
         return jpeg_bytes
-
-    def scroll_to_top(self, timeout=30):
-        self.logger.info('scrolling to top')
-        self.websock_thread.expect_result(self._command_id.peek())
-        msg_id = self.send_to_chrome(
-                    method='Runtime.evaluate',
-                    params={'expression': 'window.scrollTo(0, 0);'})
-        self._wait_for(
-                lambda: self.websock_thread.received_result(msg_id),
-                timeout=timeout)
-        self.websock_thread.pop_result(msg_id)
 
     def url(self, timeout=30):
         '''
