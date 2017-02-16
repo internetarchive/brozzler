@@ -391,6 +391,9 @@ def brozzler_list_jobs():
     arg_parser.add_argument(
             '-a', '--all', dest='all', action='store_true', help=(
                 'list all jobs (by default, only active jobs are listed)'))
+    arg_parser.add_argument(
+            '--yaml', dest='yaml', action='store_true', help=(
+                'yaml output (default is json)'))
     add_rethinkdb_options(arg_parser)
     add_common_options(arg_parser)
 
@@ -403,8 +406,13 @@ def brozzler_list_jobs():
         reql = reql.filter({'status': 'ACTIVE'})
     logging.debug('querying rethinkdb: %s', reql)
     results = reql.run()
-    for result in results:
-        print(json.dumps(result, cls=Jsonner, indent=2))
+    if args.yaml:
+        yaml.dump_all(
+                results, stream=sys.stdout, explicit_start=True,
+                default_flow_style=False)
+    else:
+        for result in results:
+            print(json.dumps(result, cls=Jsonner, indent=2))
 
 def brozzler_list_sites():
     arg_parser = argparse.ArgumentParser(
