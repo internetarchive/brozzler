@@ -188,14 +188,14 @@ class Site(brozzler.BaseDictable):
             might_accept = True
         elif "accepts" in self.scope:
             for rule in self.scope["accepts"]:
-                if self._scope_rule_applies(rule, u):
+                if self._scope_rule_applies(rule, u, parent_page):
                     might_accept = True
                     break
 
         if might_accept:
             if "blocks" in self.scope:
                 for rule in self.scope["blocks"]:
-                    if self._scope_rule_applies(rule, u):
+                    if self._scope_rule_applies(rule, u, parent_page):
                         return False
             return True
         else:
