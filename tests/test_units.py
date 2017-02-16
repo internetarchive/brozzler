@@ -2,7 +2,7 @@
 '''
 test_units.py - some unit tests for parts of brozzler amenable to that
 
-Copyright (C) 2016 Internet Archive
+Copyright (C) 2016-2017 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import brozzler.chrome
 import socket
 import logging
 import psutil
+import yaml
 
 @pytest.fixture(scope='module')
 def httpd(request):
@@ -72,4 +73,54 @@ def test_find_available_port():
     assert x._find_available_port(9800) >= 9990
     sock.close()
     assert x._find_available_port(9800) == 9800
+
+def test_scoping():
+    test_scope = yaml.load('''
+max_hops: 100
+accepts:
+- url_match: REGEX_MATCH
+  value: ^.*/audio_file/.*\.mp3$
+- url_match: SURT_MATCH
+  value: http://(com,vimeocdn,
+- url_match: STRING_MATCH
+  value: ec-media.soundcloud.com
+- regex: ^https?://twitter\.com.*$
+- substring: facebook.com
+- regex: ^https?://(www.)?youtube.com/watch?.*$
+  parent_url_regex: ^https?://(www.)?youtube.com/user/.*$
+blocks:
+- domain: twitter.com
+  url_match: REGEX_MATCH
+  value: ^.*lang=(?!en).*$
+- bad_thing: bad rule should be ignored
+''')
+
+    site = brozzler.Site(
+            seed='http://example.com/foo/bar?baz=quux#monkey', id=1,
+            scope=test_scope)
+    page = brozzler.Page(
+            url='http://example.com/foo/bar?baz=quux#monkey', site_id=site.id)
+
+    assert site.is_in_scope('http://example.com/foo/bar', page)
+    assert not site.is_in_scope('http://example.com/foo/baz', page)
+
+    assert not site.is_in_scope('http://foo.com/some.mp3', page)
+    assert site.is_in_scope('http://foo.com/blah/audio_file/some.mp3', page)
+
+    assert site.is_in_scope('http://a.b.vimeocdn.com/blahblah', page)
+    assert not site.is_in_scope('https://a.b.vimeocdn.com/blahblah', page)
+
+    assert site.is_in_scope('https://twitter.com/twit', page)
+    assert site.is_in_scope('https://twitter.com/twit?lang=en', page)
+    assert not site.is_in_scope('https://twitter.com/twit?lang=es', page)
+
+    assert site.is_in_scope('https://www.facebook.com/whatevz', page)
+
+    assert not site.is_in_scope(
+            'https://www.youtube.com/watch?v=dUIn5OAPS5s', page)
+    yt_user_page = brozzler.Page(
+            url='https://www.youtube.com/user/SonoraSantaneraVEVO',
+            site_id=site.id, hops_from_seed=10)
+    assert site.is_in_scope(
+            'https://www.youtube.com/watch?v=dUIn5OAPS5s', yt_user_page)
 
