@@ -201,54 +201,109 @@ class Site(brozzler.BaseDictable):
         else:
             return False
 
-    def _scope_rule_applies(self, rule, url):
+    def _normalize_rule(self, rule):
         """
-        Examples of valid rules:
-        [
-            {
-                "domain": "monkey.org",
-                "url_match": "STRING_MATCH",
-                "value": "bar",
-            },
-            {
-                "url_match": "SURT_MATCH",
-                "value": "http://(com,woop,)/fuh/",
-            },
-            {
-                "domain": "bad.domain.com",
-            },
-        ]
+        Normalizes a scope rule.
+
+        A scope rule is considered deprecated if it contains a `url_match` and
+        `value`. This method converts such scope rules to the preferred style
+        and returns the new rule. If `rule` is not a deprecated-style rule,
+        returns  it unchanged.
+        """
+        if "url_match" in rule and "value" in rule:
+            new_rule = dict(rule)
+            url_match = new_rule.pop("url_match")
+            if url_match == "REGEX_MATCH":
+                new_rule["regex"] = new_rule.pop("value")
+            elif url_match == "SURT_MATCH":
+                new_rule["surt"] = new_rule.pop("value")
+            elif url_match == "STRING_MATCH":
+                new_rule["substring"] = new_rule.pop("value")
+            else:
+                raise Exception("invalid scope rule")
+            return new_rule
+        else:
+            return rule
+
+    def _scope_rule_applies(self, rule, url, parent_page=None):
+        """
+        Examples of valid rules expressed as yaml.
+
+        - domain: bad.domain.com
+
+        # preferred:
+        - domain: monkey.org
+          substring: bar
+
+        # deprecated version of the same:
+        - domain: monkey.org
+          url_match: STRING_MATCH
+          value: bar
+
+        # preferred:
+        - surt: http://(com,woop,)/fuh/
+
+        # deprecated version of the same:
+        - url_match: SURT_MATCH
+          value: http://(com,woop,)/fuh/
+
+        # preferred:
+        - regex: ^https?://(www.)?youtube.com/watch?.*$
+          parent_url_regex: ^https?://(www.)?youtube.com/user/.*$
+
+        # deprecated version of the same:
+        - url_match: REGEX_MATCH
+          value: ^https?://(www.)?youtube.com/watch?.*$
+          parent_url_regex: ^https?://(www.)?youtube.com/user/.*$
         """
         if not isinstance(url, Url):
             u = Url(url)
         else:
             u = url
 
-        if "domain" in rule and not u.matches_ip_or_domain(rule["domain"]):
+        try:
+            rewl = self._normalize_rule(rule)
+        except Exception as e:
+            self.logger.error(
+                    "problem normalizing scope rule %s - %s", rule, e)
             return False
-        if "url_match" in rule:
-            if rule["url_match"] == "STRING_MATCH":
-                return u.url.find(rule["value"]) >= 0
-            elif rule["url_match"] == "REGEX_MATCH":
-                try:
-                    return re.fullmatch(rule["value"], u.url)
-                except Exception as e:
-                    self.logger.warn(
-                            "caught exception matching against regex %s: %s",
-                            rule["value"], e)
+
+        invalid_keys = rewl.keys() - {
+                "domain", "surt", "substring", "regex", "parent_url_regex"}
+        if invalid_keys:
+            self.logger.error(
+                    "invalid keys %s in scope rule %s", invalid_keys, rule)
+            return False
+
+        if "domain" in rewl and not u.matches_ip_or_domain(rewl["domain"]):
+            return False
+        if "surt" in rewl and not u.surt.startswith(rewl["surt"]):
+            return False
+        if "substring" in rewl and not u.url.find(rewl["substring"]) >= 0:
+            return False
+        if "regex" in rewl:
+            try:
+                if not re.fullmatch(rewl["regex"], u.url):
                     return False
-            elif rule["url_match"] == "SURT_MATCH":
-                return u.surt.startswith(rule["value"])
-            else:
-                self.logger.warn("invalid rule.url_match=%s", rule.url_match)
+            except Exception as e:
+                self.logger.error(
+                        "caught exception matching against regex %s - %s",
+                        rewl["regex"], e)
                 return False
-        else:
-            if "domain" in rule:
-                # we already know that it matches from earlier check
-                return True
-            else:
-                self.logger.warn("unable to make sense of scope rule %s", rule)
+        if "parent_url_regex" in rewl:
+            if not parent_page:
                 return False
+            pu = Url(parent_page.url)
+            try:
+                if not re.fullmatch(rule["parent_url_regex"], pu.url):
+                    return False
+            except Exception as e:
+                self.logger.error(
+                        "caught exception matching against regex %s - %s",
+                        rule["parent_url_regex"], e)
+                return False
+
+        return True
 
 class Page(brozzler.BaseDictable):
     def __init__(
