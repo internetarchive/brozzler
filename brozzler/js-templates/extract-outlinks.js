@@ -1,3 +1,5 @@
+// we have problems if the page has changed the definition of Set or Array
+// http://www.polyvore.com/ does this for example
 var __brzl_framesDone = new Set();
 var __brzl_compileOutlinks = function(frame) {
     __brzl_framesDone.add(frame);
