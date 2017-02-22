@@ -1,7 +1,7 @@
 '''
 brozzler/browser.py - manages the browsers for brozzler
 
-Copyright (C) 2014-2016 Internet Archive
+Copyright (C) 2014-2017 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -485,9 +485,17 @@ class Browser:
                 lambda: self.websock_thread.received_result(msg_id),
                 timeout=timeout)
         message = self.websock_thread.pop_result(msg_id)
-        if message['result']['result']['value']:
-            return frozenset(message['result']['result']['value'].split('\n'))
+        if ('result' in message and 'result' in message['result']
+                and 'value' in message['result']['result']):
+            if message['result']['result']['value']:
+                return frozenset(
+                        message['result']['result']['value'].split('\n'))
+            else:
+                # no links found
+                return frozenset()
         else:
+            self.logger.error(
+                    'problem extracting outlinks, result message: %s', message)
             return frozenset()
 
     def screenshot(self, timeout=30):
