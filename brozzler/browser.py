@@ -30,6 +30,7 @@ import datetime
 import base64
 from brozzler.chrome import Chrome
 import surt
+import socket
 
 class BrowsingException(Exception):
     pass
@@ -41,9 +42,11 @@ class BrowsingTimeout(BrowsingException):
     pass
 
 class BrowserPool:
+    '''
+    Manages pool of browsers. Automatically chooses available port for the
+    debugging protocol.
+    '''
     logger = logging.getLogger(__module__ + '.' + __qualname__)
-
-    BASE_PORT = 9200
 
     def __init__(self, size=3, **kwargs):
         '''
@@ -54,13 +57,8 @@ class BrowserPool:
             **kwargs: arguments for Browser(...)
         '''
         self.size = size
-        self._available = set()
+        self.kwargs = kwargs
         self._in_use = set()
-
-        for i in range(0, size):
-            browser = Browser(port=BrowserPool.BASE_PORT + i, **kwargs)
-            self._available.add(browser)
-
         self._lock = threading.Lock()
 
     def acquire(self):
@@ -74,16 +72,22 @@ class BrowserPool:
             NoBrowsersAvailable if none available
         '''
         with self._lock:
-            try:
-                browser = self._available.pop()
-            except KeyError:
+            if len(self._in_use) >= self.size:
                 raise NoBrowsersAvailable
+
+            # choose available port
+            sock = socket.socket()
+            sock.bind(('0.0.0.0', 0))
+            port = sock.getsockname()[1]
+            sock.close()
+
+            browser = Browser(port=port, **self.kwargs)
             self._in_use.add(browser)
             return browser
 
     def release(self, browser):
+        browser.stop()  # make sure
         with self._lock:
-            self._available.add(browser)
             self._in_use.remove(browser)
 
     def shutdown_now(self):
@@ -91,13 +95,12 @@ class BrowserPool:
                 'shutting down browser pool (%s browsers in use)',
                 len(self._in_use))
         with self._lock:
-            for browser in self._available:
-                browser.stop()
             for browser in self._in_use:
                 browser.stop()
+            self._in_use.clear()
 
     def num_available(self):
-        return len(self._available)
+        return self.size - len(self._in_use)
 
     def num_in_use(self):
         return len(self._in_use)
