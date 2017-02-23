@@ -169,13 +169,16 @@ class TheGoodUrlCanonicalizer(object):
     def monkey_patch_dsrules_init():
         orig_init = pywb.cdx.cdxdomainspecific.CDXDomainSpecificRule.__init__
         def cdx_dsrule_init(self, url_prefix, rules):
-            orig_init(self, url_prefix, rules)
             good_surts = []
-            for url_prefix in self.url_prefix:
+            url_prefixes = [url_prefix] if isinstance(
+                    url_prefix, str) else url_prefix
+            for bad_surt in url_prefixes:
                 good_surts.extend(
                         TheGoodUrlCanonicalizer.good_surts_from_default(
-                                url_prefix))
-            self.url_prefix = good_surts
+                                bad_surt))
+            if 'match' in rules and 'regex' in rules['match']:
+                rules['match']['regex'] = r'https?://\(' + rules['match']['regex']
+            orig_init(self, good_surts, rules)
         pywb.cdx.cdxdomainspecific.CDXDomainSpecificRule.__init__ = cdx_dsrule_init
 
 def support_in_progress_warcs():
@@ -273,11 +276,147 @@ Run pywb like so:
 See README.rst for more information.
 '''
 
+# copied and pasted from cdxdomainspecific.py, only changes are commented as
+# such below
+def _fuzzy_query_call(self, query):
+    # imports added here for brozzler
+    from pywb.utils.loaders import to_native_str
+    from six.moves.urllib.parse import urlsplit, urlunsplit
+
+    matched_rule = None
+
+    urlkey = to_native_str(query.key, 'utf-8')
+    url = query.url
+    filter_ = query.filters
+    output = query.output
+
+    for rule in self.rules.iter_matching(urlkey):
+        m = rule.regex.search(urlkey)
+        if not m:
+            continue
+
+        matched_rule = rule
+
+        groups = m.groups()
+        for g in groups:
+            for f in matched_rule.filter:
+                filter_.append(f.format(g))
+
+        break
+
+    if not matched_rule:
+        return None
+
+    repl = '?'
+    if matched_rule.replace:
+        repl = matched_rule.replace
+
+    inx = url.find(repl)
+    if inx > 0:
+        url = url[:inx + len(repl)]
+
+    # begin brozzler changes
+    if matched_rule.match_type == 'domain':
+        orig_split_url = urlsplit(url)
+        # remove the subdomain, path, query and fragment
+        host = orig_split_url.netloc.split('.', 1)[1]
+        new_split_url = (orig_split_url.scheme, host, '', '', '')
+        url = urlunsplit(new_split_url)
+    # end brozzler changes
+
+    params = query.params
+    params.update({'url': url,
+                   'matchType': matched_rule.match_type,
+                   'filter': filter_})
+
+    if 'reverse' in params:
+        del params['reverse']
+
+    if 'closest' in params:
+        del params['closest']
+
+    if 'end_key' in params:
+        del params['end_key']
+
+    return params
+
+def monkey_patch_fuzzy_query():
+    pywb.cdx.cdxdomainspecific.FuzzyQuery.__call__ = _fuzzy_query_call
+
+# copied and pasted from pywb/utils/canonicalize.py, only changes are commented
+# as such
+def _calc_search_range(url, match_type, surt_ordered=True, url_canon=None):
+    # imports added here for brozzler
+    from pywb.utils.canonicalize import UrlCanonicalizer, UrlCanonicalizeException
+    import six.moves.urllib.parse as urlparse
+
+    def inc_last_char(x):
+        return x[0:-1] + chr(ord(x[-1]) + 1)
+
+    if not url_canon:
+        # make new canon
+        url_canon = UrlCanonicalizer(surt_ordered)
+    else:
+        # ensure surt order matches url_canon
+        surt_ordered = url_canon.surt_ordered
+
+    start_key = url_canon(url)
+
+    if match_type == 'exact':
+        end_key = start_key + '!'
+
+    elif match_type == 'prefix':
+        # add trailing slash if url has it
+        if url.endswith('/') and not start_key.endswith('/'):
+            start_key += '/'
+
+        end_key = inc_last_char(start_key)
+
+    elif match_type == 'host':
+        if surt_ordered:
+            host = start_key.split(')/')[0]
+
+            start_key = host + ')/'
+            end_key = host + '*'
+        else:
+            host = urlparse.urlsplit(url).netloc
+
+            start_key = host + '/'
+            end_key = host + '0'
+
+    elif match_type == 'domain':
+        if not surt_ordered:
+            msg = 'matchType=domain unsupported for non-surt'
+            raise UrlCanonicalizeException(msg)
+
+        host = start_key.split(')/')[0]
+
+        # if tld, use com, as start_key
+        # otherwise, stick with com,example)/
+        if ',' not in host:
+            start_key = host + ','
+        else:
+            start_key = host + ')/'
+
+        # begin brozzler changes
+        end_key = host + '~'
+        # end brozzler changes
+    else:
+        raise UrlCanonicalizeException('Invalid match_type: ' + match_type)
+
+    return (start_key, end_key)
+
+def monkey_patch_calc_search_engine():
+    pywb.utils.canonicalize.calc_search_range = _calc_search_range
+    pywb.cdx.query.calc_search_range = _calc_search_range
+
 def main(argv=sys.argv):
     brozzler.pywb.TheGoodUrlCanonicalizer.replace_default_canonicalizer()
     brozzler.pywb.TheGoodUrlCanonicalizer.monkey_patch_dsrules_init()
     brozzler.pywb.support_in_progress_warcs()
     brozzler.pywb.monkey_patch_wburl()
+    brozzler.pywb.monkey_patch_fuzzy_query()
+    brozzler.pywb.monkey_patch_calc_search_engine()
     wayback_cli = BrozzlerWaybackCli(
             args=argv[1:], default_port=8880,
             desc=('brozzler-wayback - pywb wayback (monkey-patched for use '
