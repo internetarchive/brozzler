@@ -406,7 +406,7 @@ def _calc_search_range(url, match_type, surt_ordered=True, url_canon=None):
 
     return (start_key, end_key)
 
-def monkey_patch_calc_search_engine():
+def monkey_patch_calc_search_range():
     pywb.utils.canonicalize.calc_search_range = _calc_search_range
     pywb.cdx.query.calc_search_range = _calc_search_range
 
@@ -416,7 +416,7 @@ def main(argv=sys.argv):
     brozzler.pywb.support_in_progress_warcs()
     brozzler.pywb.monkey_patch_wburl()
     brozzler.pywb.monkey_patch_fuzzy_query()
-    brozzler.pywb.monkey_patch_calc_search_engine()
+    brozzler.pywb.monkey_patch_calc_search_range()
     wayback_cli = BrozzlerWaybackCli(
             args=argv[1:], default_port=8880,
             desc=('brozzler-wayback - pywb wayback (monkey-patched for use '
