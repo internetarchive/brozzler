@@ -150,6 +150,8 @@ class BrozzlerEasyController:
         brozzler.pywb.TheGoodUrlCanonicalizer.monkey_patch_dsrules_init()
         brozzler.pywb.support_in_progress_warcs()
         brozzler.pywb.monkey_patch_wburl()
+        brozzler.pywb.monkey_patch_fuzzy_query()
+        brozzler.pywb.monkey_patch_calc_search_engine()
 
         if args.warcs_dir.endswith('/'):
             warcs_dir = args.warcs_dir
