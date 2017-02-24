@@ -47,14 +47,19 @@ class ExtraHeaderAdder(urllib.request.BaseHandler):
         return req
 
 class YoutubeDLSpy(urllib.request.BaseHandler):
-    Transaction = collections.namedtuple('Transaction', ['request', 'response'])
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
     def __init__(self):
         self.reset()
 
     def _http_response(self, request, response):
-        self.transactions.append(YoutubeDLSpy.Transaction(request, response))
+        txn = {
+            'url': request.full_url,
+            'method': request.get_method(),
+            'status_code': response.code,
+            'response_headers': response.headers,
+        }
+        self.transactions.append(txn)
         return response
 
     http_response = https_response = _http_response
@@ -73,16 +78,16 @@ class YoutubeDLSpy(urllib.request.BaseHandler):
         for txn in self.transactions:
              # XXX check http status 301,302,303,307? check for "uri" header
              # as well as "location"? see urllib.request.HTTPRedirectHandler
-             if 'location' in txn.response.headers:
-                 redirects[txn.request.full_url] = txn
+             if 'location' in txn['response_headers']:
+                 redirects[txn['url']] = txn
 
         final_url = url
         while final_url in redirects:
-            final_url = redirects.pop(final_url).response.headers['location']
+            final_url = redirects.pop(final_url)['response_headers']['location']
 
         final_bounces = []
         for txn in self.transactions:
-            if txn.request.full_url == final_url:
+            if txn['url'] == final_url:
                 final_bounces.append(txn)
 
         return final_bounces
@@ -316,15 +321,14 @@ class BrozzlerWorker:
         if not final_bounces:
             return True
         for txn in final_bounces:
-            if txn.response.headers.get_content_type() in [
+            if txn['response_headers'].get_content_type() in [
                     'text/html', 'application/xhtml+xml']:
                 return True
         return False
 
     def _already_fetched(self, page, brozzler_spy):
         for txn in brozzler_spy.final_bounces(page.url):
-            if (txn.request.get_method() == 'GET'
-                    and txn.response.getcode() == 200):
+            if (txn['method'] == 'GET' and txn['status_code'] == 200):
                 return True
         return False
 
