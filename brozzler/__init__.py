@@ -50,20 +50,6 @@ class ReachedLimit(Exception):
     def __str__(self):
         return self.__repr__()
 
-class BaseDictable:
-    def to_dict(self):
-        d = dict(vars(self))
-        for k in vars(self):
-            if k.startswith("_") or d[k] is None:
-                del d[k]
-        return d
-
-    def to_json(self):
-        return json.dumps(self.to_dict(), separators=(',', ':'))
-
-    def __repr__(self):
-        return "{}(**{})".format(self.__class__.__name__, self.to_dict())
-
 def fixup(url, hash_strip=False):
     '''
     Does rudimentary canonicalization, such as converting IDN to punycode.
@@ -81,8 +67,6 @@ def fixup(url, hash_strip=False):
 TRACE = 5
 import logging as _logging
 def _logging_trace(msg, *args, **kwargs):
-    if len(_logging.root.handlers) == 0:
-        basicConfig()
     _logging.root.trace(msg, *args, **kwargs)
 def _logger_trace(self, msg, *args, **kwargs):
     if self.isEnabledFor(TRACE):

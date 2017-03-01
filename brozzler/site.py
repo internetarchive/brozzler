@@ -88,53 +88,29 @@ class Url:
 
         return host_parts[-len(domain_parts):] == domain_parts
 
-class Site(brozzler.BaseDictable):
+class Site(rethinkstuff.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)
+    table = 'sites'
 
-    def __init__(
-            self, seed, id=None, job_id=None, scope=None, proxy=None,
-            ignore_robots=False, time_limit=None, warcprox_meta=None,
-            enable_warcprox_features=False, reached_limit=None,
-            status="ACTIVE", claimed=False, start_time=None,
-            last_disclaimed=_EPOCH_UTC, last_claimed_by=None,
-            last_claimed=_EPOCH_UTC, metadata={}, remember_outlinks=None,
-            cookie_db=None, user_agent=None, behavior_parameters=None,
-            username=None, password=None, starts_and_stops=None):
-
-        self.seed = seed
-        self.id = id
-        self.job_id = job_id
-        self.proxy = proxy
-        self.ignore_robots = ignore_robots
-        self.enable_warcprox_features = bool(enable_warcprox_features)
-        self.warcprox_meta = warcprox_meta
-        self.time_limit = time_limit
-        self.reached_limit = reached_limit
-        self.status = status
-        self.claimed = bool(claimed)
-        self.last_claimed_by = last_claimed_by
-        self.last_disclaimed = last_disclaimed
-        self.last_claimed = last_claimed
-        self.metadata = metadata
-        self.remember_outlinks = remember_outlinks
-        self.cookie_db = cookie_db
-        self.user_agent = user_agent
-        self.behavior_parameters = behavior_parameters
-        self.username = username
-        self.password = password
-        self.starts_and_stops = starts_and_stops
-        if not self.starts_and_stops:
-            if start_time:   # backward compatibility
+    def __init__(self, rethinker, d={}):
+        rethinkstuff.Document.__init__(self, rethinker, d)
+        if not self.get('status'):
+            self.status = 'ACTIVE'
+        self.enable_warcprox_features = bool(self.get('enable_warcprox_features'))
+        self.claimed = bool(self.get('claimed'))
+        self.last_disclaimed = self.get('last_disclaimed', _EPOCH_UTC)
+        self.last_claimed = self.get('last_claimed', _EPOCH_UTC)
+        if not self.get('starts_and_stops'):
+            if self.get('start_time'):   # backward compatibility
                 self.starts_and_stops = [{"start":start_time,"stop":None}]
-                if self.status != "ACTIVE":
+                if self.get('status') != "ACTIVE":
                     self.starts_and_stops[0]["stop"] = self.last_disclaimed
             else:
                 self.starts_and_stops = [
                         {"start":rethinkstuff.utcnow(),"stop":None}]
 
-        self.scope = scope or {}
-        if not "surt" in self.scope:
-            self.scope["surt"] = Url(seed).surt
+    def __str__(self):
+        return 'Site({"id":"%s","seed":"%s",...})' % (self.id, self.seed)
 
     def elapsed(self):
         '''Returns elapsed crawl time as a float in seconds.'''
@@ -147,9 +123,6 @@ class Site(brozzler.BaseDictable):
         else: # crawl is active
             dt += (rethinkstuff.utcnow() - ss['start']).total_seconds()
         return dt
-
-    def __str__(self):
-        return "Site-%s-%s" % (self.id, self.seed)
 
     def note_seed_redirect(self, url):
         new_scope_surt = Url(url).surt
@@ -305,41 +278,26 @@ class Site(brozzler.BaseDictable):
 
         return True
 
-class Page(brozzler.BaseDictable):
-    def __init__(
-            self, url, id=None, site_id=None, job_id=None, hops_from_seed=0,
-            redirect_url=None, priority=None, claimed=False, brozzle_count=0,
-            via_page_id=None, last_claimed_by=None, hops_off_surt=0,
-            outlinks=None, needs_robots_check=False, blocked_by_robots=None):
-        self.site_id = site_id
-        self.job_id = job_id
-        self.url = url
-        self.hops_from_seed = hops_from_seed
-        self.redirect_url = redirect_url
-        self.claimed = bool(claimed)
-        self.last_claimed_by = last_claimed_by
-        self.brozzle_count = brozzle_count
-        self.via_page_id = via_page_id
-        self.hops_off_surt = hops_off_surt
-        self.outlinks = outlinks
-        self.needs_robots_check = needs_robots_check
-        self.blocked_by_robots = blocked_by_robots
+class Page(rethinkstuff.Document):
+    logger = logging.getLogger(__module__ + "." + __qualname__)
+    table = 'pages'
+
+    def __init__(self, rethinker, d={}):
+        rethinkstuff.Document.__init__(self, rethinker, d)
+        self.hops_from_seed = self.get('hops_from_seed', 0)
+        self.brozzle_count = self.get('brozzle_count', 0)
+        self.claimed = self.get('claimed', False)
+        self.hops_off_surt = self.get('hops_off_surt', 0)
+        self.needs_robots_check = self.get('needs_robots_check', False)
         self._canon_hurl = None
 
-        if priority is not None:
-            self.priority = priority
-        else:
-            self.priority = self._calc_priority()
-
-        if id is not None:
-            self.id = id
-        else:
-            digest_this = "site_id:{},url:{}".format(self.site_id, self.url)
+        self.priority = self.get('priority', self._calc_priority())
+        if self.get('id') is None:
+            digest_this = "site_id:%s,url:%s" % (self.site_id, self.url)
             self.id = hashlib.sha1(digest_this.encode("utf-8")).hexdigest()
 
-    def __repr__(self):
-        return """Page(url={},job_id={},site_id={},hops_from_seed={})""".format(
-                repr(self.url), self.job_id, self.site_id, self.hops_from_seed)
+    def __str__(self):
+        return 'Page({"id":"%s","url":"%s",...})' % (self.id, self.url)
 
     def note_redirect(self, url):
         self.redirect_url = url
