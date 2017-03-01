@@ -126,6 +126,10 @@ class BrozzlerWorker:
                 site.enable_warcprox_features
                 or self._default_enable_warcprox_features):
             svc = self._service_registry.available_service('warcprox')
+            if svc is None:
+                raise Exception(
+                        'no available instances of warcprox in the service '
+                        'registry')
             site.proxy = '%s:%s' % (svc['host'], svc['port'])
             self._frontier.update_site(site)
             self.logger.info(
@@ -284,12 +288,15 @@ class BrozzlerWorker:
         if self._needs_browsing(page, ydl_spy):
             self.logger.info('needs browsing: %s', page)
             if not browser.is_running():
-                browser.start(proxy=self._proxy(site), cookie_db=site.cookie_db)
+                browser.start(
+                        proxy=self._proxy(site),
+                        cookie_db=site.get('cookie_db'))
             final_page_url, outlinks = browser.browse_page(
                     page.url, extra_headers=site.extra_headers(),
-                    behavior_parameters=site.behavior_parameters,
-                    username=site.username, password=site.password,
-                    user_agent=site.user_agent,
+                    behavior_parameters=site.get('behavior_parameters'),
+                    username=site.get('username'),
+                    password=site.get('password'),
+                    user_agent=site.get('user_agent'),
                     on_screenshot=_on_screenshot)
             if final_page_url != page.url:
                 page.note_redirect(final_page_url)
@@ -408,6 +415,7 @@ class BrozzlerWorker:
             self._service_heartbeat()
 
     def run(self):
+        self.logger.info("brozzler worker starting")
         try:
             latest_state = None
             while True:

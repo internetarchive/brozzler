@@ -70,31 +70,32 @@ def new_job_file(frontier, job_conf_file):
 def new_job(frontier, job_conf):
     '''Returns new Job.'''
     validate_conf(job_conf)
-    job = Job(
-            id=job_conf.get("id"), conf=job_conf, status="ACTIVE",
-            started=rethinkstuff.utcnow())
-
-    # insert the job now to make sure it has an id
-    job = frontier.new_job(job)
+    job = Job(frontier.r, {
+                "conf": job_conf,
+                "status": "ACTIVE", "started": rethinkstuff.utcnow()})
+    if "id" in job_conf:
+        job.id = job_conf["id"]
+    job.save()
 
     sites = []
     for seed_conf in job_conf["seeds"]:
         merged_conf = merge(seed_conf, job_conf)
-        site = brozzler.Site(
-                job_id=job.id, seed=merged_conf["url"],
-                scope=merged_conf.get("scope"),
-                time_limit=merged_conf.get("time_limit"),
-                proxy=merged_conf.get("proxy"),
-                ignore_robots=merged_conf.get("ignore_robots"),
-                enable_warcprox_features=merged_conf.get(
-                    "enable_warcprox_features"),
-                warcprox_meta=merged_conf.get("warcprox_meta"),
-                metadata=merged_conf.get("metadata"),
-                remember_outlinks=merged_conf.get("remember_outlinks"),
-                user_agent=merged_conf.get("user_agent"),
-                behavior_parameters=merged_conf.get("behavior_parameters"),
-                username=merged_conf.get("username"),
-                password=merged_conf.get("password"))
+        site = brozzler.Site(frontier.r, {
+            "job_id": job.id,
+            "seed": merged_conf["url"],
+            "scope": merged_conf.get("scope"),
+            "time_limit": merged_conf.get("time_limit"),
+            "proxy": merged_conf.get("proxy"),
+            "ignore_robots": merged_conf.get("ignore_robots"),
+            "enable_warcprox_features": merged_conf.get(
+                "enable_warcprox_features"),
+            "warcprox_meta": merged_conf.get("warcprox_meta"),
+            "metadata": merged_conf.get("metadata"),
+            "remember_outlinks": merged_conf.get("remember_outlinks"),
+            "user_agent": merged_conf.get("user_agent"),
+            "behavior_parameters": merged_conf.get("behavior_parameters"),
+            "username": merged_conf.get("username"),
+            "password": merged_conf.get("password")})
         sites.append(site)
 
     for site in sites:
@@ -110,31 +111,31 @@ def new_site(frontier, site):
         # where a brozzler worker immediately claims the site, finds no pages
         # to crawl, and decides the site is finished
         try:
-            page = brozzler.Page(
-                    site.seed, site_id=site.id, job_id=site.job_id,
-                    hops_from_seed=0, priority=1000, needs_robots_check=True)
-            frontier.new_page(page)
+            page = brozzler.Page(frontier.r, {
+                "url": site.seed, "site_id": site.get("id"),
+                "job_id": site.get("job_id"), "hops_from_seed": 0,
+                "priority": 1000, "needs_robots_check": True})
+            page.save()
             logging.info("queued page %s", page)
         finally:
             # finally block because we want to insert the Site no matter what
-            frontier.new_site(site)
+            site.save()
     except brozzler.ReachedLimit as e:
         frontier.reached_limit(site, e)
 
-class Job(brozzler.BaseDictable):
+class Job(rethinkstuff.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)
+    table = "jobs"
 
-    def __init__(
-            self, id=None, conf=None, status="ACTIVE", started=None,
-            finished=None, stop_requested=None, starts_and_stops=None):
-        self.id = id
-        self.conf = conf
-        self.status = status
-        self.stop_requested = stop_requested
-        self.starts_and_stops = starts_and_stops
-        if not self.starts_and_stops:
-            if started:   # backward compatibility
-                self.starts_and_stops = [{"start":started,"stop":finished}]
+    def __init__(self, rethinker, d={}):
+        rethinkstuff.Document.__init__(self, rethinker, d)
+        self.status = self.get("status", "ACTIVE")
+        if not "starts_and_stops" in self:
+            if self.get("started"):   # backward compatibility
+                self.starts_and_stops = [{
+                    "start": self.get("started"),
+                    "stop": self.get("finished")}]
+                del self["started"]
             else:
                 self.starts_and_stops = [
                         {"start":rethinkstuff.utcnow(),"stop":None}]
@@ -147,7 +148,4 @@ class Job(brozzler.BaseDictable):
                     self.starts_and_stops[-1]["stop"])
         self.status = "FINISHED"
         self.starts_and_stops[-1]["stop"] = rethinkstuff.utcnow()
-
-    def __str__(self):
-        return 'Job(id=%s)' % self.id
 

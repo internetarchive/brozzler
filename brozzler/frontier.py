@@ -92,43 +92,6 @@ class RethinkDbFrontier:
                 if result.get(k) != expected:
                     raise UnexpectedDbResult("expected {} to be {} in {}".format(repr(k), expected, result))
 
-    def new_job(self, job):
-        self.logger.info("inserting into 'jobs' table %s", repr(job))
-        result = self.r.table("jobs").insert(job.to_dict()).run()
-        self._vet_result(result, inserted=1)
-        if not job.id:
-            # only if "id" has not already been set
-            job.id = result["generated_keys"][0]
-        return job
-
-    def new_site(self, site):
-        self.logger.info("inserting into 'sites' table %s", site)
-        result = self.r.table("sites").insert(site.to_dict()).run()
-        self._vet_result(result, inserted=1)
-        if not site.id:
-            # only if "id" has not already been set
-            site.id = result["generated_keys"][0]
-
-    def update_job(self, job):
-        self.logger.debug("updating 'jobs' table entry %s", job)
-        result = self.r.table("jobs").get(job.id).replace(job.to_dict()).run()
-        self._vet_result(result, replaced=[0,1], unchanged=[0,1])
-
-    def update_site(self, site):
-        self.logger.debug("updating 'sites' table entry %s", site)
-        result = self.r.table("sites").get(site.id).replace(site.to_dict()).run()
-        self._vet_result(result, replaced=[0,1], unchanged=[0,1])
-
-    def update_page(self, page):
-        self.logger.trace("updating 'pages' table entry %s", page)
-        result = self.r.table("pages").get(page.id).replace(page.to_dict()).run()
-        self._vet_result(result, replaced=[0,1], unchanged=[0,1])
-
-    def new_page(self, page):
-        self.logger.trace("inserting into 'pages' table %s", page)
-        result = self.r.table("pages").insert(page.to_dict()).run()
-        self._vet_result(result, inserted=1)
-
     def claim_site(self, worker_id):
         # XXX keep track of aggregate priority and prioritize sites accordingly?
         while True:
@@ -165,7 +128,7 @@ class RethinkDbFrontier:
                             "at %s, and presumably some error stopped it from "
                             "being disclaimed",
                             result["changes"][0]["old_val"]["last_claimed"])
-                site = brozzler.Site(**result["changes"][0]["new_val"])
+                site = brozzler.Site(self.r, result["changes"][0]["new_val"])
             else:
                 raise brozzler.NothingToClaim
             # XXX This is the only place we enforce time limit for now. Worker
@@ -204,7 +167,7 @@ class RethinkDbFrontier:
         if result["unchanged"] == 0 and result["replaced"] == 0:
             raise brozzler.NothingToClaim
         else:
-            return brozzler.Page(**result["changes"][0]["new_val"])
+            return brozzler.Page(self.r, result["changes"][0]["new_val"])
 
     def has_outstanding_pages(self, site):
         results_iter = self.r.table("pages").between(
@@ -213,55 +176,30 @@ class RethinkDbFrontier:
                 index="priority_by_site").limit(1).run()
         return len(list(results_iter)) > 0
 
-    def page(self, id):
-        result = self.r.table("pages").get(id).run()
-        if result:
-            return brozzler.Page(**result)
-        else:
-            return None
-
     def completed_page(self, site, page):
         page.brozzle_count += 1
         page.claimed = False
         # XXX set priority?
-        self.update_page(page)
+        page.save()
         if page.redirect_url and page.hops_from_seed == 0:
             site.note_seed_redirect(page.redirect_url)
-            self.update_site(site)
+            site.save()
 
     def active_jobs(self):
         results = self.r.table("jobs").filter({"status":"ACTIVE"}).run()
         for result in results:
-            yield brozzler.Job(**result)
-
-    def job(self, id):
-        if id is None:
-            return None
-        result = self.r.table("jobs").get(id).run()
-        if result:
-            return brozzler.Job(**result)
-        else:
-            return None
-
-    def site(self, id):
-        if id is None:
-            return None
-        result = self.r.table("sites").get(id).run()
-        if result:
-            return brozzler.Site(**result)
-        else:
-            return None
+            yield brozzler.Job(self.r, result)
 
     def honor_stop_request(self, job_id):
         """Raises brozzler.CrawlJobStopped if stop has been requested."""
-        job = self.job(job_id)
-        if job and job.stop_requested:
+        job = brozzler.Job.load(self.r, job_id)
+        if job and job.get('stop_requested'):
             self.logger.info("stop requested for job %s", job_id)
             raise brozzler.CrawlJobStopped
 
     def _maybe_finish_job(self, job_id):
         """Returns True if job is finished."""
-        job = self.job(job_id)
+        job = brozzler.Job.load(self.r, job_id)
         if not job:
             return False
         if job.status.startswith("FINISH"):
@@ -271,7 +209,7 @@ class RethinkDbFrontier:
         results = self.r.table("sites").get_all(job_id, index="job_id").run()
         n = 0
         for result in results:
-            site = brozzler.Site(**result)
+            site = brozzler.Site(self.r, result)
             if not site.status.startswith("FINISH"):
                 results.close()
                 return False
@@ -279,7 +217,7 @@ class RethinkDbFrontier:
 
         self.logger.info("all %s sites finished, job %s is FINISHED!", n, job.id)
         job.finish()
-        self.update_job(job)
+        job.save()
         return True
 
     def finished(self, site, status):
@@ -288,7 +226,7 @@ class RethinkDbFrontier:
         site.claimed = False
         site.last_disclaimed = rethinkstuff.utcnow()
         site.starts_and_stops[-1]["stop"] = rethinkstuff.utcnow()
-        self.update_site(site)
+        site.save()
         if site.job_id:
             self._maybe_finish_job(site.job_id)
 
@@ -299,34 +237,34 @@ class RethinkDbFrontier:
         if not page and not self.has_outstanding_pages(site):
             self.finished(site, "FINISHED")
         else:
-            self.update_site(site)
+            site.save()
         if page:
             page.claimed = False
-            self.update_page(page)
+            page.save()
 
     def resume_job(self, job):
         job.status = "ACTIVE"
         job.starts_and_stops.append(
                 {"start":rethinkstuff.utcnow(), "stop":None})
-        self.update_job(job)
+        job.save()
         for site in self.job_sites(job.id):
             site.status = "ACTIVE"
             site.starts_and_stops.append(
                     {"start":rethinkstuff.utcnow(), "stop":None})
-            self.update_site(site)
+            site.save()
 
     def resume_site(self, site):
         if site.job_id:
             # can't call resume_job since that would resume jobs's other sites
-            job = self.job(site.job_id)
+            job = brozzler.job.load(self.r, site.job_id)
             job.status = "ACTIVE"
             job.starts_and_stops.append(
                     {"start":rethinkstuff.utcnow(), "stop":None})
-            self.update_job(job)
+            job.save()
         site.status = "ACTIVE"
         site.starts_and_stops.append(
                 {"start":rethinkstuff.utcnow(), "stop":None})
-        self.update_site(site)
+        site.save()
 
     def scope_and_schedule_outlinks(self, site, parent_page, outlinks):
         if site.remember_outlinks:
@@ -340,18 +278,18 @@ class RethinkDbFrontier:
                         hops_off_surt = parent_page.hops_off_surt + 1
                     else:
                         hops_off_surt = 0
-                    new_child_page = brozzler.Page(
-                            url, site_id=site.id, job_id=site.job_id,
-                            hops_from_seed=parent_page.hops_from_seed+1,
-                            via_page_id=parent_page.id,
-                            hops_off_surt=hops_off_surt)
-                    existing_child_page = self.page(new_child_page.id)
+                    new_child_page = brozzler.Page(self.r, {
+                        'url': url, 'site_id': site.id, 'job_id': site.job_id,
+                        'hops_from_seed': parent_page.hops_from_seed+1,
+                        'via_page_id': parent_page.id,
+                        'hops_off_surt': hops_off_surt})
+                    existing_child_page = brozzler.Page.load(new_child_page.id)
                     if existing_child_page:
                         existing_child_page.priority += new_child_page.priority
-                        self.update_page(existing_child_page)
+                        existing_child_page.save()
                         counts["updated"] += 1
                     else:
-                        self.new_page(new_child_page)
+                        new_child_page.save()
                         counts["added"] += 1
                     if site.remember_outlinks:
                         parent_page.outlinks["accepted"].append(url)
@@ -365,7 +303,7 @@ class RethinkDbFrontier:
                     parent_page.outlinks["rejected"].append(url)
 
         if site.remember_outlinks:
-            self.update_page(parent_page)
+            parent_page.save()
 
         self.logger.info(
                 "%s new links added, %s existing links updated, %s links "
@@ -386,7 +324,7 @@ class RethinkDbFrontier:
     def job_sites(self, job_id):
         results = self.r.table('sites').get_all(job_id, index="job_id").run()
         for result in results:
-            yield brozzler.Site(**result)
+            yield brozzler.Site(self.r, result)
 
     def seed_page(self, site_id):
         results = self.r.table("pages").between(
@@ -399,7 +337,7 @@ class RethinkDbFrontier:
                     "more than one seed page for site_id %s ?", site_id)
         if len(pages) < 1:
             return None
-        return brozzler.Page(**pages[0])
+        return brozzler.Page(self.r, pages[0])
 
     def site_pages(self, site_id, unbrozzled_only=False):
         results = self.r.table("pages").between(
@@ -409,5 +347,5 @@ class RethinkDbFrontier:
                     self.r.maxval, self.r.maxval],
                 index="priority_by_site").run()
         for result in results:
-            yield brozzler.Page(**result)
+            yield brozzler.Page(self.r, result)
 

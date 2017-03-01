@@ -97,7 +97,6 @@ class BrowserPool:
         with self._lock:
             for browser in self._in_use:
                 browser.stop()
-            self._in_use.clear()
 
     def num_available(self):
         return self.size - len(self._in_use)

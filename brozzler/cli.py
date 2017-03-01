@@ -174,12 +174,12 @@ def brozzle_page():
     behavior_parameters = {}
     if args.behavior_parameters:
         behavior_parameters = json.loads(args.behavior_parameters)
-    site = brozzler.Site(
-            id=-1, seed=args.url, proxy=args.proxy,
-            enable_warcprox_features=args.enable_warcprox_features,
-            behavior_parameters=behavior_parameters, username=args.username,
-            password=args.password)
-    page = brozzler.Page(url=args.url, site_id=site.id)
+    site = brozzler.Site(None, {
+        'id': -1, 'seed': args.url, 'proxy': args.proxy,
+        'enable_warcprox_features': args.enable_warcprox_features,
+        'behavior_parameters': behavior_parameters,
+        'username': args.username, 'password': args.password})
+    page = brozzler.Page(None, {'url': args.url, 'site_id': site.id})
     worker = brozzler.BrozzlerWorker(frontier=None)
 
     def on_screenshot(screenshot_png):
@@ -273,24 +273,26 @@ def brozzler_new_site():
     args = arg_parser.parse_args(args=sys.argv[1:])
     configure_logging(args)
 
-    site = brozzler.Site(
-            seed=args.seed, proxy=args.proxy,
-            time_limit=int(args.time_limit) if args.time_limit else None,
-            ignore_robots=args.ignore_robots,
-            enable_warcprox_features=args.enable_warcprox_features,
-            warcprox_meta=json.loads(
-                args.warcprox_meta) if args.warcprox_meta else None,
-            behavior_parameters=json.loads(
-                args.behavior_parameters) if args.behavior_parameters else None,
-            username=args.username, password=args.password)
-
     r = rethinker(args)
+    site = brozzler.Site(r, {
+        'seed': args.seed,
+        'proxy': args.proxy,
+        'time_limit': int(args.time_limit) if args.time_limit else None,
+        'ignore_robots': args.ignore_robots,
+        'enable_warcprox_features': args.enable_warcprox_features,
+        'warcprox_meta': json.loads(
+            args.warcprox_meta) if args.warcprox_meta else None,
+        'behavior_parameters': json.loads(
+            args.behavior_parameters) if args.behavior_parameters else None,
+        'username': args.username,
+        'password': args.password})
+
     frontier = brozzler.RethinkDbFrontier(r)
     brozzler.new_site(frontier, site)
 
 def brozzler_worker():
     '''
-    Main entrypoint for brozzler, gets sites and pages to brozzle from
+    Main entry point for brozzler, gets sites and pages to brozzle from
     rethinkdb, brozzles them.
     '''
     arg_parser = argparse.ArgumentParser(
