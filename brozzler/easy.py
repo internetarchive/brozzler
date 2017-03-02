@@ -42,7 +42,7 @@ import socket
 import signal
 import threading
 import time
-import rethinkstuff
+import doublethink
 import traceback
 import socketserver
 
@@ -133,10 +133,10 @@ class BrozzlerEasyController:
                 brozzler.dashboard.app, ThreadingWSGIServer)
 
     def _init_brozzler_worker(self, args):
-        r = rethinkstuff.Rethinker(
+        rr = doublethink.Rethinker(
                 args.rethinkdb_servers.split(","), args.rethinkdb_db)
-        frontier = brozzler.RethinkDbFrontier(r)
-        service_registry = rethinkstuff.ServiceRegistry(r)
+        frontier = brozzler.RethinkDbFrontier(rr)
+        service_registry = doublethink.ServiceRegistry(rr)
         worker = brozzler.worker.BrozzlerWorker(
                 frontier, service_registry,
                 max_browsers=args.max_browsers,

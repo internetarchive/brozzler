@@ -26,7 +26,7 @@ import logging
 import os
 import re
 import requests
-import rethinkstuff
+import doublethink
 import signal
 import string
 import sys
@@ -37,6 +37,7 @@ import warnings
 import yaml
 import shutil
 import base64
+import rethinkdb as r
 
 def add_common_options(arg_parser):
     arg_parser.add_argument(
@@ -78,7 +79,7 @@ def rethinker(args):
     servers = args.rethinkdb_servers or 'localhost'
     db = args.rethinkdb_db or os.environ.get(
             'BROZZLER_RETHINKDB_DB') or 'brozzler'
-    return rethinkstuff.Rethinker(servers.split(','), db)
+    return doublethink.Rethinker(servers.split(','), db)
 
 def _add_proxy_options(arg_parser):
     arg_parser.add_argument(
@@ -222,8 +223,8 @@ def brozzler_new_job():
     args = arg_parser.parse_args(args=sys.argv[1:])
     configure_logging(args)
 
-    r = rethinker(args)
-    frontier = brozzler.RethinkDbFrontier(r)
+    rr = rethinker(args)
+    frontier = brozzler.RethinkDbFrontier(rr)
     try:
         brozzler.job.new_job_file(frontier, args.job_conf_file)
     except brozzler.job.InvalidJobConf as e:
@@ -273,8 +274,8 @@ def brozzler_new_site():
     args = arg_parser.parse_args(args=sys.argv[1:])
     configure_logging(args)
 
-    r = rethinker(args)
-    site = brozzler.Site(r, {
+    rr = rethinker(args)
+    site = brozzler.Site(rr, {
         'seed': args.seed,
         'proxy': args.proxy,
         'time_limit': int(args.time_limit) if args.time_limit else None,
@@ -287,7 +288,7 @@ def brozzler_new_site():
         'username': args.username,
         'password': args.password})
 
-    frontier = brozzler.RethinkDbFrontier(r)
+    frontier = brozzler.RethinkDbFrontier(rr)
     brozzler.new_site(frontier, site)
 
 def brozzler_worker():
@@ -296,7 +297,7 @@ def brozzler_worker():
     rethinkdb, brozzles them.
     '''
     arg_parser = argparse.ArgumentParser(
-            prog=os.path.basename(__file__),
+            prog=os.path.basename(sys.argv[0]),
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     add_rethinkdb_options(arg_parser)
     arg_parser.add_argument(
@@ -341,9 +342,9 @@ def brozzler_worker():
     signal.signal(signal.SIGTERM, sigterm)
     signal.signal(signal.SIGINT, sigint)
 
-    r = rethinker(args)
-    frontier = brozzler.RethinkDbFrontier(r)
-    service_registry = rethinkstuff.ServiceRegistry(r)
+    rr = rethinker(args)
+    frontier = brozzler.RethinkDbFrontier(rr)
+    service_registry = doublethink.ServiceRegistry(rr)
     worker = brozzler.worker.BrozzlerWorker(
             frontier, service_registry, max_browsers=int(args.max_browsers),
             chrome_exe=args.chrome_exe)
@@ -369,13 +370,13 @@ def brozzler_ensure_tables():
     args = arg_parser.parse_args(args=sys.argv[1:])
     configure_logging(args)
 
-    r = rethinker(args)
+    rr = rethinker(args)
 
     # services table
-    rethinkstuff.ServiceRegistry(r)
+    doublethink.ServiceRegistry(rr)
 
     # sites, pages, jobs tables
-    brozzler.frontier.RethinkDbFrontier(r)
+    brozzler.frontier.RethinkDbFrontier(rr)
 
 class Jsonner(json.JSONEncoder):
     def default(self, o):
@@ -402,8 +403,8 @@ def brozzler_list_jobs():
     args = arg_parser.parse_args(args=sys.argv[1:])
     configure_logging(args)
 
-    r = rethinker(args)
-    reql = r.table('jobs').order_by('id')
+    rr = rethinker(args)
+    reql = rr.table('jobs').order_by('id')
     if not args.all:
         reql = reql.filter({'status': 'ACTIVE'})
     logging.debug('querying rethinkdb: %s', reql)
@@ -439,9 +440,9 @@ def brozzler_list_sites():
     args = arg_parser.parse_args(args=sys.argv[1:])
     configure_logging(args)
 
-    r = rethinker(args)
+    rr = rethinker(args)
 
-    reql = r.table('sites')
+    reql = rr.table('sites')
     if args.job:
         try:
             job_id = int(args.job)
@@ -493,13 +494,13 @@ def brozzler_list_pages():
     args = arg_parser.parse_args(args=sys.argv[1:])
     configure_logging(args)
 
-    r = rethinker(args)
+    rr = rethinker(args)
     if args.job:
         try:
             job_id = int(args.job)
         except ValueError:
             job_id = args.job
-        reql = r.table('sites').get_all(job_id, index='job_id')['id']
+        reql = rr.table('sites').get_all(job_id, index='job_id')['id']
         logging.debug('querying rethinkb: %s', reql)
         site_ids = reql.run()
     else:
@@ -509,7 +510,7 @@ def brozzler_list_pages():
             site_ids = [args.site]
 
     for site_id in site_ids:
-        reql = r.table('pages')
+        reql = rr.table('pages')
         if args.queued:
             reql = reql.between(
                     [site_id, 0, r.minval], [site_id, 0, r.maxval],
@@ -541,7 +542,6 @@ def brozzler_list_captures():
     url or sha1.
     '''
     import surt
-    import rethinkdb
 
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(sys.argv[0]),
@@ -563,7 +563,7 @@ def brozzler_list_captures():
     args = arg_parser.parse_args(args=sys.argv[1:])
     configure_logging(args)
 
-    r = rethinker(args)
+    rr = rethinker(args)
 
     if args.url_or_sha1[:5] == 'sha1:':
         if args.prefix:
@@ -572,9 +572,9 @@ def brozzler_list_captures():
                     'to lookup by sha1')
         # assumes it's already base32 (XXX could detect if hex and convert)
         sha1base32 = args.url_or_sha1[5:].upper()
-        reql = r.table('captures').between(
-                [sha1base32, rethinkdb.minval, rethinkdb.minval],
-                [sha1base32, rethinkdb.maxval, rethinkdb.maxval],
+        reql = rr.table('captures').between(
+                [sha1base32, r.minval, r.minval],
+                [sha1base32, r.maxval, r.maxval],
                 index='sha1_warc_type')
         logging.debug('querying rethinkdb: %s', reql)
         results = reql.run()
@@ -590,9 +590,9 @@ def brozzler_list_captures():
         else:
             abbr_end_key = key[:150]
             end_key = key
-        reql = r.table('captures').between(
-                [abbr_start_key, rethinkdb.minval],
-                [abbr_end_key, rethinkdb.maxval],
+        reql = rr.table('captures').between(
+                [abbr_start_key, r.minval],
+                [abbr_end_key, r.maxval],
                 index='abbr_canon_surt_timestamp', right_bound='closed')
         reql = reql.order_by(index='abbr_canon_surt_timestamp')
         reql = reql.filter(

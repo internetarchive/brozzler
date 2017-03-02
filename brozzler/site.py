@@ -22,13 +22,13 @@ import logging
 import brozzler
 import hashlib
 import time
-import rethinkstuff
+import doublethink
 import datetime
 import re
 import ipaddress
 
 _EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(
-        tzinfo=rethinkstuff.UTC)
+        tzinfo=doublethink.UTC)
 
 class Url:
     def __init__(self, url):
@@ -88,12 +88,12 @@ class Url:
 
         return host_parts[-len(domain_parts):] == domain_parts
 
-class Site(rethinkstuff.Document):
+class Site(doublethink.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)
     table = 'sites'
 
-    def __init__(self, rethinker, d={}):
-        rethinkstuff.Document.__init__(self, rethinker, d)
+    def __init__(self, rr, d={}):
+        doublethink.Document.__init__(self, rr, d)
         if not self.get('status'):
             self.status = 'ACTIVE'
         self.enable_warcprox_features = bool(self.get('enable_warcprox_features'))
@@ -107,7 +107,11 @@ class Site(rethinkstuff.Document):
                     self.starts_and_stops[0]["stop"] = self.last_disclaimed
             else:
                 self.starts_and_stops = [
-                        {"start":rethinkstuff.utcnow(),"stop":None}]
+                        {"start":doublethink.utcnow(),"stop":None}]
+        if not self.scope:
+            self.scope = {}
+        if not 'surt' in self.scope:
+            self.scope['surt'] = Url(self.seed).surt
 
     def __str__(self):
         return 'Site({"id":"%s","seed":"%s",...})' % (self.id, self.seed)
@@ -121,7 +125,7 @@ class Site(rethinkstuff.Document):
         if ss['stop']:
             dt += (ss['stop'] - ss['start']).total_seconds()
         else: # crawl is active
-            dt += (rethinkstuff.utcnow() - ss['start']).total_seconds()
+            dt += (doublethink.utcnow() - ss['start']).total_seconds()
         return dt
 
     def note_seed_redirect(self, url):
@@ -278,12 +282,12 @@ class Site(rethinkstuff.Document):
 
         return True
 
-class Page(rethinkstuff.Document):
+class Page(doublethink.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)
     table = 'pages'
 
-    def __init__(self, rethinker, d={}):
-        rethinkstuff.Document.__init__(self, rethinker, d)
+    def __init__(self, rr, d={}):
+        doublethink.Document.__init__(self, rr, d)
         self.hops_from_seed = self.get('hops_from_seed', 0)
         self.brozzle_count = self.get('brozzle_count', 0)
         self.claimed = self.get('claimed', False)
@@ -303,12 +307,16 @@ class Page(rethinkstuff.Document):
         self.redirect_url = url
 
     def _calc_priority(self):
+        if not self.url:
+            return None
         priority = 0
         priority += max(0, 10 - self.hops_from_seed)
         priority += max(0, 6 - self.canon_url().count("/"))
         return priority
 
     def canon_url(self):
+        if not self.url:
+            return None
         if self._canon_hurl is None:
             self._canon_hurl = surt.handyurl.parse(self.url)
             surt.GoogleURLCanonicalizer.canonicalize(self._canon_hurl)

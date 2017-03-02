@@ -24,7 +24,7 @@ import threading
 import urllib.request
 import os
 import socket
-import rethinkstuff
+import doublethink
 import time
 import brozzler
 import datetime
@@ -78,8 +78,8 @@ def test_httpd(httpd):
 def test_services_up():
     '''Check that the expected services are up and running.'''
     # check that rethinkdb is listening and looks sane
-    r = rethinkstuff.Rethinker(db='rethinkdb')  # built-in db
-    tbls = r.table_list().run()
+    rr = doublethink.Rethinker(db='rethinkdb')  # built-in db
+    tbls = rr.table_list().run()
     assert len(tbls) > 10
 
     # check that warcprox is listening
@@ -99,10 +99,11 @@ def test_services_up():
 
 def test_brozzle_site(httpd):
     test_id = 'test_brozzle_site-%s' % datetime.datetime.utcnow().isoformat()
-    site = brozzler.Site(
-            seed='http://localhost:%s/site1/' % httpd.server_port,
-            proxy='localhost:8000', enable_warcprox_features=True,
-            warcprox_meta={'captures-table-extra-fields':{'test_id':test_id}})
+    rr = doublethink.Rethinker('localhost', db='brozzler')
+    site = brozzler.Site(rr, {
+        'seed': 'http://localhost:%s/site1/' % httpd.server_port,
+        'proxy': 'localhost:8000', 'enable_warcprox_features': True,
+        'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
 
     # the two pages we expect to be crawled
     page1 = 'http://localhost:%s/site1/' % httpd.server_port
@@ -114,8 +115,7 @@ def test_brozzle_site(httpd):
         stop_service('brozzler-worker')
 
         assert site.id is None
-        r = rethinkstuff.Rethinker('localhost', db='brozzler')
-        frontier = brozzler.RethinkDbFrontier(r)
+        frontier = brozzler.RethinkDbFrontier(rr)
         brozzler.new_site(frontier, site)
         assert site.id is not None
         assert len(list(frontier.site_pages(site.id))) == 1
@@ -126,7 +126,7 @@ def test_brozzle_site(httpd):
     start = time.time()
     while site.status != 'FINISHED' and time.time() - start < 300:
         time.sleep(0.5)
-        site = frontier.site(site.id)
+        site.refresh()
     assert site.status == 'FINISHED'
 
     # check that we got the two pages we expected
@@ -138,7 +138,7 @@ def test_brozzle_site(httpd):
 
     time.sleep(2)   # in case warcprox hasn't finished processing urls
     # take a look at the captures table
-    captures = r.table('captures').filter({'test_id':test_id}).run()
+    captures = rr.table('captures').filter({'test_id':test_id}).run()
     captures_by_url = {
             c['url']: c for c in captures if c['http_method'] != 'HEAD'}
     assert robots in captures_by_url
@@ -180,17 +180,17 @@ def test_warcprox_selection(httpd):
     page2 = 'http://localhost:%s/site1/file1.txt' % httpd.server_port
     robots = 'http://localhost:%s/robots.txt' % httpd.server_port
 
-    site = brozzler.Site(
-            seed='http://localhost:%s/site1/' % httpd.server_port,
-            enable_warcprox_features=True,
-            warcprox_meta={'captures-table-extra-fields':{'test_id':test_id}})
+    rr = doublethink.Rethinker('localhost', db='brozzler')
+    site = brozzler.Site(rr, {
+        'seed': 'http://localhost:%s/site1/' % httpd.server_port,
+        'enable_warcprox_features': True,
+        'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
 
     # so we can examine rethinkdb before it does anything
     try:
         stop_service('brozzler-worker')
         assert site.id is None
-        r = rethinkstuff.Rethinker('localhost', db='brozzler')
-        frontier = brozzler.RethinkDbFrontier(r)
+        frontier = brozzler.RethinkDbFrontier(rr)
         brozzler.new_site(frontier, site)
         assert site.id is not None
         assert len(list(frontier.site_pages(site.id))) == 1
@@ -201,14 +201,14 @@ def test_warcprox_selection(httpd):
     start = time.time()
     while not site.proxy and time.time() - start < 20:
         time.sleep(0.5)
-        site = frontier.site(site.id)
+        site.refresh()
     assert site.proxy[-5:] == ':8000'
 
     # the site should be brozzled fairly quickly
     start = time.time()
     while site.status != 'FINISHED' and time.time() - start < 300:
         time.sleep(0.5)
-        site = frontier.site(site.id)
+        site.refresh()
     assert site.status == 'FINISHED'
 
     # check that we got the two pages we expected
@@ -220,7 +220,7 @@ def test_warcprox_selection(httpd):
 
     time.sleep(2)   # in case warcprox hasn't finished processing urls
     # take a look at the captures table
-    captures = r.table('captures').filter({'test_id':test_id}).run()
+    captures = rr.table('captures').filter({'test_id':test_id}).run()
     captures_by_url = {
             c['url']: c for c in captures if c['http_method'] != 'HEAD'}
     assert robots in captures_by_url
@@ -239,19 +239,19 @@ def test_warcprox_selection(httpd):
 
 def test_obey_robots(httpd):
     test_id = 'test_obey_robots-%s' % datetime.datetime.utcnow().isoformat()
-    site = brozzler.Site(
-            seed='http://localhost:%s/site1/' % httpd.server_port,
-            proxy='localhost:8000', enable_warcprox_features=True,
-            user_agent='im a badbot',   # robots.txt blocks badbot
-            warcprox_meta={'captures-table-extra-fields':{'test_id':test_id}})
+    rr = doublethink.Rethinker('localhost', db='brozzler')
+    site = brozzler.Site(rr, {
+        'seed': 'http://localhost:%s/site1/' % httpd.server_port,
+        'proxy': 'localhost:8000', 'enable_warcprox_features': True,
+        'user_agent': 'im a badbot',   # robots.txt blocks badbot
+        'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
 
     # so we can examine rethinkdb before it does anything
     try:
         stop_service('brozzler-worker')
 
         assert site.id is None
-        r = rethinkstuff.Rethinker('localhost', db='brozzler')
-        frontier = brozzler.RethinkDbFrontier(r)
+        frontier = brozzler.RethinkDbFrontier(rr)
         brozzler.new_site(frontier, site)
         assert site.id is not None
         site_pages = list(frontier.site_pages(site.id))
@@ -265,7 +265,7 @@ def test_obey_robots(httpd):
     start = time.time()
     while site.status != 'FINISHED' and time.time() - start < 300:
         time.sleep(0.5)
-        site = frontier.site(site.id)
+        site.refresh()
     assert site.status == 'FINISHED'
 
     # check that only the one page is in rethinkdb
@@ -278,7 +278,7 @@ def test_obey_robots(httpd):
     # take a look at the captures table
     time.sleep(2)   # in case warcprox hasn't finished processing urls
     robots_url = 'http://localhost:%s/robots.txt' % httpd.server_port
-    captures = list(r.table('captures').filter({'test_id':test_id}).run())
+    captures = list(rr.table('captures').filter({'test_id':test_id}).run())
     assert len(captures) == 1
     assert captures[0]['url'] == robots_url
 
@@ -292,27 +292,27 @@ def test_obey_robots(httpd):
 
 def test_login(httpd):
     test_id = 'test_login-%s' % datetime.datetime.utcnow().isoformat()
-    site = brozzler.Site(
-            seed='http://localhost:%s/site2/' % httpd.server_port,
-            proxy='localhost:8000', enable_warcprox_features=True,
-            warcprox_meta={'captures-table-extra-fields':{'test_id':test_id}},
-            username='test_username', password='test_password')
+    rr = doublethink.Rethinker('localhost', db='brozzler')
+    site = brozzler.Site(rr, {
+        'seed': 'http://localhost:%s/site2/' % httpd.server_port,
+        'proxy': 'localhost:8000', 'enable_warcprox_features': True,
+        'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}},
+        'username': 'test_username', 'password': 'test_password'})
 
-    r = rethinkstuff.Rethinker('localhost', db='brozzler')
-    frontier = brozzler.RethinkDbFrontier(r)
+    frontier = brozzler.RethinkDbFrontier(rr)
     brozzler.new_site(frontier, site)
 
     # the site should be brozzled fairly quickly
     start = time.time()
     while site.status != 'FINISHED' and time.time() - start < 300:
         time.sleep(0.5)
-        site = frontier.site(site.id)
+        site.refresh()
     assert site.status == 'FINISHED'
 
     # take a look at the captures table
     time.sleep(2)   # in case warcprox hasn't finished processing urls
     robots_url = 'http://localhost:%s/robots.txt' % httpd.server_port
-    captures = list(r.table('captures').filter(
+    captures = list(rr.table('captures').filter(
                 {'test_id':test_id}).order_by('timestamp').run())
     meth_url = ['%s %s' % (c['http_method'], c['url']) for c in captures]
 

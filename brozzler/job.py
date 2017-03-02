@@ -23,7 +23,7 @@ import yaml
 import json
 import datetime
 import uuid
-import rethinkstuff
+import doublethink
 import os
 import cerberus
 import urllib
@@ -70,9 +70,9 @@ def new_job_file(frontier, job_conf_file):
 def new_job(frontier, job_conf):
     '''Returns new Job.'''
     validate_conf(job_conf)
-    job = Job(frontier.r, {
+    job = Job(frontier.rr, {
                 "conf": job_conf,
-                "status": "ACTIVE", "started": rethinkstuff.utcnow()})
+                "status": "ACTIVE", "started": doublethink.utcnow()})
     if "id" in job_conf:
         job.id = job_conf["id"]
     job.save()
@@ -80,7 +80,7 @@ def new_job(frontier, job_conf):
     sites = []
     for seed_conf in job_conf["seeds"]:
         merged_conf = merge(seed_conf, job_conf)
-        site = brozzler.Site(frontier.r, {
+        site = brozzler.Site(frontier.rr, {
             "job_id": job.id,
             "seed": merged_conf["url"],
             "scope": merged_conf.get("scope"),
@@ -111,7 +111,7 @@ def new_site(frontier, site):
         # where a brozzler worker immediately claims the site, finds no pages
         # to crawl, and decides the site is finished
         try:
-            page = brozzler.Page(frontier.r, {
+            page = brozzler.Page(frontier.rr, {
                 "url": site.seed, "site_id": site.get("id"),
                 "job_id": site.get("job_id"), "hops_from_seed": 0,
                 "priority": 1000, "needs_robots_check": True})
@@ -123,12 +123,12 @@ def new_site(frontier, site):
     except brozzler.ReachedLimit as e:
         frontier.reached_limit(site, e)
 
-class Job(rethinkstuff.Document):
+class Job(doublethink.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)
     table = "jobs"
 
-    def __init__(self, rethinker, d={}):
-        rethinkstuff.Document.__init__(self, rethinker, d)
+    def __init__(self, rr, d={}):
+        doublethink.Document.__init__(self, rr, d)
         self.status = self.get("status", "ACTIVE")
         if not "starts_and_stops" in self:
             if self.get("started"):   # backward compatibility
@@ -138,7 +138,7 @@ class Job(rethinkstuff.Document):
                 del self["started"]
             else:
                 self.starts_and_stops = [
-                        {"start":rethinkstuff.utcnow(),"stop":None}]
+                        {"start":doublethink.utcnow(),"stop":None}]
 
     def finish(self):
         if self.status == "FINISHED" or self.starts_and_stops[-1]["stop"]:
@@ -147,5 +147,5 @@ class Job(rethinkstuff.Document):
                     "starts_and_stops[-1]['stop']=%s", self.status,
                     self.starts_and_stops[-1]["stop"])
         self.status = "FINISHED"
-        self.starts_and_stops[-1]["stop"] = rethinkstuff.utcnow()
+        self.starts_and_stops[-1]["stop"] = doublethink.utcnow()
 
