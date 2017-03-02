@@ -50,10 +50,10 @@ def test_robots(httpd):
     Basic test of robots.txt user-agent substring matching.
     '''
     url = 'http://localhost:%s/' % httpd.server_port
-    site = brozzler.Site(seed=url, user_agent='im/a/GoOdbot/yep')
+    site = brozzler.Site(None, {'seed':url,'user_agent':'im/a/GoOdbot/yep'})
     assert brozzler.is_permitted_by_robots(site, url)
 
-    site = brozzler.Site(seed=url, user_agent='im/a bAdBOt/uh huh')
+    site = brozzler.Site(None, {'seed':url,'user_agent':'im/a bAdBOt/uh huh'})
     assert not brozzler.is_permitted_by_robots(site, url)
 
 def test_scoping():
@@ -77,11 +77,12 @@ blocks:
 - bad_thing: bad rule should be ignored
 ''')
 
-    site = brozzler.Site(
-            seed='http://example.com/foo/bar?baz=quux#monkey', id=1,
-            scope=test_scope)
-    page = brozzler.Page(
-            url='http://example.com/foo/bar?baz=quux#monkey', site_id=site.id)
+    site = brozzler.Site(None, {
+        'id': 1, 'seed': 'http://example.com/foo/bar?baz=quux#monkey',
+        'scope': test_scope})
+    page = brozzler.Page(None, {
+        'url': 'http://example.com/foo/bar?baz=quux#monkey',
+        'site_id': site.id})
 
     assert site.is_in_scope('http://example.com/foo/bar', page)
     assert not site.is_in_scope('http://example.com/foo/baz', page)
@@ -100,9 +101,9 @@ blocks:
 
     assert not site.is_in_scope(
             'https://www.youtube.com/watch?v=dUIn5OAPS5s', page)
-    yt_user_page = brozzler.Page(
-            url='https://www.youtube.com/user/SonoraSantaneraVEVO',
-            site_id=site.id, hops_from_seed=10)
+    yt_user_page = brozzler.Page(None, {
+        'url': 'https://www.youtube.com/user/SonoraSantaneraVEVO',
+        'site_id': site.id, 'hops_from_seed': 10})
     assert site.is_in_scope(
             'https://www.youtube.com/watch?v=dUIn5OAPS5s', yt_user_page)
 

@@ -31,7 +31,7 @@ import io
 import socket
 import collections
 import requests
-import rethinkstuff
+import doublethink
 import tempfile
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
@@ -131,7 +131,7 @@ class BrozzlerWorker:
                         'no available instances of warcprox in the service '
                         'registry')
             site.proxy = '%s:%s' % (svc['host'], svc['port'])
-            self._frontier.update_site(site)
+            site.save()
             self.logger.info(
                     'chose warcprox instance %s from service registry for %s',
                     repr(site.proxy), site)
@@ -408,7 +408,7 @@ class BrozzlerWorker:
             if not hasattr(self, "status_info"):
                 due = True
             else:
-                d = rethinkstuff.utcnow() - self.status_info["last_heartbeat"]
+                d = doublethink.utcnow() - self.status_info["last_heartbeat"]
                 due = d.total_seconds() > self.HEARTBEAT_INTERVAL
 
         if due:

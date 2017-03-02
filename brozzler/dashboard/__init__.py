@@ -27,11 +27,11 @@ except ImportError as e:
             'brozzler[dashboard]".\nSee README.rst for more information.',
             type(e).__name__, e)
     sys.exit(1)
-import rethinkstuff
+import doublethink
 import json
 import os
 import importlib
-import rethinkdb
+import rethinkdb as r
 import yaml
 import base64
 
@@ -45,19 +45,19 @@ SETTINGS = {
     'WAYBACK_BASEURL': os.environ.get(
         'WAYBACK_BASEURL', 'http://localhost:8880/brozzler'),
 }
-r = rethinkstuff.Rethinker(
+rr = doublethink.Rethinker(
         SETTINGS['RETHINKDB_SERVERS'], db=SETTINGS['RETHINKDB_DB'])
 _svc_reg = None
 def service_registry():
     global _svc_reg
     if not _svc_reg:
-        _svc_reg = rethinkstuff.ServiceRegistry(r)
+        _svc_reg = doublethink.ServiceRegistry(rr)
     return _svc_reg
 
 @app.route("/api/sites/<site_id>/queued_count")
 @app.route("/api/site/<site_id>/queued_count")
 def queued_count(site_id):
-    reql = r.table("pages").between(
+    reql = rr.table("pages").between(
             [site_id, 0, False, r.minval], [site_id, 0, False, r.maxval],
             index="priority_by_site").count()
     logging.debug("querying rethinkdb: %s", reql)
@@ -70,7 +70,7 @@ def queue(site_id):
     logging.debug("flask.request.args=%s", flask.request.args)
     start = flask.request.args.get("start", 0)
     end = flask.request.args.get("end", start + 90)
-    reql = r.table("pages").between(
+    reql = rr.table("pages").between(
             [site_id, 0, False, r.minval], [site_id, 0, False, r.maxval],
             index="priority_by_site")[start:end]
     logging.debug("querying rethinkdb: %s", reql)
@@ -82,7 +82,7 @@ def queue(site_id):
 @app.route("/api/sites/<site_id>/page_count")
 @app.route("/api/site/<site_id>/page_count")
 def page_count(site_id):
-    reql = r.table("pages").between(
+    reql = rr.table("pages").between(
             [site_id, 1, False, r.minval],
             [site_id, r.maxval, False, r.maxval],
             index="priority_by_site").count()
@@ -96,7 +96,7 @@ def pages(site_id):
     """Pages already crawled."""
     start = int(flask.request.args.get("start", 0))
     end = int(flask.request.args.get("end", start + 90))
-    reql = r.table("pages").between(
+    reql = rr.table("pages").between(
             [site_id, 1, r.minval], [site_id, r.maxval, r.maxval],
             index="least_hops").order_by(index="least_hops")[start:end]
     logging.debug("querying rethinkdb: %s", reql)
@@ -106,7 +106,7 @@ def pages(site_id):
 @app.route("/api/pages/<page_id>")
 @app.route("/api/page/<page_id>")
 def page(page_id):
-    reql = r.table("pages").get(page_id)
+    reql = rr.table("pages").get(page_id)
     logging.debug("querying rethinkdb: %s", reql)
     page_ = reql.run()
     return flask.jsonify(page_)
@@ -114,7 +114,7 @@ def page(page_id):
 @app.route("/api/pages/<page_id>/yaml")
 @app.route("/api/page/<page_id>/yaml")
 def page_yaml(page_id):
-    reql = r.table("pages").get(page_id)
+    reql = rr.table("pages").get(page_id)
     logging.debug("querying rethinkdb: %s", reql)
     page_ = reql.run()
     return app.response_class(
@@ -124,7 +124,7 @@ def page_yaml(page_id):
 @app.route("/api/sites/<site_id>")
 @app.route("/api/site/<site_id>")
 def site(site_id):
-    reql = r.table("sites").get(site_id)
+    reql = rr.table("sites").get(site_id)
     logging.debug("querying rethinkdb: %s", reql)
     s = reql.run()
     if "cookie_db" in s:
@@ -134,7 +134,7 @@ def site(site_id):
 @app.route("/api/sites/<site_id>/yaml")
 @app.route("/api/site/<site_id>/yaml")
 def site_yaml(site_id):
-    reql = r.table("sites").get(site_id)
+    reql = rr.table("sites").get(site_id)
     logging.debug("querying rethinkdb: %s", reql)
     site_ = reql.run()
     return app.response_class(
@@ -143,7 +143,7 @@ def site_yaml(site_id):
 
 @app.route("/api/stats/<bucket>")
 def stats(bucket):
-    reql = r.table("stats").get(bucket)
+    reql = rr.table("stats").get(bucket)
     logging.debug("querying rethinkdb: %s", reql)
     stats_ = reql.run()
     return flask.jsonify(stats_)
@@ -155,7 +155,7 @@ def sites(job_id):
         jid = int(job_id)
     except ValueError:
         jid = job_id
-    reql = r.table("sites").get_all(jid, index="job_id")
+    reql = rr.table("sites").get_all(jid, index="job_id")
     logging.debug("querying rethinkdb: %s", reql)
     sites_ = list(reql.run())
     # TypeError: <binary, 7168 bytes, '53 51 4c 69 74 65...'> is not JSON serializable
@@ -167,7 +167,7 @@ def sites(job_id):
 @app.route("/api/jobless-sites")
 def jobless_sites():
     # XXX inefficient (unindexed) query
-    reql = r.table("sites").filter(~r.row.has_fields("job_id"))
+    reql = rr.table("sites").filter(~r.row.has_fields("job_id"))
     logging.debug("querying rethinkdb: %s", reql)
     sites_ = list(reql.run())
     # TypeError: <binary, 7168 bytes, '53 51 4c 69 74 65...'> is not JSON serializable
@@ -183,7 +183,7 @@ def job(job_id):
         jid = int(job_id)
     except ValueError:
         jid = job_id
-    reql = r.table("jobs").get(jid)
+    reql = rr.table("jobs").get(jid)
     logging.debug("querying rethinkdb: %s", reql)
     job_ = reql.run()
     return flask.jsonify(job_)
@@ -195,7 +195,7 @@ def job_yaml(job_id):
         jid = int(job_id)
     except ValueError:
         jid = job_id
-    reql = r.table("jobs").get(jid)
+    reql = rr.table("jobs").get(jid)
     logging.debug("querying rethinkdb: %s", reql)
     job_ = reql.run()
     return app.response_class(
@@ -214,7 +214,7 @@ def services():
 
 @app.route("/api/jobs")
 def jobs():
-    reql = r.table("jobs").order_by(rethinkdb.desc("id"))
+    reql = rr.table("jobs").order_by(r.desc("id"))
     logging.debug("querying rethinkdb: %s", reql)
     jobs_ = list(reql.run())
     return flask.jsonify(jobs=jobs_)

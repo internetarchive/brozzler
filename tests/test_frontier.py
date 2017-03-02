@@ -21,7 +21,7 @@ limitations under the License.
 import brozzler
 import logging
 import argparse
-import rethinkstuff
+import doublethink
 import time
 
 args = argparse.Namespace()
@@ -30,8 +30,8 @@ brozzler.cli.configure_logging(args)
 
 def test_rethinkdb_up():
     '''Checks that rethinkdb is listening and looks sane.'''
-    r = rethinkstuff.Rethinker(db='rethinkdb')  # built-in db
-    tbls = r.table_list().run()
+    rr = doublethink.Rethinker(db='rethinkdb')  # built-in db
+    tbls = rr.table_list().run()
     assert len(tbls) > 10
 
 def test_resume_job():
@@ -40,8 +40,8 @@ def test_resume_job():
     "finish" crawling a job. Doesn't actually crawl anything.
     '''
     # vagrant brozzler-worker isn't configured to look at the "ignoreme" db
-    r = rethinkstuff.Rethinker(db='ignoreme')
-    frontier = brozzler.RethinkDbFrontier(r)
+    rr = doublethink.Rethinker(db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
     job_conf = {'seeds': [{'url': 'http://example.com/'}]}
     job = brozzler.new_job(frontier, job_conf)
     assert len(list(frontier.job_sites(job.id))) == 1
@@ -57,7 +57,7 @@ def test_resume_job():
     assert site.starts_and_stops[0]['stop'] is None
 
     frontier.finished(site, 'FINISHED')
-    job = frontier.job(job.id)
+    job.refresh()
 
     assert job.status == 'FINISHED'
     assert len(job.starts_and_stops) == 1
@@ -71,7 +71,7 @@ def test_resume_job():
     assert site.starts_and_stops[0]['stop'] > site.starts_and_stops[0]['start']
 
     frontier.resume_site(site)
-    job = frontier.job(job.id)
+    job.refresh()
 
     assert job.status == 'ACTIVE'
     assert len(job.starts_and_stops) == 2
@@ -83,7 +83,7 @@ def test_resume_job():
     assert site.starts_and_stops[1]['stop'] is None
 
     frontier.finished(site, 'FINISHED')
-    job = frontier.job(job.id)
+    job.refresh()
 
     assert job.status == 'FINISHED'
     assert len(job.starts_and_stops) == 2
@@ -110,7 +110,7 @@ def test_resume_job():
     assert site.starts_and_stops[2]['stop'] is None
 
     frontier.finished(site, 'FINISHED')
-    job = frontier.job(job.id)
+    job.refresh()
 
     assert job.status == 'FINISHED'
     assert len(job.starts_and_stops) == 3
@@ -125,12 +125,12 @@ def test_resume_job():
 
 def test_time_limit():
     # vagrant brozzler-worker isn't configured to look at the "ignoreme" db
-    r = rethinkstuff.Rethinker('localhost', db='ignoreme')
-    frontier = brozzler.RethinkDbFrontier(r)
-    site = brozzler.Site(seed='http://example.com/', time_limit=99999)
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+    site = brozzler.Site(rr, {'seed':'http://example.com/', 'time_limit':99999})
     brozzler.new_site(frontier, site)
 
-    site = frontier.site(site.id)  # get it back from the db
+    site.refresh()  # get it back from the db
     assert site.status == 'ACTIVE'
     assert len(site.starts_and_stops) == 1
     assert site.starts_and_stops[0]['start']
@@ -161,7 +161,7 @@ def test_time_limit():
 
     site.time_limit = 0.1
     site.claimed = True
-    frontier.update_site(site)
+    site.save()
 
     time.sleep(0.1)
     frontier._enforce_time_limit(site)

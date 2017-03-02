@@ -34,8 +34,8 @@ except ImportError as e:
             'brozzler[easy]".\nSee README.rst for more information.',
             type(e).__name__, e)
     sys.exit(1)
-import rethinkstuff
-import rethinkdb
+import doublethink
+import rethinkdb as r
 import surt
 import json
 import brozzler
@@ -48,12 +48,12 @@ class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
         self.table = table
 
     @property
-    def r(self):
+    def rr(self):
         try:
-            return self._r
+            return self._rr
         except AttributeError:
-            self._r = rethinkstuff.Rethinker(self.servers, self.db)
-            return self._r
+            self._rr = doublethink.Rethinker(self.servers, self.db)
+            return self._rr
 
     def load_cdx(self, cdx_query):
         # logging.debug('vars(cdx_query)=%s', vars(cdx_query))
@@ -85,15 +85,14 @@ class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
     def _query_rethinkdb(self, cdx_query):
         start_key = cdx_query.key.decode('utf-8')
         end_key = cdx_query.end_key.decode('utf-8')
-        reql = self.r.table(self.table).between(
-                [start_key[:150], rethinkdb.minval],
-                [end_key[:150], rethinkdb.maxval],
+        reql = self.rr.table(self.table).between(
+                [start_key[:150], r.minval], [end_key[:150], r.maxval],
                 index='abbr_canon_surt_timestamp', right_bound='closed')
         reql = reql.order_by(index='abbr_canon_surt_timestamp')
         # TODO support for POST, etc
         # http_method='WARCPROX_WRITE_RECORD' for screenshots, thumbnails
         reql = reql.filter(
-                lambda capture: rethinkdb.expr(
+                lambda capture: r.expr(
                     ['WARCPROX_WRITE_RECORD','GET']).contains(
                         capture['http_method']))
         reql = reql.filter(
