@@ -136,6 +136,8 @@ class Job(doublethink.Document):
                     "start": self.get("started"),
                     "stop": self.get("finished")}]
                 del self["started"]
+                if "finished" in self:
+                    del self["finished"]
             else:
                 self.starts_and_stops = [
                         {"start":doublethink.utcnow(),"stop":None}]

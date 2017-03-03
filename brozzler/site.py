@@ -102,12 +102,14 @@ class Site(doublethink.Document):
         self.last_claimed = self.get('last_claimed', _EPOCH_UTC)
         if not self.get('starts_and_stops'):
             if self.get('start_time'):   # backward compatibility
-                self.starts_and_stops = [{"start":start_time,"stop":None}]
-                if self.get('status') != "ACTIVE":
-                    self.starts_and_stops[0]["stop"] = self.last_disclaimed
+                self.starts_and_stops = [{
+                    'start':self.get('start_time'),'stop':None}]
+                if self.get('status') != 'ACTIVE':
+                    self.starts_and_stops[0]['stop'] = self.last_disclaimed
+                del self['start_time']
             else:
                 self.starts_and_stops = [
-                        {"start":doublethink.utcnow(),"stop":None}]
+                        {'start':doublethink.utcnow(),'stop':None}]
         if not self.scope:
             self.scope = {}
         if not 'surt' in self.scope:

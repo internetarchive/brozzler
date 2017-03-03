@@ -26,6 +26,7 @@ import brozzler.chrome
 import socket
 import logging
 import yaml
+import datetime
 
 @pytest.fixture(scope='module')
 def httpd(request):
@@ -106,4 +107,34 @@ blocks:
         'site_id': site.id, 'hops_from_seed': 10})
     assert site.is_in_scope(
             'https://www.youtube.com/watch?v=dUIn5OAPS5s', yt_user_page)
+
+def test_start_stop_backwards_compat():
+    site = brozzler.Site(None, {'seed': 'http://example.com/'})
+    assert len(site.starts_and_stops) == 1
+    assert site.starts_and_stops[0]['start']
+    assert site.starts_and_stops[0]['stop'] is None
+    assert not 'start_time' in site
+
+    site = brozzler.Site(None, {
+        'seed': 'http://example.com/',
+        'start_time': datetime.datetime(2017,1,1)})
+    assert len(site.starts_and_stops) == 1
+    assert site.starts_and_stops[0]['start'] == datetime.datetime(2017, 1, 1)
+    assert site.starts_and_stops[0]['stop'] is None
+    assert not 'start_time' in site
+
+    job = brozzler.Job(None, {'seeds': [{'url':'https://example.com/'}]})
+    assert job.starts_and_stops[0]['start']
+    assert job.starts_and_stops[0]['stop'] is None
+    assert not 'started' in job
+    assert not 'finished' in job
+
+    job = brozzler.Job(None, {
+        'seeds': [{'url':'https://example.com/'}],
+        'started': datetime.datetime(2017, 1, 1),
+        'finished': datetime.datetime(2017, 1, 2)})
+    assert job.starts_and_stops[0]['start'] == datetime.datetime(2017, 1, 1)
+    assert job.starts_and_stops[0]['stop'] == datetime.datetime(2017, 1, 2)
+    assert not 'started' in job
+    assert not 'finished' in job
 
