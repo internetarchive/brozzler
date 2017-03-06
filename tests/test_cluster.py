@@ -39,11 +39,22 @@ def stop_service(service):
 
 @pytest.fixture(scope='module')
 def httpd(request):
+    class RequestHandler(http.server.SimpleHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == '/site5/redirect/':
+                self.send_response(303, 'See other')
+                self.send_header('Connection', 'close')
+                self.send_header('Content-Length', 0)
+                self.send_header('Location', '/site5/destination/')
+                self.end_headers()
+                self.wfile.write(b'')
+            else:
+                super().do_GET()
+
     # SimpleHTTPRequestHandler always uses CWD so we have to chdir
     os.chdir(os.path.join(os.path.dirname(__file__), 'htdocs'))
 
-    httpd = http.server.HTTPServer(
-            ('localhost', 0), http.server.SimpleHTTPRequestHandler)
+    httpd = http.server.HTTPServer(('localhost', 0), RequestHandler)
     httpd_thread = threading.Thread(name='httpd', target=httpd.serve_forever)
     httpd_thread.start()
 
@@ -330,3 +341,36 @@ def test_login(httpd):
     assert ('WARCPROX_WRITE_RECORD screenshot:http://localhost:%s/site2/login.html' % httpd.server_port) in meth_url
     assert ('WARCPROX_WRITE_RECORD thumbnail:http://localhost:%s/site2/login.html' % httpd.server_port) in meth_url
 
+def test_seed_redirect(httpd):
+    test_id = 'test_login-%s' % datetime.datetime.utcnow().isoformat()
+    rr = doublethink.Rethinker('localhost', db='brozzler')
+    seed_url = 'http://localhost:%s/site5/redirect/' % httpd.server_port
+    site = brozzler.Site(rr, {
+        'seed': 'http://localhost:%s/site5/redirect/' % httpd.server_port,
+        'proxy': 'localhost:8000', 'enable_warcprox_features': True,
+        'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
+    assert site.scope['surt'] == 'http://(localhost:%s,)/site5/redirect/' % httpd.server_port
+
+    frontier = brozzler.RethinkDbFrontier(rr)
+    brozzler.new_site(frontier, site)
+    assert site.id
+
+    # the site should be brozzled fairly quickly
+    start = time.time()
+    while site.status != 'FINISHED' and time.time() - start < 300:
+        time.sleep(0.5)
+        site.refresh()
+    assert site.status == 'FINISHED'
+
+    # take a look at the pages table
+    pages = list(frontier.site_pages(site.id))
+    assert len(pages) == 2
+    pages.sort(key=lambda page: page.hops_from_seed)
+    assert pages[0].hops_from_seed == 0
+    assert pages[0].url == seed_url
+    assert pages[0].redirect_url == 'http://localhost:%s/site5/destination/' % httpd.server_port
+    assert pages[1].hops_from_seed == 1
+    assert pages[1].url == 'http://localhost:%s/site5/destination/page2.html' % httpd.server_port
+
+    # check that scope has been updated properly
+    assert site.scope['surt'] == 'http://(localhost:%s,)/site5/destination/' % httpd.server_port

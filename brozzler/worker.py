@@ -352,14 +352,15 @@ class BrozzlerWorker:
                         not brozzler.is_permitted_by_robots(site, page.url)):
                     logging.warn("page %s is blocked by robots.txt", page.url)
                     page.blocked_by_robots = True
+                    self._frontier.completed_page(site, page)
                 else:
                     outlinks = self.brozzle_page(browser, site, page)
+                    self._frontier.completed_page(site, page)
                     self._frontier.scope_and_schedule_outlinks(
                             site, page, outlinks)
                     if browser.is_running():
                         site.cookie_db = browser.chrome.persist_and_read_cookie_db()
 
-                self._frontier.completed_page(site, page)
                 page = None
         except brozzler.ShutdownRequested:
             self.logger.info("shutdown requested")
