@@ -71,8 +71,8 @@ def new_job(frontier, job_conf):
     '''Returns new Job.'''
     validate_conf(job_conf)
     job = Job(frontier.rr, {
-                "conf": job_conf,
-                "status": "ACTIVE", "started": doublethink.utcnow()})
+                "conf": job_conf, "status": "ACTIVE",
+                "started": doublethink.utcnow()})
     if "id" in job_conf:
         job.id = job_conf["id"]
     job.save()
@@ -80,22 +80,9 @@ def new_job(frontier, job_conf):
     sites = []
     for seed_conf in job_conf["seeds"]:
         merged_conf = merge(seed_conf, job_conf)
-        site = brozzler.Site(frontier.rr, {
-            "job_id": job.id,
-            "seed": merged_conf["url"],
-            "scope": merged_conf.get("scope"),
-            "time_limit": merged_conf.get("time_limit"),
-            "proxy": merged_conf.get("proxy"),
-            "ignore_robots": merged_conf.get("ignore_robots"),
-            "enable_warcprox_features": merged_conf.get(
-                "enable_warcprox_features"),
-            "warcprox_meta": merged_conf.get("warcprox_meta"),
-            "metadata": merged_conf.get("metadata"),
-            "remember_outlinks": merged_conf.get("remember_outlinks"),
-            "user_agent": merged_conf.get("user_agent"),
-            "behavior_parameters": merged_conf.get("behavior_parameters"),
-            "username": merged_conf.get("username"),
-            "password": merged_conf.get("password")})
+        merged_conf["job_id"] = job.id
+        merged_conf["seed"] = merged_conf.pop("url")
+        site = brozzler.Site(frontier.rr, merged_conf)
         sites.append(site)
 
     for site in sites:
@@ -127,9 +114,9 @@ class Job(doublethink.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)
     table = "jobs"
 
-    def __init__(self, rr, d={}):
-        doublethink.Document.__init__(self, rr, d)
-        self.status = self.get("status", "ACTIVE")
+    def populate_defaults(self):
+        if not "status" in self:
+            self.status = "ACTIVE"
         if not "starts_and_stops" in self:
             if self.get("started"):   # backward compatibility
                 self.starts_and_stops = [{
