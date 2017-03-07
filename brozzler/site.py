@@ -92,28 +92,32 @@ class Site(doublethink.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)
     table = 'sites'
 
-    def __init__(self, rr, d={}):
-        doublethink.Document.__init__(self, rr, d)
-        if not self.get('status'):
-            self.status = 'ACTIVE'
-        self.enable_warcprox_features = bool(self.get('enable_warcprox_features'))
-        self.claimed = bool(self.get('claimed'))
-        self.last_disclaimed = self.get('last_disclaimed', _EPOCH_UTC)
-        self.last_claimed = self.get('last_claimed', _EPOCH_UTC)
-        if not self.get('starts_and_stops'):
-            if self.get('start_time'):   # backward compatibility
+    def populate_defaults(self):
+        if not "status" in self:
+            self.status = "ACTIVE"
+        if not "enable_warcprox_features" in self:
+            self.enable_warcprox_features = False
+        if not "claimed" in self:
+            self.claimed = False
+        if not "last_disclaimed" in self:
+            self.last_disclaimed = _EPOCH_UTC
+        if not "last_claimed" in self:
+            self.last_claimed = _EPOCH_UTC
+        if not "scope" in self:
+            self.scope = {}
+        if not "surt" in self.scope:
+            self.scope["surt"] = Url(self.seed).surt
+
+        if not "starts_and_stops" in self:
+            if self.get("start_time"):   # backward compatibility
                 self.starts_and_stops = [{
-                    'start':self.get('start_time'),'stop':None}]
-                if self.get('status') != 'ACTIVE':
-                    self.starts_and_stops[0]['stop'] = self.last_disclaimed
-                del self['start_time']
+                    "start":self.get("start_time"),"stop":None}]
+                if self.get("status") != "ACTIVE":
+                    self.starts_and_stops[0]["stop"] = self.last_disclaimed
+                del self["start_time"]
             else:
                 self.starts_and_stops = [
-                        {'start':doublethink.utcnow(),'stop':None}]
-        if not self.scope:
-            self.scope = {}
-        if not 'surt' in self.scope:
-            self.scope['surt'] = Url(self.seed).surt
+                        {"start":doublethink.utcnow(),"stop":None}]
 
     def __str__(self):
         return 'Site({"id":"%s","seed":"%s",...})' % (self.id, self.seed)
@@ -286,19 +290,22 @@ class Site(doublethink.Document):
 
 class Page(doublethink.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)
-    table = 'pages'
+    table = "pages"
 
-    def __init__(self, rr, d={}):
-        doublethink.Document.__init__(self, rr, d)
-        self.hops_from_seed = self.get('hops_from_seed', 0)
-        self.brozzle_count = self.get('brozzle_count', 0)
-        self.claimed = self.get('claimed', False)
-        self.hops_off_surt = self.get('hops_off_surt', 0)
-        self.needs_robots_check = self.get('needs_robots_check', False)
-        self._canon_hurl = None
-
-        self.priority = self.get('priority', self._calc_priority())
-        if self.get('id') is None:
+    def populate_defaults(self):
+        if not "hops_from_seed" in self:
+            self.hops_from_seed = 0
+        if not "brozzle_count" in self:
+            self.brozzle_count = 0
+        if not "claimed" in self:
+            self.claimed = False
+        if not "hops_off_surt" in self:
+            self.hops_off_surt = 0
+        if not "needs_robots_check" in self:
+            self.needs_robots_check = False
+        if not "priority" in self:
+            self.priority = self._calc_priority()
+        if not "id" in self:
             digest_this = "site_id:%s,url:%s" % (self.site_id, self.url)
             self.id = hashlib.sha1(digest_this.encode("utf-8")).hexdigest()
 

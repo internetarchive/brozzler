@@ -172,3 +172,78 @@ def test_time_limit():
     assert site.starts_and_stops[1]['start']
     assert site.starts_and_stops[1]['stop']
     assert site.starts_and_stops[1]['stop'] > site.starts_and_stops[0]['start']
+
+def test_field_defaults():
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+
+    # page
+    brozzler.Page.table_ensure(rr)
+    page = brozzler.Page(rr, {'hops_from_seed': 3})
+    assert page.hops_from_seed == 3
+    assert page.id is None
+    assert page.brozzle_count is None
+    page.save()
+    assert page.hops_from_seed == 3
+    assert page.id
+    assert page.brozzle_count == 0
+
+    qage = brozzler.Page.load(rr, page.id)
+    assert qage.hops_from_seed == 3
+    assert qage.id == page.id
+    assert qage.brozzle_count == 0
+    qage.save()
+    assert qage.hops_from_seed == 3
+    assert qage.id == page.id
+    assert qage.brozzle_count == 0
+    qage.refresh()
+    assert qage.hops_from_seed == 3
+    assert qage.id == page.id
+    assert qage.brozzle_count == 0
+
+    # site
+    brozzler.Site.table_ensure(rr)
+    site = brozzler.Site(rr, {'enable_warcprox_features': True})
+    assert site.enable_warcprox_features is True
+    assert site.id is None
+    assert site.scope is None
+    site.save()
+    assert site.id
+    assert site.scope
+
+    tite = brozzler.Site.load(rr, site.id)
+    assert tite.enable_warcprox_features is True
+    assert tite.id == site.id
+    assert tite.scope == site.scope
+    tite.save()
+    assert tite.enable_warcprox_features is True
+    assert tite.id == site.id
+    assert tite.scope == site.scope
+    tite.refresh()
+    assert tite.enable_warcprox_features is True
+    assert tite.id == site.id
+    assert tite.scope == site.scope
+
+    # job
+    brozzler.Job.table_ensure(rr)
+    job = brozzler.Job(rr, {'status': 'WHUUUT'})
+    assert job.status == 'WHUUUT'
+    assert job.id is None
+    assert job.starts_and_stops is None
+    job.save()
+    assert job.status == 'WHUUUT'
+    assert job.id
+    assert job.starts_and_stops
+
+    kob = brozzler.Job.load(rr, job.id)
+    assert kob.status == 'WHUUUT'
+    assert kob.id
+    assert kob.starts_and_stops
+    kob.save()
+    assert kob.status == 'WHUUUT'
+    assert kob.id
+    assert kob.starts_and_stops
+    kob.refresh()
+    assert kob.status == 'WHUUUT'
+    assert kob.id
+    assert kob.starts_and_stops
+
