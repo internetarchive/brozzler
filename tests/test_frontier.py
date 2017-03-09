@@ -180,8 +180,8 @@ def test_field_defaults():
     brozzler.Page.table_ensure(rr)
     page = brozzler.Page(rr, {'hops_from_seed': 3})
     assert page.hops_from_seed == 3
-    assert page.id is None
-    assert page.brozzle_count is None
+    assert page.id
+    assert page.brozzle_count == 0
     page.save()
     assert page.hops_from_seed == 3
     assert page.id
@@ -205,7 +205,7 @@ def test_field_defaults():
     site = brozzler.Site(rr, {'enable_warcprox_features': True})
     assert site.enable_warcprox_features is True
     assert site.id is None
-    assert site.scope is None
+    assert site.scope
     site.save()
     assert site.id
     assert site.scope
@@ -228,7 +228,7 @@ def test_field_defaults():
     job = brozzler.Job(rr, {'status': 'WHUUUT'})
     assert job.status == 'WHUUUT'
     assert job.id is None
-    assert job.starts_and_stops is None
+    assert job.starts_and_stops
     job.save()
     assert job.status == 'WHUUUT'
     assert job.id
