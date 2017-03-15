@@ -16,7 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-import surt
+import urlcanon
 import json
 import logging
 import brozzler
@@ -25,68 +25,9 @@ import time
 import doublethink
 import datetime
 import re
-import ipaddress
 
 _EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(
         tzinfo=doublethink.UTC)
-
-class Url:
-    def __init__(self, url):
-        self.url = url
-        self._surt = None
-        self._host = None
-
-    @property
-    def surt(self):
-        if not self._surt:
-            try:
-                hurl = surt.handyurl.parse(self.url)
-                surt.GoogleURLCanonicalizer.canonicalize(hurl)
-                hurl.query = None
-                hurl.hash = None
-                # XXX chop off path after last slash??
-                self._surt = hurl.getURLString(surt=True, trailing_comma=True)
-            except Exception as e:
-                logging.warn('problem surting %s - %s', repr(self.url), e)
-        return self._surt
-
-    @property
-    def host(self):
-        if not self._host:
-            self._host = surt.handyurl.parse(self.url).host
-        return self._host
-
-    def matches_ip_or_domain(self, ip_or_domain):
-        """
-        Returns true if
-         - ip_or_domain is an ip address and self.host is the same ip address
-         - ip_or_domain is a domain and self.host is the same domain
-         - ip_or_domain is a domain and self.host is a subdomain of it
-        """
-        if not self.host:
-            return False
-
-        if ip_or_domain == self.host:
-            return True
-
-        # if either ip_or_domain or self.host are ip addresses, and they're not
-        # identical (previous check), not a match
-        try:
-            ipaddress.ip_address(ip_or_domain)
-            return False
-        except:
-            pass
-        try:
-            ipaddress.ip_address(self.host)
-            return False
-        except:
-            pass
-
-        # if we get here, we're looking at two hostnames
-        domain_parts = ip_or_domain.encode("idna").decode("ascii").lower().split(".")
-        host_parts = self.host.encode("idna").decode("ascii").lower().split(".")
-
-        return host_parts[-len(domain_parts):] == domain_parts
 
 class Site(doublethink.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -105,8 +46,9 @@ class Site(doublethink.Document):
             self.last_claimed = _EPOCH_UTC
         if not "scope" in self:
             self.scope = {}
-        if not "surt" in self.scope:
-            self.scope["surt"] = Url(self.seed).surt
+        if not "surt" in self.scope and self.seed:
+            self.scope["surt"] = brozzler.site_surt_canon(
+                    self.seed).surt().decode('ascii')
 
         if not "starts_and_stops" in self:
             if self.get("start_time"):   # backward compatibility
@@ -135,7 +77,7 @@ class Site(doublethink.Document):
         return dt
 
     def note_seed_redirect(self, url):
-        new_scope_surt = Url(url).surt
+        new_scope_surt = brozzler.site_surt_canon(url).surt().decode("ascii")
         if not new_scope_surt.startswith(self.scope["surt"]):
             self.logger.info("changing site scope surt from {} to {}".format(
                 self.scope["surt"], new_scope_surt))
@@ -149,148 +91,49 @@ class Site(doublethink.Document):
         return hdrs
 
     def is_in_scope(self, url, parent_page=None):
-        if not isinstance(url, Url):
-            u = Url(url)
-        else:
-            u = url
+        if not isinstance(url, urlcanon.ParsedUrl):
+            url = urlcanon.semantic(url)
+        if parent_page:
+            parent_url = urlcanon.semantic(parent_page.url)
 
         might_accept = False
-        if not u.surt:
-            return False
-        elif not u.surt.startswith("http://") and not u.surt.startswith("https://"):
+        if not url.scheme in (b'http', b'https'):
             # XXX doesn't belong here maybe (where? worker ignores unknown
             # schemes?)
             return False
         elif (parent_page and "max_hops" in self.scope
                 and parent_page.hops_from_seed >= self.scope["max_hops"]):
             pass
-        elif u.surt.startswith(self.scope["surt"]):
+        elif url.surt().startswith(self.scope["surt"].encode("utf-8")):
             might_accept = True
         elif parent_page and parent_page.hops_off_surt < self.scope.get(
                 "max_hops_off_surt", 0):
             might_accept = True
         elif "accepts" in self.scope:
-            for rule in self.scope["accepts"]:
-                if self._scope_rule_applies(rule, u, parent_page):
-                    might_accept = True
-                    break
+            for accept_rule in self.scope["accepts"]:
+                rule = urlcanon.MatchRule(**accept_rule)
+                if rule.applies(url, parent_url):
+                   might_accept = True
+                   break
 
         if might_accept:
             if "blocks" in self.scope:
-                for rule in self.scope["blocks"]:
-                    if self._scope_rule_applies(rule, u, parent_page):
+                for block_rule in self.scope["blocks"]:
+                    rule = urlcanon.MatchRule(**block_rule)
+                    if rule.applies(url, parent_url):
                         return False
             return True
         else:
             return False
 
-    def _normalize_rule(self, rule):
-        """
-        Normalizes a scope rule.
-
-        A scope rule is considered deprecated if it contains a `url_match` and
-        `value`. This method converts such scope rules to the preferred style
-        and returns the new rule. If `rule` is not a deprecated-style rule,
-        returns  it unchanged.
-        """
-        if "url_match" in rule and "value" in rule:
-            new_rule = dict(rule)
-            url_match = new_rule.pop("url_match")
-            if url_match == "REGEX_MATCH":
-                new_rule["regex"] = new_rule.pop("value")
-            elif url_match == "SURT_MATCH":
-                new_rule["surt"] = new_rule.pop("value")
-            elif url_match == "STRING_MATCH":
-                new_rule["substring"] = new_rule.pop("value")
-            else:
-                raise Exception("invalid scope rule")
-            return new_rule
-        else:
-            return rule
-
-    def _scope_rule_applies(self, rule, url, parent_page=None):
-        """
-        Examples of valid rules expressed as yaml.
-
-        - domain: bad.domain.com
-
-        # preferred:
-        - domain: monkey.org
-          substring: bar
-
-        # deprecated version of the same:
-        - domain: monkey.org
-          url_match: STRING_MATCH
-          value: bar
-
-        # preferred:
-        - surt: http://(com,woop,)/fuh/
-
-        # deprecated version of the same:
-        - url_match: SURT_MATCH
-          value: http://(com,woop,)/fuh/
-
-        # preferred:
-        - regex: ^https?://(www.)?youtube.com/watch?.*$
-          parent_url_regex: ^https?://(www.)?youtube.com/user/.*$
-
-        # deprecated version of the same:
-        - url_match: REGEX_MATCH
-          value: ^https?://(www.)?youtube.com/watch?.*$
-          parent_url_regex: ^https?://(www.)?youtube.com/user/.*$
-        """
-        if not isinstance(url, Url):
-            u = Url(url)
-        else:
-            u = url
-
-        try:
-            rewl = self._normalize_rule(rule)
-        except Exception as e:
-            self.logger.error(
-                    "problem normalizing scope rule %s - %s", rule, e)
-            return False
-
-        invalid_keys = rewl.keys() - {
-                "domain", "surt", "substring", "regex", "parent_url_regex"}
-        if invalid_keys:
-            self.logger.error(
-                    "invalid keys %s in scope rule %s", invalid_keys, rule)
-            return False
-
-        if "domain" in rewl and not u.matches_ip_or_domain(rewl["domain"]):
-            return False
-        if "surt" in rewl and not u.surt.startswith(rewl["surt"]):
-            return False
-        if "substring" in rewl and not u.url.find(rewl["substring"]) >= 0:
-            return False
-        if "regex" in rewl:
-            try:
-                if not re.fullmatch(rewl["regex"], u.url):
-                    return False
-            except Exception as e:
-                self.logger.error(
-                        "caught exception matching against regex %s - %s",
-                        rewl["regex"], e)
-                return False
-        if "parent_url_regex" in rewl:
-            if not parent_page:
-                return False
-            pu = Url(parent_page.url)
-            try:
-                if not re.fullmatch(rule["parent_url_regex"], pu.url):
-                    return False
-            except Exception as e:
-                self.logger.error(
-                        "caught exception matching against regex %s - %s",
-                        rule["parent_url_regex"], e)
-                return False
-
-        return True
-
 class Page(doublethink.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)
     table = "pages"
+
+    @staticmethod
+    def compute_id(site_id, url):
+        digest_this = "site_id:%s,url:%s" % (site_id, url)
+        return hashlib.sha1(digest_this.encode("utf-8")).hexdigest()
 
     def populate_defaults(self):
         if not "hops_from_seed" in self:
@@ -306,8 +149,7 @@ class Page(doublethink.Document):
         if not "priority" in self:
             self.priority = self._calc_priority()
         if not "id" in self:
-            digest_this = "site_id:%s,url:%s" % (self.site_id, self.url)
-            self.id = hashlib.sha1(digest_this.encode("utf-8")).hexdigest()
+            self.id = self.compute_id(self.site_id, self.url)
 
     def __str__(self):
         return 'Page({"id":"%s","url":"%s",...})' % (self.id, self.url)
@@ -327,7 +169,6 @@ class Page(doublethink.Document):
         if not self.url:
             return None
         if self._canon_hurl is None:
-            self._canon_hurl = surt.handyurl.parse(self.url)
-            surt.GoogleURLCanonicalizer.canonicalize(self._canon_hurl)
-        return self._canon_hurl.geturl()
+            self._canon_hurl = urlcanon.semantic(self.url)
+        return str(self._canon_hurl)
 

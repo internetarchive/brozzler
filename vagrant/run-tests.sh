@@ -16,4 +16,4 @@ vagrant ssh -- 'status warcprox ;
 echo
 
 vagrant ssh -- 'source /opt/brozzler-ve34/bin/activate && pip install pytest'
-vagrant ssh -- "source /opt/brozzler-ve34/bin/activate && DISPLAY=:1 py.test -v -s /brozzler/tests $@"
+vagrant ssh -- "source /opt/brozzler-ve34/bin/activate && DISPLAY=:1 py.test -v /brozzler/tests $@"

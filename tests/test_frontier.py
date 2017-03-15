@@ -202,10 +202,12 @@ def test_field_defaults():
 
     # site
     brozzler.Site.table_ensure(rr)
-    site = brozzler.Site(rr, {'enable_warcprox_features': True})
+    site = brozzler.Site(rr, {
+        'seed': 'http://example.com/', 'enable_warcprox_features': True})
     assert site.enable_warcprox_features is True
     assert site.id is None
     assert site.scope
+    assert site.scope['surt'] == 'http://(com,example,)/'
     site.save()
     assert site.id
     assert site.scope
@@ -247,3 +249,111 @@ def test_field_defaults():
     assert kob.id
     assert kob.starts_and_stops
 
+def test_scope_and_scheduled_outlinks():
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+    site = brozzler.Site(rr, {
+        'seed':'http://example.com/', 'remember_outlinks':True})
+    parent_page = brozzler.Page(rr, {
+        'hops_from_seed': 1, 'url': 'http://example.com/whatever'})
+    outlinks = [
+        'https://example.com/',
+        'https://example.com/foo',
+        'http://example.com/bar',
+        'HTtp://exAMPle.COm/bar',
+        'HTtp://exAMPle.COm/BAr',
+        'HTtp://exAMPle.COm/BAZZZZ',]
+    orig_is_permitted_by_robots = brozzler.is_permitted_by_robots
+    brozzler.is_permitted_by_robots = lambda *args: True
+    try:
+        frontier.scope_and_schedule_outlinks(site, parent_page, outlinks)
+    finally:
+        brozzler.is_permitted_by_robots = orig_is_permitted_by_robots
+
+    assert sorted(parent_page.outlinks['rejected']) == [
+            'https://example.com/', 'https://example.com/foo']
+    assert sorted(parent_page.outlinks['accepted']) == [
+                'http://example.com/BAZZZZ', 'http://example.com/BAr',
+                'http://example.com/bar']
+    assert parent_page.outlinks['blocked'] == []
+
+    pp = brozzler.Page.load(rr, parent_page.id)
+    assert pp == parent_page
+
+    for url in parent_page.outlinks['rejected']:
+        id = brozzler.Page.compute_id(site.id, url)
+        assert brozzler.Page.load(rr, id) is None
+    for url in parent_page.outlinks['accepted']:
+        id = brozzler.Page.compute_id(site.id, url)
+        assert brozzler.Page.load(rr, id)
+
+def test_completed_page():
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # redirect that changes scope surt
+    site = brozzler.Site(rr, {'seed':'http://example.com/a/'})
+    site.save()
+    page = brozzler.Page(rr, {
+        'site_id': site.id,
+        'url': 'http://example.com/a/',
+        'claimed': True,
+        'brozzle_count': 0,
+        'hops_from_seed': 0,
+        'redirect_url':'http://example.com/b/', })
+    page.save()
+    assert site.scope == {'surt': 'http://(com,example,)/a/'}
+    frontier.completed_page(site, page)
+    assert site.scope == {'surt': 'http://(com,example,)/b/'}
+    site.refresh()
+    assert site.scope == {'surt': 'http://(com,example,)/b/'}
+    assert page.brozzle_count == 1
+    assert page.claimed == False
+    page.refresh()
+    assert page.brozzle_count == 1
+    assert page.claimed == False
+
+    # redirect that doesn't change scope surt because destination is covered by
+    # the original surt
+    site = brozzler.Site(rr, {'seed':'http://example.com/a/'})
+    site.save()
+    page = brozzler.Page(rr, {
+        'site_id': site.id,
+        'url': 'http://example.com/a/',
+        'claimed': True,
+        'brozzle_count': 0,
+        'hops_from_seed': 0,
+        'redirect_url':'http://example.com/a/x/', })
+    page.save()
+    assert site.scope == {'surt': 'http://(com,example,)/a/'}
+    frontier.completed_page(site, page)
+    assert site.scope == {'surt': 'http://(com,example,)/a/'}
+    site.refresh()
+    assert site.scope == {'surt': 'http://(com,example,)/a/'}
+    assert page.brozzle_count == 1
+    assert page.claimed == False
+    page.refresh()
+    assert page.brozzle_count == 1
+    assert page.claimed == False
+
+    # redirect that doesn't change scope surt because page is not the seed page
+    site = brozzler.Site(rr, {'seed':'http://example.com/a/'})
+    site.save()
+    page = brozzler.Page(rr, {
+        'site_id': site.id,
+        'url': 'http://example.com/c/',
+        'claimed': True,
+        'brozzle_count': 0,
+        'hops_from_seed': 1,
+        'redirect_url':'http://example.com/d/', })
+    page.save()
+    assert site.scope == {'surt': 'http://(com,example,)/a/'}
+    frontier.completed_page(site, page)
+    assert site.scope == {'surt': 'http://(com,example,)/a/'}
+    site.refresh()
+    assert site.scope == {'surt': 'http://(com,example,)/a/'}
+    assert page.brozzle_count == 1
+    assert page.claimed == False
+    page.refresh()
+    assert page.brozzle_count == 1
+    assert page.claimed == False

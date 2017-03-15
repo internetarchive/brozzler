@@ -29,7 +29,6 @@ from requests.structures import CaseInsensitiveDict
 import datetime
 import base64
 from brozzler.chrome import Chrome
-import surt
 import socket
 
 class BrowsingException(Exception):
