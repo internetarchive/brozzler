@@ -541,7 +541,7 @@ def brozzler_list_captures():
     Handy utility for looking up entries in the rethinkdb "captures" table by
     url or sha1.
     '''
-    import surt
+    import urlcanon
 
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(sys.argv[0]),
@@ -579,9 +579,7 @@ def brozzler_list_captures():
         logging.debug('querying rethinkdb: %s', reql)
         results = reql.run()
     else:
-        key = surt.surt(
-                args.url_or_sha1, trailing_comma=True, host_massage=False,
-                with_scheme=True)
+        key = urlcanon.semantic(args.url_or_sha1).surt().decode('ascii')
         abbr_start_key = key[:150]
         if args.prefix:
             # surt is necessarily ascii and \x7f is the last ascii character

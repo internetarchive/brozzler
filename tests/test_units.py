@@ -75,7 +75,6 @@ blocks:
 - domain: twitter.com
   url_match: REGEX_MATCH
   value: ^.*lang=(?!en).*$
-- bad_thing: bad rule should be ignored
 ''')
 
     site = brozzler.Site(None, {

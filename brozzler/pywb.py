@@ -36,7 +36,7 @@ except ImportError as e:
     sys.exit(1)
 import doublethink
 import rethinkdb as r
-import surt
+import urlcanon
 import json
 import brozzler
 import argparse
@@ -116,9 +116,7 @@ class TheGoodUrlCanonicalizer(object):
 
     def __call__(self, url):
         try:
-            key = surt.surt(
-                    url, trailing_comma=True, host_massage=False,
-                    with_scheme=True)
+            key = urlcanon.semantic(url).surt().decode('ascii')
             # logging.debug('%s -> %s', url, key)
             return key
         except Exception as e:

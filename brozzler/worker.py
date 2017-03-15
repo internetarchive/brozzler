@@ -33,6 +33,7 @@ import collections
 import requests
 import doublethink
 import tempfile
+import urlcanon
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
@@ -208,7 +209,7 @@ class BrozzlerWorker:
                         "with youtube-dl json for %s", page)
                 self._warcprox_write_record(
                         warcprox_address=self._proxy(site),
-                        url="youtube-dl:%s" % brozzler.fixup(page.url),
+                        url="youtube-dl:%s" % str(urlcanon.semantic(page.url)),
                         warc_type="metadata",
                         content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                         payload=info_json.encode("utf-8"),
@@ -245,7 +246,7 @@ class BrozzlerWorker:
         def _on_screenshot(screenshot_png):
             if on_screenshot:
                 on_screenshot(screenshot_png)
-            elif self._proxy(site) and self._enable_warcprox_features(site):
+            if self._proxy(site) and self._enable_warcprox_features(site):
                 self.logger.info(
                         "sending WARCPROX_WRITE_RECORD request to %s with "
                         "screenshot for %s", self._proxy(site), page)
@@ -253,13 +254,13 @@ class BrozzlerWorker:
                         screenshot_png)
                 self._warcprox_write_record(
                         warcprox_address=self._proxy(site),
-                        url="screenshot:%s" % brozzler.fixup(page.url, True),
+                        url="screenshot:%s" % str(urlcanon.semantic(page.url)),
                         warc_type="resource", content_type="image/jpeg",
                         payload=screenshot_jpeg,
                         extra_headers=site.extra_headers())
                 self._warcprox_write_record(
                         warcprox_address=self._proxy(site),
-                        url="thumbnail:%s" % brozzler.fixup(page.url, True),
+                        url="thumbnail:%s" % str(urlcanon.semantic(page.url)),
                         warc_type="resource", content_type="image/jpeg",
                         payload=thumbnail_jpeg,
                         extra_headers=site.extra_headers())

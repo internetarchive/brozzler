@@ -23,6 +23,7 @@ import time
 import datetime
 import rethinkdb as r
 import doublethink
+import urlcanon
 
 class UnexpectedDbResult(Exception):
     pass
@@ -261,18 +262,21 @@ class RethinkDbFrontier:
 
     def scope_and_schedule_outlinks(self, site, parent_page, outlinks):
         if site.remember_outlinks:
-            parent_page.outlinks = {"accepted":[],"blocked":[],"rejected":[]}
+            decisions = {"accepted":set(),"blocked":set(),"rejected":set()}
         counts = {"added":0,"updated":0,"rejected":0,"blocked":0}
         for url in outlinks or []:
-            u = brozzler.site.Url(url)
-            if site.is_in_scope(u, parent_page=parent_page):
+            url_for_scoping = urlcanon.semantic(url)
+            url_for_crawling = urlcanon.whatwg(url)
+            if site.is_in_scope(url_for_scoping, parent_page=parent_page):
                 if brozzler.is_permitted_by_robots(site, url):
-                    if not u.surt.startswith(site.scope["surt"]):
+                    if not url_for_scoping.surt().startswith(
+                            site.scope["surt"].encode("utf-8")):
                         hops_off_surt = parent_page.hops_off_surt + 1
                     else:
                         hops_off_surt = 0
                     new_child_page = brozzler.Page(self.rr, {
-                        'url': url, 'site_id': site.id, 'job_id': site.job_id,
+                        'url': str(url_for_crawling),
+                        'site_id': site.id, 'job_id': site.job_id,
                         'hops_from_seed': parent_page.hops_from_seed+1,
                         'via_page_id': parent_page.id,
                         'hops_off_surt': hops_off_surt})
@@ -286,17 +290,20 @@ class RethinkDbFrontier:
                         new_child_page.save()
                         counts["added"] += 1
                     if site.remember_outlinks:
-                        parent_page.outlinks["accepted"].append(url)
+                        decisions["accepted"].add(str(url_for_crawling))
                 else:
                     counts["blocked"] += 1
                     if site.remember_outlinks:
-                        parent_page.outlinks["blocked"].append(url)
+                        decisions["blocked"].add(str(url_for_crawling))
             else:
                 counts["rejected"] += 1
                 if site.remember_outlinks:
-                    parent_page.outlinks["rejected"].append(url)
+                    decisions["rejected"].add(str(url_for_crawling))
 
         if site.remember_outlinks:
+            parent_page.outlinks = {}
+            for k in decisions:
+                parent_page.outlinks[k] = list(decisions[k])
             parent_page.save()
 
         self.logger.info(

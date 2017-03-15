@@ -50,31 +50,18 @@ class ReachedLimit(Exception):
     def __str__(self):
         return self.__repr__()
 
-def fixup(url, hash_strip=False):
-    '''
-    Does rudimentary canonicalization, such as converting IDN to punycode.
-    '''
-    import surt
-    hurl = surt.handyurl.parse(url)
-    if hash_strip:
-        hurl.hash = None
-    # handyurl.parse() already lowercases the scheme via urlsplit
-    if hurl.host:
-        hurl.host = hurl.host.encode('idna').decode('ascii').lower()
-    return hurl.getURLString()
-
 # monkey-patch log level TRACE
 TRACE = 5
-import logging as _logging
+import logging
 def _logging_trace(msg, *args, **kwargs):
-    _logging.root.trace(msg, *args, **kwargs)
+    logging.root.trace(msg, *args, **kwargs)
 def _logger_trace(self, msg, *args, **kwargs):
     if self.isEnabledFor(TRACE):
         self._log(TRACE, msg, args, **kwargs)
-_logging.trace = _logging_trace
-_logging.Logger.trace = _logger_trace
-_logging._levelToName[TRACE] = 'TRACE'
-_logging._nameToLevel['TRACE'] = TRACE
+logging.trace = _logging_trace
+logging.Logger.trace = _logger_trace
+logging._levelToName[TRACE] = 'TRACE'
+logging._nameToLevel['TRACE'] = TRACE
 
 _behaviors = None
 def behaviors():
@@ -158,6 +145,14 @@ def jinja2_environment():
         _jinja2_env.filters['json'] = json.dumps
     return _jinja2_env
 
+import urlcanon
+def _remove_query(url):
+    url.question_mark = b''
+    url.query = b''
+# XXX chop off path after last slash??
+site_surt_canon = urlcanon.Canonicalizer(
+        urlcanon.semantic.steps + [_remove_query])
+
 from brozzler.site import Page, Site
 from brozzler.worker import BrozzlerWorker
 from brozzler.robots import is_permitted_by_robots
@@ -166,3 +161,6 @@ from brozzler.browser import Browser, BrowserPool, BrowsingException
 from brozzler.job import new_job, new_site, Job
 from brozzler.cli import suggest_default_chrome_exe
 
+__all__ = ['Page', 'Site', 'BrozzlerWorker', 'is_permitted_by_robots',
+           'RethinkDbFrontier', 'Browser', 'BrowserPool', 'BrowsingException',
+           'new_job', 'new_site', 'Job']
