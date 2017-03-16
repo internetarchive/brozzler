@@ -93,8 +93,12 @@ class Site(doublethink.Document):
     def is_in_scope(self, url, parent_page=None):
         if not isinstance(url, urlcanon.ParsedUrl):
             url = urlcanon.semantic(url)
+        try_parent_urls = []
         if parent_page:
-            parent_url = urlcanon.semantic(parent_page.url)
+            try_parent_urls.append(urlcanon.semantic(parent_page.url))
+            if parent_page.redirect_url:
+                try_parent_urls.append(
+                        urlcanon.semantic(parent_page.redirect_url))
 
         might_accept = False
         if not url.scheme in (b'http', b'https'):
@@ -112,16 +116,25 @@ class Site(doublethink.Document):
         elif "accepts" in self.scope:
             for accept_rule in self.scope["accepts"]:
                 rule = urlcanon.MatchRule(**accept_rule)
-                if rule.applies(url, parent_url):
-                   might_accept = True
-                   break
+                if try_parent_urls:
+                    for parent_url in try_parent_urls:
+                        if rule.applies(url, parent_url):
+                           might_accept = True
+                else:
+                    if rule.applies(url):
+                        might_accept = True
 
         if might_accept:
             if "blocks" in self.scope:
                 for block_rule in self.scope["blocks"]:
                     rule = urlcanon.MatchRule(**block_rule)
-                    if rule.applies(url, parent_url):
-                        return False
+                    if try_parent_urls:
+                        for parent_url in try_parent_urls:
+                            if rule.applies(url, parent_url):
+                               return False
+                    else:
+                        if rule.applies(url):
+                            return False
             return True
         else:
             return False
