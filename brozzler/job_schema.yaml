@@ -38,6 +38,21 @@ id:
             domain:
               type: string
 
+            substring:
+              type: string
+
+            regex:
+              type: string  # code up a regex type?
+
+            ssurt:
+              type: string
+
+            surt:
+              type: string
+
+            parent_url_regex:
+              type: string
+
             url_match:
               type: string
               allowed:
