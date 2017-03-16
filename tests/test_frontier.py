@@ -249,7 +249,7 @@ def test_field_defaults():
     assert kob.id
     assert kob.starts_and_stops
 
-def test_scope_and_scheduled_outlinks():
+def test_scope_and_schedule_outlinks():
     rr = doublethink.Rethinker('localhost', db='ignoreme')
     frontier = brozzler.RethinkDbFrontier(rr)
     site = brozzler.Site(rr, {
@@ -286,6 +286,109 @@ def test_scope_and_scheduled_outlinks():
     for url in parent_page.outlinks['accepted']:
         id = brozzler.Page.compute_id(site.id, url)
         assert brozzler.Page.load(rr, id)
+
+def test_parent_url_scoping():
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # scope rules that look at parent page url should consider both the
+    # original url and the redirect url, if any, of the parent page
+    site = brozzler.Site(rr, {
+        'seed': 'http://example.com/foo/',
+        'scope': {
+            'accepts': [{
+                'parent_url_regex': '^http://example.com/acceptme/.*$'}],
+            'blocks': [{
+                'parent_url_regex': '^http://example.com/blockme/.*$'}],
+            },
+        'remember_outlinks': True})
+    site.save()
+
+    # an outlink that would not otherwise be in scope
+    outlinks = ['https://some-random-url.com/']
+
+    # parent page does not match any parent_url_regex
+    parent_page = brozzler.Page(rr, {
+        'site_id': site.id,
+        'url': 'http://example.com/foo/spluh'})
+    orig_is_permitted_by_robots = brozzler.is_permitted_by_robots
+    brozzler.is_permitted_by_robots = lambda *args: True
+    try:
+        frontier.scope_and_schedule_outlinks(site, parent_page, outlinks)
+    finally:
+        brozzler.is_permitted_by_robots = orig_is_permitted_by_robots
+    assert parent_page.outlinks['rejected'] == outlinks
+    assert parent_page.outlinks['accepted'] == []
+
+    # parent page url matches accept parent_url_regex
+    parent_page = brozzler.Page(rr, {
+        'site_id': site.id,
+        'url': 'http://example.com/acceptme/futz'})
+    orig_is_permitted_by_robots = brozzler.is_permitted_by_robots
+    brozzler.is_permitted_by_robots = lambda *args: True
+    try:
+        frontier.scope_and_schedule_outlinks(site, parent_page, outlinks)
+    finally:
+        brozzler.is_permitted_by_robots = orig_is_permitted_by_robots
+    assert parent_page.outlinks['rejected'] == []
+    assert parent_page.outlinks['accepted'] == outlinks
+
+    # parent page redirect_url matches accept parent_url_regex
+    parent_page_c = brozzler.Page(rr, {
+        'site_id': site.id,
+        'url': 'http://example.com/toot/blah',
+        'redirect_url':'http://example.com/acceptme/futz'})
+    orig_is_permitted_by_robots = brozzler.is_permitted_by_robots
+    brozzler.is_permitted_by_robots = lambda *args: True
+    try:
+        frontier.scope_and_schedule_outlinks(site, parent_page, outlinks)
+    finally:
+        brozzler.is_permitted_by_robots = orig_is_permitted_by_robots
+    assert parent_page.outlinks['rejected'] == []
+    assert parent_page.outlinks['accepted'] == outlinks
+
+    # an outlink that would normally be in scope
+    outlinks = ['http://example.com/foo/whatever/']
+
+    # parent page does not match any parent_url_regex
+    parent_page = brozzler.Page(rr, {
+        'site_id': site.id,
+        'url': 'http://example.com/foo/spluh'})
+    orig_is_permitted_by_robots = brozzler.is_permitted_by_robots
+    brozzler.is_permitted_by_robots = lambda *args: True
+    try:
+        frontier.scope_and_schedule_outlinks(site, parent_page, outlinks)
+    finally:
+        brozzler.is_permitted_by_robots = orig_is_permitted_by_robots
+    assert parent_page.outlinks['rejected'] == []
+    assert parent_page.outlinks['accepted'] == outlinks
+
+    # parent page url matches block parent_url_regex
+    parent_page = brozzler.Page(rr, {
+        'site_id': site.id,
+        'url': 'http://example.com/blockme/futz'})
+    orig_is_permitted_by_robots = brozzler.is_permitted_by_robots
+    brozzler.is_permitted_by_robots = lambda *args: True
+    try:
+        frontier.scope_and_schedule_outlinks(site, parent_page, outlinks)
+    finally:
+        brozzler.is_permitted_by_robots = orig_is_permitted_by_robots
+    assert parent_page.outlinks['rejected'] == outlinks
+    assert parent_page.outlinks['accepted'] == []
+
+    # parent page redirect_url matches block parent_url_regex
+    parent_page_c = brozzler.Page(rr, {
+        'site_id': site.id,
+        'url': 'http://example.com/toot/blah',
+        'redirect_url':'http://example.com/blockme/futz'})
+    orig_is_permitted_by_robots = brozzler.is_permitted_by_robots
+    brozzler.is_permitted_by_robots = lambda *args: True
+    try:
+        frontier.scope_and_schedule_outlinks(site, parent_page, outlinks)
+    finally:
+        brozzler.is_permitted_by_robots = orig_is_permitted_by_robots
+    assert parent_page.outlinks['rejected'] == outlinks
+    assert parent_page.outlinks['accepted'] == []
 
 def test_completed_page():
     rr = doublethink.Rethinker('localhost', db='ignoreme')
@@ -357,3 +460,4 @@ def test_completed_page():
     page.refresh()
     assert page.brozzle_count == 1
     assert page.claimed == False
+
