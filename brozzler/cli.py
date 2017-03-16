@@ -392,11 +392,18 @@ def brozzler_list_jobs():
             prog=os.path.basename(sys.argv[0]),
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
-            '-a', '--all', dest='all', action='store_true', help=(
-                'list all jobs (by default, only active jobs are listed)'))
-    arg_parser.add_argument(
             '--yaml', dest='yaml', action='store_true', help=(
                 'yaml output (default is json)'))
+    group = arg_parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+            '--active', dest='active', action='store_true', help=(
+                'list active jobs'))
+    group.add_argument(
+            '--all', dest='all', action='store_true', help=(
+                'list all jobs'))
+    group.add_argument(
+            '--job', dest='job', metavar='JOB_ID', help=(
+                'list only the specified job'))
     add_rethinkdb_options(arg_parser)
     add_common_options(arg_parser)
 
@@ -422,18 +429,24 @@ def brozzler_list_sites():
             prog=os.path.basename(sys.argv[0]),
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
-            '-a', '--all', dest='all', action='store_true', help=(
-                'list all sites (by default, only active sites are listed)'))
-    arg_parser.add_argument(
             '--yaml', dest='yaml', action='store_true', help=(
                 'yaml output (default is json)'))
-    group = arg_parser.add_mutually_exclusive_group()
+    group = arg_parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
-            '--jobless', dest='jobless', action='store_true', help=(
-                'list only jobless sites'))
+            '--active', dest='active', action='store_true', help=(
+                'list all active sites'))
     group.add_argument(
             '--job', dest='job', metavar='JOB_ID', help=(
-                'list only sites for the supplied job'))
+                'list sites for a particular job'))
+    group.add_argument(
+            '--jobless', dest='jobless', action='store_true', help=(
+                'list all jobless sites'))
+    group.add_argument(
+            '--site', dest='site', metavar='SITE_ID', help=(
+                'list only the specified site'))
+    group.add_argument(
+            '--all', dest='all', action='store_true', help=(
+                'list all sites'))
     add_rethinkdb_options(arg_parser)
     add_common_options(arg_parser)
 
@@ -451,7 +464,7 @@ def brozzler_list_sites():
         reql = reql.get_all(job_id, index='job_id')
     elif args.jobless:
         reql = reql.filter(~r.row.has_fields('job_id'))
-    if not args.all:
+    elif args.active:
         reql = reql.filter({'status': 'ACTIVE'})
     logging.debug('querying rethinkdb: %s', reql)
     results = reql.run()
@@ -473,20 +486,23 @@ def brozzler_list_pages():
     group = arg_parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
             '--job', dest='job', metavar='JOB_ID', help=(
-                'list pages for all sites of the supplied job'))
+                'list pages for all sites of a particular job'))
     group.add_argument(
             '--site', dest='site', metavar='SITE_ID', help=(
-                'list pages of the supplied site'))
+                'list pages for the specified site'))
+    # group.add_argument(
+    #         '--page', dest='page', metavar='PAGE_ID', help=(
+    #             'list only the specified page'))
     group = arg_parser.add_mutually_exclusive_group()
     group.add_argument(
             '--queued', dest='queued', action='store_true', help=(
-                'limit only queued pages'))
+                'limit to queued pages'))
     group.add_argument(
             '--brozzled', dest='brozzled', action='store_true', help=(
-                'limit only pages that have already been brozzled'))
+                'limit to pages that have already been brozzled'))
     group.add_argument(
             '--claimed', dest='claimed', action='store_true', help=(
-                'limit only pages that are currently claimed by a brozzler '
+                'limit to pages that are currently claimed by a brozzler '
                 'worker'))
     add_rethinkdb_options(arg_parser)
     add_common_options(arg_parser)
@@ -503,7 +519,7 @@ def brozzler_list_pages():
         reql = rr.table('sites').get_all(job_id, index='job_id')['id']
         logging.debug('querying rethinkb: %s', reql)
         site_ids = reql.run()
-    else:
+    elif args.site:
         try:
             site_ids = [int(args.site)]
         except ValueError:
