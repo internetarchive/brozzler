@@ -411,11 +411,25 @@ def brozzler_list_jobs():
     configure_logging(args)
 
     rr = rethinker(args)
-    reql = rr.table('jobs').order_by('id')
-    if not args.all:
-        reql = reql.filter({'status': 'ACTIVE'})
-    logging.debug('querying rethinkdb: %s', reql)
-    results = reql.run()
+    if args.job is not None:
+        try:
+            job_id = int(args.job)
+        except ValueError:
+            job_id = args.job
+        reql = rr.table('jobs').get(job_id)
+        logging.debug('querying rethinkdb: %s', reql)
+        result = reql.run()
+        if result:
+            results = [reql.run()]
+        else:
+            logging.error('no such job with id %s', repr(job_id))
+            sys.exit(1)
+    else:
+        reql = rr.table('jobs').order_by('id')
+        if args.active:
+            reql = reql.filter({'status': 'ACTIVE'})
+        logging.debug('querying rethinkdb: %s', reql)
+        results = reql.run()
     if args.yaml:
         yaml.dump_all(
                 results, stream=sys.stdout, explicit_start=True,
