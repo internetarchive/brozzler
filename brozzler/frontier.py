@@ -261,8 +261,7 @@ class RethinkDbFrontier:
         site.save()
 
     def scope_and_schedule_outlinks(self, site, parent_page, outlinks):
-        if site.remember_outlinks:
-            decisions = {"accepted":set(),"blocked":set(),"rejected":set()}
+        decisions = {"accepted":set(),"blocked":set(),"rejected":set()}
         counts = {"added":0,"updated":0,"rejected":0,"blocked":0}
         for url in outlinks or []:
             url_for_scoping = urlcanon.semantic(url)
@@ -289,22 +288,18 @@ class RethinkDbFrontier:
                     else:
                         new_child_page.save()
                         counts["added"] += 1
-                    if site.remember_outlinks:
-                        decisions["accepted"].add(str(url_for_crawling))
+                    decisions["accepted"].add(str(url_for_crawling))
                 else:
                     counts["blocked"] += 1
-                    if site.remember_outlinks:
-                        decisions["blocked"].add(str(url_for_crawling))
+                    decisions["blocked"].add(str(url_for_crawling))
             else:
                 counts["rejected"] += 1
-                if site.remember_outlinks:
-                    decisions["rejected"].add(str(url_for_crawling))
+                decisions["rejected"].add(str(url_for_crawling))
 
-        if site.remember_outlinks:
-            parent_page.outlinks = {}
-            for k in decisions:
-                parent_page.outlinks[k] = list(decisions[k])
-            parent_page.save()
+        parent_page.outlinks = {}
+        for k in decisions:
+            parent_page.outlinks[k] = list(decisions[k])
+        parent_page.save()
 
         self.logger.info(
                 "%s new links added, %s existing links updated, %s links "
