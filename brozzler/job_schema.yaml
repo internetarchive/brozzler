@@ -75,6 +75,7 @@ id:
       max_hops_off_surt:
         type: integer
 
+  # ignored, left for backward compatibility
   remember_outlinks:
     type: boolean
 

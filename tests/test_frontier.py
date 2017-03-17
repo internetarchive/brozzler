@@ -252,8 +252,7 @@ def test_field_defaults():
 def test_scope_and_schedule_outlinks():
     rr = doublethink.Rethinker('localhost', db='ignoreme')
     frontier = brozzler.RethinkDbFrontier(rr)
-    site = brozzler.Site(rr, {
-        'seed':'http://example.com/', 'remember_outlinks':True})
+    site = brozzler.Site(rr, {'seed':'http://example.com/'})
     parent_page = brozzler.Page(rr, {
         'hops_from_seed': 1, 'url': 'http://example.com/whatever'})
     outlinks = [
