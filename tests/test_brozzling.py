@@ -143,8 +143,8 @@ def test_js_dialogs(httpd):
         #         'http://localhost:%s/site4/print.html' % httpd.server_port)
 
 def test_page_videos(httpd):
-    # test depends on behavior of youtube-dl, could fail and need to be
-    # adjusted on youtube-dl updates
+    # test depends on behavior of youtube-dl and chromium, could fail and need
+    # to be adjusted on youtube-dl or chromium updates
     chrome_exe = brozzler.suggest_default_chrome_exe()
     worker = brozzler.BrozzlerWorker(None)
     chrome_exe = brozzler.suggest_default_chrome_exe()
@@ -152,7 +152,6 @@ def test_page_videos(httpd):
     page = brozzler.Page(None, {
         'url':'http://localhost:%s/site6/' % httpd.server_port})
     with brozzler.Browser(chrome_exe=chrome_exe) as browser:
-        import pdb; pdb.set_trace()
         worker.brozzle_page(browser, site, page)
     assert page.videos
     assert len(page.videos) == 2
