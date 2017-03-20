@@ -142,3 +142,34 @@ def test_js_dialogs(httpd):
         # browser.browse_page(
         #         'http://localhost:%s/site4/print.html' % httpd.server_port)
 
+def test_page_videos(httpd):
+    # test depends on behavior of youtube-dl, could fail and need to be
+    # adjusted on youtube-dl updates
+    chrome_exe = brozzler.suggest_default_chrome_exe()
+    worker = brozzler.BrozzlerWorker(None)
+    chrome_exe = brozzler.suggest_default_chrome_exe()
+    site = brozzler.Site(None, {})
+    page = brozzler.Page(None, {
+        'url':'http://localhost:%s/site6/' % httpd.server_port})
+    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        import pdb; pdb.set_trace()
+        worker.brozzle_page(browser, site, page)
+    assert page.videos
+    assert len(page.videos) == 2
+    assert page.videos[0] == {
+        'blame': 'youtube-dl',
+        'response_code': 200,
+        'content-length': 383631,
+        'content-type': 'video/mp4',
+        'url': 'http://localhost:%s/site6/small.mp4' % httpd.server_port,
+    }
+    assert page.videos[1] == {
+        'blame': 'browser',
+        # 'response_code': 206,
+        # 'content-range': 'bytes 0-229454/229455',
+        'response_code': 200,
+        'content-length': 229455,
+        'content-type': 'video/webm',
+        'url': 'http://localhost:%s/site6/small.webm' % httpd.server_port,
+    }
+
