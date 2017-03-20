@@ -34,6 +34,7 @@ import requests
 import doublethink
 import tempfile
 import urlcanon
+from requests.structures import CaseInsensitiveDict
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
@@ -198,10 +199,34 @@ class BrozzlerWorker:
                     'WARCPROX_WRITE_RECORD request (expected 204)',
                     e.getcode(), e.info())
 
+    def _remember_videos(self, page, ydl_spy):
+        videos = []
+        for txn in ydl_spy.transactions:
+            if (txn['response_headers'].get_content_type().startswith('video/')
+                    and txn['method'] == 'GET'
+                    and txn['status_code'] in (200, 206)):
+                video = {
+                    'blame': 'youtube-dl',
+                    'url': txn['url'],
+                    'response_code': txn['status_code'],
+                    'content-type': txn['response_headers'].get_content_type(),
+                }
+                if 'content-length' in txn['response_headers']:
+                    video['content-length'] = int(
+                            txn['response_headers']['content-length'])
+                if 'content-range' in txn['response_headers']:
+                    video['content-range'] = txn[
+                            'response_headers']['content-range']
+                logging.debug('embedded video %s', video)
+                videos.append(video)
+        page.videos = videos
+
     def _try_youtube_dl(self, ydl, site, page):
         try:
             self.logger.info("trying youtube-dl on {}".format(page))
             info = ydl.extract_info(page.url)
+            self._remember_videos(page, ydl.brozzler_spy)
+            # logging.info('XXX %s', json.dumps(info))
             if self._proxy(site) and self._enable_warcprox_features(site):
                 info_json = json.dumps(info, sort_keys=True, indent=4)
                 self.logger.info(
@@ -243,6 +268,41 @@ class BrozzlerWorker:
         return full_jpeg, thumb_jpeg
 
     def brozzle_page(self, browser, site, page, on_screenshot=None):
+        self.logger.info("brozzling {}".format(page))
+        try:
+            with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
+                ydl = self._youtube_dl(tempdir, site)
+                ydl_spy = ydl.brozzler_spy # remember for later
+                self._try_youtube_dl(ydl, site, page)
+        except brozzler.ReachedLimit as e:
+            raise
+        except brozzler.ShutdownRequested:
+            raise
+        except Exception as e:
+            if (hasattr(e, 'exc_info') and len(e.exc_info) >= 2
+                    and hasattr(e.exc_info[1], 'code')
+                    and e.exc_info[1].code == 430):
+                self.logger.info(
+                        'youtube-dl got %s %s processing %s',
+                        e.exc_info[1].code, e.exc_info[1].msg, page.url)
+            else:
+                self.logger.error(
+                        "youtube_dl raised exception on %s", page,
+                        exc_info=True)
+
+        if self._needs_browsing(page, ydl_spy):
+            self.logger.info('needs browsing: %s', page)
+            outlinks = self._browse_page(browser, site, page, on_screenshot)
+            return outlinks
+        else:
+            if not self._already_fetched(page, ydl_spy):
+                self.logger.info('needs fetch: %s', page)
+                self._fetch_url(site, page)
+            else:
+                self.logger.info('already fetched: %s', page)
+            return []
+
+    def _browse_page(self, browser, site, page, on_screenshot=None):
         def _on_screenshot(screenshot_png):
             if on_screenshot:
                 on_screenshot(screenshot_png)
@@ -265,50 +325,39 @@ class BrozzlerWorker:
                         payload=thumbnail_jpeg,
                         extra_headers=site.extra_headers())
 
-        self.logger.info("brozzling {}".format(page))
-        try:
-            with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
-                ydl = self._youtube_dl(tempdir, site)
-                ydl_spy = ydl.brozzler_spy # remember for later
-                self._try_youtube_dl(ydl, site, page)
-        except brozzler.ReachedLimit as e:
-            raise
-        except brozzler.ShutdownRequested:
-            raise
-        except Exception as e:
-            if (hasattr(e, 'exc_info') and len(e.exc_info) >= 2
-                    and hasattr(e.exc_info[1], 'code')
-                    and e.exc_info[1].code == 430):
-                self.logger.info(
-                        'youtube-dl got %s %s processing %s',
-                        e.exc_info[1].code, e.exc_info[1].msg, page.url)
-            else:
-                self.logger.error(
-                        "youtube_dl raised exception on %s", page, exc_info=True)
+        def _on_response(chrome_msg):
+            if ('params' in chrome_msg
+                    and 'response' in chrome_msg['params']
+                    and 'mimeType' in chrome_msg['params']['response']
+                    and chrome_msg['params']['response'].get('mimeType', '').startswith('video/')
+                    and chrome_msg['params']['response'].get('status') in (200, 206)):
+                video = {
+                    'blame': 'browser',
+                    'url': chrome_msg['params']['response'].get('url'),
+                    'response_code': chrome_msg['params']['response']['status'],
+                    'content-type': chrome_msg['params']['response']['mimeType'],
+                }
+                response_headers = CaseInsensitiveDict(
+                        chrome_msg['params']['response']['headers'])
+                if 'content-length' in response_headers:
+                    video['content-length'] = int(response_headers['content-length'])
+                if 'content-range' in response_headers:
+                    video['content-range'] = response_headers['content-range']
+                logging.debug('embedded video %s', video)
+                page.videos.append(video)
 
-        if self._needs_browsing(page, ydl_spy):
-            self.logger.info('needs browsing: %s', page)
-            if not browser.is_running():
-                browser.start(
-                        proxy=self._proxy(site),
-                        cookie_db=site.get('cookie_db'))
-            final_page_url, outlinks = browser.browse_page(
-                    page.url, extra_headers=site.extra_headers(),
-                    behavior_parameters=site.get('behavior_parameters'),
-                    username=site.get('username'),
-                    password=site.get('password'),
-                    user_agent=site.get('user_agent'),
-                    on_screenshot=_on_screenshot)
-            if final_page_url != page.url:
-                page.note_redirect(final_page_url)
-            return outlinks
-        else:
-            if not self._already_fetched(page, ydl_spy):
-                self.logger.info('needs fetch: %s', page)
-                self._fetch_url(site, page)
-            else:
-                self.logger.info('already fetched: %s', page)
-            return []
+        if not browser.is_running():
+            browser.start(
+                    proxy=self._proxy(site), cookie_db=site.get('cookie_db'))
+        final_page_url, outlinks = browser.browse_page(
+                page.url, extra_headers=site.extra_headers(),
+                behavior_parameters=site.get('behavior_parameters'),
+                username=site.get('username'), password=site.get('password'),
+                user_agent=site.get('user_agent'),
+                on_screenshot=_on_screenshot, on_response=_on_response)
+        if final_page_url != page.url:
+            page.note_redirect(final_page_url)
+        return outlinks
 
     def _fetch_url(self, site, page):
         proxies = None
