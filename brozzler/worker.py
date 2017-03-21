@@ -225,6 +225,7 @@ class BrozzlerWorker:
         try:
             self.logger.info("trying youtube-dl on {}".format(page))
             info = ydl.extract_info(page.url)
+            self._remember_videos(page, ydl.brozzler_spy)
             # logging.info('XXX %s', json.dumps(info))
             if self._proxy(site) and self._enable_warcprox_features(site):
                 info_json = json.dumps(info, sort_keys=True, indent=4)
