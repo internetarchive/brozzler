@@ -23,6 +23,7 @@ import logging
 import argparse
 import doublethink
 import time
+import datetime
 
 args = argparse.Namespace()
 args.log_level = logging.INFO
@@ -33,6 +34,119 @@ def test_rethinkdb_up():
     rr = doublethink.Rethinker(db='rethinkdb')  # built-in db
     tbls = rr.table_list().run()
     assert len(tbls) > 10
+
+def test_basics():
+    rr = doublethink.Rethinker(db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+    job_conf = {'seeds': [
+        {'url': 'http://example.com'}, {'url': 'https://example.org/'}]}
+    job = brozzler.new_job(frontier, job_conf)
+    assert job.id
+    assert job.starts_and_stops
+    assert job.starts_and_stops[0]['start']
+    assert job == {
+        'id': job.id,
+        'conf': {
+            'seeds': [
+                {'url': 'http://example.com'},
+                {'url': 'https://example.org/'}
+            ]
+        },
+        'status': 'ACTIVE',
+        'starts_and_stops': [
+            {
+                'start': job.starts_and_stops[0]['start'],
+                'stop': None
+            }
+        ]
+    }
+
+    sites = sorted(list(frontier.job_sites(job.id)), key=lambda x: x.seed)
+    assert len(sites) == 2
+    assert sites[0].starts_and_stops[0]['start']
+    assert sites[1].starts_and_stops[0]['start']
+    assert sites[0] == {
+        'claimed': False,
+        'enable_warcprox_features': False,
+        'id': sites[0].id,
+        'job_id': job.id,
+        'last_claimed': brozzler.EPOCH_UTC,
+        'last_disclaimed': brozzler.EPOCH_UTC,
+        'scope': {
+            'surt': 'http://(com,example,)/'
+        },
+        'seed': 'http://example.com',
+        'starts_and_stops': [
+            {
+                'start': sites[0].starts_and_stops[0]['start'],
+                'stop': None
+           }
+        ],
+        'status': 'ACTIVE'
+    }
+    assert sites[1] == {
+        'claimed': False,
+        'enable_warcprox_features': False,
+        'id': sites[1].id,
+        'job_id': job.id,
+        'last_claimed': brozzler.EPOCH_UTC,
+        'last_disclaimed': brozzler.EPOCH_UTC,
+        'scope': {
+            'surt': 'https://(org,example,)/',
+        },
+        'seed': 'https://example.org/',
+        'starts_and_stops': [
+            {
+                'start': sites[1].starts_and_stops[0]['start'],
+                'stop': None,
+           },
+        ],
+        'status': 'ACTIVE',
+    }
+
+    pages = list(frontier.site_pages(sites[0].id))
+    assert len(pages) == 1
+    assert pages[0] == {
+        'brozzle_count': 0,
+        'claimed': False,
+        'hops_from_seed': 0,
+        'hops_off_surt': 0,
+        'id': brozzler.Page.compute_id(sites[0].id, 'http://example.com'),
+        'job_id': job.id,
+        'needs_robots_check': True,
+        'priority': 1000,
+        'site_id': sites[0].id,
+        'url': 'http://example.com',
+    }
+    pages = list(frontier.site_pages(sites[1].id))
+    assert len(pages) == 1
+    assert pages[0] == {
+        'brozzle_count': 0,
+        'claimed': False,
+        'hops_from_seed': 0,
+        'hops_off_surt': 0,
+        'id': brozzler.Page.compute_id(sites[1].id, 'https://example.org/'),
+        'job_id': job.id,
+        'needs_robots_check': True,
+        'priority': 1000,
+        'site_id': sites[1].id,
+        'url': 'https://example.org/',
+    }
+
+    # test "brozzled" parameter of frontier.site_pages
+    assert len(list(frontier.site_pages(sites[1].id))) == 1
+    assert len(list(frontier.site_pages(sites[1].id, brozzled=True))) == 0
+    assert len(list(frontier.site_pages(sites[1].id, brozzled=False))) == 1
+    pages[0].brozzle_count = 1
+    pages[0].save()
+    assert len(list(frontier.site_pages(sites[1].id))) == 1
+    assert len(list(frontier.site_pages(sites[1].id, brozzled=True))) == 1
+    assert len(list(frontier.site_pages(sites[1].id, brozzled=False))) == 0
+    pages[0].brozzle_count = 32819
+    pages[0].save()
+    assert len(list(frontier.site_pages(sites[1].id))) == 1
+    assert len(list(frontier.site_pages(sites[1].id, brozzled=True))) == 1
+    assert len(list(frontier.site_pages(sites[1].id, brozzled=False))) == 0
 
 def test_resume_job():
     '''
