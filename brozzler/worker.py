@@ -200,7 +200,8 @@ class BrozzlerWorker:
                     e.getcode(), e.info())
 
     def _remember_videos(self, page, ydl_spy):
-        videos = []
+        if not 'videos' in page:
+            page.videos = []
         for txn in ydl_spy.transactions:
             if (txn['response_headers'].get_content_type().startswith('video/')
                     and txn['method'] == 'GET'
@@ -218,14 +219,12 @@ class BrozzlerWorker:
                     video['content-range'] = txn[
                             'response_headers']['content-range']
                 logging.debug('embedded video %s', video)
-                videos.append(video)
-        page.videos = videos
+                page.videos.append(video)
 
     def _try_youtube_dl(self, ydl, site, page):
         try:
             self.logger.info("trying youtube-dl on {}".format(page))
             info = ydl.extract_info(page.url)
-            self._remember_videos(page, ydl.brozzler_spy)
             # logging.info('XXX %s', json.dumps(info))
             if self._proxy(site) and self._enable_warcprox_features(site):
                 info_json = json.dumps(info, sort_keys=True, indent=4)
@@ -344,6 +343,8 @@ class BrozzlerWorker:
                 if 'content-range' in response_headers:
                     video['content-range'] = response_headers['content-range']
                 logging.debug('embedded video %s', video)
+                if not 'videos' in page:
+                    page.videos = []
                 page.videos.append(video)
 
         if not browser.is_running():
