@@ -337,11 +337,20 @@ class RethinkDbFrontier:
             return None
         return brozzler.Page(self.rr, pages[0])
 
-    def site_pages(self, site_id, unbrozzled_only=False):
+    def site_pages(self, site_id, brozzled=None):
+        '''
+        Args:
+            site_id (str or int):
+            brozzled (bool): if true, results include only pages that have
+                been brozzled at least once; if false, only pages that have
+                not been brozzled; and if None (the default), all pages
+        Returns:
+            iterator of brozzler.Page
+        '''
         results = self.rr.table("pages").between(
-                [site_id, 0 if unbrozzled_only else r.minval,
+                [site_id, 1 if brozzled is True else 0,
                     r.minval, r.minval],
-                [site_id, 0 if unbrozzled_only else r.maxval,
+                [site_id, 0 if brozzled is False else r.maxval,
                     r.maxval, r.maxval],
                 index="priority_by_site").run()
         for result in results:

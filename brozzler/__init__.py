@@ -153,6 +153,11 @@ def _remove_query(url):
 site_surt_canon = urlcanon.Canonicalizer(
         urlcanon.semantic.steps + [_remove_query])
 
+import doublethink
+import datetime
+EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(
+        tzinfo=doublethink.UTC)
+
 from brozzler.site import Page, Site
 from brozzler.worker import BrozzlerWorker
 from brozzler.robots import is_permitted_by_robots

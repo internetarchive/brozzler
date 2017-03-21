@@ -26,9 +26,6 @@ import doublethink
 import datetime
 import re
 
-_EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(
-        tzinfo=doublethink.UTC)
-
 class Site(doublethink.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)
     table = 'sites'
@@ -41,9 +38,9 @@ class Site(doublethink.Document):
         if not "claimed" in self:
             self.claimed = False
         if not "last_disclaimed" in self:
-            self.last_disclaimed = _EPOCH_UTC
+            self.last_disclaimed = brozzler.EPOCH_UTC
         if not "last_claimed" in self:
-            self.last_claimed = _EPOCH_UTC
+            self.last_claimed = brozzler.EPOCH_UTC
         if not "scope" in self:
             self.scope = {}
         if not "surt" in self.scope and self.seed:
