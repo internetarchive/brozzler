@@ -124,9 +124,7 @@ class BrozzlerWorker:
             return site.proxy
         elif self._default_proxy:
             return self._default_proxy
-        elif self._service_registry and (
-                site.enable_warcprox_features
-                or self._default_enable_warcprox_features):
+        elif self._service_registry and self._enable_warcprox_features(site):
             svc = self._service_registry.available_service('warcprox')
             if svc is None:
                 raise Exception(
@@ -142,6 +140,8 @@ class BrozzlerWorker:
 
 
     def _enable_warcprox_features(self, site):
+        if not self._proxy(site):
+            return False
         if site.enable_warcprox_features is not None:
             return site.enable_warcprox_features
         else:
@@ -227,7 +227,7 @@ class BrozzlerWorker:
             info = ydl.extract_info(page.url)
             self._remember_videos(page, ydl.brozzler_spy)
             # logging.info('XXX %s', json.dumps(info))
-            if self._proxy(site) and self._enable_warcprox_features(site):
+            if self._enable_warcprox_features(site):
                 info_json = json.dumps(info, sort_keys=True, indent=4)
                 self.logger.info(
                         "sending WARCPROX_WRITE_RECORD request to warcprox "
@@ -306,7 +306,7 @@ class BrozzlerWorker:
         def _on_screenshot(screenshot_png):
             if on_screenshot:
                 on_screenshot(screenshot_png)
-            if self._proxy(site) and self._enable_warcprox_features(site):
+            if self._enable_warcprox_features(site):
                 self.logger.info(
                         "sending WARCPROX_WRITE_RECORD request to %s with "
                         "screenshot for %s", self._proxy(site), page)

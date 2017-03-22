@@ -86,7 +86,7 @@ def _add_proxy_options(arg_parser):
             '--proxy', dest='proxy', default=None, help='http proxy')
     arg_parser.add_argument(
             '--enable-warcprox-features', dest='enable_warcprox_features',
-            action='store_true', help=(
+            action='store_true', default=None, help=(
                 'enable special features that assume the configured proxy is '
                 'warcprox'))
 
@@ -159,14 +159,7 @@ def brozzle_page():
     arg_parser.add_argument(
             '--password', dest='password', default=None,
             help='use this password to try to log in if a login form is found')
-    arg_parser.add_argument(
-            '--proxy', dest='proxy', default=None,
-            help='http proxy')
-    arg_parser.add_argument(
-            '--enable-warcprox-features', dest='enable_warcprox_features',
-            action='store_true', help=(
-                'enable special features that assume the configured proxy '
-                'is warcprox'))
+    _add_proxy_options(arg_parser)
     add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])
