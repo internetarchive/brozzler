@@ -67,7 +67,6 @@ def test_basics():
     assert sites[1].starts_and_stops[0]['start']
     assert sites[0] == {
         'claimed': False,
-        'enable_warcprox_features': False,
         'id': sites[0].id,
         'job_id': job.id,
         'last_claimed': brozzler.EPOCH_UTC,
@@ -86,7 +85,6 @@ def test_basics():
     }
     assert sites[1] == {
         'claimed': False,
-        'enable_warcprox_features': False,
         'id': sites[1].id,
         'job_id': job.id,
         'last_claimed': brozzler.EPOCH_UTC,
