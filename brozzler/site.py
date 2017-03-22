@@ -33,8 +33,6 @@ class Site(doublethink.Document):
     def populate_defaults(self):
         if not "status" in self:
             self.status = "ACTIVE"
-        if not "enable_warcprox_features" in self:
-            self.enable_warcprox_features = False
         if not "claimed" in self:
             self.claimed = False
         if not "last_disclaimed" in self:
