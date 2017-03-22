@@ -2,7 +2,7 @@
     :target: https://travis-ci.org/internetarchive/brozzler
 
 .. |logo| image:: https://cdn.rawgit.com/internetarchive/brozzler/1.1b5/brozzler/webconsole/static/brozzler.svg
-   :width: 7%
+   :scale: 7%
 
 |logo| brozzler
 ===============
