@@ -567,3 +567,27 @@ def test_completed_page():
     assert page.brozzle_count == 1
     assert page.claimed == False
 
+def test_seed_page():
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    site = brozzler.Site(rr, {'seed':'http://example.com/a/'})
+    site.save()
+
+    assert frontier.seed_page(site.id) is None
+
+    page1 = brozzler.Page(rr, {
+        'site_id': site.id,
+        'url': 'http://example.com/a/b/',
+        'hops_from_seed': 1})
+    page1.save()
+
+    assert frontier.seed_page(site.id) is None
+
+    page0 = brozzler.Page(rr, {
+        'site_id': site.id,
+        'url': 'http://example.com/a/',
+        'hops_from_seed': 0})
+    page0.save()
+
+    assert frontier.seed_page(site.id) == page0
