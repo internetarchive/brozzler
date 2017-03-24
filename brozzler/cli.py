@@ -336,7 +336,8 @@ def brozzler_worker():
     service_registry = doublethink.ServiceRegistry(rr)
     worker = brozzler.worker.BrozzlerWorker(
             frontier, service_registry, max_browsers=int(args.max_browsers),
-            chrome_exe=args.chrome_exe)
+            chrome_exe=args.chrome_exe, proxy=args.proxy,
+            warcprox_auto=args.warcprox_auto)
 
     worker.run()
 
