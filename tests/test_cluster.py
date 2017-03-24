@@ -115,7 +115,6 @@ def test_brozzle_site(httpd):
     rr = doublethink.Rethinker('localhost', db='brozzler')
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site1/' % httpd.server_port,
-        'proxy': 'localhost:8000',
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
 
     # the two pages we expect to be crawled
@@ -336,7 +335,6 @@ def test_obey_robots(httpd):
     rr = doublethink.Rethinker('localhost', db='brozzler')
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site1/' % httpd.server_port,
-        'proxy': 'localhost:8000',
         'user_agent': 'im a badbot',   # robots.txt blocks badbot
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
 
@@ -389,7 +387,6 @@ def test_login(httpd):
     rr = doublethink.Rethinker('localhost', db='brozzler')
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site2/' % httpd.server_port,
-        'proxy': 'localhost:8000',
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}},
         'username': 'test_username', 'password': 'test_password'})
 
@@ -430,7 +427,6 @@ def test_seed_redirect(httpd):
     seed_url = 'http://localhost:%s/site5/redirect/' % httpd.server_port
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site5/redirect/' % httpd.server_port,
-        'proxy': 'localhost:8000',
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
     assert site.scope['surt'] == 'http://(localhost:%s,)/site5/redirect/' % httpd.server_port
 
