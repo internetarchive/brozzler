@@ -30,6 +30,8 @@ import brozzler
 import datetime
 import requests
 import subprocess
+import http.server
+import logging
 
 def start_service(service):
     subprocess.check_call(['sudo', 'service', service, 'start'])
@@ -113,7 +115,7 @@ def test_brozzle_site(httpd):
     rr = doublethink.Rethinker('localhost', db='brozzler')
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site1/' % httpd.server_port,
-        'proxy': 'localhost:8000', 'enable_warcprox_features': True,
+        'proxy': 'localhost:8000',
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
 
     # the two pages we expect to be crawled
@@ -180,11 +182,89 @@ def test_brozzle_site(httpd):
     assert response.status_code == 200
     assert response.headers['content-type'] == 'image/jpeg'
 
-def test_warcprox_selection(httpd):
-    ''' When enable_warcprox_features is true, brozzler is expected to choose
-    and instance of warcprox '''
+def test_proxy_warcprox(httpd):
+    '''Test --proxy with proxy that happens to be warcprox'''
+    try:
+        stop_service('brozzler-worker')
+        _test_proxy_setting(
+                httpd, proxy='localhost:8000', warcprox_auto=False,
+                is_warcprox=True)
+    finally:
+        start_service('brozzler-worker')
 
-    test_id = 'test_warcprox_selection-%s' % datetime.datetime.utcnow().isoformat()
+def test_proxy_non_warcprox(httpd):
+    '''Test --proxy with proxy that happens not to be warcprox'''
+    class DumbProxyRequestHandler(http.server.SimpleHTTPRequestHandler):
+        def do_HEAD(self):
+            if not hasattr(self.server, 'requests'):
+                self.server.requests = []
+            logging.info('%s %s', self.command, self.path)
+            self.server.requests.append('%s %s' % (self.command, self.path))
+            response = urllib.request.urlopen(self.path)
+            self.wfile.write(('HTTP/1.0 %s %s\r\n' % (
+                response.code, response.reason)).encode('ascii'))
+            for header in response.getheaders():
+                self.wfile.write(('%s: %s\r\n' % (
+                    header[0], header[1])).encode('ascii'))
+            self.wfile.write(b'\r\n')
+            return response
+        def do_GET(self):
+            response = self.do_HEAD()
+            self.copyfile(response, self.wfile)
+        def do_WARCPROX_WRITE_RECORD(self):
+            if not hasattr(self.server, 'requests'):
+                self.server.requests = []
+            logging.info('%s %s', self.command, self.path)
+            self.send_error(400)
+
+    proxy = http.server.HTTPServer(('localhost', 0), DumbProxyRequestHandler)
+    th = threading.Thread(name='dumb-proxy', target=proxy.serve_forever)
+    th.start()
+
+    try:
+        stop_service('brozzler-worker')
+        _test_proxy_setting(
+                httpd, proxy='localhost:%s' % proxy.server_port,
+                warcprox_auto=False, is_warcprox=False)
+    finally:
+        start_service('brozzler-worker')
+    assert len(proxy.requests) <= 15
+    assert proxy.requests.count('GET /status') == 1
+    assert ('GET http://localhost:%s/site1/' % httpd.server_port) in proxy.requests
+    assert ('GET http://localhost:%s/site1/file1.txt' % httpd.server_port) in proxy.requests
+    assert [req for req in proxy.requests if req.startswith('WARCPROX_WRITE_RECORD')] == []
+
+    proxy.shutdown()
+    th.join()
+
+def test_no_proxy(httpd):
+    try:
+        stop_service('brozzler-worker')
+        _test_proxy_setting(
+                httpd, proxy=None, warcprox_auto=False, is_warcprox=False)
+    finally:
+        start_service('brozzler-worker')
+    # XXX how to check that no proxy was used?
+
+def test_warcprox_auto(httpd):
+    '''Test --warcprox-auto'''
+    try:
+        stop_service('brozzler-worker')
+        _test_proxy_setting(
+                httpd, proxy=None, warcprox_auto=True, is_warcprox=True)
+    finally:
+        start_service('brozzler-worker')
+
+def test_proxy_conflict():
+    with pytest.raises(AssertionError) as excinfo:
+        worker = brozzler.worker.BrozzlerWorker(
+                None, None, warcprox_auto=True, proxy='localhost:12345')
+
+def _test_proxy_setting(
+        httpd, proxy=None, warcprox_auto=False, is_warcprox=False):
+    test_id = 'test_proxy=%s_warcprox_auto=%s_is_warcprox=%s-%s' % (
+            proxy, warcprox_auto, is_warcprox,
+            datetime.datetime.utcnow().isoformat())
 
     # the two pages we expect to be crawled
     page1 = 'http://localhost:%s/site1/' % httpd.server_port
@@ -192,35 +272,36 @@ def test_warcprox_selection(httpd):
     robots = 'http://localhost:%s/robots.txt' % httpd.server_port
 
     rr = doublethink.Rethinker('localhost', db='brozzler')
+    service_registry = doublethink.ServiceRegistry(rr)
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site1/' % httpd.server_port,
-        'enable_warcprox_features': True,
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
+    assert site.id is None
+    frontier = brozzler.RethinkDbFrontier(rr)
+    brozzler.new_site(frontier, site)
+    assert site.id is not None
+    assert len(list(frontier.site_pages(site.id))) == 1
 
-    # so we can examine rethinkdb before it does anything
-    try:
-        stop_service('brozzler-worker')
-        assert site.id is None
-        frontier = brozzler.RethinkDbFrontier(rr)
-        brozzler.new_site(frontier, site)
-        assert site.id is not None
-        assert len(list(frontier.site_pages(site.id))) == 1
-    finally:
-        start_service('brozzler-worker')
+    worker = brozzler.worker.BrozzlerWorker(
+            frontier, service_registry, max_browsers=1,
+            chrome_exe=brozzler.suggest_default_chrome_exe(),
+            warcprox_auto=warcprox_auto, proxy=proxy)
+    browser = worker._browser_pool.acquire()
+    worker.brozzle_site(browser, site)
+    worker._browser_pool.release(browser)
 
-    # check proxy is set in rethink
-    start = time.time()
-    while not site.proxy and time.time() - start < 20:
-        time.sleep(0.5)
-        site.refresh()
-    assert site.proxy[-5:] == ':8000'
-
-    # the site should be brozzled fairly quickly
-    start = time.time()
-    while site.status != 'FINISHED' and time.time() - start < 300:
-        time.sleep(0.5)
-        site.refresh()
+    # check proxy is set
     assert site.status == 'FINISHED'
+    if warcprox_auto:
+        assert site.proxy[-5:] == ':8000'
+    else:
+        assert not site.proxy
+    site.refresh() # check that these things were persisted
+    assert site.status == 'FINISHED'
+    if warcprox_auto:
+        assert site.proxy[-5:] == ':8000'
+    else:
+        assert not site.proxy
 
     # check that we got the two pages we expected
     pages = list(frontier.site_pages(site.id))
@@ -234,26 +315,28 @@ def test_warcprox_selection(httpd):
     captures = rr.table('captures').filter({'test_id':test_id}).run()
     captures_by_url = {
             c['url']: c for c in captures if c['http_method'] != 'HEAD'}
-    assert robots in captures_by_url
-    assert page1 in captures_by_url
-    assert page2 in captures_by_url
-    assert 'screenshot:%s' % page1 in captures_by_url
-    assert 'thumbnail:%s' % page1 in captures_by_url
-    # no screenshots of plaintext
+    if is_warcprox:
+        assert robots in captures_by_url
+        assert page1 in captures_by_url
+        assert page2 in captures_by_url
+        assert 'screenshot:%s' % page1 in captures_by_url
+        assert 'thumbnail:%s' % page1 in captures_by_url
 
-    # check pywb
-    t14 = captures_by_url[page2]['timestamp'].strftime('%Y%m%d%H%M%S')
-    wb_url = 'http://localhost:8880/brozzler/%s/%s' % (t14, page2)
-    expected_payload = open(os.path.join(
-        os.path.dirname(__file__), 'htdocs', 'site1', 'file1.txt'), 'rb').read()
-    assert requests.get(wb_url).content == expected_payload
+        # check pywb
+        t14 = captures_by_url[page2]['timestamp'].strftime('%Y%m%d%H%M%S')
+        wb_url = 'http://localhost:8880/brozzler/%s/%s' % (t14, page2)
+        expected_payload = open(os.path.join(
+            os.path.dirname(__file__), 'htdocs', 'site1', 'file1.txt'), 'rb').read()
+        assert requests.get(wb_url).content == expected_payload
+    else:
+        assert captures_by_url == {}
 
 def test_obey_robots(httpd):
     test_id = 'test_obey_robots-%s' % datetime.datetime.utcnow().isoformat()
     rr = doublethink.Rethinker('localhost', db='brozzler')
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site1/' % httpd.server_port,
-        'proxy': 'localhost:8000', 'enable_warcprox_features': True,
+        'proxy': 'localhost:8000',
         'user_agent': 'im a badbot',   # robots.txt blocks badbot
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
 
@@ -306,7 +389,7 @@ def test_login(httpd):
     rr = doublethink.Rethinker('localhost', db='brozzler')
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site2/' % httpd.server_port,
-        'proxy': 'localhost:8000', 'enable_warcprox_features': True,
+        'proxy': 'localhost:8000',
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}},
         'username': 'test_username', 'password': 'test_password'})
 
@@ -347,7 +430,7 @@ def test_seed_redirect(httpd):
     seed_url = 'http://localhost:%s/site5/redirect/' % httpd.server_port
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site5/redirect/' % httpd.server_port,
-        'proxy': 'localhost:8000', 'enable_warcprox_features': True,
+        'proxy': 'localhost:8000',
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
     assert site.scope['surt'] == 'http://(localhost:%s,)/site5/redirect/' % httpd.server_port
 

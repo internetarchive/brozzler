@@ -77,7 +77,7 @@ def main(argv=[]):
         'PYTHONPATH=/home/vagrant/brozzler-ve34/lib/python3.4/site-packages '
         '/home/vagrant/brozzler-ve34/bin/python '
         '/home/vagrant/brozzler-ve34/bin/brozzler-new-site '
-        '--proxy=localhost:8000 --enable-warcprox-features %s %s') % (
+        '--proxy=localhost:8000 %s %s') % (
                 ' '.join(options), args.seed)
     subprocess.call(['vagrant', 'ssh', '--', cmd])
 

@@ -78,7 +78,7 @@ Launch one or more workers:
 
 ::
 
-    brozzler-worker
+    brozzler-worker --warcprox-auto
 
 Submit jobs:
 
@@ -90,8 +90,7 @@ Submit sites not tied to a job:
 
 ::
 
-    brozzler-new-site --proxy=localhost:8000 --enable-warcprox-features \
-        --time-limit=600 http://example.com/
+    brozzler-new-site --time-limit=600 http://example.com/
 
 Job Configuration
 -----------------
@@ -106,7 +105,6 @@ everything else is optional. For details, see `<job-conf.rst>`_.
     time_limit: 60 # seconds
     proxy: 127.0.0.1:8000 # point at warcprox for archiving
     ignore_robots: false
-    enable_warcprox_features: false
     warcprox_meta: null
     metadata: {}
     seeds:

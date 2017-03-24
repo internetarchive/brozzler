@@ -101,15 +101,15 @@ class BrozzlerWorker:
 
     def __init__(
             self, frontier, service_registry=None, max_browsers=1,
-            chrome_exe="chromium-browser", proxy=None,
-            enable_warcprox_features=False):
+            chrome_exe="chromium-browser", warcprox_auto=False, proxy=None):
         self._frontier = frontier
         self._service_registry = service_registry
         self._max_browsers = max_browsers
 
-        # these two settings can be overridden by the job/site configuration
-        self._default_proxy = proxy
-        self._default_enable_warcprox_features = enable_warcprox_features
+        self._warcprox_auto = warcprox_auto
+        self._proxy = proxy
+        assert not (warcprox_auto and proxy)
+        self._proxy_is_warcprox = None
 
         self._browser_pool = brozzler.browser.BrowserPool(
                 max_browsers, chrome_exe=chrome_exe, ignore_cert_errors=True)
@@ -119,12 +119,12 @@ class BrozzlerWorker:
         self._thread = None
         self._start_stop_lock = threading.Lock()
 
-    def _proxy(self, site):
-        if site.proxy:
+    def _proxy_for(self, site):
+        if self._proxy:
+            return self._proxy
+        elif site.proxy:
             return site.proxy
-        elif self._default_proxy:
-            return self._default_proxy
-        elif self._service_registry and self._enable_warcprox_features(site):
+        elif self._warcprox_auto:
             svc = self._service_registry.available_service('warcprox')
             if svc is None:
                 raise Exception(
@@ -138,11 +138,21 @@ class BrozzlerWorker:
             return site.proxy
         return None
 
-    def _enable_warcprox_features(self, site):
-        if site.enable_warcprox_features is not None:
-            return site.enable_warcprox_features
+    def _using_warcprox(self, site):
+        if self._proxy:
+            if self._proxy_is_warcprox is None:
+                try:
+                    response = requests.get('http://%s/status' % self._proxy)
+                    status = json.loads(response.text)
+                    self._proxy_is_warcprox = (status['role'] == 'warcprox')
+                except Exception as e:
+                    self._proxy_is_warcprox = False
+                logging.info(
+                        '%s %s warcprox', self._proxy,
+                        'IS' if self._proxy_is_warcprox else 'IS NOT')
+            return self._proxy_is_warcprox
         else:
-            return self._default_enable_warcprox_features
+            return bool(site.proxy or self._warcprox_auto)
 
     def _youtube_dl(self, destdir, site):
         ydl_opts = {
@@ -156,12 +166,12 @@ class BrozzlerWorker:
             "nopart": True,
             "no_color": True,
         }
-        if self._proxy(site):
-            ydl_opts["proxy"] = "http://{}".format(self._proxy(site))
+        if self._proxy_for(site):
+            ydl_opts["proxy"] = "http://{}".format(self._proxy_for(site))
             ## XXX (sometimes?) causes chrome debug websocket to go through
             ## proxy. Maybe not needed thanks to hls_prefer_native.
             ## # see https://github.com/rg3/youtube-dl/issues/6087
-            ## os.environ["http_proxy"] = "http://{}".format(self._proxy(site))
+            ## os.environ["http_proxy"] = "http://{}".format(self._proxy_for(site))
         ydl = youtube_dl.YoutubeDL(ydl_opts)
         if site.extra_headers():
             ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers()))
@@ -224,13 +234,13 @@ class BrozzlerWorker:
             info = ydl.extract_info(page.url)
             self._remember_videos(page, ydl.brozzler_spy)
             # logging.info('XXX %s', json.dumps(info))
-            if self._proxy(site) and self._enable_warcprox_features(site):
+            if self._using_warcprox(site):
                 info_json = json.dumps(info, sort_keys=True, indent=4)
                 self.logger.info(
                         "sending WARCPROX_WRITE_RECORD request to warcprox "
                         "with youtube-dl json for %s", page)
                 self._warcprox_write_record(
-                        warcprox_address=self._proxy(site),
+                        warcprox_address=self._proxy_for(site),
                         url="youtube-dl:%s" % str(urlcanon.semantic(page.url)),
                         warc_type="metadata",
                         content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
@@ -303,20 +313,20 @@ class BrozzlerWorker:
         def _on_screenshot(screenshot_png):
             if on_screenshot:
                 on_screenshot(screenshot_png)
-            if self._proxy(site) and self._enable_warcprox_features(site):
+            if self._using_warcprox(site):
                 self.logger.info(
                         "sending WARCPROX_WRITE_RECORD request to %s with "
-                        "screenshot for %s", self._proxy(site), page)
+                        "screenshot for %s", self._proxy_for(site), page)
                 screenshot_jpeg, thumbnail_jpeg = self.full_and_thumb_jpegs(
                         screenshot_png)
                 self._warcprox_write_record(
-                        warcprox_address=self._proxy(site),
+                        warcprox_address=self._proxy_for(site),
                         url="screenshot:%s" % str(urlcanon.semantic(page.url)),
                         warc_type="resource", content_type="image/jpeg",
                         payload=screenshot_jpeg,
                         extra_headers=site.extra_headers())
                 self._warcprox_write_record(
-                        warcprox_address=self._proxy(site),
+                        warcprox_address=self._proxy_for(site),
                         url="thumbnail:%s" % str(urlcanon.semantic(page.url)),
                         warc_type="resource", content_type="image/jpeg",
                         payload=thumbnail_jpeg,
@@ -347,7 +357,8 @@ class BrozzlerWorker:
 
         if not browser.is_running():
             browser.start(
-                    proxy=self._proxy(site), cookie_db=site.get('cookie_db'))
+                    proxy=self._proxy_for(site),
+                    cookie_db=site.get('cookie_db'))
         final_page_url, outlinks = browser.browse_page(
                 page.url, extra_headers=site.extra_headers(),
                 behavior_parameters=site.get('behavior_parameters'),
@@ -360,10 +371,10 @@ class BrozzlerWorker:
 
     def _fetch_url(self, site, page):
         proxies = None
-        if self._proxy(site):
+        if self._proxy_for(site):
             proxies = {
-                'http': 'http://%s' % self._proxy(site),
-                'https': 'http://%s' % self._proxy(site),
+                'http': 'http://%s' % self._proxy_for(site),
+                'https': 'http://%s' % self._proxy_for(site),
             }
 
         self.logger.info('fetching %s', page)
@@ -388,17 +399,19 @@ class BrozzlerWorker:
                 return True
         return False
 
-    def _brozzle_site(self, browser, site):
-        page = None
+    def brozzle_site(self, browser, site):
         try:
+            page = None
             start = time.time()
             while time.time() - start < 7 * 60:
+                site.refresh()
                 self._frontier.honor_stop_request(site.job_id)
                 page = self._frontier.claim_page(site, "%s:%s" % (
                     socket.gethostname(), browser.chrome.port))
 
                 if (page.needs_robots_check and
-                        not brozzler.is_permitted_by_robots(site, page.url)):
+                        not brozzler.is_permitted_by_robots(
+                            site, page.url, self._proxy_for(site))):
                     logging.warn("page %s is blocked by robots.txt", page.url)
                     page.blocked_by_robots = True
                     self._frontier.completed_page(site, page)
@@ -424,8 +437,13 @@ class BrozzlerWorker:
         except:
             self.logger.critical("unexpected exception", exc_info=True)
         finally:
-            browser.stop()
             self._frontier.disclaim_site(site, page)
+
+    def _brozzle_site_thread_target(self, browser, site):
+        try:
+            self.brozzle_site(browser, site)
+        finally:
+            browser.stop()
             self._browser_pool.release(browser)
             with self._browsing_threads_lock:
                 self._browsing_threads.remove(threading.current_thread())
@@ -477,9 +495,10 @@ class BrozzlerWorker:
                             socket.gethostname(), browser.chrome.port))
                         self.logger.info(
                                 "brozzling site (proxy=%s) %s",
-                                repr(self._proxy(site)), site)
+                                repr(self._proxy_for(site)), site)
                         th = threading.Thread(
-                                target=self._brozzle_site, args=(browser, site),
+                                target=self._brozzle_site_thread_target,
+                                args=(browser, site),
                                 name="BrozzlingThread:%s" % browser.chrome.port,
                                 daemon=True)
                         with self._browsing_threads_lock:

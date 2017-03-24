@@ -314,9 +314,7 @@ def test_field_defaults():
 
     # site
     brozzler.Site.table_ensure(rr)
-    site = brozzler.Site(rr, {
-        'seed': 'http://example.com/', 'enable_warcprox_features': True})
-    assert site.enable_warcprox_features is True
+    site = brozzler.Site(rr, {'seed': 'http://example.com/'})
     assert site.id is None
     assert site.scope
     assert site.scope['surt'] == 'http://(com,example,)/'
@@ -325,15 +323,12 @@ def test_field_defaults():
     assert site.scope
 
     tite = brozzler.Site.load(rr, site.id)
-    assert tite.enable_warcprox_features is True
     assert tite.id == site.id
     assert tite.scope == site.scope
     tite.save()
-    assert tite.enable_warcprox_features is True
     assert tite.id == site.id
     assert tite.scope == site.scope
     tite.refresh()
-    assert tite.enable_warcprox_features is True
     assert tite.id == site.id
     assert tite.scope == site.scope
 
