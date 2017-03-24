@@ -138,11 +138,9 @@ class BrozzlerEasyController:
         frontier = brozzler.RethinkDbFrontier(rr)
         service_registry = doublethink.ServiceRegistry(rr)
         worker = brozzler.worker.BrozzlerWorker(
-                frontier, service_registry,
-                max_browsers=args.max_browsers,
-                chrome_exe=args.chrome_exe,
+                frontier, service_registry, chrome_exe=args.chrome_exe,
                 proxy='%s:%s' % self.warcprox_controller.proxy.server_address,
-                enable_warcprox_features=True)
+                max_browsers=args.max_browsers)
         return worker
 
     def _init_pywb(self, args):

@@ -81,15 +81,6 @@ def rethinker(args):
             'BROZZLER_RETHINKDB_DB') or 'brozzler'
     return doublethink.Rethinker(servers.split(','), db)
 
-def _add_proxy_options(arg_parser):
-    arg_parser.add_argument(
-            '--proxy', dest='proxy', default=None, help='http proxy')
-    arg_parser.add_argument(
-            '--enable-warcprox-features', dest='enable_warcprox_features',
-            action='store_true', default=None, help=(
-                'enable special features that assume the configured proxy is '
-                'warcprox'))
-
 def configure_logging(args):
     logging.basicConfig(
             stream=sys.stderr, level=args.log_level, format=(
@@ -159,7 +150,8 @@ def brozzle_page():
     arg_parser.add_argument(
             '--password', dest='password', default=None,
             help='use this password to try to log in if a login form is found')
-    _add_proxy_options(arg_parser)
+    arg_parser.add_argument(
+            '--proxy', dest='proxy', default=None, help='http proxy')
     add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])
@@ -170,7 +162,6 @@ def brozzle_page():
         behavior_parameters = json.loads(args.behavior_parameters)
     site = brozzler.Site(None, {
         'id': -1, 'seed': args.url, 'proxy': args.proxy,
-        'enable_warcprox_features': args.enable_warcprox_features,
         'behavior_parameters': behavior_parameters,
         'username': args.username, 'password': args.password})
     page = brozzler.Page(None, {'url': args.url, 'site_id': site.id})
@@ -237,7 +228,6 @@ def brozzler_new_site():
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('seed', metavar='SEED', help='seed url')
     add_rethinkdb_options(arg_parser)
-    _add_proxy_options(arg_parser)
     arg_parser.add_argument(
             '--time-limit', dest='time_limit', default=None,
             help='time limit in seconds for this site')
@@ -273,7 +263,6 @@ def brozzler_new_site():
         'proxy': args.proxy,
         'time_limit': int(args.time_limit) if args.time_limit else None,
         'ignore_robots': args.ignore_robots,
-        'enable_warcprox_features': args.enable_warcprox_features,
         'warcprox_meta': json.loads(
             args.warcprox_meta) if args.warcprox_meta else None,
         'behavior_parameters': json.loads(
@@ -300,6 +289,13 @@ def brozzler_worker():
     arg_parser.add_argument(
             '-n', '--max-browsers', dest='max_browsers', default='1',
             help='max number of chrome instances simultaneously browsing pages')
+    arg_parser.add_argument(
+            '--proxy', dest='proxy', default=None, help='http proxy')
+    arg_parser.add_argument(
+            '--warcprox-auto', dest='warcprox_auto', action='store_true',
+            help=(
+                'when needed, choose an available instance of warcprox from '
+                'the rethinkdb service registry'))
     add_common_options(arg_parser)
 
     args = arg_parser.parse_args(args=sys.argv[1:])

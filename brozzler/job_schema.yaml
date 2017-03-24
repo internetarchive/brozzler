@@ -9,18 +9,11 @@ id:
     type: number
     min: 0
 
-  enable_warcprox_features:
-    type: boolean
-
   ignore_robots:
     type: boolean
 
   warcprox_meta:
     type: dict
-    nullable: true
-
-  proxy:
-    type: string
     nullable: true
 
   scope:
@@ -42,7 +35,7 @@ id:
               type: string
 
             regex:
-              type: string  # code up a regex type?
+              type: string  # code up a cerberus regex type?
 
             ssurt:
               type: string
@@ -74,10 +67,6 @@ id:
 
       max_hops_off_surt:
         type: integer
-
-  # ignored, left for backward compatibility
-  remember_outlinks:
-    type: boolean
 
   metadata:
     type: dict

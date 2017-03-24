@@ -80,7 +80,7 @@ class Site(doublethink.Document):
 
     def extra_headers(self):
         hdrs = {}
-        if self.enable_warcprox_features and self.warcprox_meta:
+        if self.warcprox_meta:
             hdrs["Warcprox-Meta"] = json.dumps(
                     self.warcprox_meta, separators=(',', ':'))
         return hdrs

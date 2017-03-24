@@ -33,8 +33,7 @@ Then you can run brozzler-new-site:
 ::
 
     (brozzler-ve34)vagrant@brozzler-easy:~$ brozzler-new-site \
-           --proxy=localhost:8000 --enable-warcprox-features \
-           http://example.com/
+           --proxy=localhost:8000 http://example.com/
 
 
 Or brozzler-new-job (make sure to set the proxy to localhost:8000):
@@ -44,7 +43,6 @@ Or brozzler-new-job (make sure to set the proxy to localhost:8000):
     (brozzler-ve34)vagrant@brozzler-easy:~$ cat >job1.yml
     id: job1
     proxy: localhost:8000 # point at warcprox for archiving
-    enable_warcprox_features: true
     seeds:
       - url: https://example.org/
     (brozzler-ve34)vagrant@brozzler-easy:~$ brozzler-new-job job1.yml

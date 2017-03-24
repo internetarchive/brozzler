@@ -47,20 +47,22 @@ def _reppy_rules_getitem(self, agent):
 reppy.parser.Rules.__getitem__ = _reppy_rules_getitem
 
 _robots_caches = {}  # {site_id:reppy.cache.RobotsCache}
-def _robots_cache(site):
+def _robots_cache(site, proxy=None):
     class SessionRaiseOn420(requests.Session):
         def get(self, url, *args, **kwargs):
             res = super().get(url, *args, **kwargs)
             if res.status_code == 420 and 'warcprox-meta' in res.headers:
-                raise brozzler.ReachedLimit(warcprox_meta=json.loads(res.headers['warcprox-meta']), http_payload=res.text)
+                raise brozzler.ReachedLimit(
+                        warcprox_meta=json.loads(res.headers['warcprox-meta']),
+                        http_payload=res.text)
             else:
                 return res
 
     if not site.id in _robots_caches:
         req_sesh = SessionRaiseOn420()
         req_sesh.verify = False   # ignore cert errors
-        if site.proxy:
-            proxie = "http://{}".format(site.proxy)
+        if proxy:
+            proxie = "http://%s" % proxy
             req_sesh.proxies = {"http":proxie,"https":proxie}
         if site.extra_headers():
             req_sesh.headers.update(site.extra_headers())
@@ -70,14 +72,14 @@ def _robots_cache(site):
 
     return _robots_caches[site.id]
 
-def is_permitted_by_robots(site, url):
+def is_permitted_by_robots(site, url, proxy=None):
     if site.ignore_robots:
         return True
 
     tries_left = 10
     while True:
         try:
-            result = _robots_cache(site).allowed(
+            result = _robots_cache(site, proxy).allowed(
                     url, site.user_agent or "brozzler")
             return result
         except BaseException as e:

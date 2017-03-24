@@ -14,7 +14,6 @@ an example
     time_limit: 60 # seconds
     proxy: 127.0.0.1:8000 # point at warcprox for archiving
     ignore_robots: false
-    enable_warcprox_features: false
     warcprox_meta:
       warc-prefix: job1
       stats:
@@ -134,29 +133,6 @@ proxy
 +-----------------------+--------+----------+---------+
 HTTP proxy, with the format ``host:port``. Typically configured to point to
 warcprox for archival crawling.
-
-enable_warcprox_features
-------------------------
-+-----------------------+---------+----------+---------+
-| scope                 | type    | required | default |
-+=======================+=========+==========+=========+
-| seed-level, top-level | boolean | no       | false   |
-+-----------------------+---------+----------+---------+
-If true for a given seed, and the seed is configured to use a proxy, enables
-special features that assume the proxy is an instance of warcprox. As of this
-writing, the special features that are enabled are:
-
-- sending screenshots and thumbnails to warcprox using a WARCPROX_WRITE_RECORD
-  request
-- sending youtube-dl metadata json to warcprox using a WARCPROX_WRITE_RECORD
-  request
-
-See the warcprox docs for information on the WARCPROX_WRITE_RECORD method (XXX
-not yet written).
-
-*Note that if* ``warcprox_meta`` *and* ``proxy`` *are configured, the
-Warcprox-Meta header will be sent even if* ``enable_warcprox_features`` *is not
-set.*
 
 ignore_robots
 -------------
