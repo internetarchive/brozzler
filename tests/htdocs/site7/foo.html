@@ -1,0 +1,36 @@
+<html>
+    <head>
+        <title>hashtag url test</title>
+        <script>
+            (function() {
+                let lastHash = null;
+                setInterval(function() {
+                    const hash = new URL(document.URL).hash;
+                    if (hash != lastHash && (hash == '#whee' || hash == '#boosh')) {
+                        lastHash = hash;
+
+                        const httpRequest = new XMLHttpRequest();
+                        httpRequest.onreadystatechange = function() {
+                            if (httpRequest.readyState === XMLHttpRequest.DONE) {
+                                const e = document.createElement('p');
+                                e.textContent = 'loaded from ' + hash.substring(1) + ': ' + httpRequest.responseText;
+                                document.body.appendChild(e);
+                            }
+                        };
+
+                        httpRequest.open('GET', hash.substring(1) + '.txt', true);
+                        httpRequest.send(null);
+                    }
+                }, 1000);
+            })();
+        </script>
+    </head>
+    <body>
+        <h1>hashtag url test</h1>
+        <div><a href='#boosh'>#boosh</a></div>
+        <div><a href='#ignored'>#ignored</a></div>
+        <p>this page will ajax load ./whee.txt if it notices the url in the
+        location bar has fragment "#whee", and ./boosh.txt if it notices
+        "#boosh"</p>
+    </body>
+</html>

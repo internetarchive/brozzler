@@ -27,6 +27,7 @@ import doublethink
 import os
 import cerberus
 import urllib
+import urlcanon
 
 def load_schema():
     schema_file = os.path.join(os.path.dirname(__file__), 'job_schema.yaml')
@@ -94,22 +95,24 @@ def new_job(frontier, job_conf):
 def new_site(frontier, site):
     site.id = str(uuid.uuid4())
     logging.info("new site {}".format(site))
+    # insert the Page into the database before the Site, to avoid situation
+    # where a brozzler worker immediately claims the site, finds no pages
+    # to crawl, and decides the site is finished
     try:
-        # insert the Page into the database before the Site, to avoid situation
-        # where a brozzler worker immediately claims the site, finds no pages
-        # to crawl, and decides the site is finished
-        try:
-            page = brozzler.Page(frontier.rr, {
-                "url": site.seed, "site_id": site.get("id"),
-                "job_id": site.get("job_id"), "hops_from_seed": 0,
-                "priority": 1000, "needs_robots_check": True})
-            page.save()
-            logging.info("queued page %s", page)
-        finally:
-            # finally block because we want to insert the Site no matter what
-            site.save()
-    except brozzler.ReachedLimit as e:
-        frontier.reached_limit(site, e)
+        url = urlcanon.parse_url(site.seed)
+        hashtag = (url.hash_sign + url.fragment).decode("utf-8")
+        urlcanon.canon.remove_fragment(url)
+        page = brozzler.Page(frontier.rr, {
+            "url": str(url), "site_id": site.get("id"),
+            "job_id": site.get("job_id"), "hops_from_seed": 0,
+            "priority": 1000, "needs_robots_check": True})
+        if hashtag:
+            page.hashtags = [hashtag,]
+        page.save()
+        logging.info("queued page %s", page)
+    finally:
+        # finally block because we want to insert the Site no matter what
+        site.save()
 
 class Job(doublethink.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)

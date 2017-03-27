@@ -7,6 +7,8 @@
 
 cd $(dirname "${BASH_SOURCE[0]}")
 
+vagrant up
+
 echo service status:
 vagrant ssh -- 'status warcprox ;
                 status Xvnc ;

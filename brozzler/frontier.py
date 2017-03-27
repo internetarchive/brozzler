@@ -266,8 +266,11 @@ class RethinkDbFrontier:
         for url in outlinks or []:
             url_for_scoping = urlcanon.semantic(url)
             url_for_crawling = urlcanon.whatwg(url)
+            hashtag = (url_for_crawling.hash_sign
+                       + url_for_crawling.fragment).decode('utf-8')
+            urlcanon.canon.remove_fragment(url_for_crawling)
             if site.is_in_scope(url_for_scoping, parent_page=parent_page):
-                if brozzler.is_permitted_by_robots(site, url):
+                if brozzler.is_permitted_by_robots(site, str(url_for_crawling)):
                     if not url_for_scoping.surt().startswith(
                             site.scope["surt"].encode("utf-8")):
                         hops_off_surt = parent_page.hops_off_surt + 1
@@ -283,9 +286,17 @@ class RethinkDbFrontier:
                             self.rr, new_child_page.id)
                     if existing_child_page:
                         existing_child_page.priority += new_child_page.priority
+                        if hashtag and existing_child_page.hashtags:
+                            hashtags = set(existing_child_page.hashtags)
+                            hashtags.add(hashtag)
+                            existing_child_page.hashtags = list(hashtags)
+                        elif hashtag:
+                            existing_child_page.hashtags = [hashtag]
                         existing_child_page.save()
                         counts["updated"] += 1
                     else:
+                        if hashtag:
+                            new_child_page.hashtags = [hashtag,]
                         new_child_page.save()
                         counts["added"] += 1
                     decisions["accepted"].add(str(url_for_crawling))

@@ -364,7 +364,8 @@ class BrozzlerWorker:
                 behavior_parameters=site.get('behavior_parameters'),
                 username=site.get('username'), password=site.get('password'),
                 user_agent=site.get('user_agent'),
-                on_screenshot=_on_screenshot, on_response=_on_response)
+                on_screenshot=_on_screenshot, on_response=_on_response,
+                hashtags=page.hashtags)
         if final_page_url != page.url:
             page.note_redirect(final_page_url)
         return outlinks
