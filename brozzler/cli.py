@@ -161,8 +161,7 @@ def brozzle_page():
     if args.behavior_parameters:
         behavior_parameters = json.loads(args.behavior_parameters)
     site = brozzler.Site(None, {
-        'id': -1, 'seed': args.url, 'proxy': args.proxy,
-        'behavior_parameters': behavior_parameters,
+        'id': -1, 'seed': args.url, 'behavior_parameters': behavior_parameters,
         'username': args.username, 'password': args.password})
     page = brozzler.Page(None, {'url': args.url, 'site_id': site.id})
     worker = brozzler.BrozzlerWorker(frontier=None)
@@ -178,7 +177,7 @@ def brozzle_page():
         logging.info('wrote screenshot to %s', filename)
 
     browser = brozzler.Browser(chrome_exe=args.chrome_exe)
-    browser.start(proxy=site.proxy)
+    browser.start(proxy=args.proxy)
     try:
         outlinks = worker.brozzle_page(
                 browser, site, page, on_screenshot=on_screenshot)
@@ -260,7 +259,6 @@ def brozzler_new_site():
     rr = rethinker(args)
     site = brozzler.Site(rr, {
         'seed': args.seed,
-        'proxy': args.proxy,
         'time_limit': int(args.time_limit) if args.time_limit else None,
         'ignore_robots': args.ignore_robots,
         'warcprox_meta': json.loads(

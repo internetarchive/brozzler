@@ -591,3 +591,67 @@ def test_seed_page():
     page0.save()
 
     assert frontier.seed_page(site.id) == page0
+
+def test_hashtag_seed():
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # no hash tag
+    site = brozzler.Site(rr, {'seed': 'http://example.org/'})
+    brozzler.new_site(frontier, site)
+
+    assert site.scope['surt'] == 'http://(org,example,)/'
+
+    pages = list(frontier.site_pages(site.id))
+    assert len(pages) == 1
+    assert pages[0].url == 'http://example.org/'
+    assert not pages[0].hashtags
+
+    # yes hash tag
+    site = brozzler.Site(rr, {'seed': 'http://example.org/#hash'})
+    brozzler.new_site(frontier, site)
+
+    assert site.scope['surt'] == 'http://(org,example,)/'
+
+    pages = list(frontier.site_pages(site.id))
+    assert len(pages) == 1
+    assert pages[0].url == 'http://example.org/'
+    assert pages[0].hashtags == ['#hash',]
+
+def test_hashtag_links():
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    site = brozzler.Site(rr, {'seed': 'http://example.org/'})
+    brozzler.new_site(frontier, site)
+    parent_page = frontier.seed_page(site.id)
+    assert not parent_page.hashtags
+    outlinks = [
+        'http://example.org/#foo',
+        'http://example.org/bar',
+        'http://example.org/bar#baz',
+        'http://example.org/bar#quux',
+        'http://example.org/zuh#buh',
+    ]
+    frontier.scope_and_schedule_outlinks(site, parent_page, outlinks)
+
+    pages = sorted(list(frontier.site_pages(site.id)), key=lambda p: p.url)
+    assert len(pages) == 3
+    assert pages[0].url == 'http://example.org/'
+    assert sorted(pages[0].outlinks['accepted']) == [
+            'http://example.org/', 'http://example.org/bar',
+            'http://example.org/zuh']
+    assert not pages[0].outlinks['blocked']
+    assert not pages[0].outlinks['rejected']
+    assert pages[0].hashtags == ['#foo',]
+    assert pages[0].hops_from_seed == 0
+
+    assert pages[1].url == 'http://example.org/bar'
+    assert sorted(pages[1].hashtags) == ['#baz','#quux']
+    assert pages[1].priority == 36
+    assert pages[1].hops_from_seed == 1
+
+    assert pages[2].url == 'http://example.org/zuh'
+    assert pages[2].hashtags == ['#buh']
+    assert pages[2].priority == 12
+

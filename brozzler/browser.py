@@ -30,6 +30,7 @@ import datetime
 import base64
 from brozzler.chrome import Chrome
 import socket
+import urlcanon
 
 class BrowsingException(Exception):
     pass
@@ -374,7 +375,7 @@ class Browser:
             self, page_url, ignore_cert_errors=False, extra_headers=None,
             user_agent=None, behavior_parameters=None,
             on_request=None, on_response=None, on_screenshot=None,
-            username=None, password=None):
+            username=None, password=None, hashtags=None):
         '''
         Browses page in browser.
 
@@ -434,12 +435,7 @@ class Browser:
                     page_url, behavior_parameters)
             self.run_behavior(behavior_script, timeout=900)
             outlinks = self.extract_outlinks()
-            ## for each hashtag not already visited:
-            ##     navigate_to_hashtag (nothing to wait for so no timeout?)
-            ##     if on_screenshot;
-            ##         take screenshot (30 sec)
-            ##     run behavior (3 min)
-            ##     outlinks += retrieve_outlinks (60 sec)
+            self.visit_hashtags(page_url, hashtags, outlinks)
             final_page_url = self.url()
             return final_page_url, outlinks
         except brozzler.ReachedLimit:
@@ -453,6 +449,29 @@ class Browser:
             self.is_browsing = False
             self.websock_thread.on_request = None
             self.websock_thread.on_response = None
+
+    def visit_hashtags(self, page_url, hashtags, outlinks):
+        _hashtags = set(hashtags or [])
+        for outlink in outlinks:
+            url = urlcanon.whatwg(outlink)
+            hashtag = (url.hash_sign + url.fragment).decode('utf-8')
+            urlcanon.canon.remove_fragment(url)
+            if hashtag and str(url) == page_url:
+                _hashtags.add(hashtag)
+        # could inject a script that listens for HashChangeEvent to figure
+        # out which hashtags were visited already and skip those
+        for hashtag in _hashtags:
+            # navigate_to_hashtag (nothing to wait for so no timeout?)
+            self.logger.debug('navigating to hashtag %s', hashtag)
+            url = urlcanon.whatwg(page_url)
+            url.hash_sign = b'#'
+            url.fragment = hashtag[1:].encode('utf-8')
+            self.send_to_chrome(
+                    method='Page.navigate', params={'url': str(url)})
+            time.sleep(5) # um.. wait for idleness or something?
+            # take another screenshot?
+            # run behavior again with short timeout?
+            # retrieve outlinks again and append to list?
 
     def navigate_to_page(
             self, page_url, extra_headers=None, user_agent=None, timeout=300):

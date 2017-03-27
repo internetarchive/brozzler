@@ -115,7 +115,6 @@ def test_brozzle_site(httpd):
     rr = doublethink.Rethinker('localhost', db='brozzler')
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site1/' % httpd.server_port,
-        'proxy': 'localhost:8000',
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
 
     # the two pages we expect to be crawled
@@ -336,7 +335,6 @@ def test_obey_robots(httpd):
     rr = doublethink.Rethinker('localhost', db='brozzler')
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site1/' % httpd.server_port,
-        'proxy': 'localhost:8000',
         'user_agent': 'im a badbot',   # robots.txt blocks badbot
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
 
@@ -389,7 +387,6 @@ def test_login(httpd):
     rr = doublethink.Rethinker('localhost', db='brozzler')
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site2/' % httpd.server_port,
-        'proxy': 'localhost:8000',
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}},
         'username': 'test_username', 'password': 'test_password'})
 
@@ -430,7 +427,6 @@ def test_seed_redirect(httpd):
     seed_url = 'http://localhost:%s/site5/redirect/' % httpd.server_port
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site5/redirect/' % httpd.server_port,
-        'proxy': 'localhost:8000',
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
     assert site.scope['surt'] == 'http://(localhost:%s,)/site5/redirect/' % httpd.server_port
 
@@ -457,3 +453,50 @@ def test_seed_redirect(httpd):
 
     # check that scope has been updated properly
     assert site.scope['surt'] == 'http://(localhost:%s,)/site5/destination/' % httpd.server_port
+
+def test_hashtags(httpd):
+    test_id = 'test_hashtags-%s' % datetime.datetime.utcnow().isoformat()
+    rr = doublethink.Rethinker('localhost', db='brozzler')
+    seed_url = 'http://localhost:%s/site7/' % httpd.server_port
+    site = brozzler.Site(rr, {
+        'seed': seed_url,
+        'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
+
+    frontier = brozzler.RethinkDbFrontier(rr)
+    brozzler.new_site(frontier, site)
+    assert site.id
+
+    # the site should be brozzled fairly quickly
+    start = time.time()
+    while site.status != 'FINISHED' and time.time() - start < 300:
+        time.sleep(0.5)
+        site.refresh()
+    assert site.status == 'FINISHED'
+
+    # check that we the page we expected
+    pages = sorted(list(frontier.site_pages(site.id)), key=lambda p: p.url)
+    assert len(pages) == 2
+    assert pages[0].url == seed_url
+    assert pages[0].hops_from_seed == 0
+    assert pages[0].brozzle_count == 1
+    assert pages[0].outlinks['accepted'] == ['http://localhost:%s/site7/foo.html' % httpd.server_port]
+    assert not pages[0].hashtags
+    assert pages[1].url == 'http://localhost:%s/site7/foo.html' % httpd.server_port
+    assert pages[1].hops_from_seed == 1
+    assert pages[1].brozzle_count == 1
+    assert sorted(pages[1].hashtags) == ['#boosh','#ignored','#whee',]
+
+    time.sleep(2)   # in case warcprox hasn't finished processing urls
+    # take a look at the captures table
+    captures = rr.table('captures').filter({'test_id':test_id}).run()
+    captures_by_url = {
+            c['url']: c for c in captures if c['http_method'] != 'HEAD'}
+    assert seed_url in captures_by_url
+    assert 'http://localhost:%s/site7/foo.html' % httpd.server_port in captures_by_url
+    assert 'http://localhost:%s/site7/whee.txt' % httpd.server_port in captures_by_url
+    assert 'http://localhost:%s/site7/boosh.txt' % httpd.server_port in captures_by_url
+    assert 'screenshot:%s' % seed_url in captures_by_url
+    assert 'thumbnail:%s' % seed_url in captures_by_url
+    assert 'screenshot:http://localhost:%s/site7/foo.html' % httpd.server_port in captures_by_url
+    assert 'thumbnail:http://localhost:%s/site7/foo.html' % httpd.server_port in captures_by_url
+
