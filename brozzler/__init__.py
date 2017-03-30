@@ -158,14 +158,14 @@ import datetime
 EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(
         tzinfo=doublethink.UTC)
 
-from brozzler.site import Page, Site
 from brozzler.worker import BrozzlerWorker
 from brozzler.robots import is_permitted_by_robots
 from brozzler.frontier import RethinkDbFrontier
 from brozzler.browser import Browser, BrowserPool, BrowsingException
-from brozzler.job import new_job, new_site, Job
+from brozzler.model import (
+        new_job, new_job_file, new_site, Job, Page, Site, InvalidJobConf)
 from brozzler.cli import suggest_default_chrome_exe
 
 __all__ = ['Page', 'Site', 'BrozzlerWorker', 'is_permitted_by_robots',
            'RethinkDbFrontier', 'Browser', 'BrowserPool', 'BrowsingException',
-           'new_job', 'new_site', 'Job']
+           'new_job', 'new_site', 'Job', 'new_job_file', 'InvalidJobConf']

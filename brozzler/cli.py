@@ -209,8 +209,8 @@ def brozzler_new_job():
     rr = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(rr)
     try:
-        brozzler.job.new_job_file(frontier, args.job_conf_file)
-    except brozzler.job.InvalidJobConf as e:
+        brozzler.new_job_file(frontier, args.job_conf_file)
+    except brozzler.InvalidJobConf as e:
         print('brozzler-new-job: invalid job file:', args.job_conf_file, file=sys.stderr)
         print('  ' + yaml.dump(e.errors).rstrip().replace('\n', '\n  '), file=sys.stderr)
         sys.exit(1)
