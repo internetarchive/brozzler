@@ -96,6 +96,12 @@
      mouseover_css_selector: .menu-item a
      mouseover_until_hard_timeout: False
   request_idle_timeout_sec: 10
+- url_regex: '^https?://.*\.ky\.gov/.*$'
+  behavior_js_template: mouseovers.js.j2
+  default_parameters:
+     mouseover_css_selector: .zz1_AgencyListingMenu_1
+     mouseover_until_hard_timeout: False
+  request_idle_timeout_sec: 10
 - # default fallback behavior
   url_regex: '^.*$'
   request_idle_timeout_sec: 10
