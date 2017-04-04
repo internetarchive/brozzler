@@ -98,7 +98,8 @@
      sdo_action: mouseover
      sdo_until_hard_timeout: False
   request_idle_timeout_sec: 10
-- url_regex: '^https?://.*\.ky\.gov/.*$'
+- # https://webarchive.jira.com/browse/ARI-5313
+  url_regex: '^https?://.*\.ky\.gov/.*$'
   behavior_js_template: mouseovers.js.j2
   default_parameters:
      mouseover_css_selector: .zz1_AgencyListingMenu_1
