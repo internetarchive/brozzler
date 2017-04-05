@@ -2,7 +2,7 @@
 '''
 test_brozzling.py - XXX explain
 
-Copyright (C) 2016 Internet Archive
+Copyright (C) 2016-2017 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -147,7 +147,6 @@ def test_page_videos(httpd):
     # to be adjusted on youtube-dl or chromium updates
     chrome_exe = brozzler.suggest_default_chrome_exe()
     worker = brozzler.BrozzlerWorker(None)
-    chrome_exe = brozzler.suggest_default_chrome_exe()
     site = brozzler.Site(None, {})
     page = brozzler.Page(None, {
         'url':'http://localhost:%s/site6/' % httpd.server_port})
@@ -170,5 +169,20 @@ def test_page_videos(httpd):
         'content-length': 229455,
         'content-type': 'video/webm',
         'url': 'http://localhost:%s/site6/small.webm' % httpd.server_port,
+    }
+
+def test_extract_outlinks(httpd):
+    chrome_exe = brozzler.suggest_default_chrome_exe()
+    worker = brozzler.BrozzlerWorker(None)
+    site = brozzler.Site(None, {})
+    page = brozzler.Page(None, {
+        'url':'http://localhost:%s/site8/' % httpd.server_port})
+    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        outlinks = worker.brozzle_page(browser, site, page)
+    assert outlinks == {
+        'http://example.com/offsite',
+        'http://localhost:%s/site8/baz/zuh' % httpd.server_port,
+        'http://localhost:%s/site8/fdjisapofdjisap#1' % httpd.server_port,
+        'http://localhost:%s/site8/fdjisapofdjisap#2' % httpd.server_port
     }
 
