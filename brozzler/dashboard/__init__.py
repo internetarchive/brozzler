@@ -270,11 +270,12 @@ except ImportError:
         logging.info("running brozzler-dashboard using simple flask app.run")
         app.run()
 
-def main():
+def main(argv=None):
     import argparse
     import brozzler.cli
+    argv = argv or sys.argv
     arg_parser = argparse.ArgumentParser(
-            prog=os.path.basename(sys.argv[0]),
+            prog=os.path.basename(argv[0]),
             formatter_class=argparse.RawDescriptionHelpFormatter,
             description=(
                 'brozzler-dashboard - web application for viewing brozzler '
@@ -289,8 +290,8 @@ def main():
                 '(default: brozzler)\n'
                 '  WAYBACK_BASEURL     base url for constructing wayback '
                 'links (default http://localhost:8880/brozzler)'))
-    brozzler.cli.add_common_options(arg_parser)
-    args = arg_parser.parse_args(args=sys.argv[1:])
+    brozzler.cli.add_common_options(arg_parser, argv)
+    args = arg_parser.parse_args(args=argv[1:])
     brozzler.cli.configure_logging(args)
     run()
 

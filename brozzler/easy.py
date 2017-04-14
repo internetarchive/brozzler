@@ -46,10 +46,11 @@ import doublethink
 import traceback
 import socketserver
 
-def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
+def _build_arg_parser(argv=None):
+    argv = argv or sys.argv
     arg_parser = argparse.ArgumentParser(
             formatter_class=brozzler.cli.BetterArgumentDefaultsHelpFormatter,
-            prog=prog, description=(
+            prog=os.path.basename(argv[0]), description=(
                 'brozzler-easy - easy deployment of brozzler, with '
                 'brozzler-worker, warcprox, pywb, and brozzler-dashboard all '
                 'running in a single process'))
@@ -107,7 +108,7 @@ def _build_arg_parser(prog=os.path.basename(sys.argv[0])):
             type=int, default=8881, help='brozzler dashboard port')
 
     # common at the bottom args
-    brozzler.cli.add_common_options(arg_parser)
+    brozzler.cli.add_common_options(arg_parser, argv)
 
     return arg_parser
 
@@ -264,9 +265,10 @@ class BrozzlerEasyController:
         logging.warn('dumping state (caught signal {})\n{}'.format(
             signum, '\n'.join(state_strs)))
 
-def main():
-    arg_parser = _build_arg_parser()
-    args = arg_parser.parse_args(args=sys.argv[1:])
+def main(argv=None):
+    argv = argv or sys.argv
+    arg_parser = _build_arg_parser(argv)
+    args = arg_parser.parse_args(args=argv[1:])
     brozzler.cli.configure_logging(args)
 
     controller = BrozzlerEasyController(args)

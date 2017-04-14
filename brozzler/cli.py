@@ -39,7 +39,8 @@ import shutil
 import base64
 import rethinkdb as r
 
-def add_common_options(arg_parser):
+def add_common_options(arg_parser, argv=None):
+    argv = argv or sys.argv
     arg_parser.add_argument(
             '-q', '--quiet', dest='log_level', action='store_const',
             default=logging.INFO, const=logging.WARN, help=(
@@ -58,7 +59,7 @@ def add_common_options(arg_parser):
     arg_parser.add_argument(
             '--version', action='version',
             version='brozzler %s - %s' % (
-                brozzler.__version__, os.path.basename(sys.argv[0])))
+                brozzler.__version__, os.path.basename(argv[0])))
 
 def add_rethinkdb_options(arg_parser):
     arg_parser.add_argument(
@@ -124,13 +125,14 @@ class BetterArgumentDefaultsHelpFormatter(
         else:
             return super()._get_help_string(action)
 
-def brozzle_page():
+def brozzle_page(argv=None):
     '''
     Command line utility entry point for brozzling a single page. Opens url in
     a browser, running some javascript behaviors, and prints outlinks.
     '''
+    argv = argv or sys.argv
     arg_parser = argparse.ArgumentParser(
-            prog=os.path.basename(sys.argv[0]),
+            prog=os.path.basename(argv[0]),
             description='brozzle-page - brozzle a single page',
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('url', metavar='URL', help='page url')
@@ -152,9 +154,9 @@ def brozzle_page():
             help='use this password to try to log in if a login form is found')
     arg_parser.add_argument(
             '--proxy', dest='proxy', default=None, help='http proxy')
-    add_common_options(arg_parser)
+    add_common_options(arg_parser, argv)
 
-    args = arg_parser.parse_args(args=sys.argv[1:])
+    args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
 
     behavior_parameters = {}
@@ -187,23 +189,24 @@ def brozzle_page():
     finally:
         browser.stop()
 
-def brozzler_new_job():
+def brozzler_new_job(argv=None):
     '''
     Command line utility entry point for queuing a new brozzler job. Takes a
     yaml brozzler job configuration file, creates job, sites, and pages objects
     in rethinkdb, which brozzler-workers will look at and start crawling.
     '''
+    argv = argv or sys.argv
     arg_parser = argparse.ArgumentParser(
-            prog=os.path.basename(sys.argv[0]),
+            prog=os.path.basename(argv[0]),
             description='brozzler-new-job - queue new job with brozzler',
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
             'job_conf_file', metavar='JOB_CONF_FILE',
             help='brozzler job configuration file in yaml')
     add_rethinkdb_options(arg_parser)
-    add_common_options(arg_parser)
+    add_common_options(arg_parser, argv)
 
-    args = arg_parser.parse_args(args=sys.argv[1:])
+    args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
 
     rr = rethinker(args)
@@ -215,14 +218,15 @@ def brozzler_new_job():
         print('  ' + yaml.dump(e.errors).rstrip().replace('\n', '\n  '), file=sys.stderr)
         sys.exit(1)
 
-def brozzler_new_site():
+def brozzler_new_site(argv=None):
     '''
     Command line utility entry point for queuing a new brozzler site.
     Takes a seed url and creates a site and page object in rethinkdb, which
     brozzler-workers will look at and start crawling.
     '''
+    argv = argv or sys.argv
     arg_parser = argparse.ArgumentParser(
-            prog=os.path.basename(sys.argv[0]),
+            prog=os.path.basename(argv[0]),
             description='brozzler-new-site - register site to brozzle',
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('seed', metavar='SEED', help='seed url')
@@ -251,9 +255,9 @@ def brozzler_new_site():
     arg_parser.add_argument(
             '--password', dest='password', default=None,
             help='use this password to try to log in if a login form is found')
-    add_common_options(arg_parser)
+    add_common_options(arg_parser, argv)
 
-    args = arg_parser.parse_args(args=sys.argv[1:])
+    args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
 
     rr = rethinker(args)
@@ -271,13 +275,14 @@ def brozzler_new_site():
     frontier = brozzler.RethinkDbFrontier(rr)
     brozzler.new_site(frontier, site)
 
-def brozzler_worker():
+def brozzler_worker(argv=None):
     '''
     Main entry point for brozzler, gets sites and pages to brozzle from
     rethinkdb, brozzles them.
     '''
+    argv = argv or sys.argv
     arg_parser = argparse.ArgumentParser(
-            prog=os.path.basename(sys.argv[0]),
+            prog=os.path.basename(argv[0]),
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     add_rethinkdb_options(arg_parser)
     arg_parser.add_argument(
@@ -294,9 +299,9 @@ def brozzler_worker():
             help=(
                 'when needed, choose an available instance of warcprox from '
                 'the rethinkdb service registry'))
-    add_common_options(arg_parser)
+    add_common_options(arg_parser, argv)
 
-    args = arg_parser.parse_args(args=sys.argv[1:])
+    args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
 
     def sigterm(signum, frame):
@@ -341,7 +346,7 @@ def brozzler_worker():
 
     logging.info('brozzler-worker is all done, exiting')
 
-def brozzler_ensure_tables():
+def brozzler_ensure_tables(argv=None):
     '''
     Creates rethinkdb tables if they don't already exist. Brozzler
     (brozzler-worker, brozzler-new-job, etc) normally creates the tables it
@@ -349,13 +354,14 @@ def brozzler_ensure_tables():
     the same time, you can end up with duplicate broken tables. So it's a good
     idea to use this utility at an early step when spinning up a cluster.
     '''
+    argv = argv or sys.argv
     arg_parser = argparse.ArgumentParser(
-            prog=os.path.basename(sys.argv[0]),
+            prog=os.path.basename(argv[0]),
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     add_rethinkdb_options(arg_parser)
-    add_common_options(arg_parser)
+    add_common_options(arg_parser, argv)
 
-    args = arg_parser.parse_args(args=sys.argv[1:])
+    args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
 
     rr = rethinker(args)
@@ -375,9 +381,10 @@ class Jsonner(json.JSONEncoder):
         else:
             return json.JSONEncoder.default(self, o)
 
-def brozzler_list_jobs():
+def brozzler_list_jobs(argv=None):
+    argv = argv or sys.argv
     arg_parser = argparse.ArgumentParser(
-            prog=os.path.basename(sys.argv[0]),
+            prog=os.path.basename(argv[0]),
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
             '--yaml', dest='yaml', action='store_true', help=(
@@ -393,9 +400,9 @@ def brozzler_list_jobs():
             '--job', dest='job', metavar='JOB_ID', help=(
                 'list only the specified job'))
     add_rethinkdb_options(arg_parser)
-    add_common_options(arg_parser)
+    add_common_options(arg_parser, argv)
 
-    args = arg_parser.parse_args(args=sys.argv[1:])
+    args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
 
     rr = rethinker(args)
@@ -426,9 +433,10 @@ def brozzler_list_jobs():
         for result in results:
             print(json.dumps(result, cls=Jsonner, indent=2))
 
-def brozzler_list_sites():
+def brozzler_list_sites(argv=None):
+    argv = argv or sys.argv
     arg_parser = argparse.ArgumentParser(
-            prog=os.path.basename(sys.argv[0]),
+            prog=os.path.basename(argv[0]),
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
             '--yaml', dest='yaml', action='store_true', help=(
@@ -450,9 +458,9 @@ def brozzler_list_sites():
             '--all', dest='all', action='store_true', help=(
                 'list all sites'))
     add_rethinkdb_options(arg_parser)
-    add_common_options(arg_parser)
+    add_common_options(arg_parser, argv)
 
-    args = arg_parser.parse_args(args=sys.argv[1:])
+    args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
 
     rr = rethinker(args)
@@ -478,9 +486,10 @@ def brozzler_list_sites():
         for result in results:
             print(json.dumps(result, cls=Jsonner, indent=2))
 
-def brozzler_list_pages():
+def brozzler_list_pages(argv=None):
+    argv = argv or sys.argv
     arg_parser = argparse.ArgumentParser(
-            prog=os.path.basename(sys.argv[0]),
+            prog=os.path.basename(argv[0]),
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
             '--yaml', dest='yaml', action='store_true', help=(
@@ -507,9 +516,9 @@ def brozzler_list_pages():
                 'limit to pages that are currently claimed by a brozzler '
                 'worker'))
     add_rethinkdb_options(arg_parser)
-    add_common_options(arg_parser)
+    add_common_options(arg_parser, argv)
 
-    args = arg_parser.parse_args(args=sys.argv[1:])
+    args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
 
     rr = rethinker(args)
@@ -554,15 +563,16 @@ def brozzler_list_pages():
             for result in results:
                 print(json.dumps(result, cls=Jsonner, indent=2))
 
-def brozzler_list_captures():
+def brozzler_list_captures(argv=None):
     '''
     Handy utility for looking up entries in the rethinkdb "captures" table by
     url or sha1.
     '''
     import urlcanon
 
+    argv = argv or sys.argv
     arg_parser = argparse.ArgumentParser(
-            prog=os.path.basename(sys.argv[0]),
+            prog=os.path.basename(argv[0]),
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
             '-p', '--prefix', dest='prefix', action='store_true', help=(
@@ -573,12 +583,12 @@ def brozzler_list_captures():
             '--yaml', dest='yaml', action='store_true', help=(
                 'yaml output (default is json)'))
     add_rethinkdb_options(arg_parser)
-    add_common_options(arg_parser)
+    add_common_options(arg_parser, argv)
     arg_parser.add_argument(
             'url_or_sha1', metavar='URL_or_SHA1',
             help='url or sha1 to look up in captures table')
 
-    args = arg_parser.parse_args(args=sys.argv[1:])
+    args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
 
     rr = rethinker(args)
