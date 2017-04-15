@@ -406,7 +406,7 @@ class BrozzlerWorker:
             start = time.time()
             while time.time() - start < 7 * 60:
                 site.refresh()
-                self._frontier.honor_stop_request(site.job_id)
+                self._frontier.honor_stop_request(site)
                 page = self._frontier.claim_page(site, "%s:%s" % (
                     socket.gethostname(), browser.chrome.port))
 
@@ -431,7 +431,7 @@ class BrozzlerWorker:
             self.logger.info("no pages left for site %s", site)
         except brozzler.ReachedLimit as e:
             self._frontier.reached_limit(site, e)
-        except brozzler.CrawlJobStopped:
+        except brozzler.CrawlStopped:
             self._frontier.finished(site, "FINISHED_STOP_REQUESTED")
         # except brozzler.browser.BrowsingAborted:
         #     self.logger.info("{} shut down".format(browser))
