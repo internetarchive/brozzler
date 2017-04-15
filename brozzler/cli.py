@@ -635,3 +635,39 @@ def brozzler_list_captures(argv=None):
         for result in results:
             print(json.dumps(result, cls=Jsonner, indent=2))
 
+def brozzler_stop_crawl(argv=None):
+    argv = argv or sys.argv
+    arg_parser = argparse.ArgumentParser(
+            prog=os.path.basename(argv[0]),
+            formatter_class=BetterArgumentDefaultsHelpFormatter)
+    group = arg_parser.add_mutually_exclusive_group(required=True)
+    add_rethinkdb_options(arg_parser)
+    group.add_argument(
+            '--job', dest='job_id', metavar='JOB_ID', help=(
+                'request crawl stop for the specified job'))
+    group.add_argument(
+            '--site', dest='site_id', metavar='SITE_ID', help=(
+                'request crawl stop for the specified site'))
+    add_common_options(arg_parser, argv)
+
+    args = arg_parser.parse_args(args=argv[1:])
+    configure_logging(args)
+
+    rr = rethinker(args)
+    if args.job_id:
+        try:
+            job_id = int(args.job_id)
+        except ValueError:
+            job_id = args.job_id
+        job = brozzler.Job.load(rr, job_id)
+        job.stop_requested = doublethink.utcnow()
+        job.save()
+    elif args.site_id:
+        try:
+            site_id = int(args.site_id)
+        except ValueError:
+            site_id = args.site_id
+        site = brozzler.Site.load(rr, site_id)
+        site.stop_requested = doublethink.utcnow()
+        site.save()
+

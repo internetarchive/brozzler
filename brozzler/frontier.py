@@ -183,12 +183,20 @@ class RethinkDbFrontier:
         for result in results:
             yield brozzler.Job(self.rr, result)
 
-    def honor_stop_request(self, job_id):
-        """Raises brozzler.CrawlJobStopped if stop has been requested."""
-        job = brozzler.Job.load(self.rr, job_id)
-        if job and job.get('stop_requested'):
-            self.logger.info("stop requested for job %s", job_id)
-            raise brozzler.CrawlJobStopped
+    def honor_stop_request(self, site):
+        """Raises brozzler.CrawlStopped if stop has been requested."""
+        site.refresh()
+        if (site.stop_requested
+                and site.stop_requested <= doublethink.utcnow()):
+            self.logger.info("stop requested for site %s", site.id)
+            raise brozzler.CrawlStopped
+
+        if site.job_id:
+            job = brozzler.Job.load(self.rr, site.job_id)
+            if (job and job.stop_requested
+                    and job.stop_requested <= doublethink.utcnow()):
+                self.logger.info("stop requested for job %s", site.job_id)
+                raise brozzler.CrawlStopped
 
     def _maybe_finish_job(self, job_id):
         """Returns True if job is finished."""

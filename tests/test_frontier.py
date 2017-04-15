@@ -24,6 +24,8 @@ import argparse
 import doublethink
 import time
 import datetime
+import uuid
+import pytest
 
 args = argparse.Namespace()
 args.log_level = logging.INFO
@@ -654,4 +656,45 @@ def test_hashtag_links():
     assert pages[2].url == 'http://example.org/zuh'
     assert pages[2].hashtags == ['#buh']
     assert pages[2].priority == 12
+
+def test_honor_stop_request():
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # 1. test stop request on job
+    job_conf = {'seeds': [{'url': 'http://example.com'}]}
+    job = brozzler.new_job(frontier, job_conf)
+    assert job.id
+    sites = list(frontier.job_sites(job.id))
+    assert len(sites) == 1
+    site = sites[0]
+    assert site.job_id == job.id
+
+    # does not raise exception
+    frontier.honor_stop_request(site)
+
+    # set job.stop_requested
+    job.stop_requested = datetime.datetime.utcnow().replace(
+            tzinfo=doublethink.UTC)
+    job.save()
+    with pytest.raises(brozzler.CrawlStopped):
+        frontier.honor_stop_request(site)
+
+    # 2. test stop request on site
+    job_conf = {'seeds': [{'url': 'http://example.com'}]}
+    job = brozzler.new_job(frontier, job_conf)
+    assert job.id
+    sites = list(frontier.job_sites(job.id))
+    assert len(sites) == 1
+    site = sites[0]
+    assert site.job_id == job.id
+
+    # does not raise exception
+    frontier.honor_stop_request(site)
+
+    # set site.stop_requested
+    site.stop_requested = doublethink.utcnow()
+    site.save()
+    with pytest.raises(brozzler.CrawlStopped):
+        frontier.honor_stop_request(site)
 

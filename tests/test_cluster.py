@@ -50,6 +50,24 @@ def httpd(request):
                 self.send_header('Location', '/site5/destination/')
                 self.end_headers()
                 self.wfile.write(b'')
+            elif self.path.startswith('/infinite/'):
+                payload = b'''
+<html>
+ <head>
+  <title>infinite site</title>
+ </head>
+ <body>
+  <a href='a/'>a/</a> <a href='b/'>b/</a> <a href='c/'>c/</a>
+  <a href='d/'>d/</a> <a href='e/'>e/</a> <a href='f/'>f/</a>
+  <a href='g/'>g/</a> <a href='h/'>h/</a> <a href='i/'>i/</a>
+ </body>
+</html>
+'''
+                self.send_response(200, 'OK')
+                self.send_header('Connection', 'close')
+                self.send_header('Content-Length', len(payload))
+                self.end_headers()
+                self.wfile.write(payload)
             else:
                 super().do_GET()
 
@@ -499,4 +517,65 @@ def test_hashtags(httpd):
     assert 'thumbnail:%s' % seed_url in captures_by_url
     assert 'screenshot:http://localhost:%s/site7/foo.html' % httpd.server_port in captures_by_url
     assert 'thumbnail:http://localhost:%s/site7/foo.html' % httpd.server_port in captures_by_url
+
+def test_stop_crawl(httpd):
+    test_id = 'test_stop_crawl_job-%s' % datetime.datetime.utcnow().isoformat()
+    rr = doublethink.Rethinker('localhost', db='brozzler')
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # create a new job with three sites that could be crawled forever
+    job_conf = {'seeds': [
+        {'url': 'http://localhost:%s/infinite/foo/' % httpd.server_port},
+        {'url': 'http://localhost:%s/infinite/bar/' % httpd.server_port},
+        {'url': 'http://localhost:%s/infinite/baz/' % httpd.server_port}]}
+    job = brozzler.new_job(frontier, job_conf)
+    assert job.id
+
+    sites = list(frontier.job_sites(job.id))
+    assert not sites[0].stop_requested
+    assert not sites[1].stop_requested
+
+    # request crawl stop for one site using the command line entrypoint
+    brozzler.cli.brozzler_stop_crawl([
+        'brozzler-stop-crawl', '--site=%s' % sites[0].id])
+    sites[0].refresh()
+    assert sites[0].stop_requested
+
+    # stop request should be honored quickly
+    start = time.time()
+    while not sites[0].status.startswith(
+            'FINISHED') and time.time() - start < 120:
+        time.sleep(0.5)
+        sites[0].refresh()
+    assert sites[0].status == 'FINISHED_STOP_REQUESTED'
+
+    # but the other sites and the job as a whole should still be crawling
+    sites[1].refresh()
+    assert sites[1].status == 'ACTIVE'
+    sites[2].refresh()
+    assert sites[2].status == 'ACTIVE'
+    job.refresh()
+    assert job.status == 'ACTIVE'
+
+    # request crawl stop for the job using the command line entrypoint
+    brozzler.cli.brozzler_stop_crawl([
+        'brozzler-stop-crawl', '--job=%s' % job.id])
+    job.refresh()
+    assert job.stop_requested
+
+    # stop request should be honored quickly
+    start = time.time()
+    while not job.status.startswith(
+            'FINISHED') and time.time() - start < 120:
+        time.sleep(0.5)
+        job.refresh()
+    assert job.status == 'FINISHED'
+
+    # the other sites should also be FINISHED_STOP_REQUESTED
+    sites[0].refresh()
+    assert sites[0].status == 'FINISHED_STOP_REQUESTED'
+    sites[1].refresh()
+    assert sites[1].status == 'FINISHED_STOP_REQUESTED'
+    sites[2].refresh()
+    assert sites[2].status == 'FINISHED_STOP_REQUESTED'
 
