@@ -27,6 +27,7 @@ import socket
 import logging
 import yaml
 import datetime
+import requests
 
 @pytest.fixture(scope='module')
 def httpd(request):
@@ -106,6 +107,19 @@ blocks:
         'site_id': site.id, 'hops_from_seed': 10})
     assert site.is_in_scope(
             'https://www.youtube.com/watch?v=dUIn5OAPS5s', yt_user_page)
+
+def test_robots_proxy_down(httpd):
+    '''
+    Test that exception fetching robots.txt bubbles up if proxy is down.
+    '''
+    url = 'http://localhost:%s/' % httpd.server_port
+    site = brozzler.Site(None, {'seed':url,'user_agent':'im/a/GoOdbot/yep'})
+
+    sock = socket.socket()
+    sock.bind(('127.0.0.1', 0))
+    not_listening_proxy = '127.0.0.1:%s' % sock.getsockname()[1]
+    with pytest.raises(requests.exceptions.ProxyError):
+        brozzler.is_permitted_by_robots(site, url, proxy=not_listening_proxy)
 
 def test_start_stop_backwards_compat():
     site = brozzler.Site(None, {'seed': 'http://example.com/'})
