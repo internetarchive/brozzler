@@ -205,6 +205,8 @@ class BrozzlerWorker:
                     'got "%s %s" response on warcprox '
                     'WARCPROX_WRITE_RECORD request (expected 204)',
                     e.getcode(), e.info())
+        except urllib.error.URLError as e:
+            raise brozzler.ProxyError('_warcprox_write_record: %s', e)
 
     def _remember_videos(self, page, ydl_spy):
         if not 'videos' in page:
