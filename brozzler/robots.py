@@ -102,6 +102,9 @@ def is_permitted_by_robots(site, url, proxy=None):
                     url, site.user_agent or "brozzler")
             return result
         except Exception as e:
+            logging.warn(
+                    "caught exception fetching robots.txt: e=%s vars(e)=%s",
+                    repr(e), vars(e))
             if isinstance(e, reppy.exceptions.ServerError) and isinstance(
                     e.args[0], brozzler.ReachedLimit):
                 raise e.args[0]
