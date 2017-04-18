@@ -239,6 +239,10 @@ class WebsockReceiverThread(threading.Thread):
                         message['params']['message']['text'])
             elif message['method'] == 'Page.javascriptDialogOpening':
                 self._javascript_dialog_opening(message)
+            elif (message['method'] == 'Network.loadingFailed'
+                    and 'params' in message and 'errorText' in message['params']
+                    and message['params']['errorText'] == 'net::ERR_PROXY_CONNECTION_FAILED'):
+                brozzler.thread_raise(self.calling_thread, brozzler.ProxyError)
             # else:
             #     self.logger.debug("%s %s", message["method"], json_message)
         elif 'result' in message:
@@ -411,7 +415,8 @@ class Browser:
             outlinks: a list of navigational links extracted from the page
 
         Raises:
-            BrowsingException: if browsing the page fails
+            brozzler.ProxyError: in case of proxy connection error
+            BrowsingException: if browsing the page fails in some other way
         '''
         if not self.is_running():
             raise BrowsingException('browser has not been started')

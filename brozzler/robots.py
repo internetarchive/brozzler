@@ -73,6 +73,25 @@ def _robots_cache(site, proxy=None):
     return _robots_caches[site.id]
 
 def is_permitted_by_robots(site, url, proxy=None):
+    '''
+    Checks if `url` is permitted by robots.txt.
+
+    In case of problems fetching robots.txt, different things can happen.
+    Reppy (the robots.txt parsing library) handles some exceptions internally
+    and applies an appropriate policy. It bubbles up other exceptions. Of
+    these, there are two kinds that this function raises for the caller to
+    handle, described below. Yet other types of exceptions are caught, and the
+    fetch is retried up to 10 times. In this case, after the 10th failure, the
+    function returns `False` (i.e. forbidden by robots).
+
+    Returns:
+        bool: `True` if `site.ignore_robots` is set, or if `url` is permitted
+            by robots.txt, `False` otherwise
+
+    Raises:
+        brozzler.ReachedLimit: if warcprox responded with 420 Reached Limit
+        requests.exceptions.ProxyError: if the proxy is down
+    '''
     if site.ignore_robots:
         return True
 
@@ -82,14 +101,23 @@ def is_permitted_by_robots(site, url, proxy=None):
             result = _robots_cache(site, proxy).allowed(
                     url, site.user_agent or "brozzler")
             return result
-        except BaseException as e:
-            if isinstance(e, reppy.exceptions.ServerError) and isinstance(e.args[0], brozzler.ReachedLimit):
+        except Exception as e:
+            if isinstance(e, reppy.exceptions.ServerError) and isinstance(
+                    e.args[0], brozzler.ReachedLimit):
                 raise e.args[0]
+            elif hasattr(e, 'args') and isinstance(
+                    e.args[0], requests.exceptions.ProxyError):
+                # reppy has wrapped an exception that we want to bubble up
+                raise brozzler.ProxyError(e)
             else:
                 if tries_left > 0:
-                    logging.warn("caught exception fetching robots.txt (%s tries left) for %s: %s", tries_left, url, repr(e))
+                    logging.warn(
+                            "caught exception fetching robots.txt (%s tries "
+                            "left) for %s: %s", tries_left, url, repr(e))
                     tries_left -= 1
                 else:
-                    logging.error("caught exception fetching robots.txt (0 tries left) for %s: %s", url, repr(e), exc_info=True)
+                    logging.error(
+                            "caught exception fetching robots.txt (0 tries "
+                            "left) for %s: %s", url, repr(e), exc_info=True)
                     return False
 

@@ -23,10 +23,11 @@ import threading
 import os
 import brozzler
 import brozzler.chrome
-import socket
 import logging
 import yaml
 import datetime
+import requests
+import tempfile
 
 @pytest.fixture(scope='module')
 def httpd(request):
@@ -106,6 +107,42 @@ blocks:
         'site_id': site.id, 'hops_from_seed': 10})
     assert site.is_in_scope(
             'https://www.youtube.com/watch?v=dUIn5OAPS5s', yt_user_page)
+
+def test_proxy_down():
+    '''
+    Test all fetching scenarios raise `brozzler.ProxyError` when proxy is down.
+
+    This test needs to cover every possible fetch through the proxy other than
+    fetches from the browser. For that, see test_brozzling.py.
+    '''
+    # nobody listens on port 4 :)
+    not_listening_proxy = '127.0.0.1:4'
+
+    ### binding and not listening produces another type of connection
+    ### error, which we could test, but it takes a while
+    # sock = socket.socket()
+    # sock.bind(('127.0.0.1', 0))
+    # not_listening_proxy = '127.0.0.1:%s' % sock.getsockname()[1]
+
+    worker = brozzler.BrozzlerWorker(frontier=None, proxy=not_listening_proxy)
+
+    site = brozzler.Site(None, {'seed':'http://example.com/'})
+    page = brozzler.Page(None, {'url': 'http://example.com/'})
+
+    # robots.txt fetch
+    with pytest.raises(brozzler.ProxyError):
+        brozzler.is_permitted_by_robots(
+                site, 'http://example.com/', proxy=not_listening_proxy)
+
+    # youtube-dl fetch
+    with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
+        ydl = worker._youtube_dl(tempdir, site)
+        with pytest.raises(brozzler.ProxyError):
+            worker._try_youtube_dl(ydl, site, page)
+
+    # raw fetch
+    with pytest.raises(brozzler.ProxyError):
+        worker._fetch_url(site, page)
 
 def test_start_stop_backwards_compat():
     site = brozzler.Site(None, {'seed': 'http://example.com/'})

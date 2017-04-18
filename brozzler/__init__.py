@@ -29,6 +29,9 @@ class NothingToClaim(Exception):
 class CrawlStopped(Exception):
     pass
 
+class ProxyError(Exception):
+    pass
+
 class ReachedLimit(Exception):
     def __init__(self, http_error=None, warcprox_meta=None, http_payload=None):
         import json
