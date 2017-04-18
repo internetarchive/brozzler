@@ -166,7 +166,7 @@ def brozzle_page(argv=None):
         'id': -1, 'seed': args.url, 'behavior_parameters': behavior_parameters,
         'username': args.username, 'password': args.password})
     page = brozzler.Page(None, {'url': args.url, 'site_id': site.id})
-    worker = brozzler.BrozzlerWorker(frontier=None)
+    worker = brozzler.BrozzlerWorker(frontier=None, proxy=args.proxy)
 
     def on_screenshot(screenshot_png):
         OK_CHARS = (string.ascii_letters + string.digits)
