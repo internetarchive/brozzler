@@ -251,10 +251,17 @@ class BrozzlerWorker:
         except BaseException as e:
             if hasattr(e, "exc_info") and e.exc_info[0] == youtube_dl.utils.UnsupportedError:
                 pass
-            elif (hasattr(e, "exc_info") and e.exc_info[0] ==
-                    urllib.error.HTTPError and hasattr(e.exc_info[1], "code")
+            elif (hasattr(e, "exc_info")
+                    and e.exc_info[0] == urllib.error.HTTPError
+                    and hasattr(e.exc_info[1], "code")
                     and e.exc_info[1].code == 420):
                 raise brozzler.ReachedLimit(e.exc_info[1])
+            elif (hasattr(e, 'exc_info')
+                    and e.exc_info[0] == urllib.error.URLError
+                    and self._proxy_for(site)):
+                # connection problem when using a proxy == proxy error (XXX?)
+                raise brozzler.ProxyError(
+                        'youtube-dl hit apparent proxy error', e)
             else:
                 raise
 
@@ -285,6 +292,8 @@ class BrozzlerWorker:
             raise
         except brozzler.ShutdownRequested:
             raise
+        except brozzler.ProxyError:
+            raise
         except Exception as e:
             if (hasattr(e, 'exc_info') and len(e.exc_info) >= 2
                     and hasattr(e.exc_info[1], 'code')
@@ -294,7 +303,7 @@ class BrozzlerWorker:
                         e.exc_info[1].code, e.exc_info[1].msg, page.url)
             else:
                 self.logger.error(
-                        "youtube_dl raised exception on %s", page,
+                        'youtube_dl raised exception on %s', page,
                         exc_info=True)
 
         if self._needs_browsing(page, ydl_spy):
@@ -379,10 +388,13 @@ class BrozzlerWorker:
             }
 
         self.logger.info('fetching %s', page)
-        # response is ignored
-        requests.get(
-                page.url, proxies=proxies, headers=site.extra_headers(),
-                verify=False)
+        try:
+            # response is ignored
+            requests.get(
+                    page.url, proxies=proxies, headers=site.extra_headers(),
+                    verify=False)
+        except requests.exceptions.ProxyError as e:
+            raise brozzler.ProxyError(e)
 
     def _needs_browsing(self, page, brozzler_spy):
         final_bounces = brozzler_spy.final_bounces(page.url)

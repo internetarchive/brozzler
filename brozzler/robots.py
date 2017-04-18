@@ -101,14 +101,14 @@ def is_permitted_by_robots(site, url, proxy=None):
             result = _robots_cache(site, proxy).allowed(
                     url, site.user_agent or "brozzler")
             return result
-        except BaseException as e:
-            if (isinstance(e, reppy.exceptions.ServerError)
-                    and isinstance(e.args[0], brozzler.ReachedLimit)) or (
-                            isinstance(e, reppy.exceptions.ConnectionException)
-                            and isinstance(
-                                e.args[0], requests.exceptions.ProxyError)):
-                # reppy has wrapped an exception that we want to bubble up
+        except Exception as e:
+            if isinstance(e, reppy.exceptions.ServerError) and isinstance(
+                    e.args[0], brozzler.ReachedLimit):
                 raise e.args[0]
+            elif hasattr(e, 'args') and isinstance(
+                    e.args[0], requests.exceptions.ProxyError):
+                # reppy has wrapped an exception that we want to bubble up
+                raise brozzler.ProxyError(e)
             else:
                 if tries_left > 0:
                     logging.warn(
