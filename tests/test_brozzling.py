@@ -26,6 +26,7 @@ import threading
 import argparse
 import urllib
 import json
+import threading
 
 args = argparse.Namespace()
 args.log_level = logging.INFO
@@ -185,4 +186,29 @@ def test_extract_outlinks(httpd):
         'http://localhost:%s/site8/fdjisapofdjisap#1' % httpd.server_port,
         'http://localhost:%s/site8/fdjisapofdjisap#2' % httpd.server_port
     }
+
+def test_proxy_down():
+    '''
+    Test that browsing raises `brozzler.ProxyError` when proxy is down.
+
+    See also `test_proxy_down` in test_units.py.
+    '''
+    site = brozzler.Site(None, {'seed':'http://example.com/'})
+    page = brozzler.Page(None, {'url': 'http://example.com/'})
+
+    # nobody listens on port 4 :)
+    not_listening_proxy = '127.0.0.1:4'
+
+    ### binding and not listening produces another type of connection
+    ### error, which we could test, but it takes a while
+    # sock = socket.socket()
+    # sock.bind(('127.0.0.1', 0))
+    # not_listening_proxy = '127.0.0.1:%s' % sock.getsockname()[1]
+
+    worker = brozzler.BrozzlerWorker(frontier=None, proxy=not_listening_proxy)
+    chrome_exe = brozzler.suggest_default_chrome_exe()
+
+    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        with pytest.raises(brozzler.ProxyError):
+            worker.brozzle_page(browser, site, page)
 
