@@ -127,7 +127,7 @@ class BrozzlerWorker:
         elif self._warcprox_auto:
             svc = self._service_registry.available_service('warcprox')
             if svc is None:
-                raise Exception(
+                raise brozzler.ProxyError(
                         'no available instances of warcprox in the service '
                         'registry')
             site.proxy = '%s:%s' % (svc['host'], svc['port'])
@@ -417,6 +417,10 @@ class BrozzlerWorker:
     def brozzle_site(self, browser, site):
         try:
             page = None
+            self._frontier.honor_stop_request(site)
+            self.logger.info(
+                    "brozzling site (proxy=%s) %s",
+                    repr(self._proxy_for(site)), site)
             start = time.time()
             while time.time() - start < 7 * 60:
                 site.refresh()
@@ -449,6 +453,18 @@ class BrozzlerWorker:
             self._frontier.finished(site, "FINISHED_STOP_REQUESTED")
         # except brozzler.browser.BrowsingAborted:
         #     self.logger.info("{} shut down".format(browser))
+        except brozzler.ProxyError as e:
+            if self._warcprox_auto:
+                logging.error(
+                        'proxy error (site.proxy=%s), will try to choose a '
+                        'healthy instance next time site is brozzled: %s',
+                        site.proxy, e)
+                site.proxy = None
+            else:
+                # using brozzler-worker --proxy, nothing to do but try the
+                # same proxy again next time
+                logging.error(
+                        'proxy error (site.proxy=%s): %s', repr(site.proxy), e)
         except:
             self.logger.critical("unexpected exception", exc_info=True)
         finally:
@@ -508,9 +524,6 @@ class BrozzlerWorker:
                     try:
                         site = self._frontier.claim_site("%s:%s" % (
                             socket.gethostname(), browser.chrome.port))
-                        self.logger.info(
-                                "brozzling site (proxy=%s) %s",
-                                repr(self._proxy_for(site)), site)
                         th = threading.Thread(
                                 target=self._brozzle_site_thread_target,
                                 args=(browser, site),
