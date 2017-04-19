@@ -146,6 +146,15 @@ def test_proxy_down():
         with pytest.raises(brozzler.ProxyError):
             worker._fetch_url(site, page)
 
+        # WARCPROX_WRITE_RECORD
+        with pytest.raises(brozzler.ProxyError):
+            worker._warcprox_write_record(
+                    warcprox_address=not_listening_proxy,
+                    url='test://proxy_down/warcprox_write_record',
+                    warc_type='metadata',
+                    content_type='text/plain',
+                    payload=b'''payload doesn't matter here''')
+
 def test_start_stop_backwards_compat():
     site = brozzler.Site(None, {'seed': 'http://example.com/'})
     assert len(site.starts_and_stops) == 1

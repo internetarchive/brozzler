@@ -32,6 +32,7 @@ import requests
 import subprocess
 import http.server
 import logging
+import warcprox
 
 def start_service(service):
     subprocess.check_call(['sudo', 'service', service, 'start'])
@@ -578,4 +579,126 @@ def test_stop_crawl(httpd):
     assert sites[1].status == 'FINISHED_STOP_REQUESTED'
     sites[2].refresh()
     assert sites[2].status == 'FINISHED_STOP_REQUESTED'
+
+def test_warcprox_outage_resiliency(httpd):
+    '''
+    Tests resiliency to warcprox outage.
+
+    If no instances of warcprox are healthy when starting to crawl a site,
+    brozzler-worker should sit there and wait until a healthy instance appears.
+
+    If an instance goes down, sites assigned to that instance should bounce
+    over to a healthy instance.
+
+    If all instances of warcprox go down, brozzler-worker should sit and wait.
+    '''
+    rr = doublethink.Rethinker('localhost', db='brozzler')
+    frontier = brozzler.RethinkDbFrontier(rr)
+    svcreg = doublethink.ServiceRegistry(rr)
+
+    # run two instances of warcprox
+    opts = warcprox.Options()
+    opts.address = '0.0.0.0'
+    opts.port = 0
+
+    warcprox1 = warcprox.controller.WarcproxController(
+            service_registry=svcreg, options=opts)
+    warcprox2 = warcprox.controller.WarcproxController(
+            service_registry=svcreg, options=opts)
+    warcprox1_thread = threading.Thread(
+            target=warcprox1.run_until_shutdown, name='warcprox1')
+    warcprox2_thread = threading.Thread(
+            target=warcprox2.run_until_shutdown, name='warcprox2')
+
+    # put together a site to crawl
+    test_id = 'test_warcprox_death-%s' % datetime.datetime.utcnow().isoformat()
+    site = brozzler.Site(rr, {
+        'seed': 'http://localhost:%s/infinite/' % httpd.server_port,
+        'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
+
+    try:
+        # we manage warcprox instances ourselves, so stop the one running on
+        # the system, if any
+        try:
+            stop_service('warcprox')
+        except Exception as e:
+            logging.warn('problem stopping warcprox service: %s', e)
+
+        # queue the site for brozzling
+        brozzler.new_site(frontier, site)
+
+        # check that nothing happens
+        # XXX tail brozzler-worker.log or something?
+        time.sleep(30)
+        site.refresh()
+        assert site.status == 'ACTIVE'
+        assert not site.proxy
+        assert len(list(frontier.site_pages(site.id))) == 1
+
+        # start one instance of warcprox
+        warcprox1_thread.start()
+
+        # check that it started using that instance
+        start = time.time()
+        while not site.proxy and time.time() - start < 30:
+            time.sleep(0.5)
+            site.refresh()
+        assert site.proxy.endswith(':%s' % warcprox1.proxy.server_port)
+
+        # check that the site accumulates pages in the frontier, confirming
+        # that crawling is really happening
+        start = time.time()
+        while (len(list(frontier.site_pages(site.id))) <= 1
+               and time.time() - start < 60):
+            time.sleep(0.5)
+            site.refresh()
+        assert len(list(frontier.site_pages(site.id))) > 1
+
+        # stop warcprox #1, start warcprox #2
+        warcprox2_thread.start()
+        warcprox1.stop.set()
+        warcprox1_thread.join()
+
+        # check that it switched over to warcprox #2
+        start = time.time()
+        while ((not site.proxy
+                or not site.proxy.endswith(':%s' % warcprox2.proxy.server_port))
+               and time.time() - start < 30):
+            time.sleep(0.5)
+            site.refresh()
+        assert site.proxy.endswith(':%s' % warcprox2.proxy.server_port)
+
+        # stop warcprox #2
+        warcprox2.stop.set()
+        warcprox2_thread.join()
+
+        page_count = len(list(frontier.site_pages(site.id)))
+        assert page_count > 1
+
+        # check that it is waiting for a warcprox to appear
+        time.sleep(30)
+        site.refresh()
+        assert site.status == 'ACTIVE'
+        assert not site.proxy
+        assert len(list(frontier.site_pages(site.id))) == page_count
+
+        # stop crawling the site, else it can pollute subsequent test runs
+        brozzler.cli.brozzler_stop_crawl([
+            'brozzler-stop-crawl', '--site=%s' % site.id])
+        site.refresh()
+        assert site.stop_requested
+
+        # stop request should be honored quickly
+        start = time.time()
+        while not site.status.startswith(
+                'FINISHED') and time.time() - start < 120:
+            time.sleep(0.5)
+            site.refresh()
+        assert site.status == 'FINISHED_STOP_REQUESTED'
+    finally:
+        warcprox1.stop.set()
+        warcprox2.stop.set()
+        warcprox1_thread.join()
+        warcprox2_thread.join()
+        start_service('warcprox')
 
