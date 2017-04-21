@@ -660,6 +660,9 @@ def brozzler_stop_crawl(argv=None):
         except ValueError:
             job_id = args.job_id
         job = brozzler.Job.load(rr, job_id)
+        if not job:
+            logging.fatal('job not found with id=%s', repr(job_id))
+            sys.exit(1)
         job.stop_requested = doublethink.utcnow()
         job.save()
     elif args.site_id:
@@ -668,6 +671,9 @@ def brozzler_stop_crawl(argv=None):
         except ValueError:
             site_id = args.site_id
         site = brozzler.Site.load(rr, site_id)
+        if not site:
+            logging.fatal('site not found with id=%s', repr(site_id))
+            sys.exit(1)
         site.stop_requested = doublethink.utcnow()
         site.save()
 
