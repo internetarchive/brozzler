@@ -118,6 +118,7 @@ class BrozzlerWorker:
 
         self._thread = None
         self._start_stop_lock = threading.Lock()
+        self._shutdown = threading.Event()
 
     def _proxy_for(self, site):
         if self._proxy:
@@ -233,7 +234,9 @@ class BrozzlerWorker:
     def _try_youtube_dl(self, ydl, site, page):
         try:
             self.logger.info("trying youtube-dl on {}".format(page))
+            brozzler.thread_accept_exceptions()
             info = ydl.extract_info(page.url)
+            brozzler.thread_block_exceptions()
             self._remember_videos(page, ydl.brozzler_spy)
             # logging.info('XXX %s', json.dumps(info))
             if self._using_warcprox(site):
@@ -517,7 +520,7 @@ class BrozzlerWorker:
         self.logger.info("brozzler worker starting")
         try:
             latest_state = None
-            while True:
+            while not self._shutdown.is_set():
                 self._service_heartbeat_if_due()
                 try:
                     browser = self._browser_pool.acquire()
@@ -543,6 +546,7 @@ class BrozzlerWorker:
                 except brozzler.NothingToClaim:
                     pass
                 time.sleep(0.5)
+            self.logger.info("shutdown requested")
         except brozzler.ShutdownRequested:
             self.logger.info("shutdown requested")
         except:
@@ -586,12 +590,7 @@ class BrozzlerWorker:
         self.stop()
 
     def stop(self):
-        with self._start_stop_lock:
-            if self._thread and self._thread.is_alive():
-                self.logger.info("brozzler worker shutting down")
-                brozzler.thread_raise(self._thread, brozzler.ShutdownRequested)
-                self._thread.join()
-                self._thread = None
+        self._shutdown.set()
 
     def is_alive(self):
         return self._thread and self._thread.is_alive()

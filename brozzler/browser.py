@@ -427,6 +427,7 @@ class Browser:
             self.websock_thread.on_request = on_request
         if on_response:
             self.websock_thread.on_response = on_response
+        brozzler.thread_accept_exceptions()
         try:
             self.navigate_to_page(
                     page_url, extra_headers=extra_headers,
@@ -444,13 +445,16 @@ class Browser:
             final_page_url = self.url()
             return final_page_url, outlinks
         except brozzler.ReachedLimit:
+            brozzler.thread_block_exceptions()
             # websock_thread has stashed the ReachedLimit exception with
             # more information, raise that one
             raise self.websock_thread.reached_limit
         except websocket.WebSocketConnectionClosedException as e:
+            brozzler.thread_block_exceptions()
             self.logger.error('websocket closed, did chrome die?')
             raise BrowsingException(e)
         finally:
+            brozzler.thread_block_exceptions()
             self.is_browsing = False
             self.websock_thread.on_request = None
             self.websock_thread.on_response = None

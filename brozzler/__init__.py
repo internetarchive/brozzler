@@ -98,31 +98,88 @@ def behavior_script(url, template_parameters=None):
             return script
     return None
 
+def thread_accept_exceptions():
+    import threading
+    thread = threading.current_thread()
+    if hasattr(thread, 'thread_raise_lock'):
+        lock = thread.thread_raise_lock
+    else:
+        lock = threading.Lock()
+    with lock:
+        thread.thread_raise_lock = lock
+        thread.thread_raise_ok = True
+
+def thread_block_exceptions():
+    import threading
+    thread = threading.current_thread()
+    if hasattr(thread, 'thread_raise_lock'):
+        with thread.thread_raise_lock:
+            thread.thread_raise_ok = False
+
 def thread_raise(thread, exctype):
     '''
-    Raises the exception exctype in the thread.
+    If `thread` has declared itself willing to accept exceptions by calling
+    `thread_accept_exceptions`, raises the exception `exctype` in the thread
+    `thread`.
 
     Adapted from http://tomerfiliba.com/recipes/Thread2/ which explains:
     "The exception will be raised only when executing python bytecode. If your
     thread calls a native/built-in blocking function, the exception will be
     raised only when execution returns to the python code."
+
+    Returns:
+        True if exception was raised, False if the thread is not accepting
+        exceptions or another thread is holding `thread.thread_raise_lock`
+
+    Raises:
+        threading.ThreadError if `thread` is not running
+        TypeError if `exctype` is not a class
+        ValueError, SystemError in case of unexpected problems
     '''
-    import ctypes, inspect, threading
-    if not thread.is_alive():
-        raise threading.ThreadError('thread %s is not running' % thread)
+    import ctypes, inspect, threading, logging
+
     if not inspect.isclass(exctype):
         raise TypeError(
                 'cannot raise %s, only exception types can be raised (not '
-                'instances)' % exc_type)
-    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
-            ctypes.c_long(thread.ident), ctypes.py_object(exctype))
-    if res == 0:
-        raise ValueError('invalid thread id? thread.ident=%s' % thread.ident)
-    elif res != 1:
-        # if it returns a number greater than one, you're in trouble,
-        # and you should call it again with exc=NULL to revert the effect
-        ctypes.pythonapi.PyThreadState_SetAsyncExc(thread.ident, 0)
-        raise SystemError('PyThreadState_SetAsyncExc failed')
+                'instances)' % exctype)
+
+    if not hasattr(thread, 'thread_raise_lock'):
+        logging.warn(
+                'thread is not accepting exceptions (no member variable '
+                '"thread_raise_lock"), not raising %s in thread %s',
+                exctype, thread)
+        return False
+
+    got_lock = thread.thread_raise_lock.acquire(timeout=0.5)
+    if not got_lock:
+        logging.warn(
+                'could not get acquire "thread_raise_lock", not raising %s in '
+                'thread %s', exctype, thread)
+        return False
+    try:
+        if not thread.thread_raise_ok:
+            logging.warn(
+                    'thread is not accepting exceptions (thread_raise_ok is '
+                    '%s), not raising %s in thread %s',
+                    thread.thread_raise_ok, exctype, thread)
+            return False
+
+        if not thread.is_alive():
+            raise threading.ThreadError('thread %s is not running' % thread)
+        logging.info('raising %s in thread %s', exctype, thread)
+        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+                ctypes.c_long(thread.ident), ctypes.py_object(exctype))
+        if res == 0:
+            raise ValueError(
+                    'invalid thread id? thread.ident=%s' % thread.ident)
+        elif res != 1:
+            # if it returns a number greater than one, you're in trouble,
+            # and you should call it again with exc=NULL to revert the effect
+            ctypes.pythonapi.PyThreadState_SetAsyncExc(thread.ident, 0)
+            raise SystemError('PyThreadState_SetAsyncExc failed')
+        return True
+    finally:
+        thread.thread_raise_lock.release()
 
 def sleep(duration):
     '''
