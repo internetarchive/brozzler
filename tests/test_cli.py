@@ -21,6 +21,7 @@ import brozzler.cli
 import pkg_resources
 import pytest
 import subprocess
+import doublethink
 
 def cli_commands():
     commands = set(pkg_resources.get_entry_map(
@@ -35,7 +36,6 @@ def cli_commands():
     except ImportError:
         commands.remove('brozzler-easy')
     return commands
-
 
 @pytest.mark.parametrize('cmd', cli_commands())
 def test_call_entrypoint(capsys, cmd):
@@ -57,3 +57,25 @@ def test_run_command(capsys, cmd):
         brozzler.__version__, cmd)).encode('ascii')
     assert err == b''
 
+def test_rethinkdb_up():
+    '''Check that rethinkdb is up and running.'''
+    # check that rethinkdb is listening and looks sane
+    rr = doublethink.Rethinker(db='rethinkdb')  # built-in db
+    tbls = rr.table_list().run()
+    assert len(tbls) > 10
+
+# XXX don't know why this test is failing in travis-ci and vagrant while
+# test_call_entrypoint tests pass :( (also fails with capfd)
+@pytest.mark.xfail
+def test_stop_nonexistent_crawl(capsys):
+    with pytest.raises(SystemExit):
+        brozzler.cli.brozzler_stop_crawl(['brozzler-stop-crawl', '--site=123'])
+    out, err = capsys.readouterr()
+    assert err.endswith('site not found with id=123\n')
+    assert out == ''
+
+    with pytest.raises(SystemExit):
+        brozzler.cli.brozzler_stop_crawl(['brozzler-stop-crawl', '--job=abc'])
+    out, err = capsys.readouterr()
+    assert err.endswith('''job not found with id='abc'\n''')
+    assert out == ''
