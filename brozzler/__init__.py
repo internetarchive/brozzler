@@ -98,29 +98,67 @@ def behavior_script(url, template_parameters=None):
             return script
     return None
 
+import threading
+_thread_exception_gates = {}
+_thread_exception_gates_lock = threading.Lock()
 def thread_accept_exceptions():
-    import threading
-    thread = threading.current_thread()
-    if hasattr(thread, 'thread_raise_lock'):
-        lock = thread.thread_raise_lock
-    else:
-        lock = threading.Lock()
-    with lock:
-        thread.thread_raise_lock = lock
-        thread.thread_raise_ok = True
+    '''
+    Returns a context manager whose purpose is best explained with a snippet:
 
-def thread_block_exceptions():
-    import threading
-    thread = threading.current_thread()
-    if hasattr(thread, 'thread_raise_lock'):
-        with thread.thread_raise_lock:
-            thread.thread_raise_ok = False
+        # === thread1 ===
+
+        # If thread2 calls `thread_raise(thread1, ...)` while do_something() is
+        # executing, nothing will happen (no exception will be raised in
+        # thread1).
+        do_something()
+
+        try:
+            with thread_accept_exceptions():
+                # Now we're in the "runtime environment" (pep340) of the
+                # context manager. If thread2 calls `thread_raise(thread1,
+                # ...)` while do_something_else() is running, the exception
+                # will be raised here.
+                do_something_else()
+
+            # Here again if thread2 calls `thread_raise`, nothing happens.
+            do_yet_another_thing()
+
+        except:
+            handle_exception()
+
+    The context manager is reentrant, i.e. you can do this:
+
+        with thread_accept_exceptions():
+            with thread_accept_exceptions():
+                blah()
+
+            # `thread_raise` will still work here
+            toot()
+    '''
+    class ThreadExceptionGate:
+        def __init__(self):
+            self.lock = threading.Lock()
+            self.ok_to_raise = 0
+
+        def __enter__(self):
+            with self.lock:
+                self.ok_to_raise += 1
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            with self.lock:
+                self.ok_to_raise -= 1
+            assert self.ok_to_raise >= 0
+
+    with _thread_exception_gates_lock:
+        if not threading.current_thread().ident in _thread_exception_gates:
+            _thread_exception_gates[
+                    threading.current_thread().ident] = ThreadExceptionGate()
+    return _thread_exception_gates[threading.current_thread().ident]
 
 def thread_raise(thread, exctype):
     '''
-    If `thread` has declared itself willing to accept exceptions by calling
-    `thread_accept_exceptions`, raises the exception `exctype` in the thread
-    `thread`.
+    Raises the exception `exctype` in the thread `thread`, if it is willing to
+    accept exceptions (see `thread_accept_exceptions`).
 
     Adapted from http://tomerfiliba.com/recipes/Thread2/ which explains:
     "The exception will be raised only when executing python bytecode. If your
@@ -128,8 +166,9 @@ def thread_raise(thread, exctype):
     raised only when execution returns to the python code."
 
     Returns:
-        True if exception was raised, False if the thread is not accepting
-        exceptions or another thread is holding `thread.thread_raise_lock`
+        True if exception was raised, False if `thread` is not accepting
+        exceptions, or another thread is in the middle of raising an exception
+        in `thread`
 
     Raises:
         threading.ThreadError if `thread` is not running
@@ -143,29 +182,30 @@ def thread_raise(thread, exctype):
                 'cannot raise %s, only exception types can be raised (not '
                 'instances)' % exctype)
 
-    if not hasattr(thread, 'thread_raise_lock'):
+    if not thread.is_alive():
+        raise threading.ThreadError('thread %s is not running' % thread)
+
+    gate = _thread_exception_gates.get(thread.ident)
+    if not gate:
         logging.warn(
-                'thread is not accepting exceptions (no member variable '
-                '"thread_raise_lock"), not raising %s in thread %s',
-                exctype, thread)
+                'thread is not accepting exceptions (gate not initialized), '
+                'not raising %s in thread %s', exctype, thread)
         return False
 
-    got_lock = thread.thread_raise_lock.acquire(timeout=0.5)
+    got_lock = gate.lock.acquire(blocking=False)
     if not got_lock:
         logging.warn(
-                'could not get acquire "thread_raise_lock", not raising %s in '
-                'thread %s', exctype, thread)
+                'could not get acquire thread exception gate lock, not '
+                'raising %s in thread %s', exctype, thread)
         return False
     try:
-        if not thread.thread_raise_ok:
+        if not gate.ok_to_raise:
             logging.warn(
-                    'thread is not accepting exceptions (thread_raise_ok is '
+                    'thread is not accepting exceptions (gate.ok_to_raise is '
                     '%s), not raising %s in thread %s',
-                    thread.thread_raise_ok, exctype, thread)
+                    gate.ok_to_raise, exctype, thread)
             return False
 
-        if not thread.is_alive():
-            raise threading.ThreadError('thread %s is not running' % thread)
         logging.info('raising %s in thread %s', exctype, thread)
         res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
                 ctypes.c_long(thread.ident), ctypes.py_object(exctype))
@@ -179,7 +219,7 @@ def thread_raise(thread, exctype):
             raise SystemError('PyThreadState_SetAsyncExc failed')
         return True
     finally:
-        thread.thread_raise_lock.release()
+        gate.lock.release()
 
 def sleep(duration):
     '''
@@ -228,4 +268,5 @@ from brozzler.cli import suggest_default_chrome_exe
 
 __all__ = ['Page', 'Site', 'BrozzlerWorker', 'is_permitted_by_robots',
            'RethinkDbFrontier', 'Browser', 'BrowserPool', 'BrowsingException',
-           'new_job', 'new_site', 'Job', 'new_job_file', 'InvalidJobConf']
+           'new_job', 'new_site', 'Job', 'new_job_file', 'InvalidJobConf',
+           'sleep', 'thread_accept_exceptions', 'thread_raise']

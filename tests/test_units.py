@@ -197,18 +197,19 @@ def test_thread_raise():
     thread_preamble_done = threading.Event()
     thread_caught_exception = None
 
-    def thread_target(accept_exceptions=False, block_exceptions=False):
-        if accept_exceptions:
-            brozzler.thread_accept_exceptions()
-        if block_exceptions:
-            brozzler.thread_block_exceptions()
-        thread_preamble_done.set()
-
+    def thread_target(accept_exceptions=False):
         try:
-            logging.info('waiting')
-            let_thread_finish.wait()
+            if accept_exceptions:
+                with brozzler.thread_accept_exceptions():
+                    thread_preamble_done.set()
+                    logging.info('waiting (accepting exceptions)')
+                    let_thread_finish.wait()
+            else:
+                thread_preamble_done.set()
+                logging.info('waiting (not accepting exceptions)')
+                let_thread_finish.wait()
         except Exception as e:
-            logging.info('caught exception %s', e)
+            logging.info('caught exception %s', repr(e))
             nonlocal thread_caught_exception
             thread_caught_exception = e
         finally:
@@ -219,7 +220,7 @@ def test_thread_raise():
     # test that thread_raise does not raise exception in a thread that has not
     # called thread_accept_exceptions
     thread_caught_exception = None
-    th = threading.Thread(target=lambda: thread_target())
+    th = threading.Thread(target=lambda: thread_target(accept_exceptions=False))
     th.start()
     thread_preamble_done.wait()
     with pytest.raises(TypeError):
@@ -243,16 +244,4 @@ def test_thread_raise():
     assert thread_caught_exception
     with pytest.raises(threading.ThreadError): # thread is not running
         brozzler.thread_raise(th, Exception)
-
-    # test that thread_raise does not raise exception in a thread that has
-    # called thread_block_exceptions
-    thread_caught_exception = None
-    th = threading.Thread(target=lambda: thread_target(block_exceptions=True))
-    th.start()
-    thread_preamble_done.wait()
-    assert brozzler.thread_raise(th, Exception) is False
-    let_thread_finish.set()
-    th.join()
-    assert thread_caught_exception is None
-
 
