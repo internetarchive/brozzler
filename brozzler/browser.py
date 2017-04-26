@@ -428,21 +428,22 @@ class Browser:
         if on_response:
             self.websock_thread.on_response = on_response
         try:
-            self.navigate_to_page(
-                    page_url, extra_headers=extra_headers,
-                    user_agent=user_agent, timeout=300)
-            if password:
-                self.try_login(username, password, timeout=300)
-            if on_screenshot:
-                jpeg_bytes = self.screenshot()
-                on_screenshot(jpeg_bytes)
-            behavior_script = brozzler.behavior_script(
-                    page_url, behavior_parameters)
-            self.run_behavior(behavior_script, timeout=900)
-            outlinks = self.extract_outlinks()
-            self.visit_hashtags(page_url, hashtags, outlinks)
-            final_page_url = self.url()
-            return final_page_url, outlinks
+            with brozzler.thread_accept_exceptions():
+                self.navigate_to_page(
+                        page_url, extra_headers=extra_headers,
+                        user_agent=user_agent, timeout=300)
+                if password:
+                    self.try_login(username, password, timeout=300)
+                if on_screenshot:
+                    jpeg_bytes = self.screenshot()
+                    on_screenshot(jpeg_bytes)
+                behavior_script = brozzler.behavior_script(
+                        page_url, behavior_parameters)
+                self.run_behavior(behavior_script, timeout=900)
+                outlinks = self.extract_outlinks()
+                self.visit_hashtags(page_url, hashtags, outlinks)
+                final_page_url = self.url()
+                return final_page_url, outlinks
         except brozzler.ReachedLimit:
             # websock_thread has stashed the ReachedLimit exception with
             # more information, raise that one
