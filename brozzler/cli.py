@@ -304,11 +304,6 @@ def brozzler_worker(argv=None):
     args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
 
-    def sigterm(signum, frame):
-        raise brozzler.ShutdownRequested('shutdown requested (caught SIGTERM)')
-    def sigint(signum, frame):
-        raise brozzler.ShutdownRequested('shutdown requested (caught SIGINT)')
-
     def dump_state(signum, frame):
         signal.signal(signal.SIGQUIT, signal.SIG_IGN)
         try:
@@ -330,10 +325,6 @@ def brozzler_worker(argv=None):
         finally:
             signal.signal(signal.SIGQUIT, dump_state)
 
-    signal.signal(signal.SIGQUIT, dump_state)
-    signal.signal(signal.SIGTERM, sigterm)
-    signal.signal(signal.SIGINT, sigint)
-
     rr = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(rr)
     service_registry = doublethink.ServiceRegistry(rr)
@@ -342,8 +333,13 @@ def brozzler_worker(argv=None):
             chrome_exe=args.chrome_exe, proxy=args.proxy,
             warcprox_auto=args.warcprox_auto)
 
-    worker.run()
+    signal.signal(signal.SIGQUIT, dump_state)
+    signal.signal(signal.SIGTERM, lambda s,f: worker.stop())
+    signal.signal(signal.SIGINT, lambda s,f: worker.stop())
 
+    th = threading.Thread(target=worker.run, name='BrozzlerWorkerThread')
+    th.start()
+    th.join()
     logging.info('brozzler-worker is all done, exiting')
 
 def brozzler_ensure_tables(argv=None):
