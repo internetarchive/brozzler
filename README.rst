@@ -176,71 +176,33 @@ Run pywb like so:
 Then browse http://localhost:8880/brozzler/.
 
 
-Headless Chromium
------------------
+Headless Chrome (experimental)
+--------------------------------
 
 `Headless Chromium <https://chromium.googlesource.com/chromium/src/+/master/headless/README.md>`_
-may optionally be used instead of Chromium or Chrome to run Brozzler without
-a visisble browser window or X11 server.  At the time of writing
-``headless_shell`` is a separate Linux-only executable and must be compiled
-from source.  Beware that compiling Chromium requires 10 GB of disk space,
-several GB of RAM and patience.
+is now available in stable Chrome releases for 64-bit Linux and may be
+used to run the browser without a visibe window or X11 at all.
 
-Start by installing the dependencies listed in Chromium's `Linux-specific build
-instructions <https://chromium.googlesource.com/chromium/src/+/master/docs/linux_build_instructions.md>`_.
-
-Next install the build tools and fetch the source code:
-
-::
-
-    mkdir -p ~/chromium
-    cd ~/chromium
-    git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-    export PATH=$PWD/depot_tools:$PATH
-    fetch --no-history chromium --nosvn=True
-
-Configure a headless release build (the debug builds are much larger):
-
-::
-
-    cd src
-    mkdir -p out/release
-    echo 'import("//build/args/headless.gn")' > out/release/args.gn
-    echo 'is_debug = false' >> out/release/args.gn
-    gn gen out/release
-
-Run the compile:
-
-::
-
-    ninja -C out/release headless_shell
-
-This will produce an ``out/release/headless_shell`` executable.  Unfortunately
-this cannot be used with Brozzler as-is as the ``--window-size`` command-line
-option expects a different syntax in Headless Chromium.  As a workaround create
-a wrapper shell script ``headless_chromium.sh`` which replaces the misbehaving
-option:
+To try this out, create a wrapper script like ~/bin/chrome-headless.sh:
 
 ::
 
     #!/bin/bash
-    exec ~/chromium/src/out/release/headless_shell "${@//--window-size=1100,900/--window-size=1100x900}"
+    exec /opt/google/chrome/chrome --headless --disable-gpu "$@"
 
 Run brozzler passing the path to the wrapper script as the ``--chrome-exe``
 option:
 
 ::
 
-    chmod +x ~/bin/headless_chromium.sh
-    brozzler-worker --chrome-exe ~/bin/headless_chromium.sh
+    chmod +x ~/bin/chrome-headless.sh
+    brozzler-worker --chrome-exe ~/bin/chrome-headless.sh
 
-To render Flash content, `download <https://get.adobe.com/flashplayer/otherversions/>`_
-and extract the Linux (.tar.gz) PPAPI plugin.  Configure Headless Chromium
-to load the plugin by adding this option to your wrapper script:
-
-::
-
-    --register-pepper-plugins="/opt/PepperFlash/libpepflashplayer.so;application/x-shockwave-flash"
+Beware: Chrome's headless mode is still very new and has a number of
+`unresolved issues. <https://bugs.chromium.org/p/chromium/issues/list?can=2&q=Proj%3DHeadless>`_
+You may experience hangs or crashes with some types of content. Brozzler
+has not had much testing with it. For the moment we recommend using
+Chrome's regular mode instead.
 
 License
 -------

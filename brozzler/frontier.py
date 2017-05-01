@@ -101,14 +101,14 @@ class RethinkDbFrontier:
                         index="sites_last_disclaimed")
                     .order_by(index="sites_last_disclaimed")
                     .filter((r.row["claimed"] != True) | (
-                        r.row["last_claimed"] < r.now() - 2*60*60))
+                        r.row["last_claimed"] < r.now() - 60*60))
                     .limit(1)
                     .update(
                         # try to avoid a race condition resulting in multiple
                         # brozzler-workers claiming the same site
                         # see https://github.com/rethinkdb/rethinkdb/issues/3235#issuecomment-60283038
                         r.branch((r.row["claimed"] != True) | (
-                            r.row["last_claimed"] < r.now() - 2*60*60), {
+                            r.row["last_claimed"] < r.now() - 60*60), {
                                 "claimed": True, "last_claimed_by": worker_id,
                                 "last_claimed": doublethink.utcnow()}, {}),
                             return_changes=True)).run()

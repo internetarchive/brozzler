@@ -30,6 +30,13 @@ import requests
 import tempfile
 import uuid
 import socket
+import time
+import sys
+
+logging.basicConfig(
+        stream=sys.stderr, level=logging.INFO, format=(
+            '%(asctime)s %(process)d %(levelname)s %(threadName)s '
+            '%(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s'))
 
 @pytest.fixture(scope='module')
 def httpd(request):
@@ -184,4 +191,57 @@ def test_start_stop_backwards_compat():
     assert job.starts_and_stops[0]['stop'] == datetime.datetime(2017, 1, 2)
     assert not 'started' in job
     assert not 'finished' in job
+
+def test_thread_raise():
+    let_thread_finish = threading.Event()
+    thread_preamble_done = threading.Event()
+    thread_caught_exception = None
+
+    def thread_target(accept_exceptions=False):
+        try:
+            if accept_exceptions:
+                with brozzler.thread_accept_exceptions():
+                    thread_preamble_done.set()
+                    logging.info('waiting (accepting exceptions)')
+                    let_thread_finish.wait()
+            else:
+                thread_preamble_done.set()
+                logging.info('waiting (not accepting exceptions)')
+                let_thread_finish.wait()
+        except Exception as e:
+            logging.info('caught exception %s', repr(e))
+            nonlocal thread_caught_exception
+            thread_caught_exception = e
+        finally:
+            logging.info('finishing')
+            let_thread_finish.clear()
+            thread_preamble_done.clear()
+
+    # test that thread_raise does not raise exception in a thread that has not
+    # called thread_accept_exceptions
+    thread_caught_exception = None
+    th = threading.Thread(target=lambda: thread_target(accept_exceptions=False))
+    th.start()
+    thread_preamble_done.wait()
+    with pytest.raises(TypeError):
+        brozzler.thread_raise(
+                th, Exception("i'm an instance, which is not allowed"))
+    assert brozzler.thread_raise(th, Exception) is False
+    assert thread_caught_exception is None
+    let_thread_finish.set()
+    th.join()
+    assert thread_caught_exception is None
+
+    # test that thread_raise raises exception in a thread that has called
+    # thread_accept_exceptions
+    thread_caught_exception = None
+    th = threading.Thread(target=lambda: thread_target(accept_exceptions=True))
+    th.start()
+    thread_preamble_done.wait()
+    assert brozzler.thread_raise(th, Exception) is True
+    let_thread_finish.set()
+    th.join()
+    assert thread_caught_exception
+    with pytest.raises(threading.ThreadError): # thread is not running
+        brozzler.thread_raise(th, Exception)
 
