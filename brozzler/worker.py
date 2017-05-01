@@ -35,6 +35,7 @@ import doublethink
 import tempfile
 import urlcanon
 from requests.structures import CaseInsensitiveDict
+import rethinkdb as r
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
@@ -546,6 +547,10 @@ class BrozzlerWorker:
                     pass
                 time.sleep(0.5)
             self.logger.info("shutdown requested")
+        except r.ReqlError as e:
+            self.logger.error(
+                    "caught rethinkdb exception, will try to proceed",
+                    exc_info=True)
         except brozzler.ShutdownRequested:
             self.logger.info("shutdown requested")
         except:
