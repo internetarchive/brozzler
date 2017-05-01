@@ -698,3 +698,39 @@ def test_honor_stop_request():
     with pytest.raises(brozzler.CrawlStopped):
         frontier.honor_stop_request(site)
 
+def test_claim_site():
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    rr.table('sites').delete().run() # clean slate
+
+    with pytest.raises(brozzler.NothingToClaim):
+        claimed_site = frontier.claim_site(worker_id='test_claim_site')
+
+    site = brozzler.Site(rr, {'seed': 'http://example.org/'})
+    brozzler.new_site(frontier, site)
+
+    claimed_site = frontier.claim_site(worker_id='test_claim_site')
+    assert claimed_site.id == site.id
+    assert claimed_site.claimed
+    assert claimed_site.last_claimed >= doublethink.utcnow() - datetime.timedelta(minutes=1)
+    with pytest.raises(brozzler.NothingToClaim):
+        claimed_site = frontier.claim_site(worker_id='test_claim_site')
+
+    # site last_claimed less than 1 hour ago still not to be reclaimed
+    claimed_site.last_claimed = doublethink.utcnow() - datetime.timedelta(minutes=55)
+    claimed_site.save()
+    with pytest.raises(brozzler.NothingToClaim):
+        claimed_site = frontier.claim_site(worker_id='test_claim_site')
+
+    # site last_claimed more than 1 hour ago can be reclaimed
+    site = claimed_site
+    claimed_site = None
+    site.last_claimed = doublethink.utcnow() - datetime.timedelta(minutes=65)
+    site.save()
+    claimed_site = frontier.claim_site(worker_id='test_claim_site')
+    assert claimed_site.id == site.id
+
+    # clean up
+    rr.table('sites').get(claimed_site.id).delete().run()
+
