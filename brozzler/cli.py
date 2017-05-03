@@ -179,8 +179,8 @@ def brozzle_page(argv=None):
         logging.info('wrote screenshot to %s', filename)
 
     browser = brozzler.Browser(chrome_exe=args.chrome_exe)
-    browser.start(proxy=args.proxy)
     try:
+        browser.start(proxy=args.proxy)
         outlinks = worker.brozzle_page(
                 browser, site, page, on_screenshot=on_screenshot)
         logging.info('outlinks: \n\t%s', '\n\t'.join(sorted(outlinks)))
