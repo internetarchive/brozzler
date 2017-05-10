@@ -38,6 +38,10 @@
   behavior_js_template: instagram.js
   request_idle_timeout_sec: 10
 -
+  url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
+  behavior_js_template: huffpostslides.js
+  request_idle_timeout_sec: 10
+-
   url_regex: '^https?://(?:www\.)?brooklynmuseum\.org/exhibitions/.*$'
   behavior_js_template: simpleclicks.js.j2
   default_parameters:
