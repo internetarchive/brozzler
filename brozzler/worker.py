@@ -208,7 +208,11 @@ class BrozzlerWorker:
                     'WARCPROX_WRITE_RECORD request (expected 204)',
                     e.getcode(), e.info())
         except urllib.error.URLError as e:
-            raise brozzler.ProxyError('_warcprox_write_record: %s', e)
+            raise brozzler.ProxyError(
+                    'proxy error on WARCPROX_WRITE_RECORD %s' % url) from e
+        except ConnectionError as e:
+            raise brozzler.ProxyError(
+                    'proxy error on WARCPROX_WRITE_RECORD %s' % url) from e
 
     def _remember_videos(self, page, ydl_spy):
         if not 'videos' in page:
@@ -266,7 +270,8 @@ class BrozzlerWorker:
                     and self._proxy_for(site)):
                 # connection problem when using a proxy == proxy error (XXX?)
                 raise brozzler.ProxyError(
-                        'youtube-dl hit apparent proxy error', e)
+                        'youtube-dl hit apparent proxy error from '
+                        '%s' % page.url) from e
             else:
                 raise
 
@@ -399,7 +404,8 @@ class BrozzlerWorker:
                     page.url, proxies=proxies, headers=site.extra_headers(),
                     verify=False)
         except requests.exceptions.ProxyError as e:
-            raise brozzler.ProxyError(e)
+            raise brozzler.ProxyError(
+                    'proxy error fetching %s' % page.url) from e
 
     def _needs_browsing(self, page, brozzler_spy):
         final_bounces = brozzler_spy.final_bounces(page.url)
