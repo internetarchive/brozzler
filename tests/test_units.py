@@ -192,56 +192,121 @@ def test_start_stop_backwards_compat():
     assert not 'started' in job
     assert not 'finished' in job
 
-def test_thread_raise():
-    let_thread_finish = threading.Event()
-    thread_preamble_done = threading.Event()
-    thread_caught_exception = None
+class Exception1(Exception):
+    pass
+class Exception2(Exception):
+    pass
 
-    def thread_target(accept_exceptions=False):
+def test_thread_raise_not_accept():
+    def never_accept():
         try:
-            if accept_exceptions:
-                with brozzler.thread_accept_exceptions():
-                    thread_preamble_done.set()
-                    logging.info('waiting (accepting exceptions)')
-                    let_thread_finish.wait()
-            else:
-                thread_preamble_done.set()
-                logging.info('waiting (not accepting exceptions)')
-                let_thread_finish.wait()
+            brozzler.sleep(2)
         except Exception as e:
-            logging.info('caught exception %s', repr(e))
+            nonlocal thread_caught_exception
+            thread_caught_exception = e
+
+    # test that thread_raise does not raise exception in a thread that has no
+    # `with thread_exception_gate()` block
+    thread_caught_exception = None
+    th = threading.Thread(target=never_accept)
+    th.start()
+    brozzler.thread_raise(th, Exception1)
+    th.join()
+    assert thread_caught_exception is None
+
+def test_thread_raise_immediate():
+    def accept_immediately():
+        try:
+            with brozzler.thread_accept_exceptions():
+                brozzler.sleep(2)
+        except Exception as e:
+            nonlocal thread_caught_exception
+            thread_caught_exception = e
+
+    # test immediate exception raise
+    thread_caught_exception = None
+    th = threading.Thread(target=accept_immediately)
+    th.start()
+    brozzler.thread_raise(th, Exception1)
+    start = time.time()
+    th.join()
+    assert thread_caught_exception
+    assert isinstance(thread_caught_exception, Exception1)
+    assert time.time() - start < 1.0
+
+def test_thread_raise_safe_exit():
+    def delay_context_exit():
+        gate = brozzler.thread_accept_exceptions()
+        orig_exit = type(gate).__exit__
+        try:
+            type(gate).__exit__ = lambda self, et, ev, t: (
+                    brozzler.sleep(2), orig_exit(self, et, ev, t), False)[-1]
+            with brozzler.thread_accept_exceptions() as gate:
+                brozzler.sleep(2)
+        except Exception as e:
             nonlocal thread_caught_exception
             thread_caught_exception = e
         finally:
-            logging.info('finishing')
-            let_thread_finish.clear()
-            thread_preamble_done.clear()
+            type(gate).__exit__ = orig_exit
 
-    # test that thread_raise does not raise exception in a thread that has not
-    # called thread_accept_exceptions
+    # test that a second thread_raise() doesn't result in an exception in
+    # ThreadExceptionGate.__exit__
     thread_caught_exception = None
-    th = threading.Thread(target=lambda: thread_target(accept_exceptions=False))
+    th = threading.Thread(target=delay_context_exit)
     th.start()
-    thread_preamble_done.wait()
-    with pytest.raises(TypeError):
-        brozzler.thread_raise(
-                th, Exception("i'm an instance, which is not allowed"))
-    assert brozzler.thread_raise(th, Exception) is False
-    assert thread_caught_exception is None
-    let_thread_finish.set()
-    th.join()
-    assert thread_caught_exception is None
-
-    # test that thread_raise raises exception in a thread that has called
-    # thread_accept_exceptions
-    thread_caught_exception = None
-    th = threading.Thread(target=lambda: thread_target(accept_exceptions=True))
-    th.start()
-    thread_preamble_done.wait()
-    assert brozzler.thread_raise(th, Exception) is True
-    let_thread_finish.set()
+    time.sleep(0.2)
+    brozzler.thread_raise(th, Exception1)
+    time.sleep(0.2)
+    brozzler.thread_raise(th, Exception2)
     th.join()
     assert thread_caught_exception
-    with pytest.raises(threading.ThreadError): # thread is not running
-        brozzler.thread_raise(th, Exception)
+    assert isinstance(thread_caught_exception, Exception1)
+
+def test_thread_raise_pending_exception():
+    def accept_eventually():
+        try:
+            brozzler.sleep(2)
+            with brozzler.thread_accept_exceptions():
+                pass
+        except Exception as e:
+            nonlocal thread_caught_exception
+            thread_caught_exception = e
+
+    # test exception that has to wait for `with thread_exception_gate()` block
+    thread_caught_exception = None
+    th = threading.Thread(target=accept_eventually)
+    th.start()
+    brozzler.thread_raise(th, Exception1)
+    start = time.time()
+    th.join()
+    assert isinstance(thread_caught_exception, Exception1)
+    assert time.time() - start > 1.0
+
+def test_thread_raise_second_with_block():
+    def two_with_blocks():
+        try:
+            with brozzler.thread_accept_exceptions():
+                time.sleep(2)
+            return # test fails
+        except Exception1 as e:
+            pass
+        except:
+            return # fail test
+
+        try:
+            with brozzler.thread_accept_exceptions():
+                brozzler.sleep(2)
+        except Exception as e:
+            nonlocal thread_caught_exception
+            thread_caught_exception = e
+
+    # test that second `with` block gets second exception raised during first
+    # `with` block
+    thread_caught_exception = None
+    th = threading.Thread(target=two_with_blocks)
+    th.start()
+    brozzler.thread_raise(th, Exception1)
+    brozzler.thread_raise(th, Exception2)
+    th.join()
+    assert isinstance(thread_caught_exception, Exception2)
 
