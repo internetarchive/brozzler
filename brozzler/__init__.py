@@ -48,7 +48,8 @@ class ReachedLimit(Exception):
 
     def __repr__(self):
         return "ReachedLimit(warcprox_meta=%s,http_payload=%s)" % (
-                repr(self.warcprox_meta), repr(self.http_payload))
+                repr(self.warcprox_meta) if hasattr(self, 'warcprox_meta') else None,
+                repr(self.http_payload) if hasattr(self, 'http_payload') else None)
 
     def __str__(self):
         return self.__repr__()
