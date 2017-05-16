@@ -48,7 +48,7 @@ Mac instructions:
     rethinkdb &>>rethinkdb.log &
 
     # install brozzler with special dependencies pywb and warcprox
-    pip install brozzler[easy]  # in a virtualenv if desired
+    pip3 install brozzler[easy]  # in a virtualenv if desired
 
     # queue a site to crawl
     brozzler-new-site http://example.com/
@@ -72,7 +72,7 @@ To install brozzler only:
 
 ::
 
-    pip install brozzler  # in a virtualenv if desired
+    pip3 install brozzler  # in a virtualenv if desired
 
 Launch one or more workers:
 
