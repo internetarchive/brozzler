@@ -70,7 +70,7 @@ setuptools.setup(
             'websocket-client!=0.39.0',
             'pillow==3.3.0',
             'urlcanon>=0.1.dev16',
-            'doublethink>=0.2.0.dev71',
+            'doublethink>=0.2.0.dev81',
             'rethinkdb>=2.3,<2.4',
             'cerberus==1.0.1',
             'jinja2',
@@ -78,7 +78,7 @@ setuptools.setup(
         extras_require={
             'dashboard': ['flask>=0.11', 'gunicorn'],
             'easy': [
-                'warcprox>=2.1b1.dev60',
+                'warcprox>=2.1b1.dev86',
                 'pywb',
                 'flask>=0.11',
                 'gunicorn'
