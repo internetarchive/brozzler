@@ -494,7 +494,7 @@ class BrozzlerWorker:
         else:
             status_info = {
                 "role": "brozzler-worker",
-                "heartbeat_interval": self.HEARTBEAT_INTERVAL,
+                "ttl": self.HEARTBEAT_INTERVAL * 3,
             }
         status_info["load"] = 1.0 * self._browser_pool.num_in_use() / self._browser_pool.size
         status_info["browser_pool_size"] = self._browser_pool.size
