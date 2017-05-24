@@ -121,9 +121,6 @@ class ThreadExceptionGate:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.logger.info(
-                'self=%s exc_type=%s exc_value=%s', repr(self), repr(exc_type),
-                repr(exc_value))
         assert self.thread == threading.current_thread()
         self.ok_to_raise.clear()
         return False # don't swallow exception
