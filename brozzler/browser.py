@@ -429,11 +429,18 @@ class Browser:
             self.websock_thread.on_response = on_response
         try:
             with brozzler.thread_accept_exceptions():
-                self.navigate_to_page(
-                        page_url, extra_headers=extra_headers,
-                        user_agent=user_agent, timeout=300)
+                self.configure_browser(
+                        extra_headers=extra_headers,
+                        user_agent=user_agent)
+                self.navigate_to_page(page_url, timeout=300)
                 if password:
                     self.try_login(username, password, timeout=300)
+                    # if login redirected us, return to page_url
+                    if page_url != self.url().split('#')[0]:
+                        self.logger.debug(
+                            'login navigated away from %s; returning!',
+                            page_url)
+                        self.navigate_to_page(page_url, timeout=300)
                 if on_screenshot:
                     jpeg_bytes = self.screenshot()
                     on_screenshot(jpeg_bytes)
@@ -479,8 +486,7 @@ class Browser:
             # run behavior again with short timeout?
             # retrieve outlinks again and append to list?
 
-    def navigate_to_page(
-            self, page_url, extra_headers=None, user_agent=None, timeout=300):
+    def configure_browser(self, extra_headers=None, user_agent=None):
         headers = extra_headers or {}
         headers['Accept-Encoding'] = 'identity'
         self.send_to_chrome(
@@ -492,7 +498,7 @@ class Browser:
                     method='Network.setUserAgentOverride',
                     params={'userAgent': user_agent})
 
-        # navigate to the page!
+    def navigate_to_page(self, page_url, timeout=300):
         self.logger.info('navigating to page %s', page_url)
         self.websock_thread.got_page_load_event = None
         self.send_to_chrome(method='Page.navigate', params={'url': page_url})
