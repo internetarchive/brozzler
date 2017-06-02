@@ -434,6 +434,12 @@ class Browser:
                         user_agent=user_agent, timeout=300)
                 if password:
                     self.try_login(username, password, timeout=300)
+                    # if login redirected us, return to page_url
+                    if page_url != self.url().split('#')[0]:
+                        self.logger.info('login navigated to %s, away from %s; returning!', self.url(), page_url)
+                        self.navigate_to_page(
+                                page_url, extra_headers=extra_headers,
+                                user_agent=user_agent, timeout=300)
                 if on_screenshot:
                     jpeg_bytes = self.screenshot()
                     on_screenshot(jpeg_bytes)
