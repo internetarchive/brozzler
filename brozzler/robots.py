@@ -112,12 +112,12 @@ def is_permitted_by_robots(site, url, proxy=None):
             else:
                 if tries_left > 0:
                     logging.warn(
-                            "caught exception fetching robots.txt (%s tries "
-                            "left) for %s: %s", tries_left, url, repr(e))
+                            "caught exception fetching robots.txt (%r tries "
+                            "left) for %r: %r", tries_left, url, e)
                     tries_left -= 1
                 else:
                     logging.error(
                             "caught exception fetching robots.txt (0 tries "
-                            "left) for %s: %s", url, repr(e), exc_info=True)
+                            "left) for %r: %r", url, e, exc_info=True)
                     return False
 

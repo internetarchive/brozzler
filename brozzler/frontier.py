@@ -40,14 +40,13 @@ class RethinkDbFrontier:
     def _ensure_db(self):
         dbs = self.rr.db_list().run()
         if not self.rr.dbname in dbs:
-            self.logger.info(
-                    "creating rethinkdb database %s", repr(self.rr.dbname))
+            self.logger.info("creating rethinkdb database %r", self.rr.dbname)
             self.rr.db_create(self.rr.dbname).run()
         tables = self.rr.table_list().run()
         if not "sites" in tables:
             self.logger.info(
-                    "creating rethinkdb table 'sites' in database %s",
-                    repr(self.rr.dbname))
+                    "creating rethinkdb table 'sites' in database %r",
+                    self.rr.dbname)
             self.rr.table_create(
                     "sites", shards=self.shards, replicas=self.replicas).run()
             self.rr.table("sites").index_create("sites_last_disclaimed", [
@@ -55,8 +54,8 @@ class RethinkDbFrontier:
             self.rr.table("sites").index_create("job_id").run()
         if not "pages" in tables:
             self.logger.info(
-                    "creating rethinkdb table 'pages' in database %s",
-                    repr(self.rr.dbname))
+                    "creating rethinkdb table 'pages' in database %r",
+                    self.rr.dbname)
             self.rr.table_create(
                     "pages", shards=self.shards, replicas=self.replicas).run()
             self.rr.table("pages").index_create("priority_by_site", [
@@ -69,8 +68,8 @@ class RethinkDbFrontier:
                 r.row["hops_from_seed"]]).run()
         if not "jobs" in tables:
             self.logger.info(
-                    "creating rethinkdb table 'jobs' in database %s",
-                    repr(self.rr.dbname))
+                    "creating rethinkdb table 'jobs' in database %r",
+                    self.rr.dbname)
             self.rr.table_create(
                     "jobs", shards=self.shards, replicas=self.replicas).run()
 
@@ -86,10 +85,13 @@ class RethinkDbFrontier:
                 expected = 0
             if isinstance(expected, list):
                 if result.get(k) not in kwargs[k]:
-                    raise UnexpectedDbResult("expected {} to be one of {} in {}".format(repr(k), expected, result))
+                    raise UnexpectedDbResult(
+                            "expected %r to be one of %r in %r" % (
+                                k, expected, result))
             else:
                 if result.get(k) != expected:
-                    raise UnexpectedDbResult("expected {} to be {} in {}".format(repr(k), expected, result))
+                    raise UnexpectedDbResult("expected %r to be %r in %r" % (
+                        k, expected, result))
 
     def claim_site(self, worker_id):
         # XXX keep track of aggregate priority and prioritize sites accordingly?
