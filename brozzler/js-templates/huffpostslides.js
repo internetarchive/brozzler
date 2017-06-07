@@ -2,7 +2,7 @@
  * brozzler/behaviors.d/huffpostslides.js - from article, start slideshow and 
  * click through end
  *
- * Copyright (C) 2014-2016 Internet Archive
+ * Copyright (C) 2014-2017 Internet Archive
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
