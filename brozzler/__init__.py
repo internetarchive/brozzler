@@ -47,9 +47,9 @@ class ReachedLimit(Exception):
             self.http_payload = http_payload
 
     def __repr__(self):
-        return "ReachedLimit(warcprox_meta=%s,http_payload=%s)" % (
-                repr(self.warcprox_meta) if hasattr(self, 'warcprox_meta') else None,
-                repr(self.http_payload) if hasattr(self, 'http_payload') else None)
+        return "ReachedLimit(warcprox_meta=%r,http_payload=%r)" % (
+                self.warcprox_meta if hasattr(self, 'warcprox_meta') else None,
+                self.http_payload if hasattr(self, 'http_payload') else None)
 
     def __str__(self):
         return self.__repr__()
@@ -94,8 +94,8 @@ def behavior_script(url, template_parameters=None):
                     behavior['behavior_js_template'])
             script = template.render(parameters)
             logging.info(
-                    'using template=%s populated with parameters=%s for %s',
-                    repr(behavior['behavior_js_template']), parameters, url)
+                    'using template=%r populated with parameters=%r for %r',
+                    behavior['behavior_js_template'], parameters, url)
             return script
     return None
 
@@ -129,8 +129,8 @@ class ThreadExceptionGate:
         with self.lock:
             if self.pending_exception:
                 self.logger.warn(
-                        '%s already pending for thread %s, discarding %s',
-                        repr(self.pending_exception), self.thread, repr(e))
+                        '%r already pending for thread %r, discarding %r',
+                        self.pending_exception, self.thread, e)
             else:
                 self.pending_exception = e
 

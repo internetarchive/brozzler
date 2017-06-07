@@ -413,7 +413,7 @@ def brozzler_list_jobs(argv=None):
         if result:
             results = [reql.run()]
         else:
-            logging.error('no such job with id %s', repr(job_id))
+            logging.error('no such job with id %r', job_id)
             sys.exit(1)
     else:
         reql = rr.table('jobs').order_by('id')
@@ -657,7 +657,7 @@ def brozzler_stop_crawl(argv=None):
             job_id = args.job_id
         job = brozzler.Job.load(rr, job_id)
         if not job:
-            logging.fatal('job not found with id=%s', repr(job_id))
+            logging.fatal('job not found with id=%r', job_id)
             sys.exit(1)
         job.stop_requested = doublethink.utcnow()
         job.save()
@@ -668,7 +668,7 @@ def brozzler_stop_crawl(argv=None):
             site_id = args.site_id
         site = brozzler.Site.load(rr, site_id)
         if not site:
-            logging.fatal('site not found with id=%s', repr(site_id))
+            logging.fatal('site not found with id=%r', site_id)
             sys.exit(1)
         site.stop_requested = doublethink.utcnow()
         site.save()

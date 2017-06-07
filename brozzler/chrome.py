@@ -137,8 +137,7 @@ class Chrome:
         if proxy:
             chrome_args.append('--proxy-server=%s' % proxy)
         chrome_args.append('about:blank')
-        self.logger.info(
-                'running: %s', repr(subprocess.list2cmdline(chrome_args)))
+        self.logger.info('running: %r', subprocess.list2cmdline(chrome_args))
         # start_new_session - new process group so we can kill the whole group
         self.chrome_process = subprocess.Popen(
                 chrome_args, env=new_env, start_new_session=True,
@@ -173,7 +172,7 @@ class Chrome:
                     return url
             except brozzler.ShutdownRequested:
                 raise
-            except BaseException as e:
+            except Exception as e:
                 if time.time() - self._last_warning > 30:
                     self.logger.warn(
                             'problem with %s (will keep trying until timeout '

@@ -135,8 +135,8 @@ class BrozzlerWorker:
             site.proxy = '%s:%s' % (svc['host'], svc['port'])
             site.save()
             self.logger.info(
-                    'chose warcprox instance %s from service registry for %s',
-                    repr(site.proxy), site)
+                    'chose warcprox instance %r from service registry for %r',
+                    site.proxy, site)
             return site.proxy
         return None
 
@@ -428,8 +428,8 @@ class BrozzlerWorker:
             page = None
             self._frontier.honor_stop_request(site)
             self.logger.info(
-                    "brozzling site (proxy=%s) %s",
-                    repr(self._proxy_for(site)), site)
+                    "brozzling site (proxy=%r) %r",
+                    self._proxy_for(site), site)
             start = time.time()
             while time.time() - start < 7 * 60:
                 site.refresh()
@@ -473,7 +473,7 @@ class BrozzlerWorker:
                 # using brozzler-worker --proxy, nothing to do but try the
                 # same proxy again next time
                 logging.error(
-                        'proxy error (site.proxy=%s): %s', repr(site.proxy), e)
+                        'proxy error (site.proxy=%r): %r', site.proxy, e)
         except:
             self.logger.critical("unexpected exception", exc_info=True)
         finally:
