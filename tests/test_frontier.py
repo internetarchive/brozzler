@@ -723,14 +723,17 @@ def test_claim_site():
     with pytest.raises(brozzler.NothingToClaim):
         claimed_site = frontier.claim_site(worker_id='test_claim_site')
 
-    # site last_claimed more than 1 hour ago can be reclaimed
+    ### temporarily changing this behavior
+    ### # site last_claimed more than 1 hour ago can be reclaimed
     site = claimed_site
     claimed_site = None
     site.last_claimed = doublethink.utcnow() - datetime.timedelta(minutes=65)
     site.save()
-    claimed_site = frontier.claim_site(worker_id='test_claim_site')
-    assert claimed_site.id == site.id
+    ### claimed_site = frontier.claim_site(worker_id='test_claim_site')
+    ### assert claimed_site.id == site.id
+    with pytest.raises(brozzler.NothingToClaim):
+        claimed_site = frontier.claim_site(worker_id='test_claim_site')
 
     # clean up
-    rr.table('sites').get(claimed_site.id).delete().run()
+    rr.table('sites').get(site.id).delete().run()
 
