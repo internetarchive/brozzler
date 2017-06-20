@@ -1,5 +1,5 @@
 /*
- * brozzler/behaviors.d/pm-ca.js - behavior for http://pm.gc.ca/eng/news
+ * brozzler/behaviors.d/pm-ca.js - behavior for http://pitchfork.com/festival/chicago/
  *
  * Copyright (C) 2014-2017 Internet Archive
  *
@@ -45,6 +45,35 @@ var umbraBehavior = {
 		}
 
 		for (var j = 0; j < documents.length; j++) {
+            var closeTargets = documents[j].querySelectorAll(closeSelector);
+			for (var i = 0; i < closeTargets.length; i++) {
+				if (!this.isVisible(closeTargets[i])) {
+					continue;
+				}
+
+				var where = this.aboveBelowOrOnScreen(closeTargets[i]);
+
+				if (where == 0) {
+					// console.log("clicking on " + clickTargets[i].outerHTML);
+					// do mouse over event on click target
+					// since some urls are requsted only on
+					// this event - see
+					// https://webarchive.jira.com/browse/AITFIVE-451
+					var mouseOverEvent = document.createEvent('Events');
+					mouseOverEvent.initEvent("mouseover",true, false);
+					closeTargets[i].dispatchEvent(mouseOverEvent);
+					closeTargets[i].click();
+					clickedSomething = true;
+					this.idleSince = null;
+
+					break; //break from closeTargets loop, but not from iframe loop
+				} else if (where > 0) {
+					somethingLeftBelow = true;
+				} else if (where < 0) {
+					somethingLeftAbove = true;
+				}
+			}
+
 			var clickTargets = documents[j].querySelectorAll(cssSelector);
 			for (var i = 0; i < clickTargets.length; i++) {
 				if (!this.isVisible(clickTargets[i])) {
@@ -69,11 +98,6 @@ var umbraBehavior = {
 					clickedSomething = true;
 					this.idleSince = null;
 					this.itemsText += clickTargets[i].innerText;
-
-                    var closeTarget = documents[j].querySelectorAll(closeSelector);
-                    if (closeTarget != []) {
-                        closeTarget[0].click()
-                    }
 
 					break; //break from clickTargets loop, but not from iframe loop
 				} else if (where > 0) {
