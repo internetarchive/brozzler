@@ -180,6 +180,10 @@ class BrozzlerWorker:
             "nopart": True,
             "no_color": True,
             "progress_hooks": [ydl_progress],
+             # https://github.com/rg3/youtube-dl/blob/master/README.md#format-selection
+             # "best: Select the best quality format represented by a single
+             # file with video and audio."
+            "format": "best/bestvideo+bestaudio",
         }
         if self._proxy_for(site):
             ydl_opts["proxy"] = "http://{}".format(self._proxy_for(site))
