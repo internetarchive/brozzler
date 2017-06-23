@@ -5,6 +5,7 @@ python:
 - 3.6
 sudo: required
 dist: trusty
+group: deprecated-2017Q2  # https://blog.travis-ci.com/2017-06-21-trusty-updates-2017-Q2-launch
 before_install:
 - sudo pip install ansible==2.1.3.0
 install:

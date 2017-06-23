@@ -102,28 +102,21 @@ class RethinkDbFrontier:
                         ["ACTIVE", r.minval], ["ACTIVE", r.maxval],
                         index="sites_last_disclaimed")
                     .order_by(index="sites_last_disclaimed")
-                    .filter(r.row["claimed"] != True)
-                    # XXX
-                    # .filter((r.row["claimed"] != True) | (
-                    #     r.row["last_claimed"] < r.now() - 60*60))
+                    .filter((r.row["claimed"] != True) | (
+                        r.row["last_claimed"] < r.now() - 60*60))
                     .limit(1)
                     .update(
                         # try to avoid a race condition resulting in multiple
                         # brozzler-workers claiming the same site
                         # see https://github.com/rethinkdb/rethinkdb/issues/3235#issuecomment-60283038
-                        r.branch(r.row["claimed"] != True, {
+                        r.branch((r.row["claimed"] != True) | (
+                            r.row["last_claimed"] < r.now() - 60*60), {
                                 "claimed": True, "last_claimed_by": worker_id,
                                 "last_claimed": doublethink.utcnow()}, {}),
-                        # XXX
-                        # r.branch((r.row["claimed"] != True) | (
-                        #     r.row["last_claimed"] < r.now() - 60*60), {
-                        #         "claimed": True, "last_claimed_by": worker_id,
-                        #         "last_claimed": doublethink.utcnow()}, {}),
                             return_changes=True)).run()
             self._vet_result(result, replaced=[0,1], unchanged=[0,1])
             if result["replaced"] == 1:
                 if result["changes"][0]["old_val"]["claimed"]:
-                    # XXX impossible at the moment
                     self.logger.warn(
                             "re-claimed site that was still marked 'claimed' "
                             "because it was last claimed a long time ago "

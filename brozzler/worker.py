@@ -36,6 +36,7 @@ import tempfile
 import urlcanon
 from requests.structures import CaseInsensitiveDict
 import rethinkdb as r
+import datetime
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
@@ -156,7 +157,18 @@ class BrozzlerWorker:
         else:
             return bool(site.proxy or self._warcprox_auto)
 
+
     def _youtube_dl(self, destdir, site):
+        def ydl_progress(*args, **kwargs):
+            # in case youtube-dl takes a long time, heartbeat site.last_claimed
+            # to prevent another brozzler-worker from claiming the site
+            if site.rr and doublethink.utcnow() - site.last_claimed > datetime.timedelta(minutes=7):
+                self.logger.debug(
+                        'heartbeating site.last_claimed to prevent another '
+                        'brozzler-worker claiming this site id=%r', site.id)
+                site.last_claimed = doublethink.utcnow()
+                site.save()
+
         ydl_opts = {
             "outtmpl": "{}/ydl%(autonumber)s.out".format(destdir),
             "verbose": False,
@@ -167,6 +179,11 @@ class BrozzlerWorker:
             "noprogress": True,
             "nopart": True,
             "no_color": True,
+            "progress_hooks": [ydl_progress],
+             # https://github.com/rg3/youtube-dl/blob/master/README.md#format-selection
+             # "best: Select the best quality format represented by a single
+             # file with video and audio."
+            "format": "best/bestvideo+bestaudio",
         }
         if self._proxy_for(site):
             ydl_opts["proxy"] = "http://{}".format(self._proxy_for(site))

@@ -12,7 +12,6 @@ an example
 
     id: myjob
     time_limit: 60 # seconds
-    proxy: 127.0.0.1:8000 # point at warcprox for archiving
     ignore_robots: false
     warcprox_meta:
       warc-prefix: job1
@@ -82,8 +81,8 @@ Notice that:
 settings reference
 ==================
 
-id
---
+``id``
+------
 +-----------+--------+----------+--------------------------+
 | scope     | type   | required | default                  |
 +===========+========+==========+==========================+
@@ -92,8 +91,8 @@ id
 An arbitrary identifier for this job. Must be unique across this deployment of
 brozzler.
 
-seeds
------
+``seeds``
+---------
 +-----------+------------------------+----------+---------+
 | scope     | type                   | required | default |
 +===========+========================+==========+=========+
@@ -103,8 +102,8 @@ List of seeds. Each item in the list is a dictionary (associative array) which
 defines the seed. It must specify ``url`` (see below) and can additionally
 specify any of the settings of scope *seed-level*.
 
-url
----
+``url``
+-------
 +------------+--------+----------+---------+
 | scope      | type   | required | default |
 +============+========+==========+=========+
@@ -112,8 +111,11 @@ url
 +------------+--------+----------+---------+
 The seed url.
 
-time_limit
-----------
+``metadata``
+------------
+
+``time_limit``
+--------------
 +-----------------------+--------+----------+---------+
 | scope                 | type   | required | default |
 +=======================+========+==========+=========+
@@ -124,28 +126,18 @@ enforced at the seed level. If a time limit is specified at the top level, it
 is inherited by each seed as described above, and enforced individually on each
 seed.
 
-proxy
------
-+-----------------------+--------+----------+---------+
-| scope                 | type   | required | default |
-+=======================+========+==========+=========+
-| seed-level, top-level | string | no       | *none*  |
-+-----------------------+--------+----------+---------+
-HTTP proxy, with the format ``host:port``. Typically configured to point to
-warcprox for archival crawling.
-
-ignore_robots
--------------
-+-----------------------+---------+----------+---------+
-| scope                 | type    | required | default |
-+=======================+=========+==========+=========+
-| seed-level, top-level | boolean | no       | false   |
-+-----------------------+---------+----------+---------+
+``ignore_robots``
+-----------------
++-----------------------+---------+----------+-----------+
+| scope                 | type    | required | default   |
++=======================+=========+==========+===========+
+| seed-level, top-level | boolean | no       | ``false`` |
++-----------------------+---------+----------+-----------+
 If set to ``true``, brozzler will happily crawl pages that would otherwise be
 blocked by robots.txt rules.
 
-user_agent
-----------
+``user_agent``
+--------------
 +-----------------------+---------+----------+---------+
 | scope                 | type    | required | default |
 +=======================+=========+==========+=========+
@@ -156,13 +148,13 @@ It's good ettiquette to include a project URL with a notice to webmasters that
 explains why you're crawling, how to block the crawler robots.txt and how to
 contact the operator if the crawl is causing problems.
 
-warcprox_meta
--------------
-+-----------------------+------------+----------+---------+
-| scope                 | type       | required | default |
-+=======================+============+==========+=========+
-| seed-level, top-level | dictionary | no       | false   |
-+-----------------------+------------+----------+---------+
+``warcprox_meta``
+-----------------
++-----------------------+------------+----------+-----------+
+| scope                 | type       | required | default   |
++=======================+============+==========+===========+
+| seed-level, top-level | dictionary | no       | ``false`` |
++-----------------------+------------+----------+-----------+
 Specifies the Warcprox-Meta header to send with every request, if ``proxy`` is
 configured. The value of the Warcprox-Meta header is a json blob. It is used to
 pass settings and information to warcprox. Warcprox does not forward the header
@@ -183,11 +175,37 @@ becomes::
 
     Warcprox-Meta: {"warc-prefix":"job1-seed1","stats":{"buckets":["job1-stats","job1-seed1-stats"]}}
 
-scope
------
-+-----------------------+------------+----------+---------+
-| scope                 | type       | required | default |
-+=======================+============+==========+=========+
-| seed-level, top-level | dictionary | no       | false   |
-+-----------------------+------------+----------+---------+
+``scope``
+---------
++-----------------------+------------+----------+-----------+
+| scope                 | type       | required | default   |
++=======================+============+==========+===========+
+| seed-level, top-level | dictionary | no       | ``false`` |
++-----------------------+------------+----------+-----------+
 Scope rules. *TODO*
+
+``surt``
+--------
++-------------+--------+----------+---------------------------+
+| scope       | type   | required | default                   |
++=============+========+==========+===========================+
+| scope-level | string | no       | *generated from seed url* |
++-------------+--------+----------+---------------------------+
+
+``accepts``
+-----------
++-------------+------+----------+---------+
+| scope       | type | required | default |
++=============+======+==========+=========+
+| scope-level | list | no       | *none*  |
++-------------+------+----------+---------+
+
+``blocks``
+-----------
++-------------+------+----------+---------+
+| scope       | type | required | default |
++=============+======+==========+=========+
+| scope-level | list | no       | *none*  |
++-------------+------+----------+---------+
+
+
