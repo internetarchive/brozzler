@@ -471,7 +471,9 @@ def brozzler_list_sites(argv=None):
     elif args.jobless:
         reql = reql.filter(~r.row.has_fields('job_id'))
     elif args.active:
-        reql = reql.filter({'status': 'ACTIVE'})
+        reql = reql.between(
+                ['ACTIVE', r.minval], ['ACTIVE', r.maxval],
+                index='sites_last_disclaimed')
     logging.debug('querying rethinkdb: %s', reql)
     results = reql.run()
     if args.yaml:
