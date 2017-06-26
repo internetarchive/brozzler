@@ -162,12 +162,17 @@ class BrozzlerWorker:
         def ydl_progress(*args, **kwargs):
             # in case youtube-dl takes a long time, heartbeat site.last_claimed
             # to prevent another brozzler-worker from claiming the site
-            if site.rr and doublethink.utcnow() - site.last_claimed > datetime.timedelta(minutes=7):
+            try:
+                if site.rr and doublethink.utcnow() - site.last_claimed > datetime.timedelta(minutes=7):
+                    self.logger.debug(
+                            'heartbeating site.last_claimed to prevent another '
+                            'brozzler-worker claiming this site id=%r', site.id)
+                    site.last_claimed = doublethink.utcnow()
+                    site.save()
+            except:
                 self.logger.debug(
-                        'heartbeating site.last_claimed to prevent another '
-                        'brozzler-worker claiming this site id=%r', site.id)
-                site.last_claimed = doublethink.utcnow()
-                site.save()
+                        'problem heartbeating site.last_claimed site id=%r',
+                        site.id, exc_info=True)
 
         ydl_opts = {
             "outtmpl": "{}/ydl%(autonumber)s.out".format(destdir),
