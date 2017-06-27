@@ -447,12 +447,12 @@ class BrozzlerWorker:
 
     def brozzle_site(self, browser, site):
         try:
+            start = time.time()
             page = None
             self._frontier.honor_stop_request(site)
             self.logger.info(
                     "brozzling site (proxy=%r) %r",
                     self._proxy_for(site), site)
-            start = time.time()
             while time.time() - start < 7 * 60:
                 site.refresh()
                 self._frontier.honor_stop_request(site)
@@ -499,7 +499,8 @@ class BrozzlerWorker:
         except:
             self.logger.critical("unexpected exception", exc_info=True)
         finally:
-            site.active_brozzling_time = (site.active_brozzling_time or 0) + time.time() - start
+            if start:
+                site.active_brozzling_time = (site.active_brozzling_time or 0) + time.time() - start
             self._frontier.disclaim_site(site, page)
 
     def _brozzle_site_thread_target(self, browser, site):
