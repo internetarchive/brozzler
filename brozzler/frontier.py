@@ -135,10 +135,11 @@ class RethinkDbFrontier:
 
     def _enforce_time_limit(self, site):
         if (site.time_limit and site.time_limit > 0
-                and site.elapsed() > site.time_limit):
+                and (site.active_brozzling_time or 0) > site.time_limit):
             self.logger.debug(
-                    "site FINISHED_TIME_LIMIT! time_limit=%s elapsed=%s %s",
-                    site.time_limit, site.elapsed(), site)
+                    "site FINISHED_TIME_LIMIT! time_limit=%s "
+                    "active_brozzling_time=%s %s", site.time_limit,
+                    site.active_brozzling_time, site)
             self.finished(site, "FINISHED_TIME_LIMIT")
             return True
         else:

@@ -499,6 +499,7 @@ class BrozzlerWorker:
         except:
             self.logger.critical("unexpected exception", exc_info=True)
         finally:
+            site.active_brozzling_time = (site.active_brozzling_time or 0) + time.time() - start
             self._frontier.disclaim_site(site, page)
 
     def _brozzle_site_thread_target(self, browser, site):
