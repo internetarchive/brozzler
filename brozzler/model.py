@@ -119,7 +119,15 @@ def new_site(frontier, site):
 
 class ElapsedMixIn(object):
     def elapsed(self):
-        '''Returns elapsed crawl time as a float in seconds.'''
+        '''
+        Returns elapsed crawl time as a float in seconds.
+
+        This metric includes all the time that a site was in active rotation,
+        including any time it spent waiting for its turn to be brozzled.
+
+        In contrast `Site.active_brozzling_time` only counts time when a
+        brozzler worker claimed the site and was actively brozzling it.
+        '''
         dt = 0
         for ss in self.starts_and_stops[:-1]:
             dt += (ss['stop'] - ss['start']).total_seconds()
