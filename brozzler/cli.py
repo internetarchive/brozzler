@@ -299,6 +299,12 @@ def brozzler_worker(argv=None):
             help=(
                 'when needed, choose an available instance of warcprox from '
                 'the rethinkdb service registry'))
+    arg_parser.add_argument(
+            '--skip-extract-outlinks', dest='skip_extract_outlinks',
+            action='store_true', help='extract page outlinks by default')
+    arg_parser.add_argument(
+            '--skip-visit-hashtags', dest='skip_visit_hashtags',
+            action='store_true', help='visit page hashtags by default')
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -331,7 +337,9 @@ def brozzler_worker(argv=None):
     worker = brozzler.worker.BrozzlerWorker(
             frontier, service_registry, max_browsers=int(args.max_browsers),
             chrome_exe=args.chrome_exe, proxy=args.proxy,
-            warcprox_auto=args.warcprox_auto)
+            warcprox_auto=args.warcprox_auto,
+            skip_extract_outlinks=args.skip_extract_outlinks,
+            skip_visit_hashtags=args.skip_visit_hashtags)
 
     signal.signal(signal.SIGQUIT, dump_state)
     signal.signal(signal.SIGTERM, lambda s,f: worker.stop())

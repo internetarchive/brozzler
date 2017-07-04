@@ -103,7 +103,8 @@ class BrozzlerWorker:
 
     def __init__(
             self, frontier, service_registry=None, max_browsers=1,
-            chrome_exe="chromium-browser", warcprox_auto=False, proxy=None):
+            chrome_exe="chromium-browser", warcprox_auto=False, proxy=None,
+            skip_extract_outlinks=False, skip_visit_hashtags=False):
         self._frontier = frontier
         self._service_registry = service_registry
         self._max_browsers = max_browsers
@@ -112,6 +113,8 @@ class BrozzlerWorker:
         self._proxy = proxy
         assert not (warcprox_auto and proxy)
         self._proxy_is_warcprox = None
+        self._skip_extract_outlinks = skip_extract_outlinks
+        self._skip_visit_hashtags = skip_visit_hashtags
 
         self._browser_pool = brozzler.browser.BrowserPool(
                 max_browsers, chrome_exe=chrome_exe, ignore_cert_errors=True)
@@ -406,7 +409,9 @@ class BrozzlerWorker:
                 username=site.get('username'), password=site.get('password'),
                 user_agent=site.get('user_agent'),
                 on_screenshot=_on_screenshot, on_response=_on_response,
-                hashtags=page.hashtags)
+                hashtags=page.hashtags,
+                skip_extract_outlinks=self._skip_extract_outlinks,
+                skip_visit_hashtags=self._skip_visit_hashtags)
         if final_page_url != page.url:
             page.note_redirect(final_page_url)
         return outlinks
