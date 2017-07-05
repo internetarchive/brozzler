@@ -154,6 +154,12 @@ def brozzle_page(argv=None):
             help='use this password to try to log in if a login form is found')
     arg_parser.add_argument(
             '--proxy', dest='proxy', default=None, help='http proxy')
+    arg_parser.add_argument(
+            '--skip-extract-outlinks', dest='skip_extract_outlinks',
+            action='store_true', help='skip extracting page outlinks')
+    arg_parser.add_argument(
+            '--skip-visit-hashtags', dest='skip_visit_hashtags',
+            action='store_true', help='skip visiting page hashtags')
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -166,7 +172,9 @@ def brozzle_page(argv=None):
         'id': -1, 'seed': args.url, 'behavior_parameters': behavior_parameters,
         'username': args.username, 'password': args.password})
     page = brozzler.Page(None, {'url': args.url, 'site_id': site.id})
-    worker = brozzler.BrozzlerWorker(frontier=None, proxy=args.proxy)
+    worker = brozzler.BrozzlerWorker(frontier=None, proxy=args.proxy,
+        skip_extract_outlinks=args.skip_extract_outlinks,
+        skip_visit_hashtags=args.skip_visit_hashtags)
 
     def on_screenshot(screenshot_png):
         OK_CHARS = (string.ascii_letters + string.digits)
@@ -301,10 +309,10 @@ def brozzler_worker(argv=None):
                 'the rethinkdb service registry'))
     arg_parser.add_argument(
             '--skip-extract-outlinks', dest='skip_extract_outlinks',
-            action='store_true', help='extract page outlinks by default')
+            action='store_true', help='skip extracting page outlinks')
     arg_parser.add_argument(
             '--skip-visit-hashtags', dest='skip_visit_hashtags',
-            action='store_true', help='visit page hashtags by default')
+            action='store_true', help='skip visiting page hashtags')
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
