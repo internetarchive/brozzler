@@ -39,6 +39,15 @@
   request_idle_timeout_sec: 10
 -
   url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: .slideshow
+        do: click
+      - selector: .slideshow-overlay__container__left__nav__next
+        do: click
+-
+  url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
   behavior_js_template: huffpostslides.js
   request_idle_timeout_sec: 10
 -
@@ -108,6 +117,13 @@
   url_regex: '^https?://(?:www\.)?fec.gov/data/.*$'
   behavior_js_template: fec_gov.js
   request_idle_timeout_sec: 10
+- url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: .menu-item a
+        do: mouseover
+        do_until_hard_timeout: False
 - url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
   behavior_js_template: mouseovers.js.j2
   default_parameters:
