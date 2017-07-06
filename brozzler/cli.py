@@ -156,10 +156,10 @@ def brozzle_page(argv=None):
             '--proxy', dest='proxy', default=None, help='http proxy')
     arg_parser.add_argument(
             '--skip-extract-outlinks', dest='skip_extract_outlinks',
-            action='store_true', help='skip extracting page outlinks')
+            action='store_true', help=argparse.SUPPRESS)
     arg_parser.add_argument(
             '--skip-visit-hashtags', dest='skip_visit_hashtags',
-            action='store_true', help='skip visiting page hashtags')
+            action='store_true', help=argparse.SUPPRESS)
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -309,10 +309,10 @@ def brozzler_worker(argv=None):
                 'the rethinkdb service registry'))
     arg_parser.add_argument(
             '--skip-extract-outlinks', dest='skip_extract_outlinks',
-            action='store_true', help='skip extracting page outlinks')
+            action='store_true', help=argparse.SUPPRESS)
     arg_parser.add_argument(
             '--skip-visit-hashtags', dest='skip_visit_hashtags',
-            action='store_true', help='skip visiting page hashtags')
+            action='store_true', help=argparse.SUPPRESS)
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
