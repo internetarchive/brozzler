@@ -144,6 +144,13 @@
      click_css_selector: img#navForward1
      click_until_hard_timeout: True
   request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-5210
+  url_regex: '^https?://(?:www\.)?ssab.gov/Our-Work$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: input[type=button][value=Next]
+     click_until_hard_timeout: False
+  request_idle_timeout_sec: 10
 - # default fallback behavior
   url_regex: '^.*$'
   request_idle_timeout_sec: 10
