@@ -29,7 +29,7 @@ var umbraAboveBelowOrOnScreen = function(e) {
 }
 
 var UMBRA_IFRAME_SOUNDCLOUD_EMBEDDED_SELECTOR = "iframe";
-var UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR = "button.sc-button-play, button.playButton";
+var UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR = "button.sc-button-play, button.playButton, .compactTrackListItem__plays";
 var MAX_IFRAME_RECURSE_DEPTH = 1; //0-based
 var umbraState = {'idleSince':null};
 var umbraAlreadyClicked = {};
