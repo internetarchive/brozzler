@@ -22,18 +22,23 @@ var umbraBehavior = {
     alreadyDone : [],
     idleSince : null,
     intervalId : null,
+    actions : {{actions|json}},
 
     intervalFunc: function() {
         var didSomething = false;
         var somethingLeftBelow = false;
         var somethingLeftAbove = false;
-
-        var actions = {{actions|json}};
-        var actionsLength = actions.length;
+        var actionsLength = this.actions.length;
 
         for (var k = 0; k < actionsLength; k++) {
-            var selector = actions[k].selector;
-            var action = actions[k].do;
+            var selector = this.actions[k].selector;
+            var action = this.actions[k].do ? this.actions[k].do : 'click';
+            if (this.actions[k].limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= this.actions[k].limit) {
+                continue;
+            }
+            if (this.actions[k].limit && !(this.actions[k].alreadyDone)) {
+                this.actions[k].alreadyDone = [];
+            }
 
             var iframes = document.querySelectorAll("iframe");
             var documents = Array(iframes.length + 1);
@@ -47,20 +52,33 @@ var umbraBehavior = {
             documentsLength = documents.length;
             for (var j = 0; j < documentsLength; j++) {
 
+                if (this.actions[k].limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= this.actions[k].limit) {
+                    break;
+                }
                 var doTargets = documents[j].querySelectorAll(selector);
+                if (doTargets == []) {
+                    continue;
+                }
 
                 doTargetsLength = doTargets.length;
                 for ( var i = 0; i < doTargetsLength; i++) {
+                    if (this.actions[k].limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= this.actions[k].limit) {
+                        break;
+                    }
                     if (this.alreadyDone.indexOf(doTargets[i]) > -1) {
                         continue;
                     }
                     if (!this.isVisible(doTargets[i])) {
                         continue;
                     }
+
                     var where = this.aboveBelowOrOnScreen(doTargets[i]);
                     if (where == 0) {
                         this.doTarget(doTargets[i], action);
                         didSomething = true;
+                        if (this.actions[k].alreadyDone) {
+                            this.actions[k].alreadyDone.push(doTargets[i]);
+                        }
                     } else if (where > 0) {
                         somethingLeftBelow = true;
                     } else if (where < 0) {
@@ -90,7 +108,7 @@ var umbraBehavior = {
                 }
             }
 
-            if (!idleSince) {
+            if (!this.idleSince) {
                 this.idleSince = Date.now();
             }
         }
