@@ -74,7 +74,11 @@ var umbraBehavior = {
 					somethingLeftAbove = true;
 				}
 			}
+<<<<<<< HEAD
             
+=======
+
+>>>>>>> @{-1}
 			var clickTargets = documents[j].querySelectorAll(cssSelector);
 			for (var i = 0; i < clickTargets.length; i++) {
 				if (!this.isVisible(clickTargets[i])) {

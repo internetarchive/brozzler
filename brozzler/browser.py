@@ -379,7 +379,8 @@ class Browser:
             self, page_url, ignore_cert_errors=False, extra_headers=None,
             user_agent=None, behavior_parameters=None,
             on_request=None, on_response=None, on_screenshot=None,
-            username=None, password=None, hashtags=None):
+            username=None, password=None, hashtags=None,
+            skip_extract_outlinks=False, skip_visit_hashtags=False):
         '''
         Browses page in browser.
 
@@ -447,8 +448,12 @@ class Browser:
                 behavior_script = brozzler.behavior_script(
                         page_url, behavior_parameters)
                 self.run_behavior(behavior_script, timeout=900)
-                outlinks = self.extract_outlinks()
-                self.visit_hashtags(page_url, hashtags, outlinks)
+                if skip_extract_outlinks:
+                    outlinks = []
+                else:
+                    outlinks = self.extract_outlinks()
+                if not skip_visit_hashtags:
+                    self.visit_hashtags(page_url, hashtags, outlinks)
                 final_page_url = self.url()
                 return final_page_url, outlinks
         except brozzler.ReachedLimit:
