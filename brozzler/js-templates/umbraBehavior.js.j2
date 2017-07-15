@@ -33,10 +33,11 @@ var umbraBehavior = {
         for (var k = 0; k < actionsLength; k++) {
             var selector = this.actions[k].selector;
             var action = this.actions[k].do ? this.actions[k].do : 'click';
-            if (this.actions[k].limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= this.actions[k].limit) {
+            var limit = this.actions[k].limit ? this.actions[k].limit : 0;
+            if (limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= limit) {
                 continue;
             }
-            if (this.actions[k].limit && !(this.actions[k].alreadyDone)) {
+            if (limit && !(this.actions[k].alreadyDone)) {
                 this.actions[k].alreadyDone = [];
             }
 
@@ -52,9 +53,6 @@ var umbraBehavior = {
             documentsLength = documents.length;
             for (var j = 0; j < documentsLength; j++) {
 
-                if (this.actions[k].limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= this.actions[k].limit) {
-                    break;
-                }
                 var doTargets = documents[j].querySelectorAll(selector);
                 if (doTargets == []) {
                     continue;
@@ -62,7 +60,7 @@ var umbraBehavior = {
 
                 doTargetsLength = doTargets.length;
                 for ( var i = 0; i < doTargetsLength; i++) {
-                    if (this.actions[k].limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= this.actions[k].limit) {
+                    if (limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= limit) {
                         break;
                     }
                     if (this.alreadyDone.indexOf(doTargets[i]) > -1) {
