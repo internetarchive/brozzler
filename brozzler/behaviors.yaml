@@ -73,7 +73,7 @@
   url_regex: '^https?://(?:www\.)?soundcloud.com/.*$'
   behavior_js_template: simpledo.js.j2
   default_parameters:
-     sdo_css_selector: button.sc-button-play, button.playButton, .compactTrackListItem__plays
+     sdo_css_selector: button.sc-button-play, button.playButton, div.soundItem
      sdo_action: click
      sdo_until_hard_timeout: False
   request_idle_timeout_sec: 10
