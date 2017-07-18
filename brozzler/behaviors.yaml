@@ -100,6 +100,13 @@
      mouseover_css_selector: .menu-item a
      mouseover_until_hard_timeout: False
   request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-5334
+  url_regex: '^https?://(?:www\.)?google\.com/search.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: a#pnnext
+     click_until_hard_timeout: True
+  request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-5313
   url_regex: '^https?://.*\.ky\.gov/.*$'
   behavior_js_template: mouseovers.js.j2
