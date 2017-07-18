@@ -71,11 +71,10 @@
   request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/AITFIVE-451
   url_regex: '^https?://(?:www\.)?soundcloud.com/.*$'
-  behavior_js_template: simpledo.js.j2
+  behavior_js_template: simpleclicks.js.j2
   default_parameters:
-     sdo_css_selector: button.sc-button-play, button.playButton, div.soundItem
-     sdo_action: click
-     sdo_until_hard_timeout: False
+     click_css_selector: button.sc-button-play, button.playButton, div.compactTrackListItem
+     click_until_hard_timeout: False
   request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/AITFIVE-463
   url_regex: '^https?://(?:www\.)?christophercerrone.com/.*$'
