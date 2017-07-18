@@ -66,7 +66,7 @@
   url_regex: '^https?://(?:www\.)?soundcloud.com/.*$'
   behavior_js_template: simpleclicks.js.j2
   default_parameters:
-     click_css_selector: button.sc-button-play, button.playButton, .compactTrackListItem__plays
+     click_css_selector: button.sc-button-play, button.playButton, div.soundItem
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/AITFIVE-463
