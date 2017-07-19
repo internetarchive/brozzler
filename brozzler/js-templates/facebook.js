@@ -35,7 +35,7 @@ var umbraAboveBelowOrOnScreen = function(e) {
 }
 
 // comments - 'a.UFIPagerLink > span, a.UFIPagerLink, span.UFIReplySocialSentenceLinkText'
-var UMBRA_THINGS_TO_CLICK_SELECTOR = 'a[href^="/browse/likes"], *[rel="theater"]';
+var UMBRA_THINGS_TO_CLICK_SELECTOR = 'a.uiMorePagerPrimary, a[href^="/browse/likes"], *[rel="theater"]';
 //div[class="phm pluginLikeboxStream"] = facebook widget embedded in 3rd party pages
 var UMBRA_THINGS_TO_SCROLL_SELECTOR = 'div[class="phm pluginLikeboxStream"]';
 var NUMBER_FAILED_SCROLL_ATTEMPTS_ON_THING_TO_SCROLL_BEFORE_STOP_SCROLLING = 5;
