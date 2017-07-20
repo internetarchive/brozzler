@@ -136,9 +136,6 @@
      click_css_selector: button#ird3-button-next
      click_until_hard_timeout: True
   request_idle_timeout_sec: 10
-- # https://webarchive.jira.com/browse/ARI-5379
-  url_regex: '^https?://pm\.gc\.ca/eng/news.*$'
-  behavior_js_template: pm-ca.js
 - # https://webarchive.jira.com/browse/ARI-5389
   url_regex: '^https?://pitchfork\.com/.*$'
   behavior_js_template: pitchfork.js
