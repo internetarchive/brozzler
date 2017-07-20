@@ -32,7 +32,7 @@ var umbraBehavior = {
 		var clickedSomething = false;
 		var somethingLeftBelow = false;
 		var somethingLeftAbove = false;
-		var cssSelector = "div.teaser, li.pager__item a";
+		var cssSelector = "div.teaser";
 		var clickUntilTimeout = 10;
 
 		var iframes = document.querySelectorAll("iframe");
