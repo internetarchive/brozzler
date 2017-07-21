@@ -36,6 +36,7 @@ import tempfile
 import urlcanon
 from requests.structures import CaseInsensitiveDict
 import rethinkdb as r
+import datetime
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
@@ -102,7 +103,8 @@ class BrozzlerWorker:
 
     def __init__(
             self, frontier, service_registry=None, max_browsers=1,
-            chrome_exe="chromium-browser", warcprox_auto=False, proxy=None):
+            chrome_exe="chromium-browser", warcprox_auto=False, proxy=None,
+            skip_extract_outlinks=False, skip_visit_hashtags=False):
         self._frontier = frontier
         self._service_registry = service_registry
         self._max_browsers = max_browsers
@@ -111,6 +113,8 @@ class BrozzlerWorker:
         self._proxy = proxy
         assert not (warcprox_auto and proxy)
         self._proxy_is_warcprox = None
+        self._skip_extract_outlinks = skip_extract_outlinks
+        self._skip_visit_hashtags = skip_visit_hashtags
 
         self._browser_pool = brozzler.browser.BrowserPool(
                 max_browsers, chrome_exe=chrome_exe, ignore_cert_errors=True)
@@ -156,7 +160,23 @@ class BrozzlerWorker:
         else:
             return bool(site.proxy or self._warcprox_auto)
 
+
     def _youtube_dl(self, destdir, site):
+        def ydl_progress(*args, **kwargs):
+            # in case youtube-dl takes a long time, heartbeat site.last_claimed
+            # to prevent another brozzler-worker from claiming the site
+            try:
+                if site.rr and doublethink.utcnow() - site.last_claimed > datetime.timedelta(minutes=7):
+                    self.logger.debug(
+                            'heartbeating site.last_claimed to prevent another '
+                            'brozzler-worker claiming this site id=%r', site.id)
+                    site.last_claimed = doublethink.utcnow()
+                    site.save()
+            except:
+                self.logger.debug(
+                        'problem heartbeating site.last_claimed site id=%r',
+                        site.id, exc_info=True)
+
         ydl_opts = {
             "outtmpl": "{}/ydl%(autonumber)s.out".format(destdir),
             "verbose": False,
@@ -167,6 +187,11 @@ class BrozzlerWorker:
             "noprogress": True,
             "nopart": True,
             "no_color": True,
+            "progress_hooks": [ydl_progress],
+             # https://github.com/rg3/youtube-dl/blob/master/README.md#format-selection
+             # "best: Select the best quality format represented by a single
+             # file with video and audio."
+            "format": "best/bestvideo+bestaudio",
         }
         if self._proxy_for(site):
             ydl_opts["proxy"] = "http://{}".format(self._proxy_for(site))
@@ -384,7 +409,9 @@ class BrozzlerWorker:
                 username=site.get('username'), password=site.get('password'),
                 user_agent=site.get('user_agent'),
                 on_screenshot=_on_screenshot, on_response=_on_response,
-                hashtags=page.hashtags)
+                hashtags=page.hashtags,
+                skip_extract_outlinks=self._skip_extract_outlinks,
+                skip_visit_hashtags=self._skip_visit_hashtags)
         if final_page_url != page.url:
             page.note_redirect(final_page_url)
         return outlinks
@@ -425,12 +452,12 @@ class BrozzlerWorker:
 
     def brozzle_site(self, browser, site):
         try:
+            start = time.time()
             page = None
             self._frontier.honor_stop_request(site)
             self.logger.info(
                     "brozzling site (proxy=%r) %r",
                     self._proxy_for(site), site)
-            start = time.time()
             while time.time() - start < 7 * 60:
                 site.refresh()
                 self._frontier.honor_stop_request(site)
@@ -477,6 +504,8 @@ class BrozzlerWorker:
         except:
             self.logger.critical("unexpected exception", exc_info=True)
         finally:
+            if start:
+                site.active_brozzling_time = (site.active_brozzling_time or 0) + time.time() - start
             self._frontier.disclaim_site(site, page)
 
     def _brozzle_site_thread_target(self, browser, site):

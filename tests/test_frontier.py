@@ -238,6 +238,9 @@ def test_resume_job():
     assert site.starts_and_stops[2]['stop'] > site.starts_and_stops[0]['start']
 
 def test_time_limit():
+    # XXX test not thoroughly adapted to change in time accounting, since
+    # starts_and_stops is no longer used to enforce time limits
+
     # vagrant brozzler-worker isn't configured to look at the "ignoreme" db
     rr = doublethink.Rethinker('localhost', db='ignoreme')
     frontier = brozzler.RethinkDbFrontier(rr)
@@ -277,9 +280,16 @@ def test_time_limit():
     site.claimed = True
     site.save()
 
-    time.sleep(0.1)
+    # time limit not reached yet
     frontier._enforce_time_limit(site)
+    assert site.status == 'ACTIVE'
+    assert len(site.starts_and_stops) == 2
+    assert site.starts_and_stops[1]['start']
+    assert site.starts_and_stops[1]['stop'] is None
 
+    site.active_brozzling_time = 0.2  # this is why the time limit will be hit
+
+    frontier._enforce_time_limit(site)
     assert site.status == 'FINISHED_TIME_LIMIT'
     assert not site.claimed
     assert len(site.starts_and_stops) == 2

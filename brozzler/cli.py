@@ -154,6 +154,12 @@ def brozzle_page(argv=None):
             help='use this password to try to log in if a login form is found')
     arg_parser.add_argument(
             '--proxy', dest='proxy', default=None, help='http proxy')
+    arg_parser.add_argument(
+            '--skip-extract-outlinks', dest='skip_extract_outlinks',
+            action='store_true', help=argparse.SUPPRESS)
+    arg_parser.add_argument(
+            '--skip-visit-hashtags', dest='skip_visit_hashtags',
+            action='store_true', help=argparse.SUPPRESS)
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -166,7 +172,9 @@ def brozzle_page(argv=None):
         'id': -1, 'seed': args.url, 'behavior_parameters': behavior_parameters,
         'username': args.username, 'password': args.password})
     page = brozzler.Page(None, {'url': args.url, 'site_id': site.id})
-    worker = brozzler.BrozzlerWorker(frontier=None, proxy=args.proxy)
+    worker = brozzler.BrozzlerWorker(frontier=None, proxy=args.proxy,
+        skip_extract_outlinks=args.skip_extract_outlinks,
+        skip_visit_hashtags=args.skip_visit_hashtags)
 
     def on_screenshot(screenshot_png):
         OK_CHARS = (string.ascii_letters + string.digits)
@@ -299,6 +307,12 @@ def brozzler_worker(argv=None):
             help=(
                 'when needed, choose an available instance of warcprox from '
                 'the rethinkdb service registry'))
+    arg_parser.add_argument(
+            '--skip-extract-outlinks', dest='skip_extract_outlinks',
+            action='store_true', help=argparse.SUPPRESS)
+    arg_parser.add_argument(
+            '--skip-visit-hashtags', dest='skip_visit_hashtags',
+            action='store_true', help=argparse.SUPPRESS)
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -331,7 +345,9 @@ def brozzler_worker(argv=None):
     worker = brozzler.worker.BrozzlerWorker(
             frontier, service_registry, max_browsers=int(args.max_browsers),
             chrome_exe=args.chrome_exe, proxy=args.proxy,
-            warcprox_auto=args.warcprox_auto)
+            warcprox_auto=args.warcprox_auto,
+            skip_extract_outlinks=args.skip_extract_outlinks,
+            skip_visit_hashtags=args.skip_visit_hashtags)
 
     signal.signal(signal.SIGQUIT, dump_state)
     signal.signal(signal.SIGTERM, lambda s,f: worker.stop())
@@ -471,7 +487,9 @@ def brozzler_list_sites(argv=None):
     elif args.jobless:
         reql = reql.filter(~r.row.has_fields('job_id'))
     elif args.active:
-        reql = reql.filter({'status': 'ACTIVE'})
+        reql = reql.between(
+                ['ACTIVE', r.minval], ['ACTIVE', r.maxval],
+                index='sites_last_disclaimed')
     logging.debug('querying rethinkdb: %s', reql)
     results = reql.run()
     if args.yaml:

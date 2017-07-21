@@ -129,6 +129,13 @@
      click_css_selector: button#ird3-button-next
      click_until_hard_timeout: True
   request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-5389
+  url_regex: '^https?://pitchfork\.com/.*$'
+  behavior_js_template: pitchfork.js
+- # https://webarchive.jira.com/browse/ARI-5379
+  url_regex: '^https?://pm\.gc\.ca/eng/news.*$'
+  behavior_js_template: pm-ca.js
+  request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-4960
   url_regex: '^https?://(?:www\.)?fortstjames.ca/community-events-calendar/$'
   behavior_js_template: simpleclicks.js.j2
