@@ -38,6 +38,14 @@
   behavior_js_template: instagram.js
   request_idle_timeout_sec: 10
 -
+  url_regex: '^https?://(?:www\.)?pm\.gc\.ca/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: li.pager__item a
+        limit: 4
+      - selector: div.teaser
+-
   url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
   behavior_js_template: huffpostslides.js
   request_idle_timeout_sec: 10
@@ -102,7 +110,14 @@
   behavior_js_template: fec_gov.js
   request_idle_timeout_sec: 10
 - url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
-  behavior_js_template: simpledo.js.j2
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: .menu-item a
+        do: mouseover
+        do_until_hard_timeout: False
+- url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
+  behavior_js_template: mouseovers.js.j2
   default_parameters:
      sdo_css_selector: .menu-item a
      sdo_action: mouseover
