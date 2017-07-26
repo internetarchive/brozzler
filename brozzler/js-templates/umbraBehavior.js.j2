@@ -25,12 +25,12 @@ var umbraBehavior = {
     actions : {{actions|json}},
 
     intervalFunc: function() {
-        var didSomething = false;
-        var somethingLeftBelow = false;
-        var somethingLeftAbove = false;
         var actionsLength = this.actions.length;
-
         for (var k = 0; k < actionsLength; k++) {
+            var didSomething = false;
+            var somethingLeftBelow = false;
+            var somethingLeftAbove = false;
+
             var selector = this.actions[k].selector;
             var action = this.actions[k].do ? this.actions[k].do : 'click';
             var limit = this.actions[k].limit ? this.actions[k].limit : 0;
