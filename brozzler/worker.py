@@ -316,30 +316,34 @@ class BrozzlerWorker:
 
         return full_jpeg, thumb_jpeg
 
-    def brozzle_page(self, browser, site, page, on_screenshot=None):
+    def brozzle_page(self, browser, site, page, on_screenshot=None,
+                     enable_youtube_dl=True):
         self.logger.info("brozzling {}".format(page))
-        try:
-            with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
-                ydl = self._youtube_dl(tempdir, site)
-                ydl_spy = ydl.brozzler_spy # remember for later
-                self._try_youtube_dl(ydl, site, page)
-        except brozzler.ReachedLimit as e:
-            raise
-        except brozzler.ShutdownRequested:
-            raise
-        except brozzler.ProxyError:
-            raise
-        except Exception as e:
-            if (hasattr(e, 'exc_info') and len(e.exc_info) >= 2
-                    and hasattr(e.exc_info[1], 'code')
-                    and e.exc_info[1].code == 430):
-                self.logger.info(
-                        'youtube-dl got %s %s processing %s',
-                        e.exc_info[1].code, e.exc_info[1].msg, page.url)
-            else:
-                self.logger.error(
-                        'youtube_dl raised exception on %s', page,
-                        exc_info=True)
+        if enable_youtube_dl:
+            try:
+                with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
+                    ydl = self._youtube_dl(tempdir, site)
+                    ydl_spy = ydl.brozzler_spy # remember for later
+                    self._try_youtube_dl(ydl, site, page)
+            except brozzler.ReachedLimit as e:
+                raise
+            except brozzler.ShutdownRequested:
+                raise
+            except brozzler.ProxyError:
+                raise
+            except Exception as e:
+                if (hasattr(e, 'exc_info') and len(e.exc_info) >= 2
+                        and hasattr(e.exc_info[1], 'code')
+                        and e.exc_info[1].code == 430):
+                    self.logger.info(
+                            'youtube-dl got %s %s processing %s',
+                            e.exc_info[1].code, e.exc_info[1].msg, page.url)
+                else:
+                    self.logger.error(
+                            'youtube_dl raised exception on %s', page,
+                            exc_info=True)
+        else:
+            ydl_spy = False
 
         if self._needs_browsing(page, ydl_spy):
             self.logger.info('needs browsing: %s', page)
@@ -435,19 +439,21 @@ class BrozzlerWorker:
                     'proxy error fetching %s' % page.url) from e
 
     def _needs_browsing(self, page, brozzler_spy):
-        final_bounces = brozzler_spy.final_bounces(page.url)
-        if not final_bounces:
-            return True
-        for txn in final_bounces:
-            if txn['response_headers'].get_content_type() in [
-                    'text/html', 'application/xhtml+xml']:
+        if brozzler_spy:
+            final_bounces = brozzler_spy.final_bounces(page.url)
+            if not final_bounces:
                 return True
+            for txn in final_bounces:
+                if txn['response_headers'].get_content_type() in [
+                        'text/html', 'application/xhtml+xml']:
+                    return True
         return False
 
     def _already_fetched(self, page, brozzler_spy):
-        for txn in brozzler_spy.final_bounces(page.url):
-            if (txn['method'] == 'GET' and txn['status_code'] == 200):
-                return True
+        if brozzler_spy:
+            for txn in brozzler_spy.final_bounces(page.url):
+                if (txn['method'] == 'GET' and txn['status_code'] == 200):
+                    return True
         return False
 
     def brozzle_site(self, browser, site):
