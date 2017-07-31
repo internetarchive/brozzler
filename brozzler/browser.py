@@ -376,7 +376,7 @@ class Browser:
         return self.websock_url is not None
 
     def browse_page(
-            self, page_url, ignore_cert_errors=False, extra_headers=None,
+            self, page_url, extra_headers=None,
             user_agent=None, behavior_parameters=None,
             on_request=None, on_response=None, on_screenshot=None,
             username=None, password=None, hashtags=None,
