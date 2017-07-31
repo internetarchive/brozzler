@@ -342,6 +342,8 @@ class BrozzlerWorker:
                     self.logger.error(
                             'youtube_dl raised exception on %s', page,
                             exc_info=True)
+        else:
+            ydl_spy = False
 
         if self._needs_browsing(page, ydl_spy):
             self.logger.info('needs browsing: %s', page)
@@ -437,19 +439,21 @@ class BrozzlerWorker:
                     'proxy error fetching %s' % page.url) from e
 
     def _needs_browsing(self, page, brozzler_spy):
-        final_bounces = brozzler_spy.final_bounces(page.url)
-        if not final_bounces:
-            return True
-        for txn in final_bounces:
-            if txn['response_headers'].get_content_type() in [
-                    'text/html', 'application/xhtml+xml']:
+        if brozzler_spy:
+            final_bounces = brozzler_spy.final_bounces(page.url)
+            if not final_bounces:
                 return True
+            for txn in final_bounces:
+                if txn['response_headers'].get_content_type() in [
+                        'text/html', 'application/xhtml+xml']:
+                    return True
         return False
 
     def _already_fetched(self, page, brozzler_spy):
-        for txn in brozzler_spy.final_bounces(page.url):
-            if (txn['method'] == 'GET' and txn['status_code'] == 200):
-                return True
+        if brozzler_spy:
+            for txn in brozzler_spy.final_bounces(page.url):
+                if (txn['method'] == 'GET' and txn['status_code'] == 200):
+                    return True
         return False
 
     def brozzle_site(self, browser, site):
