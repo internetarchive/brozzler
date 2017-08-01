@@ -447,7 +447,9 @@ class BrozzlerWorker:
                 if txn['response_headers'].get_content_type() in [
                         'text/html', 'application/xhtml+xml']:
                     return True
-        return False
+            return False
+        else:
+            return True
 
     def _already_fetched(self, page, brozzler_spy):
         if brozzler_spy:
