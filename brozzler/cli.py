@@ -189,9 +189,7 @@ def brozzle_page(argv=None):
     browser = brozzler.Browser(chrome_exe=args.chrome_exe)
     try:
         browser.start(proxy=args.proxy)
-        outlinks = worker.brozzle_page(
-                browser, site, page, on_screenshot=on_screenshot)
-        logging.info('outlinks: \n\t%s', '\n\t'.join(sorted(outlinks)))
+        worker.brozzle_page(browser, site, page, on_screenshot=on_screenshot)
     except brozzler.ReachedLimit as e:
         logging.error('reached limit %s', e)
     finally:
