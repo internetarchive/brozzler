@@ -317,7 +317,7 @@ class BrozzlerWorker:
         return full_jpeg, thumb_jpeg
 
     def brozzle_page(self, browser, site, page, on_screenshot=None,
-                     enable_youtube_dl=True):
+                     on_request=None, enable_youtube_dl=True):
         self.logger.info("brozzling {}".format(page))
         if enable_youtube_dl:
             try:
@@ -347,7 +347,8 @@ class BrozzlerWorker:
 
         if self._needs_browsing(page, ydl_spy):
             self.logger.info('needs browsing: %s', page)
-            outlinks = self._browse_page(browser, site, page, on_screenshot)
+            outlinks = self._browse_page(browser, site, page, on_screenshot,
+                                         on_request)
             return outlinks
         else:
             if not self._already_fetched(page, ydl_spy):
@@ -357,7 +358,7 @@ class BrozzlerWorker:
                 self.logger.info('already fetched: %s', page)
             return []
 
-    def _browse_page(self, browser, site, page, on_screenshot=None):
+    def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
         def _on_screenshot(screenshot_png):
             if on_screenshot:
                 on_screenshot(screenshot_png)
@@ -413,7 +414,7 @@ class BrozzlerWorker:
                 username=site.get('username'), password=site.get('password'),
                 user_agent=site.get('user_agent'),
                 on_screenshot=_on_screenshot, on_response=_on_response,
-                hashtags=page.hashtags,
+                on_request=on_request, hashtags=page.hashtags,
                 skip_extract_outlinks=self._skip_extract_outlinks,
                 skip_visit_hashtags=self._skip_visit_hashtags)
         if final_page_url != page.url:
