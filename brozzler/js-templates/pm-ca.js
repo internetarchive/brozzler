@@ -1,5 +1,5 @@
 /*
- * brozzler/behaviors.d/pm-ca.js - behavior for http://pm.gc.ca/eng/news
+ * brozzler/behaviors.d/pm-ca.js - behavior for http://www.pm.gc.ca/
  *
  * Copyright (C) 2014-2017 Internet Archive
  *
