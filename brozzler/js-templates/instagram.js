@@ -26,14 +26,23 @@ var umbraInstagramBehavior = {
         previousBigImage: null,
 
         intervalFunc: function() {
+
                 if (this.state === "loading-thumbs") {
+                        var signUpButton = document.querySelectorAll("span._lilm5");
+                        if (signUpButton.length > 0) {
+                                console.log("clicking sign up button");
+                                signUpButton[0].click();
+                                this.idleSince = null;
+                                return;
+                        }
+
                         if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
                                 window.scrollBy(0, 200);
                                 this.idleSince = null;
                                 return;
                         }
 
-                        var moreButtons = document.querySelectorAll("a._oidfu");
+                        var moreButtons = document.querySelectorAll("a._1cr2e._epyes");
                         if (moreButtons.length > 0) {
                                 console.log("clicking load more button");
                                 moreButtons[0].click();
@@ -56,7 +65,7 @@ var umbraInstagramBehavior = {
                 }
 
                 if (this.state === "clicking-first-thumb") {
-                        var images = document.querySelectorAll("div._ovg3g");
+                        var images = document.querySelectorAll("div._si7dy");
                         if (images && images !== "undefined") {
                                 this.imageCount = images.length;
                                 if (images.length > 0) {
