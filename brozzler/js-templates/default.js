@@ -30,7 +30,7 @@ var umbraAboveBelowOrOnScreen = function(e) {
 
 var UMBRA_IFRAME_EMBEDDED_SELECTOR = "iframe";
 //elements selected for SoundCloud.com
-var UMBRA_THINGS_TO_CLICK_EMBEDDED_SELECTOR = "button.sc-button-play, button.playButton, div.soundItem";
+var UMBRA_THINGS_TO_CLICK_EMBEDDED_SELECTOR = "button.sc-button-play, .playButton, div.soundItem";
 //elements selected for Archive.org Playlists
 UMBRA_THINGS_TO_CLICK_EMBEDDED_SELECTOR += ", .jwlist>a"
 var MAX_IFRAME_RECURSE_DEPTH = 1; //0-based
