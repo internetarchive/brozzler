@@ -380,7 +380,8 @@ class Browser:
             user_agent=None, behavior_parameters=None,
             on_request=None, on_response=None, on_screenshot=None,
             username=None, password=None, hashtags=None,
-            skip_extract_outlinks=False, skip_visit_hashtags=False):
+            skip_extract_outlinks=False, skip_visit_hashtags=False,
+            page_timeout=300):
         '''
         Browses page in browser.
 
@@ -433,15 +434,15 @@ class Browser:
                 self.configure_browser(
                         extra_headers=extra_headers,
                         user_agent=user_agent)
-                self.navigate_to_page(page_url, timeout=300)
+                self.navigate_to_page(page_url, timeout=page_timeout)
                 if password:
-                    self.try_login(username, password, timeout=300)
+                    self.try_login(username, password, timeout=page_timeout)
                     # if login redirected us, return to page_url
                     if page_url != self.url().split('#')[0]:
                         self.logger.debug(
                             'login navigated away from %s; returning!',
                             page_url)
-                        self.navigate_to_page(page_url, timeout=300)
+                        self.navigate_to_page(page_url, timeout=page_timeout)
                 if on_screenshot:
                     jpeg_bytes = self.screenshot()
                     on_screenshot(jpeg_bytes)
