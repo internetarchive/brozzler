@@ -452,7 +452,6 @@ class Browser:
                     outlinks = []
                 else:
                     outlinks = self.extract_outlinks()
-                    logging.info('outlinks: \n\t%s', '\n\t'.join(sorted(outlinks)))
                 if not skip_visit_hashtags:
                     self.visit_hashtags(page_url, hashtags, outlinks)
                 final_page_url = self.url()
