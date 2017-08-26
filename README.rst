@@ -181,7 +181,7 @@ Headless Chrome (experimental)
 
 `Headless Chromium <https://chromium.googlesource.com/chromium/src/+/master/headless/README.md>`_
 is now available in stable Chrome releases for 64-bit Linux and may be
-used to run the browser without a visibe window or X11 at all.
+used to run the browser without a visible window or X11 at all.
 
 To try this out, create a wrapper script like ~/bin/chrome-headless.sh:
 
