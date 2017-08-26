@@ -26,7 +26,8 @@ Requirements
 
 Worth noting is that the browser requires a graphical environment to run. You
 already have this on your laptop, but on a server it will probably require
-deploying some additional infrastructure (typically X11). The vagrant
+deploying some additional infrastructure (typically X11; note that Xvfb does
+not support screenshots; Xvnc4, from package vnc4server, does). The vagrant
 configuration in the brozzler repository (still a work in progress) has an
 example setup.
 
