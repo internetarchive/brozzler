@@ -381,7 +381,7 @@ class Browser:
             on_request=None, on_response=None, on_screenshot=None,
             username=None, password=None, hashtags=None,
             skip_extract_outlinks=False, skip_visit_hashtags=False,
-            page_timeout=300):
+            page_timeout=300, behavior_timeout=900):
         '''
         Browses page in browser.
 
@@ -448,7 +448,7 @@ class Browser:
                     on_screenshot(jpeg_bytes)
                 behavior_script = brozzler.behavior_script(
                         page_url, behavior_parameters)
-                self.run_behavior(behavior_script, timeout=900)
+                self.run_behavior(behavior_script, timeout=behavior_timeout)
                 if skip_extract_outlinks:
                     outlinks = []
                 else:
