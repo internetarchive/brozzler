@@ -120,10 +120,6 @@
     actions:
       - selector: .menu-item a
         do: mouseover
-<<<<<<< HEAD
-        do_until_hard_timeout: False
-=======
->>>>>>> behavior-refactor
 - url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
   behavior_js_template: mouseovers.js.j2
   default_parameters:
