@@ -103,11 +103,11 @@
      click_css_selector: span.load-more-text
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
-- # https://webarchive.jira.com/browse/ARI-5453
+- # https://webarchive.jira.com/browse/ARI-5453 / ARI-5391
   url_regex: '^https?://.*\.wixsite.com/.*$'
   behavior_js_template: simpleclicks.js.j2
   default_parameters:
-     click_css_selector: .ddm1repeaterButtonlabel
+     click_css_selector: .ddm1repeaterButtonlabel, .ytp-button
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-4725
@@ -147,6 +147,13 @@
   default_parameters:
      click_css_selector: a#pnnext
      click_until_hard_timeout: True
+  request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-5259
+  url_regex: '^https?://blog\.sina\.com\.cn/.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: li.SG_pgnext a
+     click_until_hard_timeout: False
   request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-5313
   url_regex: '^https?://.*\.ky\.gov/.*$'
