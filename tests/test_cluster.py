@@ -51,6 +51,13 @@ def httpd(request):
                 self.send_header('Location', '/site5/destination/')
                 self.end_headers()
                 self.wfile.write(b'')
+            elif self.path == '/site9/redirect.html':
+                self.send_response(303, 'See other')
+                self.send_header('Connection', 'close')
+                self.send_header('Content-Length', 0)
+                self.send_header('Location', '/site9/destination.html')
+                self.end_headers()
+                self.wfile.write(b'')
             elif self.path.startswith('/infinite/'):
                 payload = b'''
 <html>
@@ -518,6 +525,60 @@ def test_hashtags(httpd):
     assert 'thumbnail:%s' % seed_url in captures_by_url
     assert 'screenshot:http://localhost:%s/site7/foo.html' % httpd.server_port in captures_by_url
     assert 'thumbnail:http://localhost:%s/site7/foo.html' % httpd.server_port in captures_by_url
+
+def test_redirect_hashtags(httpd):
+    test_id = 'test_hashtags-%s' % datetime.datetime.utcnow().isoformat()
+    rr = doublethink.Rethinker('localhost', db='brozzler')
+    seed_url = 'http://localhost:%s/site9/' % httpd.server_port
+    site = brozzler.Site(rr, {
+        'seed': seed_url,
+        'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
+
+    frontier = brozzler.RethinkDbFrontier(rr)
+    brozzler.new_site(frontier, site)
+    assert site.id
+
+    # the site should be brozzled fairly quickly
+    start = time.time()
+    while site.status != 'FINISHED' and time.time() - start < 300:
+        time.sleep(0.5)
+        site.refresh()
+    assert site.status == 'FINISHED'
+
+    # check that we the page we expected
+    pages = sorted(list(frontier.site_pages(site.id)), key=lambda p: p.url)
+    assert len(pages) == 2
+    assert pages[0].url == seed_url
+    assert pages[0].hops_from_seed == 0
+    assert pages[0].brozzle_count == 1
+    assert pages[0].outlinks['accepted'] == ['http://localhost:%s/site9/redirect.html' % httpd.server_port]
+    assert not pages[0].hashtags
+    assert pages[1].url == 'http://localhost:%s/site9/redirect.html' % httpd.server_port
+    assert pages[1].hops_from_seed == 1
+    assert pages[1].brozzle_count == 1
+    assert sorted(pages[1].hashtags) == ['#hash1','#hash2',]
+
+    time.sleep(2)   # in case warcprox hasn't finished processing urls
+    # take a look at the captures table
+    captures = rr.table('captures').filter({'test_id':test_id}).run()
+    redirect_captures = [c for c in captures if c['url'] == 'http://localhost:%s/site9/redirect.html' % httpd.server_port and c['http_method'] == 'GET']
+    assert len(redirect_captures) == 2 # youtube-dl + browser, no hashtags
+
+    # === expected captures ===
+    #  1. GET http://localhost:41243/favicon.ico
+    #  2. GET http://localhost:41243/robots.txt
+    #  3. GET http://localhost:41243/site9/
+    #  4. GET http://localhost:41243/site9/
+    #  5. GET http://localhost:41243/site9/destination.html
+    #  6. GET http://localhost:41243/site9/destination.html
+    #  7. GET http://localhost:41243/site9/redirect.html
+    #  8. GET http://localhost:41243/site9/redirect.html
+    #  9. HEAD http://localhost:41243/site9/
+    # 10. HEAD http://localhost:41243/site9/redirect.html
+    # 11. WARCPROX_WRITE_RECORD screenshot:http://localhost:41243/site9/
+    # 12. WARCPROX_WRITE_RECORD screenshot:http://localhost:41243/site9/redirect.html
+    # 13. WARCPROX_WRITE_RECORD thumbnail:http://localhost:41243/site9/
+    # 14. WARCPROX_WRITE_RECORD thumbnail:http://localhost:41243/site9/redirect.html
 
 def test_stop_crawl(httpd):
     test_id = 'test_stop_crawl_job-%s' % datetime.datetime.utcnow().isoformat()
