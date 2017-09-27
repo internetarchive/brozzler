@@ -454,7 +454,7 @@ class Browser:
                 else:
                     outlinks = self.extract_outlinks()
                 if not skip_visit_hashtags:
-                    self.visit_hashtags(page_url, hashtags, outlinks)
+                    self.visit_hashtags(self.url(), hashtags, outlinks)
                 final_page_url = self.url()
                 return final_page_url, outlinks
         except brozzler.ReachedLimit:
@@ -599,8 +599,7 @@ class Browser:
 
     def try_login(self, username, password, timeout=300):
         try_login_js = brozzler.jinja2_environment().get_template(
-                'try-login.js.j2').render(
-                        username=username, password=password)
+                'try-login.js.j2').render(username=username, password=password)
 
         self.websock_thread.got_page_load_event = None
         self.send_to_chrome(
