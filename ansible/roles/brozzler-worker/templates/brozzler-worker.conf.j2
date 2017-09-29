@@ -21,4 +21,5 @@ kill timeout 60
 exec nice brozzler-worker \
     --rethinkdb-servers={{groups['rethinkdb'] | join(',')}} \
     --max-browsers=4 \
+    --verbose \
     --warcprox-auto
