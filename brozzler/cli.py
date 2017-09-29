@@ -160,6 +160,9 @@ def brozzle_page(argv=None):
     arg_parser.add_argument(
             '--skip-visit-hashtags', dest='skip_visit_hashtags',
             action='store_true', help=argparse.SUPPRESS)
+    arg_parser.add_argument(
+            '--skip-youtube-dl', dest='skip_youtube_dl',
+            action='store_true', help=argparse.SUPPRESS)
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -174,7 +177,8 @@ def brozzle_page(argv=None):
     page = brozzler.Page(None, {'url': args.url, 'site_id': site.id})
     worker = brozzler.BrozzlerWorker(frontier=None, proxy=args.proxy,
         skip_extract_outlinks=args.skip_extract_outlinks,
-        skip_visit_hashtags=args.skip_visit_hashtags)
+        skip_visit_hashtags=args.skip_visit_hashtags,
+        skip_youtube_dl=args.skip_youtube_dl)
 
     def on_screenshot(screenshot_png):
         OK_CHARS = (string.ascii_letters + string.digits)
@@ -190,7 +194,8 @@ def brozzle_page(argv=None):
     try:
         browser.start(proxy=args.proxy)
         outlinks = worker.brozzle_page(
-                browser, site, page, on_screenshot=on_screenshot)
+                browser, site, page, on_screenshot=on_screenshot,
+                enable_youtube_dl=not args.skip_youtube_dl)
         logging.info('outlinks: \n\t%s', '\n\t'.join(sorted(outlinks)))
     except brozzler.ReachedLimit as e:
         logging.error('reached limit %s', e)
@@ -313,6 +318,9 @@ def brozzler_worker(argv=None):
     arg_parser.add_argument(
             '--skip-visit-hashtags', dest='skip_visit_hashtags',
             action='store_true', help=argparse.SUPPRESS)
+    arg_parser.add_argument(
+            '--skip-youtube-dl', dest='skip_youtube_dl',
+            action='store_true', help=argparse.SUPPRESS)
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -347,7 +355,8 @@ def brozzler_worker(argv=None):
             chrome_exe=args.chrome_exe, proxy=args.proxy,
             warcprox_auto=args.warcprox_auto,
             skip_extract_outlinks=args.skip_extract_outlinks,
-            skip_visit_hashtags=args.skip_visit_hashtags)
+            skip_visit_hashtags=args.skip_visit_hashtags,
+            skip_youtube_dl=args.skip_youtube_dl)
 
     signal.signal(signal.SIGQUIT, dump_state)
     signal.signal(signal.SIGTERM, lambda s,f: worker.stop())

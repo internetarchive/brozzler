@@ -105,7 +105,7 @@ class BrozzlerWorker:
             self, frontier, service_registry=None, max_browsers=1,
             chrome_exe="chromium-browser", warcprox_auto=False, proxy=None,
             skip_extract_outlinks=False, skip_visit_hashtags=False,
-            page_timeout=300, behavior_timeout=900):
+            skip_youtube_dl=False, page_timeout=300, behavior_timeout=900):
         self._frontier = frontier
         self._service_registry = service_registry
         self._max_browsers = max_browsers
@@ -116,6 +116,7 @@ class BrozzlerWorker:
         self._proxy_is_warcprox = None
         self._skip_extract_outlinks = skip_extract_outlinks
         self._skip_visit_hashtags = skip_visit_hashtags
+        self._skip_youtube_dl = skip_youtube_dl
         self._page_timeout = page_timeout
         self._behavior_timeout = behavior_timeout
 
@@ -420,6 +421,7 @@ class BrozzlerWorker:
                 on_request=on_request, hashtags=page.hashtags,
                 skip_extract_outlinks=self._skip_extract_outlinks,
                 skip_visit_hashtags=self._skip_visit_hashtags,
+                skip_youtube_dl=self._skip_youtube_dl,
                 page_timeout=self._page_timeout,
                 behavior_timeout=self._behavior_timeout)
         if final_page_url != page.url:
@@ -485,7 +487,8 @@ class BrozzlerWorker:
                     page.blocked_by_robots = True
                     self._frontier.completed_page(site, page)
                 else:
-                    outlinks = self.brozzle_page(browser, site, page)
+                    outlinks = self.brozzle_page(browser, site, page,
+                                                 enable_youtube_dl=not self._skip_youtube_dl)
                     self._frontier.completed_page(site, page)
                     self._frontier.scope_and_schedule_outlinks(
                             site, page, outlinks)
