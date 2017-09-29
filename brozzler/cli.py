@@ -193,10 +193,9 @@ def brozzle_page(argv=None):
     browser = brozzler.Browser(chrome_exe=args.chrome_exe)
     try:
         browser.start(proxy=args.proxy)
-        enable_youtube_dl = False if args.skip_youtube_dl else True
         outlinks = worker.brozzle_page(
                 browser, site, page, on_screenshot=on_screenshot,
-                enable_youtube_dl=enable_youtube_dl)
+                enable_youtube_dl=not args.skip_youtube_dl)
         logging.info('outlinks: \n\t%s', '\n\t'.join(sorted(outlinks)))
     except brozzler.ReachedLimit as e:
         logging.error('reached limit %s', e)
