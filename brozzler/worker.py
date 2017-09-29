@@ -487,9 +487,8 @@ class BrozzlerWorker:
                     page.blocked_by_robots = True
                     self._frontier.completed_page(site, page)
                 else:
-                    enable_youtube_dl = False if self._skip_youtube_dl else True
                     outlinks = self.brozzle_page(browser, site, page,
-                                                 enable_youtube_dl=enable_youtube_dl)
+                                                 enable_youtube_dl=not self._skip_youtube_dl)
                     self._frontier.completed_page(site, page)
                     self._frontier.scope_and_schedule_outlinks(
                             site, page, outlinks)
