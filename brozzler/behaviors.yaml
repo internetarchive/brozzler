@@ -52,8 +52,11 @@
         closeSelector: .pmf-artist-modal__close-btn
 -
   url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
-  behavior_js_template: huffpostslides.js
-  request_idle_timeout_sec: 10
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: .slideshow
+      - selector: .slideshow-overlay__container__left__nav__next
 -
   url_regex: '^https?://(?:www\.)?brooklynmuseum\.org/exhibitions/.*$'
   behavior_js_template: simpleclicks.js.j2
@@ -156,5 +159,7 @@
   request_idle_timeout_sec: 10
 - # default fallback behavior
   url_regex: '^.*$'
-  request_idle_timeout_sec: 10
-  behavior_js_template: default.js
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: button.sc-button-play, button.playButton, div.soundItem
