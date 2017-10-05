@@ -381,7 +381,7 @@ class Browser:
             on_request=None, on_response=None, on_screenshot=None,
             username=None, password=None, hashtags=None,
             skip_extract_outlinks=False, skip_visit_hashtags=False,
-            page_timeout=300, behavior_timeout=900):
+            skip_youtube_dl=False, page_timeout=300, behavior_timeout=900):
         '''
         Browses page in browser.
 
