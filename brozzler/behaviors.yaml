@@ -99,6 +99,13 @@
      click_css_selector: button.playButton.medium
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-4690
+  url_regex: '^https?://(?:www\.)?youtube.com/.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: span.load-more-text
+     click_until_hard_timeout: False
+  request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-5453
   url_regex: '^https?://.*\.wixsite.com/.*$'
   behavior_js_template: simpleclicks.js.j2
