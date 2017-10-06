@@ -114,7 +114,7 @@
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-5453
-  url_regex: '^https?://.*\.wixsite.com/.*$'
+  url_regex: '^https?://.*\.(wixsite|dorothearockburne)\.com/.*$'
   behavior_js_template: simpleclicks.js.j2
   default_parameters:
      click_css_selector: .ddm1repeaterButtonlabel, .ytp-button

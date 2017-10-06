@@ -193,6 +193,7 @@ def brozzle_page(argv=None):
     browser = brozzler.Browser(chrome_exe=args.chrome_exe)
     try:
         browser.start(proxy=args.proxy)
+        enable_youtube_dl = False if args.skip_youtube_dl else True
         outlinks = worker.brozzle_page(
                 browser, site, page, on_screenshot=on_screenshot,
                 enable_youtube_dl=not args.skip_youtube_dl)
