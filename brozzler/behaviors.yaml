@@ -55,8 +55,8 @@
   behavior_js_template: umbraBehavior.js.j2
   default_parameters:
     actions:
-      - selector: .slideshow
-      - selector: .slideshow-overlay__container__left__nav__next
+      - selector: .slideshow-card__overlay
+      - selector: .slideshow__next
 -
   url_regex: '^https?://(?:www\.)?brooklynmuseum\.org/exhibitions/.*$'
   behavior_js_template: simpleclicks.js.j2
