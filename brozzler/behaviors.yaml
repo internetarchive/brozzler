@@ -1,7 +1,7 @@
 #
 # brozzler/behaviors.yaml - behavior configuration
 #
-# Copyright (C) 2014-2016 Internet Archive
+# Copyright (C) 2014-2017 Internet Archive
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,9 +38,25 @@
   behavior_js_template: instagram.js
   request_idle_timeout_sec: 10
 -
+  url_regex: '^https?://(?:www\.)?pm\.gc\.ca/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: div.teaser, li.pager__item a
+- # https://webarchive.jira.com/browse/ARI-5389
+  url_regex: '^https?://pitchfork\.com/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: div.teaser, li.pager__item a
+        closeSelector: .pmf-artist-modal__close-btn
+-
   url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
-  behavior_js_template: huffpostslides.js
-  request_idle_timeout_sec: 10
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: .slideshow-card__overlay
+      - selector: .slideshow__next
 -
   url_regex: '^https?://(?:www\.)?brooklynmuseum\.org/exhibitions/.*$'
   behavior_js_template: simpleclicks.js.j2
@@ -53,6 +69,13 @@
   behavior_js_template: simpleclicks.js.j2
   default_parameters:
      click_css_selector: a[onclick]
+     click_until_hard_timeout: False
+  request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-5366
+  url_regex: '^https?://(?:(ici|beta)\.)radio-canada\.ca/.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: .bigBtnPlay
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-5409
@@ -73,7 +96,7 @@
   url_regex: '^https?://(?:www\.)?soundcloud.com/.*$'
   behavior_js_template: simpleclicks.js.j2
   default_parameters:
-     click_css_selector: button.sc-button-play, button.playButton, div.compactTrackListItem
+     click_css_selector: button.sc-button-play, .playButton, div.compactTrackListItem
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/AITFIVE-463
@@ -91,10 +114,10 @@
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-5453
-  url_regex: '^https?://.*\.wixsite.com/.*$'
+  url_regex: '^https?://.*\.(wixsite|dorothearockburne)\.com/.*$'
   behavior_js_template: simpleclicks.js.j2
   default_parameters:
-     click_css_selector: .ddm1repeaterButtonlabel
+     click_css_selector: .ddm1repeaterButtonlabel, .ytp-button
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-4725
@@ -109,10 +132,31 @@
   behavior_js_template: fec_gov.js
   request_idle_timeout_sec: 10
 - url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: .menu-item a
+        do: mouseover
+- url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
   behavior_js_template: mouseovers.js.j2
   default_parameters:
-     mouseover_css_selector: .menu-item a
-     mouseover_until_hard_timeout: False
+     sdo_css_selector: .menu-item a
+     sdo_action: mouseover
+     sdo_until_hard_timeout: False
+  request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-5259
+  url_regex: '^https?://blog\.sina\.com\.cn/.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: li.SG_pgnext a
+     click_until_hard_timeout: False
+  request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-5334
+  url_regex: '^https?://(?:www\.)?google\.com/search.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: a#pnnext
+     click_until_hard_timeout: True
   request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-5259
   url_regex: '^https?://blog\.sina\.com\.cn/.*$'
@@ -135,13 +179,6 @@
      click_css_selector: button#ird3-button-next
      click_until_hard_timeout: True
   request_idle_timeout_sec: 10
-- # https://webarchive.jira.com/browse/ARI-5389
-  url_regex: '^https?://pitchfork\.com/.*$'
-  behavior_js_template: pitchfork.js
-- # https://webarchive.jira.com/browse/ARI-5379
-  url_regex: '^https?://(?:www\.)?pm\.gc\.ca/.*$'
-  behavior_js_template: pm-ca.js
-  request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-4960
   url_regex: '^https?://(?:www\.)?fortstjames.ca/community-events-calendar/$'
   behavior_js_template: simpleclicks.js.j2
@@ -149,7 +186,16 @@
      click_css_selector: img#navForward1
      click_until_hard_timeout: True
   request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-5210
+  url_regex: '^https?://(?:www\.)?ssab.gov/Our-Work$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: input[type=button][value=Next]
+     click_until_hard_timeout: False
+  request_idle_timeout_sec: 10
 - # default fallback behavior
   url_regex: '^.*$'
-  request_idle_timeout_sec: 10
-  behavior_js_template: default.js
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: button.sc-button-play, button.playButton, div.soundItem
