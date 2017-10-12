@@ -249,6 +249,7 @@ class RethinkDbFrontier:
 
     def resume_job(self, job):
         job.status = "ACTIVE"
+        job.stop_requested = None
         job.starts_and_stops.append(
                 {"start":doublethink.utcnow(), "stop":None})
         job.save()
