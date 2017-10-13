@@ -18,14 +18,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-import brozzler
-import logging
 import argparse
-import doublethink
-import time
 import datetime
-import uuid
+import logging
+
+import doublethink
 import pytest
+
+import brozzler
 
 args = argparse.Namespace()
 args.log_level = logging.INFO
@@ -215,6 +215,7 @@ def test_resume_job():
     site = list(frontier.job_sites(job.id))[0]
 
     assert job.status == 'ACTIVE'
+    assert job.stop_requested is None
     assert len(job.starts_and_stops) == 3
     assert job.starts_and_stops[2]['start']
     assert job.starts_and_stops[2]['stop'] is None
