@@ -203,19 +203,18 @@ def test_resume_job():
     assert len(job.starts_and_stops) == 2
     assert job.starts_and_stops[1]['start']
     assert job.starts_and_stops[1]['stop']
-    assert job.starts_and_stops[1]['stop'] > job.starts_and_stops[0]['start']
+    assert job.starts_and_stops[1]['stop'] > job.starts_and_stops[1]['start']
     assert site.status == 'FINISHED'
     assert len(site.starts_and_stops) == 2
     assert site.starts_and_stops[1]['start']
     assert site.starts_and_stops[1]['stop']
-    assert site.starts_and_stops[1]['stop'] > site.starts_and_stops[0]['start']
+    assert site.starts_and_stops[1]['stop'] > site.starts_and_stops[1]['start']
 
     # resuming a job == resuming all of its sites
     frontier.resume_job(job)
     site = list(frontier.job_sites(job.id))[0]
 
     assert job.status == 'ACTIVE'
-    assert job.stop_requested is None
     assert len(job.starts_and_stops) == 3
     assert job.starts_and_stops[2]['start']
     assert job.starts_and_stops[2]['stop'] is None
@@ -231,12 +230,61 @@ def test_resume_job():
     assert len(job.starts_and_stops) == 3
     assert job.starts_and_stops[2]['start']
     assert job.starts_and_stops[2]['stop']
-    assert job.starts_and_stops[2]['stop'] > job.starts_and_stops[0]['start']
+    assert job.starts_and_stops[2]['stop'] > job.starts_and_stops[2]['start']
     assert site.status == 'FINISHED'
     assert len(site.starts_and_stops) == 3
     assert site.starts_and_stops[2]['start']
     assert site.starts_and_stops[2]['stop']
-    assert site.starts_and_stops[2]['stop'] > site.starts_and_stops[0]['start']
+    assert site.starts_and_stops[2]['stop'] > site.starts_and_stops[2]['start']
+
+    frontier.resume_job(job)
+    site = list(frontier.job_sites(job.id))[0]
+
+    assert job.status == 'ACTIVE'
+    assert len(job.starts_and_stops) == 4
+    assert job.starts_and_stops[3]['start']
+    assert job.starts_and_stops[3]['stop'] is None
+    assert site.status == 'ACTIVE'
+    assert len(site.starts_and_stops) == 4
+    assert site.starts_and_stops[3]['start']
+    assert site.starts_and_stops[3]['stop'] is None
+
+    # simulate a crawl stopped by a stop request
+    job.stop_requested = datetime.datetime.utcnow().replace(tzinfo=doublethink.UTC)
+    job.save()
+
+    with pytest.raises(brozzler.CrawlStopped):
+        frontier.honor_stop_request(site)
+
+    frontier.finished(site, 'FINISHED_STOP_REQUESTED')
+    job.refresh()
+
+    assert job.status == 'FINISHED'
+    assert job.stop_requested
+    assert len(job.starts_and_stops) == 4
+    assert job.starts_and_stops[3]['start']
+    assert job.starts_and_stops[3]['stop']
+    assert job.starts_and_stops[3]['stop'] > job.starts_and_stops[3]['start']
+    assert site.status == 'FINISHED_STOP_REQUESTED'
+    assert len(site.starts_and_stops) == 4
+    assert site.starts_and_stops[3]['start']
+    assert site.starts_and_stops[3]['stop']
+    assert site.starts_and_stops[3]['stop'] > site.starts_and_stops[3]['start']
+
+    # test resume job after a stop request
+    frontier.resume_job(job)
+    site = list(frontier.job_sites(job.id))[0]
+
+    assert job.status == 'ACTIVE'
+    assert job.stop_requested is None
+    assert len(job.starts_and_stops) == 5
+    assert job.starts_and_stops[4]['start']
+    assert job.starts_and_stops[4]['stop'] is None
+    assert site.status == 'ACTIVE'
+    assert len(site.starts_and_stops) == 5
+    assert site.starts_and_stops[4]['start']
+    assert site.starts_and_stops[4]['stop'] is None
+
 
 def test_time_limit():
     # XXX test not thoroughly adapted to change in time accounting, since
