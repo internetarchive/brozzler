@@ -38,9 +38,25 @@
   behavior_js_template: instagram.js
   request_idle_timeout_sec: 10
 -
+  url_regex: '^https?://(?:www\.)?pm\.gc\.ca/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: div.teaser, li.pager__item a
+- # https://webarchive.jira.com/browse/ARI-5389
+  url_regex: '^https?://pitchfork\.com/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: div.teaser, li.pager__item a
+        closeSelector: .pmf-artist-modal__close-btn
+-
   url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
-  behavior_js_template: huffpostslides.js
-  request_idle_timeout_sec: 10
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: .slideshow-card__overlay
+      - selector: .slideshow__next
 -
   url_regex: '^https?://(?:www\.)?brooklynmuseum\.org/exhibitions/.*$'
   behavior_js_template: simpleclicks.js.j2
@@ -109,6 +125,12 @@
   behavior_js_template: fec_gov.js
   request_idle_timeout_sec: 10
 - url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: .menu-item a
+        do: mouseover
+- url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
   behavior_js_template: mouseovers.js.j2
   default_parameters:
      mouseover_css_selector: .menu-item a
@@ -135,13 +157,6 @@
      click_css_selector: button#ird3-button-next
      click_until_hard_timeout: True
   request_idle_timeout_sec: 10
-- # https://webarchive.jira.com/browse/ARI-5389
-  url_regex: '^https?://pitchfork\.com/.*$'
-  behavior_js_template: pitchfork.js
-- # https://webarchive.jira.com/browse/ARI-5379
-  url_regex: '^https?://(?:www\.)?pm\.gc\.ca/.*$'
-  behavior_js_template: pm-ca.js
-  request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-4960
   url_regex: '^https?://(?:www\.)?fortstjames.ca/community-events-calendar/$'
   behavior_js_template: simpleclicks.js.j2
@@ -151,5 +166,7 @@
   request_idle_timeout_sec: 10
 - # default fallback behavior
   url_regex: '^.*$'
-  request_idle_timeout_sec: 10
-  behavior_js_template: default.js
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: button.sc-button-play, button.playButton, div.soundItem
