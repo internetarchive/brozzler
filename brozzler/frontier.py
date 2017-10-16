@@ -264,6 +264,7 @@ class RethinkDbFrontier:
             # can't call resume_job since that would resume jobs's other sites
             job = brozzler.Job.load(self.rr, site.job_id)
             job.status = "ACTIVE"
+            site.stop_requested = None
             job.starts_and_stops.append(
                     {"start":doublethink.utcnow(), "stop":None})
             job.save()
