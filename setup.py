@@ -32,7 +32,7 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.1b12.dev268',
+        version='1.1b12.dev269',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
@@ -74,6 +74,7 @@ setuptools.setup(
             'rethinkdb>=2.3,<2.4',
             'cerberus==1.0.1',
             'jinja2',
+            'cryptography!=2.1.1', # 2.1.1 installation is failing on ubuntu
         ],
         extras_require={
             'dashboard': ['flask>=0.11', 'gunicorn'],
