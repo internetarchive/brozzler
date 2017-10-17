@@ -287,7 +287,7 @@ def test_resume_job():
     # simulate job resume after a stop request
     frontier.resume_job(job)
     site1 = list(frontier.job_sites(job.id))[0]
-    site2 = list(frontier.job_sites(job.id))[0]
+    site2 = list(frontier.job_sites(job.id))[1]
 
     assert job.status == 'ACTIVE'
     assert job.stop_requested is None
@@ -308,7 +308,7 @@ def test_resume_job():
     site1.save()
 
     # should not raise a CrawlStopped
-    frontier.honor_stop_request(site)
+    frontier.honor_stop_request(site2)
 
     frontier.finished(site1, 'FINISHED_STOP_REQUESTED')
     job.refresh()
