@@ -43,6 +43,13 @@
   default_parameters:
     actions:
       - selector: div.teaser, li.pager__item a
+- # https://webarchive.jira.com/browse/ARI-5430
+  url_regex: '^https?://www\.careers\.ox\.ac\.uk/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: li.breadcrumbOnPage a
+        closeSelector: .exit
 - # https://webarchive.jira.com/browse/ARI-5389
   url_regex: '^https?://pitchfork\.com/.*$'
   behavior_js_template: umbraBehavior.js.j2
