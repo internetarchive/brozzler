@@ -1,6 +1,6 @@
 /*
  * brozzler/behaviors.d/default.js - default behavior, scrolls to the bottom of
- * the page and clicks on embedded soundcloud elements
+ * the page and clicks on selected embedded elements
  *
  * Copyright (C) 2014-2016 Internet Archive
  *
@@ -28,27 +28,30 @@ var umbraAboveBelowOrOnScreen = function(e) {
         }
 }
 
-var UMBRA_IFRAME_SOUNDCLOUD_EMBEDDED_SELECTOR = "iframe";
-var UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR = "button.sc-button-play, button.playButton, div.soundItem";
+var UMBRA_IFRAME_EMBEDDED_SELECTOR = "iframe";
+//elements selected for SoundCloud.com
+var UMBRA_THINGS_TO_CLICK_EMBEDDED_SELECTOR = "button.sc-button-play, .playButton, div.soundItem";
+//elements selected for Archive.org Playlists
+UMBRA_THINGS_TO_CLICK_EMBEDDED_SELECTOR += ", .jwlist>a"
 var MAX_IFRAME_RECURSE_DEPTH = 1; //0-based
 var umbraState = {'idleSince':null};
 var umbraAlreadyClicked = {};
 var umbraFinished = false;
 var umbraIntervalFunc = function() {
 
-    var umbraSoundCloudEmbeddedElements = [];
+    var umbraEmbeddedElements = [];
 
-    getUmbraSoundCloudEmbeddedElements(umbraSoundCloudEmbeddedElements);
+    getUmbraEmbeddedElements(umbraEmbeddedElements);
 
     var clickedSomething = false;
     var somethingLeftBelow = false;
     var somethingLeftAbove = false;
     var missedAbove = 0;
 
-    for (var i = 0; i < umbraSoundCloudEmbeddedElements.length; i++) {
+    for (var i = 0; i < umbraEmbeddedElements.length; i++) {
 
-            var targetId = umbraSoundCloudEmbeddedElements[i].id;
-            var target = umbraSoundCloudEmbeddedElements[i].target;
+            var targetId = umbraEmbeddedElements[i].id;
+            var target = umbraEmbeddedElements[i].target;
 
             if (!(targetId in umbraAlreadyClicked)) {
 
@@ -97,7 +100,7 @@ var umbraIntervalFunc = function() {
 }
 
 //try to detect sound cloud "Play" buttons and return them as targets for clicking
-var getUmbraSoundCloudEmbeddedElements = function(soundCloudEmbeddedElements, currentIframeDepth, currentDocument,
+var getUmbraEmbeddedElements = function(embeddedElements, currentIframeDepth, currentDocument,
 		iframeElement) {
 
 	//set default values for parameters
@@ -111,21 +114,21 @@ var getUmbraSoundCloudEmbeddedElements = function(soundCloudEmbeddedElements, cu
 	//collect all buttons on current document first
 	var button = [];
 
-	button = currentDocument.querySelectorAll(UMBRA_THINGS_TO_CLICK_SOUNDCLOUD_EMBEDDED_SELECTOR);
+	button = currentDocument.querySelectorAll(UMBRA_THINGS_TO_CLICK_EMBEDDED_SELECTOR);
 
 	var cssPathIframe = iframeElement ? getElementCssPath(iframeElement) : "";
 
 	for (var i = 0; i < button.length; i++) {
-		soundCloudEmbeddedElements.push({"id" : cssPathIframe + getElementCssPath(button.item(i)), "target" : button.item(i)});
+		embeddedElements.push({"id" : cssPathIframe + getElementCssPath(button.item(i)), "target" : button.item(i)});
 	}
 
 	//now get all buttons in embedded iframes
 	var iframe = [];
 
-	iframe = currentDocument.querySelectorAll(UMBRA_IFRAME_SOUNDCLOUD_EMBEDDED_SELECTOR);
+	iframe = currentDocument.querySelectorAll(UMBRA_IFRAME_EMBEDDED_SELECTOR);
 
 	for (var i = 0; i < iframe.length; i++) {
-		getUmbraSoundCloudEmbeddedElements(soundCloudEmbeddedElements, currentIframeDepth + 1, iframe[i].contentWindow.document.body, iframe[i]);
+		getUmbraEmbeddedElements(embeddedElements, currentIframeDepth + 1, iframe[i].contentWindow.document.body, iframe[i]);
 	}
 }
 
