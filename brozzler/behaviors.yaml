@@ -128,6 +128,13 @@
      mouseover_css_selector: .zz1_AgencyListingMenu_1
      mouseover_until_hard_timeout: False
   request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-5433
+  url_regex: '^https?://(?:www\.)?vermontcountrystore\.com/.*$'
+  behavior_js_template: simpleclicks.js.j2
+  default_parameters:
+     click_css_selector: .navonetitle a
+     click_until_hard_timeout: False
+  request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-5384
   url_regex: '^https?://issuu\.com/.*$'
   behavior_js_template: simpleclicks.js.j2
