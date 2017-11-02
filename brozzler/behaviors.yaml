@@ -39,7 +39,7 @@
   request_idle_timeout_sec: 10
 -
   url_regex: '^https?://(?:www\.)?pm\.gc\.ca/.*$'
-  behavior_js_template: umbraBehavior.js.j2
+  behavior_js_template: classUmbraBehavior.js.j2
   default_parameters:
     actions:
       - selector: div.teaser, li.pager__item a
