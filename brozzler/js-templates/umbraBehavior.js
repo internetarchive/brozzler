@@ -50,16 +50,15 @@ class UmbraBehavior {
         var somethingLeftAbove = false;
 
         var iframes = document.querySelectorAll("iframe");
-        iframesLength = iframes.length;
+        var iframesLength = iframes.length;
         var documents = Array(iframesLength + 1);
         documents[0] = document;
         for (var i = 0; i < iframesLength; i++) {
             documents[i+1] = iframes[i].contentWindow.document;
         }
-        documentsLength = documents.length;
+        var documentsLength = documents.length;
 
         for (var j = 0; j < documentsLength; j++) {
-
             if (closeSelector) {
                 var closeTargets = documents[j].querySelectorAll(closeSelector);
                 if (closeTargets != []) {
@@ -72,8 +71,7 @@ class UmbraBehavior {
             if (doTargets == []) {
                 continue;
             }
-
-            doTargetsLength = doTargets.length;
+            var doTargetsLength = doTargets.length;
             for ( var i = 0; i < doTargetsLength; i++) {
                 if (this.alreadyDone.indexOf(doTargets[i]) > -1) {
                     continue;
@@ -128,8 +126,8 @@ class UmbraBehavior {
                 this.index += 1;
                 this.idleSince = null;
                 return;
+            }
         }
-
     }
 
     aboveBelowOrOnScreen(elem) {
@@ -184,12 +182,9 @@ class UmbraBehavior {
     }
 }
 
-//actions : [{'selector': 'div.teaser, li.pager__item a'}],
-//actions : [{'selector': '.slideshow-card__overlay'}, {'selector': '.slideshow__next'}],
+var umbraBehavior = new UmbraBehavior( {{actions|json}} );
 
-// var umbraBehavior = new UmbraBehavior( {{actions|json}} )
-
-var umbraBehavior = new UmbraBehavior( [{'selector': 'div.teaser, li.pager__item a'}] )
+// var umbraBehavior = new UmbraBehavior( [{'selector': 'div.teaser, li.pager__item a'}] );
 
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
