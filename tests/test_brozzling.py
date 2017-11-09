@@ -63,7 +63,6 @@ def httpd(request):
                 self.end_headers()
                 self.wfile.write(payload)
             else:
-                import pdb; pdb.set_trace()
                 super().do_GET()
 
     # SimpleHTTPRequestHandler always uses CWD so we have to chdir
