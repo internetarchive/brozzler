@@ -247,14 +247,18 @@ class BrozzlerWorker:
         if not 'videos' in page:
             page.videos = []
         for txn in ydl_spy.transactions:
-            if (txn['response_headers'].get_content_type().startswith('video/')
+            content_type = txn['response_headers'].get_content_type()
+            if (content_type.startswith('video/')
+                    # skip manifests of DASH segmented video -
+                    # see https://github.com/internetarchive/brozzler/pull/70
+                    and content_type != 'video/vnd.mpeg.dash.mpd'
                     and txn['method'] == 'GET'
                     and txn['status_code'] in (200, 206)):
                 video = {
                     'blame': 'youtube-dl',
                     'url': txn['url'],
                     'response_code': txn['status_code'],
-                    'content-type': txn['response_headers'].get_content_type(),
+                    'content-type': content_type,
                 }
                 if 'content-length' in txn['response_headers']:
                     video['content-length'] = int(
@@ -390,6 +394,9 @@ class BrozzlerWorker:
                     and 'response' in chrome_msg['params']
                     and 'mimeType' in chrome_msg['params']['response']
                     and chrome_msg['params']['response'].get('mimeType', '').startswith('video/')
+                    # skip manifests of DASH segmented video -
+                    # see https://github.com/internetarchive/brozzler/pull/70
+                    and chrome_msg['params']['response']['mimeType'] != 'video/vnd.mpeg.dash.mpd'
                     and chrome_msg['params']['response'].get('status') in (200, 206)):
                 video = {
                     'blame': 'browser',
