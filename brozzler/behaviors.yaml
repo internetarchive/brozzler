@@ -38,11 +38,6 @@
   behavior_js_template: instagram.js
   request_idle_timeout_sec: 10
 -
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> ARI-5241
   url_regex: '^https?://(?:www\.)?pm\.gc\.ca/.*$'
   behavior_js_template: umbraBehavior.js.j2
   default_parameters:
@@ -55,8 +50,6 @@
     actions:
       - selector: li.breadcrumbOnPage a
         closeSelector: .exit
-<<<<<<< HEAD
-=======
 - # https://webarchive.jira.com/browse/ARI-5241
   url_regex: '^https?://(?:www\.)?colonialart\.org/.*$'
   behavior_js_template: simpleclicks.js.j2
@@ -64,7 +57,6 @@
      click_css_selector: img.link-overlay
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
->>>>>>> ARI-5241
 - # https://webarchive.jira.com/browse/ARI-5389
   url_regex: '^https?://pitchfork\.com/.*$'
   behavior_js_template: umbraBehavior.js.j2
@@ -73,10 +65,6 @@
       - selector: div.teaser, li.pager__item a
         closeSelector: .pmf-artist-modal__close-btn
 -
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> ARI-5241
   url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
   behavior_js_template: umbraBehavior.js.j2
   default_parameters:
@@ -219,23 +207,6 @@
      click_css_selector: button#ird3-button-next
      click_until_hard_timeout: True
   request_idle_timeout_sec: 10
-<<<<<<< HEAD
-=======
-- # https://webarchive.jira.com/browse/ARI-5241
-  url_regex: '^https?://(?:www\.)?colonialart\.org/.*$'
-  behavior_js_template: umbraBehavior.js.j2
-  default_parameters:
-    actions:
-      - selector: img.link-overlay
-        closeSelector: div.close
-- # https://webarchive.jira.com/browse/ARI-5389
-  url_regex: '^https?://pitchfork\.com/.*$'
-  behavior_js_template: pitchfork.js
-- # https://webarchive.jira.com/browse/ARI-5379
-  url_regex: '^https?://(?:www\.)?pm\.gc\.ca/.*$'
-  behavior_js_template: pm-ca.js
-  request_idle_timeout_sec: 10
->>>>>>> ARI-5241
 - # https://webarchive.jira.com/browse/ARI-4960
   url_regex: '^https?://(?:www\.)?fortstjames.ca/community-events-calendar/$'
   behavior_js_template: simpleclicks.js.j2
