@@ -61,17 +61,19 @@ class UmbraBehavior {
         for (var j = 0; j < documentsLength; j++) {
             if (closeSelector) {
                 var closeTargets = documents[j].querySelectorAll(closeSelector);
-                if (closeTargets != []) {
-                    this.doTarget(closeTargets[0], 'click');
-                    didSomething = true;
+                if ((closeTargets.length > 0) &&
+                    (this.alreadyDone.indexOf(closeTargets[0]) === -1) &&
+                    (this.isVisible(closeTargets[0]))) {
+                    console.log('closing');
+                    doTarget(closeTargets[0], 'click');
                 }
             }
 
             var doTargets = documents[j].querySelectorAll(selector);
-            if (doTargets == []) {
+            var doTargetsLength = doTargets.length;
+            if (!(doTargetsLength > 0)) {
                 continue;
             }
-            var doTargetsLength = doTargets.length;
             for ( var i = 0; i < doTargetsLength; i++) {
                 if (this.alreadyDone.indexOf(doTargets[i]) > -1) {
                     continue;
@@ -121,7 +123,7 @@ class UmbraBehavior {
             this.idleSince = Date.now();
         } else {
             var idleTimeMs = Date.now() - this.idleSince;
-            if ((idleTimeMs / 1000) > (this.IDLE_TIMEOUT_SEC - 1) && this.index < (this.actions.length - 1)) {
+            if ((idleTimeMs / 1000) > (this.IDLE_TIMEOUT_SEC - 1) && (this.index < (this.actions.length - 1))) {
                 console.log("ready for next action");
                 this.index += 1;
                 this.idleSince = null;
