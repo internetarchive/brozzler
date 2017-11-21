@@ -1,5 +1,5 @@
 /*
- * brozzler/js-templates/classUmbrabehavior.js.j2 - an umbra/brozzler behavior class
+ * brozzler/js-templates/umbrabehavior.js.j2 - an umbra/brozzler behavior class
  *
  * Copyright (C) 2017 Internet Archive
  *
@@ -25,7 +25,7 @@ class UmbraBehavior {
         this.alreadyDone = [];
         this.idleSince = null;
         this.intervalId = null;
-        this.intervalTimeMs = 250;
+        this.intervalTimeMs = 1000;
         this.state = null; // currently unused
         this.index = 0;
     }
@@ -127,7 +127,6 @@ class UmbraBehavior {
                 console.log("ready for next action");
                 this.index += 1;
                 this.idleSince = null;
-                return;
             }
         }
     }
@@ -186,7 +185,8 @@ class UmbraBehavior {
 
 var umbraBehavior = new UmbraBehavior( {{actions|json}} );
 
-// var umbraBehavior = new UmbraBehavior( [{'selector': 'div.teaser, li.pager__item a'}] );
+//var umbraBehavior = new UmbraBehavior( [{'selector': 'div.teaser, li.pager__item a'}] ); // pm.gc.ca/eng/news/statements
+//var umbraBehavior = new UmbraBehavior( [{'selector': 'a#get_more'}] ); // www.thejewishnews.com/arts-life/  multi iframes, error!
 
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
