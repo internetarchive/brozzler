@@ -48,6 +48,10 @@ WARCPROX_META_420 = {
 @pytest.fixture(scope='module')
 def httpd(request):
     class RequestHandler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            self.extensions_map['.mpd'] = 'video/vnd.mpeg.dash.mpd'
+            http.server.SimpleHTTPRequestHandler.__init__(self, *args, **kwargs)
+
         def do_GET(self):
             if self.path == '/420':
                 self.send_response(420, 'Reached limit')
@@ -155,7 +159,7 @@ def test_page_videos(httpd):
     with brozzler.Browser(chrome_exe=chrome_exe) as browser:
         worker.brozzle_page(browser, site, page)
     assert page.videos
-    assert len(page.videos) == 2
+    assert len(page.videos) == 4
     assert page.videos[0] == {
         'blame': 'youtube-dl',
         'response_code': 200,
@@ -164,6 +168,20 @@ def test_page_videos(httpd):
         'url': 'http://localhost:%s/site6/small.mp4' % httpd.server_port,
     }
     assert page.videos[1] == {
+        'blame': 'youtube-dl',
+        'content-length': 92728,
+        'content-type': 'video/webm',
+        'response_code': 200,
+        'url': 'http://localhost:%s/site6/small-video_280x160_100k.webm' % httpd.server_port
+    }
+    assert page.videos[2] == {
+        'blame': 'youtube-dl',
+        'content-length': 101114,
+        'content-type': 'video/webm',
+        'response_code': 200,
+        'url': 'http://localhost:%s/site6/small-audio.webm' % httpd.server_port
+    }
+    assert page.videos[3] == {
         'blame': 'browser',
         # 'response_code': 206,
         # 'content-range': 'bytes 0-229454/229455',
