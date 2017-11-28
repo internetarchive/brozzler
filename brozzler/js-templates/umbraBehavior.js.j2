@@ -1,5 +1,5 @@
 /*
- * brozzler/js-templates/umbrabehavior.js.j2 - a generalized umbra/brozzler behavior
+ * brozzler/js-templates/umbrabehavior.js.j2 - an umbra/brozzler behavior class
  *
  * Copyright (C) 2017 Internet Archive
  *
@@ -16,158 +16,209 @@
  * limitations under the License.
  */
 
-var umbraBehavior = {
-    IDLE_TIMEOUT_SEC : 10,
 
-    alreadyDone : [],
-    idleSince : null,
-    intervalId : null,
-    state : null,
+class UmbraBehavior {
 
-    //actions : [{'selector': 'div.teaser, li.pager__item a'}],
-    //actions : [{'selector': '.slideshow-card__overlay'}, {'selector': '.slideshow__next'}],
-    actions : {{actions|json}},
-    k : 0,
+    constructor(actions) {
+        this.IDLE_TIMEOUT_SEC = 10;
+        this.actions = actions;
+        this.alreadyDone = [];
+        this.idleSince = null;
+        this.intervalId = null;
+        this.intervalTimeMs = 1000;
+        this.state = null; // currently unused
+        this.index = 0;
+    }
 
-    intervalFunc: function() {
-        if (!this.state) {
-            this.state = this.actions.length === 1 ? "simple" : "fancy";
-        } else if (this.actions.length === k + 1) {
-            // last action always uses simple block
-            this.state = "simple";
-        }
-
-        var k = this.k;
+    simpleIntervalFunc() {
+        var k = this.index;
         var selector = this.actions[k].selector;
         var action = this.actions[k].do ? this.actions[k].do : 'click';
         var closeSelector = this.actions[k].closeSelector ? this.actions[k].closeSelector : null;
 
-        // need to figure out more about how to end more complex actions...
         // var limit = this.actions[k].limit ? this.actions[k].limit : 0;
-        // if (limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= limit) {
-        //     continue;
-        // }
         // if (limit && !(this.actions[k].alreadyDone)) {
         //     this.actions[k].alreadyDone = [];
         // }
 
-        if (this.state === "fancy") {
+        // if (limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= limit) {
+        //     continue;
+        // }
 
-            var moreButton = document.querySelectorAll(selector);
-            if (moreButton.length > 0) {
-                console.log("clicking more button");
-                this.doTarget(moreButton[0],action);
-                this.k++;  // use next action at next run of interval function
-                return;
-            }
+        var didSomething = false;
+        var somethingLeftBelow = false;
+        var somethingLeftAbove = false;
 
-            if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
-                window.scrollBy(0, 200);
-                this.idleSince = null;
-                return;
-            }
-
-            if (this.idleSince === null) {
-                console.log("nothing to do at the moment, might be waiting for something to load, setting this.idleSince=Date.now()");
-                this.idleSince = Date.now();
-                return;
-            } else {
-                if ((Date.now() - this.idleSince) > 9000) {
-                    console.log("finished loading-thumbs, it appears we have reached the bottom");
-                    this.state = "clicking-first-thumb";
-                    this.idleSince = null;
-                }
-                return;
-            }
+        var iframes = document.querySelectorAll("iframe");
+        var iframesLength = iframes.length;
+        var documents = Array(iframesLength + 1);
+        documents[0] = document;
+        for (var i = 0; i < iframesLength; i++) {
+            documents[i+1] = iframes[i].contentWindow.document;
         }
+        var documentsLength = documents.length;
 
-        if (this.state === "simple") {
-            var didSomething = false;
-            var somethingLeftBelow = false;
-            var somethingLeftAbove = false;
-
-            var iframes = document.querySelectorAll("iframe");
-            var documents = Array(iframes.length + 1);
-            documents[0] = document;
-
-            iframesLength = iframes.length;
-            for (var i = 0; i < iframesLength; i++) {
-                documents[i+1] = iframes[i].contentWindow.document;
+        for (var j = 0; j < documentsLength; j++) {
+            if (closeSelector) {
+                var closeTargets = documents[j].querySelectorAll(closeSelector);
+                if ((closeTargets.length > 0) &&
+                    (this.alreadyDone.indexOf(closeTargets[0]) === -1) &&
+                    (this.isVisible(closeTargets[0]))) {
+                    console.log('closing');
+                    doTarget(closeTargets[0], 'click');
+                }
             }
 
-            documentsLength = documents.length;
-            for (var j = 0; j < documentsLength; j++) {
-
-                if (closeSelector) {
-                    var closeTargets = documents[j].querySelectorAll(closeSelector);
-                    if (closeTargets != []) {
-                        for ( var i = 0; i < closeTargets.length; i++) {
-                            this.doTarget(closeTargets[i], 'click');
-                            didSomething = true;
-                            break; // break from closeTargets loop
-                        }
-                    }
-                }
-
-                var doTargets = documents[j].querySelectorAll(selector);
-                if (doTargets == []) {
+            var doTargets = documents[j].querySelectorAll(selector);
+            var doTargetsLength = doTargets.length;
+            if (!(doTargetsLength > 0)) {
+                continue;
+            }
+            for ( var i = 0; i < doTargetsLength; i++) {
+                if (this.alreadyDone.indexOf(doTargets[i]) > -1) {
                     continue;
                 }
+                if (!this.isVisible(doTargets[i])) {
+                    continue;
+                }
+                // if using limits...
+                // if (limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= limit) {
+                //     break;
+                // }
 
-                doTargetsLength = doTargets.length;
-                for ( var i = 0; i < doTargetsLength; i++) {
+                var where = this.aboveBelowOrOnScreen(doTargets[i]);
+                if (where == 0) {
+                    this.doTarget(doTargets[i], action);
                     // if using limits...
-                    // if (limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= limit) {
-                    //     break;
+                    // if (this.actions[k].alreadyDone) {
+                    //     this.actions[k].alreadyDone.push(doTargets[i]);
                     // }
-
-                    if (this.alreadyDone.indexOf(doTargets[i]) > -1) {
-                        continue;
-                    }
-                    if (!this.isVisible(doTargets[i])) {
-                        continue;
-                    }
-                    var where = this.aboveBelowOrOnScreen(doTargets[i]);
-                    if (where == 0) {
-                        this.doTarget(doTargets[i], action);
-                        // if (this.actions[k].alreadyDone) {
-                        //     this.actions[k].alreadyDone.push(doTargets[i]);
-                        // }
-                        didSomething = true;
-                        break; // break from doTargets loop, but not from documents loop
-                    } else if (where > 0) {
-                        somethingLeftBelow = true;
-                    } else if (where < 0) {
-                        somethingLeftAbove = true;
-                    }
+                    didSomething = true;
+                    break; // break from doTargets loop, but not from documents loop
+                } else if (where > 0) {
+                    somethingLeftBelow = true;
+                } else if (where < 0) {
+                    somethingLeftAbove = true;
                 }
             }
-            if (!didSomething) {
-                if (somethingLeftAbove) {
-                    // console.log("scrolling UP because everything on this screen has been clicked but we missed something above");
-                    window.scrollBy(0, -500);
-                    this.idleSince = null;
-                } else if (somethingLeftBelow) {
-                    // console.log("scrolling because everything on this screen has been clicked but there's more below document.body.clientHeight="
-                    //             + document.body.clientHeight);
-                    window.scrollBy(0, 200);
-                    this.idleSince = null;
-                } else if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
-                    // console.log("scrolling because we're not to the bottom yet document.body.clientHeight="
-                    //             + document.body.clientHeight);
-                    window.scrollBy(0, 200);
-                    this.idleSince = null;
-                } else if (this.idleSince == null) {
-                    this.idleSince = Date.now();
-                }
+        }
+        if (!didSomething) {
+            if (somethingLeftAbove) {
+                // console.log("scrolling up");
+                window.scrollBy(0, -500);
+                this.idleSince = null;
+            } else if (somethingLeftBelow) {
+                // console.log("scrolling"); document.body.clientHeight =+ document.body.clientHeight);
+                window.scrollBy(0, 200);
+                this.idleSince = null;
+            } else if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
+                // console.log("scrolling because we're not to the bottom yet");
+                window.scrollBy(0, 200);
+                this.idleSince = null;
+            } else if (this.idleSince == null) {
+                this.idleSince = Date.now();
             }
         }
         if (!this.idleSince) {
             this.idleSince = Date.now();
+        } else {
+            var idleTimeMs = Date.now() - this.idleSince;
+            if ((idleTimeMs / 1000) > (this.IDLE_TIMEOUT_SEC - 1) && (this.index < (this.actions.length - 1))) {
+                console.log("ready for next action");
+                this.index += 1;
+                this.idleSince = null;
+            }
         }
-    },
+    }
 
-    aboveBelowOrOnScreen : function(elem) {
+    simplerIntervalFunc() {
+        var k = this.index;
+        var selector = this.actions[k].selector;
+        var action = this.actions[k].do ? this.actions[k].do : 'click';
+        var closeSelector = this.actions[k].closeSelector ? this.actions[k].closeSelector : null;
+
+        // var limit = this.actions[k].limit ? this.actions[k].limit : 0;
+        // if (limit && !(this.actions[k].alreadyDone)) {
+        //     this.actions[k].alreadyDone = [];
+        // }
+
+        // if (limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= limit) {
+        //     continue;
+        // }
+
+        var didSomething = false;
+        var somethingLeftBelow = false;
+        var somethingLeftAbove = false;
+
+        if (closeSelector) {
+            var closeTargets = document.querySelectorAll(closeSelector);
+            if ((closeTargets.length > 0) &&
+                (this.alreadyDone.indexOf(closeTargets[0]) === -1) &&
+                (this.isVisible(closeTargets[0]))) {
+                console.log('closing');
+                doTarget(closeTargets[0], 'click');
+            }
+        }
+
+        var doTargets = document.querySelectorAll(selector);
+        var doTargetsLength = doTargets.length;
+        for ( var i = 0; i < doTargetsLength; i++) {
+            if (this.alreadyDone.indexOf(doTargets[i]) > -1) {
+                continue;
+            }
+            if (!this.isVisible(doTargets[i])) {
+                continue;
+            }
+            // if using limits...
+            // if (limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= limit) {
+            //     break;
+            // }
+
+            var where = this.aboveBelowOrOnScreen(doTargets[i]);
+            if (where == 0) {
+                this.doTarget(doTargets[i], action);
+                // if using limits...
+                // if (this.actions[k].alreadyDone) {
+                //     this.actions[k].alreadyDone.push(doTargets[i]);
+                // }
+                didSomething = true;
+                break; // break from doTargets loop
+            } else if (where > 0) {
+                somethingLeftBelow = true;
+            } else if (where < 0) {
+                somethingLeftAbove = true;
+            }
+        }
+        if (!didSomething) {
+            if (somethingLeftAbove) {
+                // console.log("scrolling up");
+                window.scrollBy(0, -500);
+                this.idleSince = null;
+            } else if (somethingLeftBelow) {
+                // console.log("scrolling"); document.body.clientHeight =+ document.body.clientHeight);
+                window.scrollBy(0, 200);
+                this.idleSince = null;
+            } else if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
+                // console.log("scrolling because we're not to the bottom yet");
+                window.scrollBy(0, 200);
+                this.idleSince = null;
+            } else if (this.idleSince == null) {
+                this.idleSince = Date.now();
+            }
+        }
+        if (!this.idleSince) {
+            this.idleSince = Date.now();
+        } else {
+            var idleTimeMs = Date.now() - this.idleSince;
+            if ((idleTimeMs / 1000) > (this.IDLE_TIMEOUT_SEC - 1) && (this.index < (this.actions.length - 1))) {
+                console.log("ready for next action");
+                this.index += 1;
+                this.idleSince = null;
+            }
+        }
+    }
+
+    aboveBelowOrOnScreen(elem) {
         var eTop = elem.getBoundingClientRect().top;
         if (eTop < window.scrollY) {
             return -1; // above
@@ -176,13 +227,13 @@ var umbraBehavior = {
         } else {
             return 0; // on screen
         }
-    },
+    }
 
-    isVisible : function(elem) {
+    isVisible(elem) {
         return !!(elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length);
-    },
+    }
 
-    doTarget : function(target, action) {
+    doTarget(target, action) {
         // console.log("doing " + action + target.outerHTML);
         // do mouse over event on target
         // since some urls are requsted only on
@@ -198,16 +249,16 @@ var umbraBehavior = {
 
         this.alreadyDone.push(target);
         this.idleSince = null;
-    },
+    }
 
-    start : function() {
+    start() {
         var that = this;
         this.intervalId = setInterval(function() {
-            that.intervalFunc()
-        }, 500);
-    },
+            that.simplerIntervalFunc()
+        }, this.intervalTimeMs);
+    }
 
-    isFinished : function() {
+    isFinished() {
         if (this.idleSince != null) {
             var idleTimeMs = Date.now() - this.idleSince;
             if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
@@ -216,9 +267,13 @@ var umbraBehavior = {
             }
         }
         return false;
-    },
-// end umbraBehavior definition
-};
+    }
+}
+
+var umbraBehavior = new UmbraBehavior( {{actions|json}} );
+
+//var umbraBehavior = new UmbraBehavior( [{'selector': 'div.teaser, li.pager__item a'}] ); // pm.gc.ca/eng/news
+//var umbraBehavior = new UmbraBehavior( [{'selector': 'a#get_more'}] ); // www.thejewishnews.com/arts-life/  multi iframes, error!
 
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
