@@ -26,28 +26,18 @@ class UmbraBehavior {
         this.idleSince = null;
         this.intervalId = null;
         this.intervalTimeMs = 1000;
-        this.state = null; // currently unused
         this.index = 0;
     }
 
     simpleIntervalFunc() {
+        // should match older default and simpleclicks behavior, and more
         var k = this.index;
         var selector = this.actions[k].selector;
         var action = this.actions[k].do ? this.actions[k].do : 'click';
         var closeSelector = this.actions[k].closeSelector ? this.actions[k].closeSelector : null;
-
-        // var limit = this.actions[k].limit ? this.actions[k].limit : 0;
-        // if (limit && !(this.actions[k].alreadyDone)) {
-        //     this.actions[k].alreadyDone = [];
-        // }
-
-        // if (limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= limit) {
-        //     continue;
-        // }
-
         var didSomething = false;
-        var somethingLeftBelow = false;
         var somethingLeftAbove = false;
+        var somethingLeftBelow = false;
 
         var iframes = document.querySelectorAll("iframe");
         var iframesLength = iframes.length;
@@ -57,18 +47,15 @@ class UmbraBehavior {
             documents[i+1] = iframes[i].contentWindow.document;
         }
         var documentsLength = documents.length;
-
         for (var j = 0; j < documentsLength; j++) {
             if (closeSelector) {
                 var closeTargets = documents[j].querySelectorAll(closeSelector);
                 if ((closeTargets.length > 0) &&
                     (this.alreadyDone.indexOf(closeTargets[0]) === -1) &&
                     (this.isVisible(closeTargets[0]))) {
-                    console.log('closing');
                     doTarget(closeTargets[0], 'click');
                 }
             }
-
             var doTargets = documents[j].querySelectorAll(selector);
             var doTargetsLength = doTargets.length;
             if (!(doTargetsLength > 0)) {
@@ -81,20 +68,11 @@ class UmbraBehavior {
                 if (!this.isVisible(doTargets[i])) {
                     continue;
                 }
-                // if using limits...
-                // if (limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= limit) {
-                //     break;
-                // }
-
                 var where = this.aboveBelowOrOnScreen(doTargets[i]);
                 if (where == 0) {
                     this.doTarget(doTargets[i], action);
-                    // if using limits...
-                    // if (this.actions[k].alreadyDone) {
-                    //     this.actions[k].alreadyDone.push(doTargets[i]);
-                    // }
                     didSomething = true;
-                    break; // break from doTargets loop, but not from documents loop
+                    break;
                 } else if (where > 0) {
                     somethingLeftBelow = true;
                 } else if (where < 0) {
@@ -102,116 +80,25 @@ class UmbraBehavior {
                 }
             }
         }
+
         if (!didSomething) {
             if (somethingLeftAbove) {
-                // console.log("scrolling up");
                 window.scrollBy(0, -500);
                 this.idleSince = null;
-            } else if (somethingLeftBelow) {
-                // console.log("scrolling"); document.body.clientHeight =+ document.body.clientHeight);
-                window.scrollBy(0, 200);
-                this.idleSince = null;
-            } else if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
-                // console.log("scrolling because we're not to the bottom yet");
+            } else if (somethingLeftBelow || ( (window.scrollY + window.innerHeight) < document.documentElement.scrollHeight)) {
                 window.scrollBy(0, 200);
                 this.idleSince = null;
             } else if (this.idleSince == null) {
                 this.idleSince = Date.now();
             }
         }
+
         if (!this.idleSince) {
             this.idleSince = Date.now();
         } else {
             var idleTimeMs = Date.now() - this.idleSince;
             if ((idleTimeMs / 1000) > (this.IDLE_TIMEOUT_SEC - 1) && (this.index < (this.actions.length - 1))) {
-                console.log("ready for next action");
-                this.index += 1;
-                this.idleSince = null;
-            }
-        }
-    }
-
-    simplerIntervalFunc() {
-        var k = this.index;
-        var selector = this.actions[k].selector;
-        var action = this.actions[k].do ? this.actions[k].do : 'click';
-        var closeSelector = this.actions[k].closeSelector ? this.actions[k].closeSelector : null;
-
-        // var limit = this.actions[k].limit ? this.actions[k].limit : 0;
-        // if (limit && !(this.actions[k].alreadyDone)) {
-        //     this.actions[k].alreadyDone = [];
-        // }
-
-        // if (limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= limit) {
-        //     continue;
-        // }
-
-        var didSomething = false;
-        var somethingLeftBelow = false;
-        var somethingLeftAbove = false;
-
-        if (closeSelector) {
-            var closeTargets = document.querySelectorAll(closeSelector);
-            if ((closeTargets.length > 0) &&
-                (this.alreadyDone.indexOf(closeTargets[0]) === -1) &&
-                (this.isVisible(closeTargets[0]))) {
-                console.log('closing');
-                doTarget(closeTargets[0], 'click');
-            }
-        }
-
-        var doTargets = document.querySelectorAll(selector);
-        var doTargetsLength = doTargets.length;
-        for ( var i = 0; i < doTargetsLength; i++) {
-            if (this.alreadyDone.indexOf(doTargets[i]) > -1) {
-                continue;
-            }
-            if (!this.isVisible(doTargets[i])) {
-                continue;
-            }
-            // if using limits...
-            // if (limit && this.actions[k].alreadyDone && this.actions[k].alreadyDone.length >= limit) {
-            //     break;
-            // }
-
-            var where = this.aboveBelowOrOnScreen(doTargets[i]);
-            if (where == 0) {
-                this.doTarget(doTargets[i], action);
-                // if using limits...
-                // if (this.actions[k].alreadyDone) {
-                //     this.actions[k].alreadyDone.push(doTargets[i]);
-                // }
-                didSomething = true;
-                break; // break from doTargets loop
-            } else if (where > 0) {
-                somethingLeftBelow = true;
-            } else if (where < 0) {
-                somethingLeftAbove = true;
-            }
-        }
-        if (!didSomething) {
-            if (somethingLeftAbove) {
-                // console.log("scrolling up");
-                window.scrollBy(0, -500);
-                this.idleSince = null;
-            } else if (somethingLeftBelow) {
-                // console.log("scrolling"); document.body.clientHeight =+ document.body.clientHeight);
-                window.scrollBy(0, 200);
-                this.idleSince = null;
-            } else if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
-                // console.log("scrolling because we're not to the bottom yet");
-                window.scrollBy(0, 200);
-                this.idleSince = null;
-            } else if (this.idleSince == null) {
-                this.idleSince = Date.now();
-            }
-        }
-        if (!this.idleSince) {
-            this.idleSince = Date.now();
-        } else {
-            var idleTimeMs = Date.now() - this.idleSince;
-            if ((idleTimeMs / 1000) > (this.IDLE_TIMEOUT_SEC - 1) && (this.index < (this.actions.length - 1))) {
-                console.log("ready for next action");
+                console.log("ready for next action");   // untested!
                 this.index += 1;
                 this.idleSince = null;
             }
@@ -271,9 +158,6 @@ class UmbraBehavior {
 }
 
 var umbraBehavior = new UmbraBehavior( {{actions|json}} );
-
-//var umbraBehavior = new UmbraBehavior( [{'selector': 'div.teaser, li.pager__item a'}] ); // pm.gc.ca/eng/news
-//var umbraBehavior = new UmbraBehavior( [{'selector': 'a#get_more'}] ); // www.thejewishnews.com/arts-life/  multi iframes, error!
 
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
