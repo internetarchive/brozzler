@@ -196,6 +196,7 @@ class BrozzlerWorker:
              # "best: Select the best quality format represented by a single
              # file with video and audio."
             "format": "best/bestvideo+bestaudio",
+            "youtube_include_dash_manifest": False,
         }
         if self._proxy_for(site):
             ydl_opts["proxy"] = "http://{}".format(self._proxy_for(site))
