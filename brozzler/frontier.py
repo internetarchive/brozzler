@@ -367,7 +367,7 @@ class RethinkDbFrontier:
         l = list(pages.values())
         for batch in (l[i:i+50] for i in range(0, len(l), 50)):
             try:
-                self.logger.info(
+                self.logger.debug(
                         'inserting/replacing batch of %s pages', len(batch))
                 result = self.rr.table('pages').insert(
                         batch, conflict='replace').run()
