@@ -360,8 +360,21 @@ class RethinkDbFrontier:
                 pages[fresh_page.id] = fresh_page
                 counts['added'] += 1
 
-        result = self.rr.table('pages').insert(
-                pages.values(), conflict='replace').run()
+        # insert/replace in batches of 50 to try to avoid this error:
+        # "rethinkdb.errors.ReqlDriverError: Query size (167883036) greater than maximum (134217727) in:"
+        # there can be many pages and each one can be very large (many videos,
+        # in and out of scope links, etc)
+        l = list(pages.values())
+        for batch in (l[i:i+50] for i in range(0, len(l), 50)):
+            try:
+                self.logger.info(
+                        'inserting/replacing batch of %s pages', len(batch))
+                result = self.rr.table('pages').insert(
+                        batch, conflict='replace').run()
+            except Exception as e:
+                self.logger.error(
+                        'problem inserting/replacing batch of %s pages',
+                        len(batch), exc_info=True)
 
         parent_page.outlinks = {}
         for k in decisions:
