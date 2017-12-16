@@ -20,6 +20,6 @@ exec nice warcprox \
          --gzip \
          --rollover-idle-time=180 \
          --onion-tor-socks-proxy=localhost:9050 \
-         --rethinkdb-servers={{groups['rethinkdb']|join(',')}} \
-         --rethinkdb-db=brozzler \
-         --rethinkdb-big-table
+         --rethinkdb-services-url=rethinkdb://{{groups['rethinkdb']|join(',')}}/brozzler/services \
+         --rethinkdb-stats-url=rethinkdb://{{groups['rethinkdb']|join(',')}}/brozzler/stats \
+         --rethinkdb-big-table-url=rethinkdb://{{groups['rethinkdb']|join(',')}}/brozzler/captures
