@@ -494,7 +494,7 @@ class Browser:
 
     def configure_browser(self, extra_headers=None, user_agent=None):
         headers = extra_headers or {}
-        headers['Accept-Encoding'] = 'identity'
+        headers['Accept-Encoding'] = 'gzip'  # avoid encodings br, sdch
         self.send_to_chrome(
                 method='Network.setExtraHTTPHeaders',
                 params={'headers': headers})
