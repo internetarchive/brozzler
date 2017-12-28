@@ -567,6 +567,7 @@ class Browser:
                 lambda: self.websock_thread.received_result(msg_id),
                 timeout=timeout)
         message = self.websock_thread.pop_result(msg_id)
+        self.logger.info(message)
         options['type'] = 'keyUp'
         msg_id = self.send_to_chrome(
             method='Input.dispatchKeyEvent',
