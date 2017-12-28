@@ -446,10 +446,10 @@ class Browser:
                 if on_screenshot:
                     jpeg_bytes = self.screenshot()
                     on_screenshot(jpeg_bytes)
-                self.scroll()
                 behavior_script = brozzler.behavior_script(
                         page_url, behavior_parameters)
                 self.run_behavior(behavior_script, timeout=behavior_timeout)
+                self.scrollPageDown()
                 if skip_extract_outlinks:
                     outlinks = []
                 else:
@@ -548,16 +548,10 @@ class Browser:
         jpeg_bytes = base64.b64decode(message['result']['data'])
         return jpeg_bytes
 
-    def scroll(self, timeout=30):
-        # JS example here:
-        # https://groups.google.com/forum/#!topic/chrome-debugging-protocol/DQxlrBNSC9w
-        # need new self.websock_thread method for keyUp callback?
-        # how well does PageDown work anyhow?
-        options = {'type': 'keyDown',
+    def scrollPageDown(self, timeout=30):
+        options = {'type': 'rawKeyDown',
                    'key': 'PageDown',
-                   'code': 'PageDown',
-                   'nativeVirtualKeyCode': 307,
-                   'windowsVirtualKeyCode': 307}
+                   'windowsVirtualKeyCode': 0x22}
         self.logger.info('scrolling')
         self.websock_thread.expect_result(self._command_id.peek())
         msg_id = self.send_to_chrome(
@@ -568,14 +562,6 @@ class Browser:
                 timeout=timeout)
         message = self.websock_thread.pop_result(msg_id)
         self.logger.info(message)
-        options['type'] = 'keyUp'
-        msg_id = self.send_to_chrome(
-            method='Input.dispatchKeyEvent',
-            params=options)
-        self._wait_for(
-                lambda: self.websock_thread.received_result(msg_id),
-                timeout=timeout)
-        message = self.websock_thread.pop_result(msg_id)
 
     def url(self, timeout=30):
         '''
