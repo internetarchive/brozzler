@@ -126,6 +126,7 @@ class Chrome:
                 '--remote-debugging-port=%s' % self.port,
                 '--use-mock-keychain', # mac thing
                 '--user-data-dir=%s' % self._chrome_user_data_dir,
+                '--disable-background-networking',
                 '--disable-web-sockets', '--disable-cache',
                 '--window-size=1100,900', '--no-default-browser-check',
                 '--disable-first-run-ui', '--no-first-run',
