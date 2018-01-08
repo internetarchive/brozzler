@@ -229,6 +229,11 @@ class WebsockReceiverThread(threading.Thread):
                     self.on_request(message)
             elif message['method'] == 'Debugger.paused':
                 self._debugger_paused(message)
+            elif message['method'] == 'Page.interstitialShown':
+                # for AITFIVE-1529: handle http auth
+                # for now, we should consider killing the browser when we receive Page.interstitialShown and
+                # consider the page finished—-first we should figure out when else that event might happen
+                self.logger.info('Page.interstitialShown received')
             elif message['method'] == 'Inspector.targetCrashed':
                 self.logger.error(
                         '''chrome tab went "aw snap" or "he's dead jim"!''')
