@@ -229,6 +229,11 @@ class WebsockReceiverThread(threading.Thread):
                     self.on_request(message)
             elif message['method'] == 'Debugger.paused':
                 self._debugger_paused(message)
+            elif message['method'] == 'Page.interstitialShown':
+                # for AITFIVE-1529: handle http auth
+                # for now, we should consider killing the browser when we receive Page.interstitialShown and
+                # consider the page finished—-first we should figure out when else that event might happen
+                self.logger.info('Page.interstitialShown received')
             elif message['method'] == 'Inspector.targetCrashed':
                 self.logger.error(
                         '''chrome tab went "aw snap" or "he's dead jim"!''')
@@ -494,13 +499,16 @@ class Browser:
 
     def configure_browser(self, extra_headers=None, user_agent=None):
         headers = extra_headers or {}
-        headers['Accept-Encoding'] = 'identity'
-        self.send_to_chrome(
+        headers['Accept-Encoding'] = 'gzip'  # avoid encodings br, sdch
+        self.websock_thread.expect_result(self._command_id.peek())
+        msg_id = self.send_to_chrome(
                 method='Network.setExtraHTTPHeaders',
                 params={'headers': headers})
-
+        self._wait_for(
+                lambda: self.websock_thread.received_result(msg_id),
+                timeout=10)
         if user_agent:
-            self.send_to_chrome(
+            msg_id = self.send_to_chrome(
                     method='Network.setUserAgentOverride',
                     params={'userAgent': user_agent})
 

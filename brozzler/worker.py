@@ -226,7 +226,7 @@ class BrozzlerWorker:
         request.set_proxy(warcprox_address, "http")
 
         try:
-            with urllib.request.urlopen(request) as response:
+            with urllib.request.urlopen(request, timeout=600) as response:
                 if response.getcode() != 204:
                     self.logger.warn(
                             'got "%s %s" response on warcprox '

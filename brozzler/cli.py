@@ -500,6 +500,8 @@ def brozzler_list_sites(argv=None):
         reql = reql.between(
                 ['ACTIVE', r.minval], ['ACTIVE', r.maxval],
                 index='sites_last_disclaimed')
+    elif args.site:
+        reql = reql.get_all(args.site)
     logging.debug('querying rethinkdb: %s', reql)
     results = reql.run()
     if args.yaml:
