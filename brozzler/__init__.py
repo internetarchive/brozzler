@@ -77,8 +77,8 @@ def behaviors(behaviors_dir=None):
     import os, yaml, string
     global _behaviors
     if _behaviors is None:
-        cwd = behaviors_dir or os.path.dirname(__file__)
-        behaviors_yaml = os.path.join(cwd, 'behaviors.yaml')
+        d = behaviors_dir or os.path.dirname(__file__)
+        behaviors_yaml = os.path.join(d, 'behaviors.yaml')
         with open(behaviors_yaml) as fin:
             _behaviors = yaml.load(fin)
     return _behaviors
