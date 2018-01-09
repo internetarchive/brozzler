@@ -549,6 +549,12 @@ class Browser:
         return jpeg_bytes
 
     def scrollPageDown(self, timeout=30):
+        # resources for Input.dispatchKeyEvent
+        # https://github.com/chromedp/chromedp/blob/master/kb/gen.go#L28 for example:
+        # https://chromium.googlesource.com/chromium/src/+/master/ui/events/keycodes/keyboard_codes_posix.h
+        # https://github.com/ChromeDevTools/EmulatedDeviceLab/blob/master/lib/device.js#L192 examples of several Input methods
+        # https://groups.google.com/forum/#!topic/chrome-debugging-protocol/iLb5pvvRkbs
+        # https://groups.google.com/forum/#!topic/chrome-debugging-protocol/DQxlrBNSC9w
         options = {'type': 'rawKeyDown',
                    'key': 'PageDown',
                    'windowsVirtualKeyCode': 0x22}
