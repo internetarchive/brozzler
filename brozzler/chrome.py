@@ -278,13 +278,13 @@ class Chrome:
                     'chrome pid %s reaped (status=%s) after killing with '
                     'SIGKILL', self.chrome_process.pid, status)
 
+        finally:
             try:
                 self._home_tmpdir.cleanup()
             except:
                 self.logger.error(
                         'exception deleting %s', self._home_tmpdir,
                         exc_info=True)
-        finally:
             self._out_reader_thread.join()
             self.chrome_process = None
 
