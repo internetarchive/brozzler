@@ -1,7 +1,7 @@
 #
 # brozzler/behaviors.yaml - behavior configuration
 #
-# Copyright (C) 2014-2017 Internet Archive
+# Copyright (C) 2014-2018 Internet Archive
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,6 +57,10 @@
      click_css_selector: img.link-overlay
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
+-
+  url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
+  behavior_js_template: huffpostslides.js
+  request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-5389
   url_regex: '^https?://pitchfork\.com/.*$'
   behavior_js_template: umbraBehavior.js.j2
@@ -64,13 +68,6 @@
     actions:
       - selector: div.teaser, li.pager__item a
         closeSelector: .pmf-artist-modal__close-btn
--
-  url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
-  behavior_js_template: umbraBehavior.js.j2
-  default_parameters:
-    actions:
-      - selector: .slideshow-card__overlay
-      - selector: .slideshow__next
 -
   url_regex: '^https?://(?:www\.)?brooklynmuseum\.org/exhibitions/.*$'
   behavior_js_template: simpleclicks.js.j2
@@ -157,13 +154,6 @@
     actions:
       - selector: .menu-item a
         do: mouseover
-- url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
-  behavior_js_template: mouseovers.js.j2
-  default_parameters:
-     sdo_css_selector: .menu-item a
-     sdo_action: mouseover
-     sdo_until_hard_timeout: False
-  request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-5259
   url_regex: '^https?://blog\.sina\.com\.cn/.*$'
   behavior_js_template: simpleclicks.js.j2
@@ -213,13 +203,6 @@
      click_css_selector: img.link-overlay
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
-- # https://webarchive.jira.com/browse/ARI-5389
-  url_regex: '^https?://pitchfork\.com/.*$'
-  behavior_js_template: pitchfork.js
-- # https://webarchive.jira.com/browse/ARI-5379
-  url_regex: '^https?://(?:www\.)?pm\.gc\.ca/.*$'
-  behavior_js_template: pm-ca.js
-  request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-4960
   url_regex: '^https?://(?:www\.)?fortstjames.ca/community-events-calendar/$'
   behavior_js_template: simpleclicks.js.j2
@@ -239,4 +222,4 @@
   behavior_js_template: umbraBehavior.js.j2
   default_parameters:
     actions:
-      - selector: button.sc-button-play, .playButton, div.soundItem, .jwlist>a, .ytp-button
+      - selector: button.sc-button-play, .playButton, div.soundItem, .jwlist>a

@@ -126,6 +126,7 @@ class Chrome:
                 '--remote-debugging-port=%s' % self.port,
                 '--use-mock-keychain', # mac thing
                 '--user-data-dir=%s' % self._chrome_user_data_dir,
+                '--disable-background-networking',
                 '--disable-web-sockets', '--disable-cache',
                 '--window-size=1100,900', '--no-default-browser-check',
                 '--disable-first-run-ui', '--no-first-run',
@@ -277,13 +278,13 @@ class Chrome:
                     'chrome pid %s reaped (status=%s) after killing with '
                     'SIGKILL', self.chrome_process.pid, status)
 
+        finally:
             try:
                 self._home_tmpdir.cleanup()
             except:
                 self.logger.error(
                         'exception deleting %s', self._home_tmpdir,
                         exc_info=True)
-        finally:
             self._out_reader_thread.join()
             self.chrome_process = None
 

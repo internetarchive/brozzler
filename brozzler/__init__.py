@@ -68,29 +68,34 @@ logging._levelToName[TRACE] = 'TRACE'
 logging._nameToLevel['TRACE'] = TRACE
 
 _behaviors = None
-def behaviors():
+def behaviors(behaviors_dir=None):
+    """Return list of JS behaviors loaded from YAML file.
+
+    :param behaviors_dir: Directory containing `behaviors.yaml` and
+    `js-templates/`. Defaults to brozzler dir.
+    """
     import os, yaml, string
     global _behaviors
     if _behaviors is None:
-        behaviors_yaml = os.path.join(
-                os.path.dirname(__file__), 'behaviors.yaml')
+        d = behaviors_dir or os.path.dirname(__file__)
+        behaviors_yaml = os.path.join(d, 'behaviors.yaml')
         with open(behaviors_yaml) as fin:
             _behaviors = yaml.load(fin)
     return _behaviors
 
-def behavior_script(url, template_parameters=None):
+def behavior_script(url, template_parameters=None, behaviors_dir=None):
     '''
     Returns the javascript behavior string populated with template_parameters.
     '''
     import re, logging
-    for behavior in behaviors():
+    for behavior in behaviors(behaviors_dir=behaviors_dir):
         if re.match(behavior['url_regex'], url):
             parameters = dict()
             if 'default_parameters' in behavior:
                 parameters.update(behavior['default_parameters'])
             if template_parameters:
                 parameters.update(template_parameters)
-            template = jinja2_environment().get_template(
+            template = jinja2_environment(behaviors_dir).get_template(
                     behavior['behavior_js_template'])
             script = template.render(parameters)
             logging.info(
@@ -229,12 +234,16 @@ def sleep(duration):
         time.sleep(min(duration - elapsed, 0.5))
 
 _jinja2_env = None
-def jinja2_environment():
+def jinja2_environment(behaviors_dir=None):
     global _jinja2_env
     if not _jinja2_env:
-        import jinja2, json
-        _jinja2_env = jinja2.Environment(
-                loader=jinja2.PackageLoader('brozzler', 'js-templates'))
+        import os, jinja2, json
+        if behaviors_dir:
+            _loader = jinja2.FileSystemLoader(os.path.join(behaviors_dir,
+                                                           'js-templates'))
+        else:
+            _loader=jinja2.PackageLoader('brozzler', 'js-templates')
+        _jinja2_env = jinja2.Environment(loader=_loader)
         _jinja2_env.filters['json'] = json.dumps
     return _jinja2_env
 

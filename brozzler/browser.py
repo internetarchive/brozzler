@@ -382,7 +382,7 @@ class Browser:
 
     def browse_page(
             self, page_url, extra_headers=None,
-            user_agent=None, behavior_parameters=None,
+            user_agent=None, behavior_parameters=None, behaviors_dir=None,
             on_request=None, on_response=None, on_screenshot=None,
             username=None, password=None, hashtags=None,
             skip_extract_outlinks=False, skip_visit_hashtags=False,
@@ -402,6 +402,8 @@ class Browser:
                 supplied (default None)
             behavior_parameters: dict of parameters for populating the
                 javascript behavior template (default None)
+            behaviors_dir: Directory containing behaviors.yaml and JS templates
+                (default None loads Brozzler default JS behaviors)
             on_request: callback to invoke on every Network.requestWillBeSent
                 event, takes one argument, the json-decoded message (default
                 None)
@@ -452,7 +454,8 @@ class Browser:
                     jpeg_bytes = self.screenshot()
                     on_screenshot(jpeg_bytes)
                 behavior_script = brozzler.behavior_script(
-                        page_url, behavior_parameters)
+                        page_url, behavior_parameters,
+                        behaviors_dir=behaviors_dir)
                 self.run_behavior(behavior_script, timeout=behavior_timeout)
                 if skip_extract_outlinks:
                     outlinks = []
