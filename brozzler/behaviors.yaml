@@ -52,11 +52,8 @@
         closeSelector: .pmf-artist-modal__close-btn
 -
   url_regex: '^https?://(?:www\.)?huffingtonpost\.com/.*$'
-  behavior_js_template: umbraBehavior.js.j2
-  default_parameters:
-    actions:
-      - selector: .slideshow-card__overlay
-      - selector: .slideshow__next
+  behavior_js_template: huffpostslides.js
+  request_idle_timeout_sec: 10
 -
   url_regex: '^https?://(?:www\.)?brooklynmuseum\.org/exhibitions/.*$'
   behavior_js_template: simpleclicks.js.j2
@@ -64,13 +61,6 @@
      click_css_selector: img.img-responsive
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
-- # acalog https://webarchive.jira.com/browse/ARI-5517
-  url_regex: '^https?://(?:www\.)?thejewishnews.com/.*$'
-  behavior_js_template: umbraBehavior.js.j2
-  default_parameters:
-    actions:
-      - selector: a#get_more
-      - selector: a#get_more
 - # acalog https://webarchive.jira.com/browse/ARI-3775
   url_regex: '^https?://.*[?&]catoid=[^?]*$'
   behavior_js_template: simpleclicks.js.j2
@@ -137,12 +127,6 @@
     actions:
       - selector: .menu-item a
         do: mouseover
-- url_regex: '^https?://(?:www\.)?news\.com\.au/.*$'
-  behavior_js_template: mouseovers.js.j2
-  default_parameters:
-     mouseover_css_selector: .menu-item a
-     mouseover_until_hard_timeout: False
-  request_idle_timeout_sec: 10
 - # https://webarchive.jira.com/browse/ARI-5259
   url_regex: '^https?://blog\.sina\.com\.cn/.*$'
   behavior_js_template: simpleclicks.js.j2
