@@ -129,13 +129,30 @@ class BrozzlerWorker:
         self._start_stop_lock = threading.Lock()
         self._shutdown = threading.Event()
 
+    def _choose_warcprox(self):
+        warcproxes = self._service_registry.available_services('warcprox')
+        if not warcproxes:
+            return None
+        active_sites = self._frontier.rr.table('sites').between(
+                ['ACTIVE', r.minval], ['ACTIVE', r.maxval],
+                index='sites_last_disclaimed').run()
+        for warcprox in warcproxes:
+            address = '%s:%s' % (warcprox['host'], warcprox['port'])
+            warcprox['assigned_sites'] = len([
+                site for site in active_sites
+                if 'proxy' in site and site['proxy'] == address])
+        warcproxes.sort(key=lambda warcprox: (
+            warcprox['assigned_sites'], warcprox['load']))
+        # XXX make this heuristic more advanced?
+        return warcproxes[0]
+
     def _proxy_for(self, site):
         if self._proxy:
             return self._proxy
         elif site.proxy:
             return site.proxy
         elif self._warcprox_auto:
-            svc = self._service_registry.available_service('warcprox')
+            svc = self._choose_warcprox()
             if svc is None:
                 raise brozzler.ProxyError(
                         'no available instances of warcprox in the service '
