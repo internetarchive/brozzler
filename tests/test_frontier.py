@@ -863,6 +863,8 @@ def test_choose_warcprox():
     # avoid this of error: https://travis-ci.org/internetarchive/brozzler/jobs/330991786#L1021
     rr.table('sites').wait()
     rr.table('services').wait()
+    rr.table('sites').index_wait()
+    rr.table('services').index_wait()
 
     # clean slate
     rr.table('sites').delete().run()
