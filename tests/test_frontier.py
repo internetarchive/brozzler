@@ -855,3 +855,78 @@ def test_claim_site():
     # clean up
     rr.table('sites').get(claimed_site.id).delete().run()
 
+def test_choose_warcprox():
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    svcreg = doublethink.ServiceRegistry(rr)
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # avoid this of error: https://travis-ci.org/internetarchive/brozzler/jobs/330991786#L1021
+    rr.table('sites').wait().run()
+    rr.table('services').wait().run()
+    rr.table('sites').index_wait().run()
+    rr.table('services').index_wait().run()
+
+    # clean slate
+    rr.table('sites').delete().run()
+    rr.table('services').delete().run()
+    worker = brozzler.BrozzlerWorker(frontier, svcreg)
+    assert worker._choose_warcprox() is None
+
+    rr.table('services').insert({
+        'role': 'warcprox',
+        'first_heartbeat': doublethink.utcnow(),
+        'last_heartbeat': doublethink.utcnow(),
+        'host': 'host1', 'port': 8000,
+        'load': 0, 'ttl': 60}).run()
+    rr.table('services').insert({
+        'role': 'warcprox',
+        'first_heartbeat': doublethink.utcnow(),
+        'last_heartbeat': doublethink.utcnow(),
+        'host': 'host2', 'port': 8000,
+        'load': 0, 'ttl': 60}).run()
+    rr.table('services').insert({
+        'role': 'warcprox',
+        'first_heartbeat': doublethink.utcnow(),
+        'last_heartbeat': doublethink.utcnow(),
+        'host': 'host2', 'port': 8001,
+        'load': 0, 'ttl': 60}).run()
+    rr.table('services').insert({
+        'role': 'warcprox',
+        'first_heartbeat': doublethink.utcnow(),
+        'last_heartbeat': doublethink.utcnow(),
+        'host': 'host3', 'port': 8000,
+        'load': 0, 'ttl': 60}).run()
+    rr.table('services').insert({
+        'role': 'warcprox',
+        'first_heartbeat': doublethink.utcnow(),
+        'last_heartbeat': doublethink.utcnow(),
+        'host': 'host4', 'port': 8000,
+        'load': 1, 'ttl': 60}).run()
+
+    rr.table('sites').insert({
+        'proxy': 'host1:8000', 'status': 'ACTIVE',
+        'last_disclaimed': doublethink.utcnow()}).run()
+    rr.table('sites').insert({
+        'proxy': 'host1:8000', 'status': 'ACTIVE',
+        'last_disclaimed': doublethink.utcnow()}).run()
+    rr.table('sites').insert({
+        'proxy': 'host2:8000', 'status': 'ACTIVE',
+        'last_disclaimed': doublethink.utcnow()}).run()
+    rr.table('sites').insert({
+        'proxy': 'host2:8001', 'status': 'ACTIVE',
+        'last_disclaimed': doublethink.utcnow()}).run()
+
+    instance = worker._choose_warcprox()
+    assert instance['host'] == 'host3'
+    assert instance['port'] == 8000
+    rr.table('sites').insert({
+        'proxy': 'host3:8000', 'status': 'ACTIVE',
+        'last_disclaimed': doublethink.utcnow()}).run()
+
+    instance = worker._choose_warcprox()
+    assert instance['host'] == 'host4'
+    assert instance['port'] == 8000
+
+    # clean up
+    rr.table('sites').delete().run()
+    rr.table('services').delete().run()
