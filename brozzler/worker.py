@@ -133,9 +133,10 @@ class BrozzlerWorker:
         warcproxes = self._service_registry.available_services('warcprox')
         if not warcproxes:
             return None
-        active_sites = self._frontier.rr.table('sites').between(
+        reql = self._frontier.rr.table('sites').between(
                 ['ACTIVE', r.minval], ['ACTIVE', r.maxval],
-                index='sites_last_disclaimed').run()
+                index='sites_last_disclaimed')
+        active_sites = list(reql.run())
         for warcprox in warcproxes:
             address = '%s:%s' % (warcprox['host'], warcprox['port'])
             warcprox['assigned_sites'] = len([
