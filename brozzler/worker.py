@@ -290,8 +290,12 @@ class BrozzlerWorker:
     def _try_youtube_dl(self, ydl, site, page):
         try:
             self.logger.info("trying youtube-dl on {}".format(page))
+
             with brozzler.thread_accept_exceptions():
-                info = ydl.extract_info(page.url)
+                # we do whatwg canonicalization here to avoid "<urlopen error
+                # no host given>" resulting in ProxyError
+                # needs automated test
+                info = ydl.extract_info(str(urlcanon.whatwg(page.url)))
             self._remember_videos(page, ydl.brozzler_spy)
             # logging.info('XXX %s', json.dumps(info))
             if self._using_warcprox(site):
