@@ -296,7 +296,7 @@ class BrozzlerWorker:
                 # we do whatwg canonicalization here to avoid "<urlopen error
                 # no host given>" resulting in ProxyError
                 # needs automated test
-                info = ydl.extract_info(urlcanon.whatwg(page.url))
+                info = ydl.extract_info(str(urlcanon.whatwg(page.url)))
             self._remember_videos(page, ydl.brozzler_spy)
             # logging.info('XXX %s', json.dumps(info))
             if self._using_warcprox(site):

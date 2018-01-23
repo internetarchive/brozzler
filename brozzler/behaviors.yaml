@@ -97,11 +97,10 @@
      click_until_hard_timeout: False
 - # https://webarchive.jira.com/browse/ARI-5294
   url_regex: '^https?://citymedfordwi\.civicweb\.net/.*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: div.meeting-document-type-buttons button.button-small
-     click_until_hard_timeout: False
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: div.meeting-document-type-buttons button.button-small
 - # https://webarchive.jira.com/browse/ARI-5409
   url_regex: '^https?://(?:www\.)?tuebingen.de/.*$'
   behavior_js_template: simpleclicks.js.j2
