@@ -162,7 +162,8 @@ class WebsockReceiverThread(threading.Thread):
         # ping_timeout is used as the timeout for the call to select.select()
         # in addition to its documented purpose, and must have a value to avoid
         # hangs in certain situations
-        self.websock.run_forever(ping_timeout=0.5)
+        self.websock.run_forever(sockopt=((socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),),
+                                 ping_timeout=0.5)
 
     def _on_message(self, websock, message):
         try:
