@@ -37,6 +37,7 @@ import urlcanon
 from requests.structures import CaseInsensitiveDict
 import rethinkdb as r
 import datetime
+import urllib.parse
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
@@ -87,7 +88,9 @@ class YoutubeDLSpy(urllib.request.BaseHandler):
 
         final_url = url
         while final_url in redirects:
-            final_url = redirects.pop(final_url)['response_headers']['location']
+            txn = redirects.pop(final_url)
+            final_url = urllib.parse.urljoin(
+                    txn['url'], txn['response_headers']['location'])
 
         final_bounces = []
         for txn in self.transactions:
