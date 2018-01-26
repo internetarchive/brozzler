@@ -310,3 +310,30 @@ def test_thread_raise_second_with_block():
     th.join()
     assert isinstance(thread_caught_exception, Exception2)
 
+def test_needs_browsing():
+    # only one test case here right now, which exposed a bug
+
+    class ConvenientHeaders(http.client.HTTPMessage):
+        def __init__(self, headers):
+            http.client.HTTPMessage.__init__(self)
+            for (k, v) in headers.items():
+                self.add_header(k, v)
+
+    page = brozzler.Page(None, {
+        'url':'http://example.com/a'})
+
+    spy = brozzler.worker.YoutubeDLSpy()
+    spy.transactions.append({
+        'url': 'http://example.com/a',
+        'method': 'HEAD',
+        'status_code': 301,
+        'response_headers': ConvenientHeaders({'Location': '/b'})})
+    spy.transactions.append({
+        'url': 'http://example.com/b',
+        'method': 'GET',
+        'status_code': 200,
+        'response_headers': ConvenientHeaders({
+            'Content-Type': 'application/pdf'})})
+
+    assert not brozzler.worker.BrozzlerWorker._needs_browsing(None, page, spy)
+
