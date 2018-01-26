@@ -542,7 +542,7 @@ class Browser:
                     'problem extracting outlinks, result message: %s', message)
             return frozenset()
 
-    def screenshot(self, timeout=30):
+    def screenshot(self, timeout=90):
         self.logger.info('taking screenshot')
         self.websock_thread.expect_result(self._command_id.peek())
         msg_id = self.send_to_chrome(method='Page.captureScreenshot')
