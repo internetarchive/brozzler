@@ -461,10 +461,13 @@ class Browser:
                             page_url)
                         self.navigate_to_page(page_url, timeout=page_timeout)
                 if on_screenshot:
-                    self._try_screenshot(on_screenshot)
-                behavior_script = brozzler.behavior_script(
+                    jpeg_bytes = self.screenshot()
+                    on_screenshot(jpeg_bytes)
+                behavior_script, timeout_from_behavior = brozzler.behavior_script(
                         page_url, behavior_parameters,
                         behaviors_dir=behaviors_dir)
+                if timeout_from_behavior > behavior_timeout:
+                    behavior_timeout = timeout_from_behavior
                 self.run_behavior(behavior_script, timeout=behavior_timeout)
                 if skip_extract_outlinks:
                     outlinks = []
