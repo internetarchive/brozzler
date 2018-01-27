@@ -68,6 +68,7 @@ setuptools.setup(
             'reppy==0.3.4',
             'requests',
             'websocket-client!=0.39.0',
+            'wsaccel',
             'pillow==3.3.0',
             'urlcanon>=0.1.dev16',
             'doublethink>=0.2.0.dev81',
