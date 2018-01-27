@@ -106,6 +106,7 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
     Returns the javascript behavior string populated with template_parameters.
     '''
     import re, logging, json
+    behavior_timeout_custom = None
     for behavior in behaviors(behaviors_dir=behaviors_dir):
         if re.match(behavior['url_regex'], url):
             parameters = dict()
@@ -119,8 +120,10 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
             logging.info(
                     'using template=%r populated with parameters=%r for %r',
                     behavior['behavior_js_template'], json.dumps(parameters), url)
-            return script
-    return None
+            if 'behavior_timeout_sec' in parameters:
+                behavior_timeout_custom = int(parameters['behavior_timeout_sec'])
+            return script, behavior_timeout_custom
+    return None, behavior_timeout_custom
 
 class ThreadExceptionGate:
     logger = logging.getLogger(__module__ + "." + __qualname__)

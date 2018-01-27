@@ -59,6 +59,7 @@
   default_parameters:
     actions:
       - selector: div.teaser, li.pager__item a
+    behavior_timeout_sec: 1800
 - # https://webarchive.jira.com/browse/ARI-5389
   url_regex: '^https?://pitchfork\.com/.*$'
   behavior_js_template: umbraBehavior.js.j2
