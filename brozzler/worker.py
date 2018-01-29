@@ -103,6 +103,7 @@ class BrozzlerWorker:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
     HEARTBEAT_INTERVAL = 20.0
+    SITE_SESSION_MINUTES = 15
 
     def __init__(
             self, frontier, service_registry=None, max_browsers=1,
@@ -191,7 +192,7 @@ class BrozzlerWorker:
             # in case youtube-dl takes a long time, heartbeat site.last_claimed
             # to prevent another brozzler-worker from claiming the site
             try:
-                if site.rr and doublethink.utcnow() - site.last_claimed > datetime.timedelta(minutes=7):
+                if site.rr and doublethink.utcnow() - site.last_claimed > datetime.timedelta(minutes=self.SITE_SESSION_MINUTES):
                     self.logger.debug(
                             'heartbeating site.last_claimed to prevent another '
                             'brozzler-worker claiming this site id=%r', site.id)
@@ -506,7 +507,7 @@ class BrozzlerWorker:
             self.logger.info(
                     "brozzling site (proxy=%r) %r",
                     self._proxy_for(site), site)
-            while time.time() - start < 7 * 60:
+            while time.time() - start < self.SITE_SESSION_MINUTES * 60:
                 site.refresh()
                 self._frontier.honor_stop_request(site)
                 page = self._frontier.claim_page(site, "%s:%s" % (
@@ -519,8 +520,9 @@ class BrozzlerWorker:
                     page.blocked_by_robots = True
                     self._frontier.completed_page(site, page)
                 else:
-                    outlinks = self.brozzle_page(browser, site, page,
-                                                 enable_youtube_dl=not self._skip_youtube_dl)
+                    outlinks = self.brozzle_page(
+                            browser, site, page,
+                            enable_youtube_dl=not self._skip_youtube_dl)
                     self._frontier.completed_page(site, page)
                     self._frontier.scope_and_schedule_outlinks(
                             site, page, outlinks)
