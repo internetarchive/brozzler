@@ -466,7 +466,7 @@ class Browser:
                 behavior_script, behavior_timeout_custom = brozzler.behavior_script(
                         page_url, behavior_parameters,
                         behaviors_dir=behaviors_dir)
-                if behavior_timeout_custom and behavior_timeout_custom > behavior_timeout:
+                if behavior_timeout_custom:
                     behavior_timeout = behavior_timeout_custom
                 self.run_behavior(behavior_script, timeout=behavior_timeout)
                 if skip_extract_outlinks:
