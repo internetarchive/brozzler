@@ -173,21 +173,6 @@ class WebsockReceiverThread(threading.Thread):
                     'uncaught exception in _handle_message message=%s',
                     message, exc_info=True)
 
-    def _debugger_paused(self, message):
-        # we hit the breakpoint set in start(), get rid of google analytics
-        self.logger.debug('debugger paused! message=%s', message)
-        scriptId = message['params']['callFrames'][0]['location']['scriptId']
-
-        # replace script
-        self.websock.send(
-                json.dumps(dict(
-                    id=0, method='Debugger.setScriptSource',
-                    params={'scriptId': scriptId,
-                        'scriptSource': 'console.log("google analytics is no more!");'})))
-
-        # resume execution
-        self.websock.send(json.dumps(dict(id=0, method='Debugger.resume')))
-
     def _network_response_received(self, message):
         if (message['params']['response']['status'] == 420
                 and 'Warcprox-Meta' in CaseInsensitiveDict(
@@ -228,8 +213,6 @@ class WebsockReceiverThread(threading.Thread):
             elif message['method'] == 'Network.requestWillBeSent':
                 if self.on_request:
                     self.on_request(message)
-            elif message['method'] == 'Debugger.paused':
-                self._debugger_paused(message)
             elif message['method'] == 'Page.interstitialShown':
                 # for AITFIVE-1529: handle http auth
                 # for now, we should consider killing the browser when we receive Page.interstitialShown and
@@ -305,9 +288,10 @@ class Browser:
         msg_id = next(self._command_id)
         kwargs['id'] = msg_id
         msg = json.dumps(kwargs)
-        logging.log(
-                brozzler.TRACE if suppress_logging else logging.DEBUG,
-                'sending message to %s: %s', self.websock, msg)
+        #logging.log(
+        #        brozzler.TRACE if suppress_logging else logging.DEBUG,
+        #        'sending message to %s: %s', self.websock, msg)
+        # print(msg)
         self.websock.send(msg)
         return msg_id
 
@@ -331,16 +315,14 @@ class Browser:
             self.send_to_chrome(method='Network.enable')
             self.send_to_chrome(method='Page.enable')
             self.send_to_chrome(method='Console.enable')
-            self.send_to_chrome(method='Debugger.enable')
             self.send_to_chrome(method='Runtime.enable')
 
-            # disable google analytics, see _handle_message() where breakpoint
-            # is caught Debugger.paused
+            # disable google analytics
             self.send_to_chrome(
-                    method='Debugger.setBreakpointByUrl',
-                    params={
-                        'lineNumber': 1,
-                        'urlRegex': 'https?://www.google-analytics.com/analytics.js'})
+                method='Network.setBlockedURLs',
+                params={'urls': ['http://www.google-analytics.com/analytics.js',
+                                 'https://www.google-analytics.com/analytics.js']
+                )
 
     def stop(self):
         '''
