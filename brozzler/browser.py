@@ -320,8 +320,8 @@ class Browser:
             # disable google analytics
             self.send_to_chrome(
                 method='Network.setBlockedURLs',
-                params={'urls': ['http://www.google-analytics.com/analytics.js',
-                                 'https://www.google-analytics.com/analytics.js']
+                params={'urls': ['*google-analytics.com/analytics.js',
+                                 '*google-analytics.com/ga.js']}
                 )
 
     def stop(self):
