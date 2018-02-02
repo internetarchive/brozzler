@@ -61,6 +61,33 @@ class BrowserPool:
         self._in_use = set()
         self._lock = threading.Lock()
 
+    def _fresh_browser(self):
+        # choose available port
+        sock = socket.socket()
+        sock.bind(('0.0.0.0', 0))
+        port = sock.getsockname()[1]
+        sock.close()
+
+        browser = Browser(port=port, **self.kwargs)
+        return browser
+
+    def acquire_multi(self, n=1):
+        '''
+        Returns a list of up to `n` browsers.
+
+        Raises:
+            NoBrowsersAvailable if none available
+        '''
+        browsers = []
+        with self._lock:
+            if len(self._in_use) >= self.size:
+                raise NoBrowsersAvailable
+            while len(self._in_use) < self.size and len(browsers) < n:
+                browser = self._fresh_browser()
+                browsers.append(browser)
+                self._in_use.add(browser)
+        return browsers
+
     def acquire(self):
         '''
         Returns an available instance.
@@ -74,14 +101,7 @@ class BrowserPool:
         with self._lock:
             if len(self._in_use) >= self.size:
                 raise NoBrowsersAvailable
-
-            # choose available port
-            sock = socket.socket()
-            sock.bind(('0.0.0.0', 0))
-            port = sock.getsockname()[1]
-            sock.close()
-
-            browser = Browser(port=port, **self.kwargs)
+            browser = self._fresh_browser()
             self._in_use.add(browser)
             return browser
 
@@ -89,6 +109,13 @@ class BrowserPool:
         browser.stop()  # make sure
         with self._lock:
             self._in_use.remove(browser)
+
+    def release_all(self, browsers):
+        for browser in browsers:
+            browser.stop()  # make sure
+        with self._lock:
+            for browser in browsers:
+                self._in_use.remove(browser)
 
     def shutdown_now(self):
         self.logger.info(

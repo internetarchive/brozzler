@@ -93,7 +93,7 @@ class RethinkDbFrontier:
                     raise UnexpectedDbResult("expected %r to be %r in %r" % (
                         k, expected, result))
 
-    def claim_site(self, worker_id):
+    def claim_sites(self, n=1):
         # XXX keep track of aggregate priority and prioritize sites accordingly?
         while True:
             result = (
@@ -104,34 +104,43 @@ class RethinkDbFrontier:
                     .order_by(index="sites_last_disclaimed")
                     .filter((r.row["claimed"] != True) | (
                         r.row["last_claimed"] < r.now() - 60*60))
-                    .limit(1)
+                    .limit(n)
                     .update(
                         # try to avoid a race condition resulting in multiple
                         # brozzler-workers claiming the same site
                         # see https://github.com/rethinkdb/rethinkdb/issues/3235#issuecomment-60283038
                         r.branch((r.row["claimed"] != True) | (
                             r.row["last_claimed"] < r.now() - 60*60), {
-                                "claimed": True, "last_claimed_by": worker_id,
+                                "claimed": True,
                                 "last_claimed": doublethink.utcnow()}, {}),
                             return_changes=True)).run()
-            self._vet_result(result, replaced=[0,1], unchanged=[0,1])
-            if result["replaced"] == 1:
-                if result["changes"][0]["old_val"]["claimed"]:
+
+            self._vet_result(
+                    result, replaced=list(range(n+1)),
+                    unchanged=list(range(n+1)))
+            sites = []
+            for i in range(result["replaced"]):
+                if result["changes"][i]["old_val"]["claimed"]:
                     self.logger.warn(
                             "re-claimed site that was still marked 'claimed' "
                             "because it was last claimed a long time ago "
                             "at %s, and presumably some error stopped it from "
                             "being disclaimed",
-                            result["changes"][0]["old_val"]["last_claimed"])
-                site = brozzler.Site(self.rr, result["changes"][0]["new_val"])
-            else:
+                            result["changes"][i]["old_val"]["last_claimed"])
+                site = brozzler.Site(self.rr, result["changes"][i]["new_val"])
+                sites.append(site)
+            if not sites:
                 raise brozzler.NothingToClaim
             # XXX This is the only place we enforce time limit for now. Worker
             # loop should probably check time limit. Maybe frontier needs a
             # housekeeping thread to ensure that time limits get enforced in a
             # timely fashion.
-            if not self._enforce_time_limit(site):
-                return site
+            for site in list(sites):
+                if self._enforce_time_limit(site):
+                    sites.remove(site)
+            if sites:
+                return sites
+            # else try again
 
     def _enforce_time_limit(self, site):
         if (site.time_limit and site.time_limit > 0
