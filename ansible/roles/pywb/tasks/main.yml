@@ -5,6 +5,7 @@
   become: true
 - name: install pywb in virtualenv
   pip: name=pywb
+       version=0.33.2
        virtualenv={{venv_root}}/pywb-ve34
        virtualenv_python=python3.4
        extra_args='--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
