@@ -315,10 +315,9 @@ class Browser:
         msg_id = next(self._command_id)
         kwargs['id'] = msg_id
         msg = json.dumps(kwargs)
-        #logging.log(
-        #        brozzler.TRACE if suppress_logging else logging.DEBUG,
-        #        'sending message to %s: %s', self.websock, msg)
-        # print(msg)
+        logging.log(
+                brozzler.TRACE if suppress_logging else logging.DEBUG,
+                'sending message to %s: %s', self.websock, msg)
         self.websock.send(msg)
         return msg_id
 
