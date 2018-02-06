@@ -268,6 +268,7 @@ def main(argv=None):
     arg_parser = _build_arg_parser(argv)
     args = arg_parser.parse_args(args=argv[1:])
     brozzler.cli.configure_logging(args)
+    brozzler.chrome.check_version(args.chrome_exe)
 
     controller = BrozzlerEasyController(args)
     signal.signal(signal.SIGTERM, lambda a,b: controller.stop.set())
