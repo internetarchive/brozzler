@@ -501,6 +501,9 @@ class BrozzlerWorker:
 
     def brozzle_site(self, browser, site):
         try:
+            site.last_claimed_by = '%s:%s' % (
+                    socket.gethostname(), browser.chrome.port)
+            site.save()
             start = time.time()
             page = None
             self._frontier.honor_stop_request(site)
@@ -602,36 +605,50 @@ class BrozzlerWorker:
         if due:
             self._service_heartbeat()
 
+    def _start_browsing_some_sites(self):
+        '''
+        Starts browsing some sites.
+
+        Raises:
+            NoBrowsersAvailable if none available
+        '''
+        browsers = self._browser_pool.acquire_multi(
+                (self._browser_pool.num_available() + 1) // 2)
+        try:
+            sites = self._frontier.claim_sites(len(browsers))
+        except:
+            self._browser_pool.release_all(browsers)
+            raise
+
+        for i in range(len(browsers)):
+            if i < len(sites):
+                th = threading.Thread(
+                        target=self._brozzle_site_thread_target,
+                        args=(browsers[i], sites[i]),
+                        name="BrozzlingThread:%s" % browsers[i].chrome.port,
+                        daemon=True)
+                with self._browsing_threads_lock:
+                    self._browsing_threads.add(th)
+                th.start()
+            else:
+                self._browser_pool.release(browsers[i])
+
     def run(self):
         self.logger.info("brozzler worker starting")
         try:
-            latest_state = None
             while not self._shutdown.is_set():
                 self._service_heartbeat_if_due()
                 try:
-                    browser = self._browser_pool.acquire()
-                    try:
-                        site = self._frontier.claim_site("%s:%s" % (
-                            socket.gethostname(), browser.chrome.port))
-                        th = threading.Thread(
-                                target=self._brozzle_site_thread_target,
-                                args=(browser, site),
-                                name="BrozzlingThread:%s" % browser.chrome.port,
-                                daemon=True)
-                        with self._browsing_threads_lock:
-                            self._browsing_threads.add(th)
-                        th.start()
-                    except:
-                        self._browser_pool.release(browser)
-                        raise
+                    self._start_browsing_some_sites()
                 except brozzler.browser.NoBrowsersAvailable:
-                    if latest_state != "browsers-busy":
-                        self.logger.info(
-                                "all %s browsers are busy", self._max_browsers)
-                        latest_state = "browsers-busy"
+                    logging.trace(
+                            "all %s browsers are in use", self._max_browsers)
                 except brozzler.NothingToClaim:
-                    pass
+                    logging.trace(
+                            "all active sites are already claimed by a "
+                            "brozzler worker")
                 time.sleep(0.5)
+
             self.logger.info("shutdown requested")
         except r.ReqlError as e:
             self.logger.error(
