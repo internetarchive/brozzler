@@ -3,7 +3,7 @@
 brozzler-easy - brozzler-worker, warcprox, pywb, and brozzler-dashboard all
 working together in a single process
 
-Copyright (C) 2016 Internet Archive
+Copyright (C) 2016-2018 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -122,8 +122,8 @@ class BrozzlerEasyController:
     def __init__(self, args):
         self.stop = threading.Event()
         self.args = args
-        self.warcprox_controller = warcprox.main.init_controller(
-                self._warcprox_args(args))
+        self.warcprox_controller = warcprox.controller.WarcproxController(
+                self._warcprox_opts(args))
         self.brozzler_worker = self._init_brozzler_worker(args)
         self.pywb_httpd = self._init_pywb(args)
         self.dashboard_httpd = self._init_brozzler_dashboard(args)
@@ -221,40 +221,38 @@ class BrozzlerEasyController:
         finally:
             self.shutdown()
 
-    def _warcprox_args(self, args):
+    def _warcprox_opts(self, args):
         '''
         Takes args as produced by the argument parser built by
         _build_arg_parser and builds warcprox arguments object suitable to pass
         to warcprox.main.init_controller. Copies some arguments, renames some,
         populates some with defaults appropriate for brozzler-easy, etc.
         '''
-        warcprox_args = argparse.Namespace()
-        warcprox_args.address = 'localhost'
+        warcprox_opts = warcprox.Options()
+        warcprox_opts.address = 'localhost'
         # let the OS choose an available port; discover it later using
         # sock.getsockname()[1]
-        warcprox_args.port = 0
-        warcprox_args.cacert = args.cacert
-        warcprox_args.certs_dir = args.certs_dir
-        warcprox_args.directory = args.warcs_dir
-        warcprox_args.gzip = True
-        warcprox_args.prefix = 'brozzler'
-        warcprox_args.size = 1000 * 1000* 1000
-        warcprox_args.rollover_idle_time = 3 * 60
-        warcprox_args.digest_algorithm = 'sha1'
-        warcprox_args.base32 = True
-        warcprox_args.stats_db_file = None
-        warcprox_args.playback_port = None
-        warcprox_args.playback_index_db_file = None
-        warcprox_args.rethinkdb_servers = args.rethinkdb_servers
-        warcprox_args.rethinkdb_db = args.rethinkdb_db
-        warcprox_args.rethinkdb_big_table = True
-        warcprox_args.kafka_broker_list = None
-        warcprox_args.kafka_capture_feed_topic = None
-        warcprox_args.queue_size = 500
-        warcprox_args.max_threads = None
-        warcprox_args.profile = False
-        warcprox_args.onion_tor_socks_proxy = args.onion_tor_socks_proxy
-        return warcprox_args
+        warcprox_opts.port = 0
+        warcprox_opts.cacert = args.cacert
+        warcprox_opts.certs_dir = args.certs_dir
+        warcprox_opts.directory = args.warcs_dir
+        warcprox_opts.gzip = True
+        warcprox_opts.prefix = 'brozzler'
+        warcprox_opts.size = 1000 * 1000* 1000
+        warcprox_opts.rollover_idle_time = 3 * 60
+        warcprox_opts.digest_algorithm = 'sha1'
+        warcprox_opts.base32 = True
+        warcprox_opts.stats_db_file = None
+        warcprox_opts.playback_port = None
+        warcprox_opts.playback_index_db_file = None
+        warcprox_opts.rethinkdb_big_table_url = (
+                'rethinkdb://%s/%s/captures' % (
+                    args.rethinkdb_servers, args.rethinkdb_db))
+        warcprox_opts.queue_size = 500
+        warcprox_opts.max_threads = None
+        warcprox_opts.profile = False
+        warcprox_opts.onion_tor_socks_proxy = args.onion_tor_socks_proxy
+        return warcprox_opts
 
     def dump_state(self, signum=None, frame=None):
         state_strs = []

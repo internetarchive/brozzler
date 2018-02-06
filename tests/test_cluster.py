@@ -661,11 +661,10 @@ def test_warcprox_outage_resiliency(httpd):
     opts = warcprox.Options()
     opts.address = '0.0.0.0'
     opts.port = 0
+    opts.rethinkdb_services_url = 'rethinkdb://localhost/brozzler/services'
 
-    warcprox1 = warcprox.controller.WarcproxController(
-            service_registry=svcreg, options=opts)
-    warcprox2 = warcprox.controller.WarcproxController(
-            service_registry=svcreg, options=opts)
+    warcprox1 = warcprox.controller.WarcproxController(opts)
+    warcprox2 = warcprox.controller.WarcproxController(opts)
     warcprox1_thread = threading.Thread(
             target=warcprox1.run_until_shutdown, name='warcprox1')
     warcprox2_thread = threading.Thread(
