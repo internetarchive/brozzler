@@ -29,6 +29,35 @@ import signal
 import sqlite3
 import json
 import tempfile
+import sys
+
+def check_version(chrome_exe):
+    '''
+    Raises SystemExit if `chrome_exe` is not a supported browser version.
+
+    Must run in the main thread to have the desired effect.
+    '''
+    # mac$ /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --version
+    # Google Chrome 64.0.3282.140 
+    # mac$ /Applications/Google\ Chrome\ Canary.app/Contents/MacOS/Google\ Chrome\ Canary --version
+    # Google Chrome 66.0.3341.0 canary
+    # linux$ chromium-browser --version
+    # Using PPAPI flash.
+    #  --ppapi-flash-path=/usr/lib/adobe-flashplugin/libpepflashplayer.so --ppapi-flash-version=
+    # Chromium 61.0.3163.100 Built on Ubuntu , running on Ubuntu 16.04
+    cmd = [chrome_exe, '--version']
+    out = subprocess.check_output(cmd, timeout=60)
+    m = re.search(br'(Chromium|Google Chrome) ([\d.]+)', out)
+    if not m:
+        sys.exit(
+                'unable to parse browser version from output of '
+                '%r: %r' % (subprocess.list2cmdline(cmd), out))
+    version_str = m.group(2).decode()
+    major_version = int(version_str.split('.')[0])
+    if major_version < 64:
+        sys.exit('brozzler requires chrome/chromium version 64 or '
+                 'later but %s reports version %s' % (
+                     chrome_exe, version_str))
 
 class Chrome:
     logger = logging.getLogger(__module__ + '.' + __qualname__)
