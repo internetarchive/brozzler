@@ -22,7 +22,7 @@ Requirements
 
 - Python 3.4 or later
 - RethinkDB deployment
-- Chromium or Google Chrome browser
+- Chromium or Google Chrome >= version 64
 
 Worth noting is that the browser requires a graphical environment to run. You
 already have this on your laptop, but on a server it will probably require
