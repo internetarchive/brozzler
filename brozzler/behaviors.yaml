@@ -82,7 +82,6 @@
   default_parameters:
     actions:
       - selector: a#get_more
-      - selector: a#get_more
 - # acalog https://webarchive.jira.com/browse/ARI-3775
   url_regex: '^https?://.*[?&]catoid=[^?]*$'
   behavior_js_template: simpleclicks.js.j2
