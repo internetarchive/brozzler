@@ -48,7 +48,7 @@
      click_css_selector: img.img-responsive
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
-- # acalog https://webarchive.jira.com/browse/ARI-5517
+- # https://webarchive.jira.com/browse/ARI-5517
   url_regex: '^https?://(?:www\.)?thejewishnews.com/.*$'
   behavior_js_template: umbraBehavior.js.j2
   default_parameters:
