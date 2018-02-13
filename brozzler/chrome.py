@@ -156,11 +156,16 @@ class Chrome:
                 '--use-mock-keychain', # mac thing
                 '--user-data-dir=%s' % self._chrome_user_data_dir,
                 '--disable-background-networking',
+                '--disable-renderer-backgrounding', '--disable-hang-monitor',
+                '--disable-background-timer-throttling', '--mute-audio',
                 '--disable-web-sockets', '--disable-cache',
                 '--window-size=1100,900', '--no-default-browser-check',
                 '--disable-first-run-ui', '--no-first-run',
                 '--homepage=about:blank', '--disable-direct-npapi-requests',
                 '--disable-web-security', '--disable-notifications',
+                '--disable-client-side-phishing-detection',
+                '--safebrowsing-disable-auto-update',
+                '--safebrowsing-disable-download-protection',
                 '--disable-extensions', '--disable-save-password-bubble']
         if self.ignore_cert_errors:
             chrome_args.append('--ignore-certificate-errors')
