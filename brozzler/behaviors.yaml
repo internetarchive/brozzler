@@ -61,6 +61,12 @@
      click_css_selector: img.img-responsive
      click_until_hard_timeout: False
   request_idle_timeout_sec: 10
+- # https://webarchive.jira.com/browse/ARI-5517
+  url_regex: '^https?://(?:www\.)?thejewishnews.com/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: a#get_more
 - # acalog https://webarchive.jira.com/browse/ARI-3775
   url_regex: '^https?://.*[?&]catoid=[^?]*$'
   behavior_js_template: simpleclicks.js.j2
