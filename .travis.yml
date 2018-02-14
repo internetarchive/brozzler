@@ -10,9 +10,15 @@ before_install:
 install:
 - ansible-playbook --extra-vars="brozzler_pip_name=file://$TRAVIS_BUILD_DIR#egg=brozzler user=travis" --inventory-file=ansible/hosts-localhost ansible/playbook.yml
 - pip install $TRAVIS_BUILD_DIR 'warcprox>=2.4b1' pytest
+- chromium-browser --version
+- sudo apt-get update
+- sudo apt-get install --only-upgrade chromium-browser
+- chromium-browser --version
+- sudo service brozzler-worker restart
 script:
 - DISPLAY=:1 py.test -v tests
 after_failure:
+- chromium-browser --version
 - sudo cat /var/log/upstart/warcprox.log
 - sudo cat /var/log/upstart/brozzler-worker.log
 - sudo cat /var/log/upstart/pywb.log
