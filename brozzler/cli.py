@@ -167,6 +167,7 @@ def brozzle_page(argv=None):
 
     args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
+    brozzler.chrome.check_version(args.chrome_exe)
 
     behavior_parameters = {}
     if args.behavior_parameters:
@@ -326,6 +327,7 @@ def brozzler_worker(argv=None):
 
     args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
+    brozzler.chrome.check_version(args.chrome_exe)
 
     def dump_state(signum, frame):
         signal.signal(signal.SIGQUIT, signal.SIG_IGN)

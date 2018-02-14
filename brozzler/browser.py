@@ -61,6 +61,33 @@ class BrowserPool:
         self._in_use = set()
         self._lock = threading.Lock()
 
+    def _fresh_browser(self):
+        # choose available port
+        sock = socket.socket()
+        sock.bind(('0.0.0.0', 0))
+        port = sock.getsockname()[1]
+        sock.close()
+
+        browser = Browser(port=port, **self.kwargs)
+        return browser
+
+    def acquire_multi(self, n=1):
+        '''
+        Returns a list of up to `n` browsers.
+
+        Raises:
+            NoBrowsersAvailable if none available
+        '''
+        browsers = []
+        with self._lock:
+            if len(self._in_use) >= self.size:
+                raise NoBrowsersAvailable
+            while len(self._in_use) < self.size and len(browsers) < n:
+                browser = self._fresh_browser()
+                browsers.append(browser)
+                self._in_use.add(browser)
+        return browsers
+
     def acquire(self):
         '''
         Returns an available instance.
@@ -74,14 +101,7 @@ class BrowserPool:
         with self._lock:
             if len(self._in_use) >= self.size:
                 raise NoBrowsersAvailable
-
-            # choose available port
-            sock = socket.socket()
-            sock.bind(('0.0.0.0', 0))
-            port = sock.getsockname()[1]
-            sock.close()
-
-            browser = Browser(port=port, **self.kwargs)
+            browser = self._fresh_browser()
             self._in_use.add(browser)
             return browser
 
@@ -89,6 +109,13 @@ class BrowserPool:
         browser.stop()  # make sure
         with self._lock:
             self._in_use.remove(browser)
+
+    def release_all(self, browsers):
+        for browser in browsers:
+            browser.stop()  # make sure
+        with self._lock:
+            for browser in browsers:
+                self._in_use.remove(browser)
 
     def shutdown_now(self):
         self.logger.info(
@@ -162,7 +189,8 @@ class WebsockReceiverThread(threading.Thread):
         # ping_timeout is used as the timeout for the call to select.select()
         # in addition to its documented purpose, and must have a value to avoid
         # hangs in certain situations
-        self.websock.run_forever(ping_timeout=0.5)
+        self.websock.run_forever(sockopt=((socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),),
+                                 ping_timeout=0.5)
 
     def _on_message(self, websock, message):
         try:
@@ -171,21 +199,6 @@ class WebsockReceiverThread(threading.Thread):
             self.logger.error(
                     'uncaught exception in _handle_message message=%s',
                     message, exc_info=True)
-
-    def _debugger_paused(self, message):
-        # we hit the breakpoint set in start(), get rid of google analytics
-        self.logger.debug('debugger paused! message=%s', message)
-        scriptId = message['params']['callFrames'][0]['location']['scriptId']
-
-        # replace script
-        self.websock.send(
-                json.dumps(dict(
-                    id=0, method='Debugger.setScriptSource',
-                    params={'scriptId': scriptId,
-                        'scriptSource': 'console.log("google analytics is no more!");'})))
-
-        # resume execution
-        self.websock.send(json.dumps(dict(id=0, method='Debugger.resume')))
 
     def _network_response_received(self, message):
         if (message['params']['response']['status'] == 420
@@ -227,8 +240,6 @@ class WebsockReceiverThread(threading.Thread):
             elif message['method'] == 'Network.requestWillBeSent':
                 if self.on_request:
                     self.on_request(message)
-            elif message['method'] == 'Debugger.paused':
-                self._debugger_paused(message)
             elif message['method'] == 'Page.interstitialShown':
                 # for AITFIVE-1529: handle http auth
                 # for now, we should consider killing the browser when we receive Page.interstitialShown and
@@ -330,16 +341,14 @@ class Browser:
             self.send_to_chrome(method='Network.enable')
             self.send_to_chrome(method='Page.enable')
             self.send_to_chrome(method='Console.enable')
-            self.send_to_chrome(method='Debugger.enable')
             self.send_to_chrome(method='Runtime.enable')
 
-            # disable google analytics, see _handle_message() where breakpoint
-            # is caught Debugger.paused
+            # disable google analytics
             self.send_to_chrome(
-                    method='Debugger.setBreakpointByUrl',
-                    params={
-                        'lineNumber': 1,
-                        'urlRegex': 'https?://www.google-analytics.com/analytics.js'})
+                method='Network.setBlockedURLs',
+                params={'urls': ['*google-analytics.com/analytics.js',
+                                 '*google-analytics.com/ga.js']}
+                )
 
     def stop(self):
         '''
@@ -549,7 +558,7 @@ class Browser:
                     'problem extracting outlinks, result message: %s', message)
             return frozenset()
 
-    def screenshot(self, timeout=30):
+    def screenshot(self, timeout=90):
         self.logger.info('taking screenshot')
         self.websock_thread.expect_result(self._command_id.peek())
         msg_id = self.send_to_chrome(method='Page.captureScreenshot')
