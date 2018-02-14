@@ -308,6 +308,8 @@ class Chrome:
                     'SIGKILL', self.chrome_process.pid, status)
 
         finally:
+            self.chrome_process.stdout.close()
+            self.chrome_process.stderr.close()
             try:
                 self._home_tmpdir.cleanup()
             except:
