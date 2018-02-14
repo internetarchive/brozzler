@@ -12,7 +12,7 @@ install:
 - pip install $TRAVIS_BUILD_DIR 'warcprox>=2.4b1' pytest
 - chromium-browser --version
 - sudo apt-get update
-- sudo apt-get -y dist-upgrade
+- sudo apt-get install --only-upgrade chromium-browser
 - chromium-browser --version
 script:
 - DISPLAY=:1 py.test -v tests
