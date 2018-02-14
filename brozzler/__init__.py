@@ -67,6 +67,21 @@ logging.Logger.trace = _logger_trace
 logging._levelToName[TRACE] = 'TRACE'
 logging._nameToLevel['TRACE'] = TRACE
 
+# see https://github.com/internetarchive/brozzler/issues/91
+def _logging_handler_handle(self, record):
+    rv = self.filter(record)
+    if rv:
+        try:
+            self.acquire()
+            self.emit(record)
+        finally:
+            try:
+                self.release()
+            except:
+                pass
+    return rv
+logging.Handler.handle = _logging_handler_handle
+
 _behaviors = None
 def behaviors(behaviors_dir=None):
     """Return list of JS behaviors loaded from YAML file.
