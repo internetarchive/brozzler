@@ -1,7 +1,7 @@
 '''
 brozzler/browser.py - manages the browsers for brozzler
 
-Copyright (C) 2014-2017 Internet Archive
+Copyright (C) 2014-2018 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -335,7 +335,7 @@ class Browser:
                     self.websock, name='WebsockThread:%s' % self.chrome.port)
             self.websock_thread.start()
 
-            self._wait_for(lambda: self.websock_thread.is_open, timeout=10)
+            self._wait_for(lambda: self.websock_thread.is_open, timeout=30)
 
             # tell browser to send us messages we're interested in
             self.send_to_chrome(method='Network.enable')
@@ -460,8 +460,7 @@ class Browser:
                             page_url)
                         self.navigate_to_page(page_url, timeout=page_timeout)
                 if on_screenshot:
-                    jpeg_bytes = self.screenshot()
-                    on_screenshot(jpeg_bytes)
+                    self._try_screenshot(on_screenshot)
                 behavior_script, behavior_timeout_custom = brozzler.behavior_script(
                         page_url, behavior_parameters,
                         behaviors_dir=behaviors_dir)
@@ -487,6 +486,15 @@ class Browser:
             self.is_browsing = False
             self.websock_thread.on_request = None
             self.websock_thread.on_response = None
+
+    def _try_screenshot(self, on_screenshot):
+        for i in range(3):
+            try:
+                jpeg_bytes = self.screenshot()
+                on_screenshot(jpeg_bytes)
+                return
+            except BrowsingTimeout as e:
+                logging.error('attempt %s/3: %s', i+1, e)
 
     def visit_hashtags(self, page_url, hashtags, outlinks):
         _hashtags = set(hashtags or [])
@@ -558,7 +566,7 @@ class Browser:
                     'problem extracting outlinks, result message: %s', message)
             return frozenset()
 
-    def screenshot(self, timeout=90):
+    def screenshot(self, timeout=45):
         self.logger.info('taking screenshot')
         self.websock_thread.expect_result(self._command_id.peek())
         msg_id = self.send_to_chrome(method='Page.captureScreenshot')
