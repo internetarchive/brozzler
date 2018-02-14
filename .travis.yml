@@ -14,6 +14,7 @@ install:
 - sudo apt-get update
 - sudo apt-get install --only-upgrade chromium-browser
 - chromium-browser --version
+- sudo service brozzler-worker restart
 script:
 - DISPLAY=:1 py.test -v tests
 after_failure:
