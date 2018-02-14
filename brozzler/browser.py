@@ -335,7 +335,7 @@ class Browser:
                     self.websock, name='WebsockThread:%s' % self.chrome.port)
             self.websock_thread.start()
 
-            self._wait_for(lambda: self.websock_thread.is_open, timeout=10)
+            self._wait_for(lambda: self.websock_thread.is_open, timeout=30)
 
             # tell browser to send us messages we're interested in
             self.send_to_chrome(method='Network.enable')
