@@ -288,6 +288,7 @@ class Browser:
         self.websock_thread = None
         self.is_browsing = False
         self._command_id = Counter()
+        self._wait_interval = 0.5
 
     def __enter__(self):
         self.start()
@@ -309,7 +310,7 @@ class Browser:
                 raise BrowsingTimeout(
                         'timed out after %.1fs waiting for: %s' % (
                             elapsed, callback))
-            brozzler.sleep(0.5)
+            brozzler.sleep(self._wait_interval)
 
     def send_to_chrome(self, suppress_logging=False, **kwargs):
         msg_id = next(self._command_id)
