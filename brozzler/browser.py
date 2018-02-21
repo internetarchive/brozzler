@@ -228,7 +228,7 @@ class WebsockReceiverThread(threading.Thread):
         self.websock.send(
                 json.dumps(dict(
                     id=0, method='Page.handleJavaScriptDialog',
-                    params={'accept': accept})), separators=',:')
+                    params={'accept': accept}), separators=',:'))
 
     def _handle_message(self, websock, json_message):
         message = json.loads(json_message)
