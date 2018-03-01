@@ -3,7 +3,7 @@
 test_frontier.py - fairly narrow tests of frontier management, requires
 rethinkdb running on localhost
 
-Copyright (C) 2017 Internet Archive
+Copyright (C) 2017-2018 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -380,7 +380,7 @@ def test_time_limit():
     assert site.starts_and_stops[1]['stop'] is None
 
     # time limit not reached yet
-    frontier._enforce_time_limit(site)
+    frontier.enforce_time_limit(site)
 
     assert site.status == 'ACTIVE'
     assert len(site.starts_and_stops) == 2
@@ -392,7 +392,7 @@ def test_time_limit():
     site.save()
 
     # time limit not reached yet
-    frontier._enforce_time_limit(site)
+    frontier.enforce_time_limit(site)
     assert site.status == 'ACTIVE'
     assert len(site.starts_and_stops) == 2
     assert site.starts_and_stops[1]['start']
@@ -400,7 +400,11 @@ def test_time_limit():
 
     site.active_brozzling_time = 0.2  # this is why the time limit will be hit
 
-    frontier._enforce_time_limit(site)
+    try:
+        frontier.enforce_time_limit(site)
+    except brozzler.ReachedTimeLimit:
+        frontier.finished(site, 'FINISHED_TIME_LIMIT')
+
     assert site.status == 'FINISHED_TIME_LIMIT'
     assert not site.claimed
     assert len(site.starts_and_stops) == 2

@@ -131,28 +131,21 @@ class RethinkDbFrontier:
                 sites.append(site)
             if not sites:
                 raise brozzler.NothingToClaim
-            # XXX This is the only place we enforce time limit for now. Worker
-            # loop should probably check time limit. Maybe frontier needs a
-            # housekeeping thread to ensure that time limits get enforced in a
-            # timely fashion.
-            for site in list(sites):
-                if self._enforce_time_limit(site):
-                    sites.remove(site)
             if sites:
                 return sites
             # else try again
 
-    def _enforce_time_limit(self, site):
+    def enforce_time_limit(self, site):
+        '''
+        Raises `brozzler.ReachedTimeLimit` if appropriate.
+        '''
         if (site.time_limit and site.time_limit > 0
                 and (site.active_brozzling_time or 0) > site.time_limit):
             self.logger.debug(
                     "site FINISHED_TIME_LIMIT! time_limit=%s "
                     "active_brozzling_time=%s %s", site.time_limit,
                     site.active_brozzling_time, site)
-            self.finished(site, "FINISHED_TIME_LIMIT")
-            return True
-        else:
-            return False
+            raise brozzler.ReachedTimeLimit
 
     def claim_page(self, site, worker_id):
         # ignores the "claimed" field of the page, because only one

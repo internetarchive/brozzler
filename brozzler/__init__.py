@@ -32,6 +32,9 @@ class CrawlStopped(Exception):
 class ProxyError(Exception):
     pass
 
+class ReachedTimeLimit(Exception):
+    pass
+
 class ReachedLimit(Exception):
     def __init__(self, http_error=None, warcprox_meta=None, http_payload=None):
         import json
