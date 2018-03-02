@@ -863,6 +863,46 @@ def test_claim_site():
     # clean up
     rr.table('sites').get(claimed_site.id).delete().run()
 
+def test_max_claimed_sites():
+    # max_claimed_sites is a brozzler job setting that puts a cap on the number
+    # of the job's sites that can be brozzled simultaneously across the cluster
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # clean slate
+    rr.table('jobs').delete().run()
+    rr.table('sites').delete().run()
+
+    job_conf = {
+        'seeds': [
+            {'url': 'http://example.com/1'},
+            {'url': 'http://example.com/2'},
+            {'url': 'http://example.com/3'},
+            {'url': 'http://example.com/4'},
+            {'url': 'http://example.com/5'},
+        ],
+        'max_claimed_sites': 3,
+    }
+
+    job = brozzler.new_job(frontier, job_conf)
+
+    assert job.id
+    assert job.max_claimed_sites == 3
+
+    sites = list(frontier.job_sites(job.id))
+    assert len(sites) == 5
+
+    claimed_sites = frontier.claim_sites(1)
+    assert len(claimed_sites) == 1
+    claimed_sites = frontier.claim_sites(3)
+    assert len(claimed_sites) == 2
+    with pytest.raises(brozzler.NothingToClaim):
+        claimed_site = frontier.claim_sites(3)
+
+    # clean slate for the next one
+    rr.table('jobs').delete().run()
+    rr.table('sites').delete().run()
+
 def test_choose_warcprox():
     rr = doublethink.Rethinker('localhost', db='ignoreme')
     svcreg = doublethink.ServiceRegistry(rr)

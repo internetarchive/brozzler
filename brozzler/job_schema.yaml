@@ -96,3 +96,7 @@ seeds:
         type: string
 
       <<: *multi_level_options
+
+max_claimed_sites:
+  type: integer
+
