@@ -13,6 +13,7 @@ an example
     id: myjob
     time_limit: 60 # seconds
     ignore_robots: false
+    max_claimed_sites: 2
     warcprox_meta:
       warc-prefix: job1
       stats:
@@ -102,6 +103,17 @@ List of seeds. Each item in the list is a dictionary (associative array) which
 defines the seed. It must specify ``url`` (see below) and can additionally
 specify any of the settings of scope *seed-level*.
 
+``max_claimed_sites``
+---------------------
++-----------+--------+----------+---------+
+| scope     | type   | required | default |
++===========+========+==========+=========+
+| top-level | number | no       | *none*  |
++-----------+--------+----------+---------+
+Puts a cap on the number of sites belonging to a given job that can be brozzled
+simultaneously across the cluster. Addresses the problem of a job with many
+seeds starving out other jobs.
+
 ``url``
 -------
 +------------+--------+----------+---------+
@@ -113,6 +125,13 @@ The seed url.
 
 ``metadata``
 ------------
++-----------------------+------------+----------+---------+
+| scope                 | type       | required | default |
++=======================+============+==========+=========+
+| seed-level, top-level | dictionary | no      | *none*   |
++-----------------------+------------+----------+---------+
+Arbitrary information about the crawl job or site. Merely informative, not used
+by brozzler for anything. Could be of use to some external process.
 
 ``time_limit``
 --------------

@@ -228,7 +228,7 @@ class WebsockReceiverThread(threading.Thread):
         self.websock.send(
                 json.dumps(dict(
                     id=0, method='Page.handleJavaScriptDialog',
-                    params={'accept': accept})))
+                    params={'accept': accept}), separators=',:'))
 
     def _handle_message(self, websock, json_message):
         message = json.loads(json_message)
@@ -288,6 +288,7 @@ class Browser:
         self.websock_thread = None
         self.is_browsing = False
         self._command_id = Counter()
+        self._wait_interval = 0.5
 
     def __enter__(self):
         self.start()
@@ -309,12 +310,12 @@ class Browser:
                 raise BrowsingTimeout(
                         'timed out after %.1fs waiting for: %s' % (
                             elapsed, callback))
-            brozzler.sleep(0.5)
+            brozzler.sleep(self._wait_interval)
 
     def send_to_chrome(self, suppress_logging=False, **kwargs):
         msg_id = next(self._command_id)
         kwargs['id'] = msg_id
-        msg = json.dumps(kwargs)
+        msg = json.dumps(kwargs, separators=',:')
         logging.log(
                 brozzler.TRACE if suppress_logging else logging.DEBUG,
                 'sending message to %s: %s', self.websock, msg)
