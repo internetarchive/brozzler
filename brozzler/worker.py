@@ -506,6 +506,10 @@ class BrozzlerWorker:
             site.save()
             start = time.time()
             page = None
+            self._frontier.enforce_time_limit(site)
+            self._frontier.honor_stop_request(site)
+            # _proxy_for() call in log statement can raise brozzler.ProxyError
+            # which is why we honor time limit and stop request first☝🏻
             self.logger.info(
                     "brozzling site (proxy=%r) %r",
                     self._proxy_for(site), site)
