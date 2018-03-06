@@ -98,7 +98,7 @@ class RethinkDbFrontier:
         Returns a dictionary that looks like this:
             {<job_id>: {'claimed_sites': 2, 'max_claimed_sites': 3}, ...}
         '''
-        # js query: r.db('brozzler').table('sites').between(['ACTIVE', r.minval], ['ACTIVE', r.maxval], {'index': 'sites_last_disclaimed'}).eqJoin('job_id', r.db('brozzler').table('jobs')).group(function(x){return x('right')('id')}).ungroup().map(function(x){return {'job_id': x('group'), 'max_claimed_sites':x('reduction')('right')('max_claimed_sites')(0), 'claimed_sites':x('reduction')('left').filter({'claimed':true}).count()}})
+        # js query: r.db('brozzler').table('sites').between(['ACTIVE', r.minval], ['ACTIVE', r.maxval], {'index': 'sites_last_disclaimed'}).eqJoin('job_id', r.db('brozzler').table('jobs')).filter(function(x){return x('right').hasFields('max_claimed_sites')}).group(function(x){return x('right')('id')}).ungroup().map(function(x){return {'job_id': x('group'), 'max_claimed_sites':x('reduction')('right')('max_claimed_sites')(0), 'claimed_sites':x('reduction')('left').filter({'claimed':true}).count()}})
         # returns results like:
         # [{'max_claimed_sites': 2, 'claimed_sites': 0, 'job_id': 1234},
         #  {'max_claimed_sites': 3, 'claimed_sites': 3, 'job_id': 1235}]
@@ -108,6 +108,7 @@ class RethinkDbFrontier:
                     ['ACTIVE', r.minval], ['ACTIVE', r.maxval],
                     index='sites_last_disclaimed')
                 .eq_join('job_id', r.db(self.rr.dbname).table('jobs'))
+                .filter(lambda x: x['right'].has_fields('max_claimed_sites'))
                 .group(lambda x: x['right']['id'])
                 .ungroup()
                 .map(lambda x: {
@@ -115,10 +116,14 @@ class RethinkDbFrontier:
                     'max_claimed_sites': x['reduction']['right']['max_claimed_sites'][0],
                     'claimed_sites': x['reduction']['left'].filter({'claimed':True}).count()
                     })).run()
-        xformed = {d['job_id']: {
-                        'claimed_sites': d['claimed_sites'],
-                        'max_claimed_sites': d['max_claimed_sites']
-                        } for d in results}
+
+        xformed = {
+            d['job_id']: {
+                'claimed_sites': d['claimed_sites'],
+                'max_claimed_sites': d['max_claimed_sites']
+            }
+            for d in results
+        }
         return xformed
 
     def claim_sites(self, n=1):
@@ -192,12 +197,13 @@ class RethinkDbFrontier:
         else:
             raise brozzler.NothingToClaim
 
-    def enforce_time_limit(self, site):
+    def enforce_time_limit(self, site, session_time=0):
         '''
         Raises `brozzler.ReachedTimeLimit` if appropriate.
         '''
-        if (site.time_limit and site.time_limit > 0
-                and (site.active_brozzling_time or 0) > site.time_limit):
+        if (site.time_limit
+                and site.time_limit > 0
+                and (site.active_brozzling_time or 0) + session_time > site.time_limit):
             self.logger.debug(
                     "site FINISHED_TIME_LIMIT! time_limit=%s "
                     "active_brozzling_time=%s %s", site.time_limit,
