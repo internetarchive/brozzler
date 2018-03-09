@@ -762,3 +762,31 @@ def test_warcprox_outage_resiliency(httpd):
         warcprox2_thread.join()
         start_service('warcprox')
 
+def test_time_limit(httpd):
+    test_id = 'test_time_limit-%s' % datetime.datetime.utcnow().isoformat()
+    rr = doublethink.Rethinker('localhost', db='brozzler')
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # create a new job with three sites that could be crawled forever
+    job_conf = {'seeds': [{
+        'url': 'http://localhost:%s/infinite/foo/' % httpd.server_port,
+        'time_limit': 20}]}
+    job = brozzler.new_job(frontier, job_conf)
+    assert job.id
+
+    sites = list(frontier.job_sites(job.id))
+    assert len(sites) == 1
+    site = sites[0]
+
+    # time limit should be enforced pretty soon
+    start = time.time()
+    while not sites[0].status.startswith(
+            'FINISHED') and time.time() - start < 120:
+        time.sleep(0.5)
+        sites[0].refresh()
+    assert sites[0].status == 'FINISHED_TIME_LIMIT'
+
+    # all sites finished so job should be finished too
+    job.refresh()
+    assert job.status == 'FINISHED'
+

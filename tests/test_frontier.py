@@ -3,7 +3,7 @@
 test_frontier.py - fairly narrow tests of frontier management, requires
 rethinkdb running on localhost
 
-Copyright (C) 2017 Internet Archive
+Copyright (C) 2017-2018 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -380,7 +380,7 @@ def test_time_limit():
     assert site.starts_and_stops[1]['stop'] is None
 
     # time limit not reached yet
-    frontier._enforce_time_limit(site)
+    frontier.enforce_time_limit(site)
 
     assert site.status == 'ACTIVE'
     assert len(site.starts_and_stops) == 2
@@ -392,7 +392,7 @@ def test_time_limit():
     site.save()
 
     # time limit not reached yet
-    frontier._enforce_time_limit(site)
+    frontier.enforce_time_limit(site)
     assert site.status == 'ACTIVE'
     assert len(site.starts_and_stops) == 2
     assert site.starts_and_stops[1]['start']
@@ -400,7 +400,11 @@ def test_time_limit():
 
     site.active_brozzling_time = 0.2  # this is why the time limit will be hit
 
-    frontier._enforce_time_limit(site)
+    try:
+        frontier.enforce_time_limit(site)
+    except brozzler.ReachedTimeLimit:
+        frontier.finished(site, 'FINISHED_TIME_LIMIT')
+
     assert site.status == 'FINISHED_TIME_LIMIT'
     assert not site.claimed
     assert len(site.starts_and_stops) == 2
@@ -858,6 +862,46 @@ def test_claim_site():
 
     # clean up
     rr.table('sites').get(claimed_site.id).delete().run()
+
+def test_max_claimed_sites():
+    # max_claimed_sites is a brozzler job setting that puts a cap on the number
+    # of the job's sites that can be brozzled simultaneously across the cluster
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # clean slate
+    rr.table('jobs').delete().run()
+    rr.table('sites').delete().run()
+
+    job_conf = {
+        'seeds': [
+            {'url': 'http://example.com/1'},
+            {'url': 'http://example.com/2'},
+            {'url': 'http://example.com/3'},
+            {'url': 'http://example.com/4'},
+            {'url': 'http://example.com/5'},
+        ],
+        'max_claimed_sites': 3,
+    }
+
+    job = brozzler.new_job(frontier, job_conf)
+
+    assert job.id
+    assert job.max_claimed_sites == 3
+
+    sites = list(frontier.job_sites(job.id))
+    assert len(sites) == 5
+
+    claimed_sites = frontier.claim_sites(1)
+    assert len(claimed_sites) == 1
+    claimed_sites = frontier.claim_sites(3)
+    assert len(claimed_sites) == 2
+    with pytest.raises(brozzler.NothingToClaim):
+        claimed_site = frontier.claim_sites(3)
+
+    # clean slate for the next one
+    rr.table('jobs').delete().run()
+    rr.table('sites').delete().run()
 
 def test_choose_warcprox():
     rr = doublethink.Rethinker('localhost', db='ignoreme')

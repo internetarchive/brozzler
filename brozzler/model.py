@@ -2,7 +2,7 @@
 brozzler/models.py - model classes representing jobs, sites, and pages, with
 related logic
 
-Copyright (C) 2014-2017 Internet Archive
+Copyright (C) 2014-2018 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -79,11 +79,14 @@ def new_job(frontier, job_conf):
                 "started": doublethink.utcnow()})
     if "id" in job_conf:
         job.id = job_conf["id"]
+    if "max_claimed_sites" in job_conf:
+        job.max_claimed_sites = job_conf["max_claimed_sites"]
     job.save()
 
     sites = []
     for seed_conf in job_conf["seeds"]:
         merged_conf = merge(seed_conf, job_conf)
+        merged_conf.pop("max_claimed_sites", None)
         merged_conf.pop("seeds")
         merged_conf["job_id"] = job.id
         merged_conf["seed"] = merged_conf.pop("url")
