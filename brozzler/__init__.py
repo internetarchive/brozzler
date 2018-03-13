@@ -264,7 +264,7 @@ def jinja2_environment(behaviors_dir=None):
                                                            'js-templates'))
         else:
             _loader=jinja2.PackageLoader('brozzler', 'js-templates')
-        _jinja2_env = jinja2.Environment(loader=_loader)
+        _jinja2_env = jinja2.Environment(loader=_loader, auto_reload=False)
         _jinja2_env.filters['json'] = json.dumps
     return _jinja2_env
 
