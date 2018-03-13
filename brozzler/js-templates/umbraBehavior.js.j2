@@ -33,6 +33,7 @@ class UmbraBehavior {
         // should match older default and simpleclicks behavior, and more
         var k = this.index;
         var selector = this.actions[k].selector;
+        var idCheck = this.actions[k].idcheck ? this.actions[k].idcheck : true;
         var action = this.actions[k].do ? this.actions[k].do : 'click';
         var closeSelector = this.actions[k].closeSelector ? this.actions[k].closeSelector : null;
         var didSomething = false;
@@ -62,7 +63,7 @@ class UmbraBehavior {
                 continue;
             }
             for ( var i = 0; i < doTargetsLength; i++) {
-                if (this.alreadyDone.indexOf(doTargets[i]) > -1) {
+                if idCheck and (this.alreadyDone.indexOf(doTargets[i]) > -1) {
                     continue;
                 }
                 if (!this.isVisible(doTargets[i])) {
