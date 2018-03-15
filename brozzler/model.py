@@ -86,7 +86,6 @@ def new_job(frontier, job_conf):
     sites = []
     for seed_conf in job_conf["seeds"]:
         merged_conf = merge(seed_conf, job_conf)
-        merged_conf.pop("max_claimed_sites", None)
         merged_conf.pop("seeds")
         merged_conf["job_id"] = job.id
         merged_conf["seed"] = merged_conf.pop("url")
