@@ -442,6 +442,12 @@ class BrozzlerWorker:
                     page.videos = []
                 page.videos.append(video)
 
+            if (chrome_msg['params']['response']['url'].lower().startswith('data:')
+                    or chrome_msg['params']['response']['fromDiskCache']
+                    or not 'requestHeaders' in chrome_msg['params']['response']):
+                return
+            self.logger.info('chrome_msg url: %s' % chrome_msg['params']['response']['url'])
+
         if not browser.is_running():
             browser.start(
                     proxy=self._proxy_for(site),
