@@ -461,8 +461,7 @@ class Browser:
                             page_url)
                         self.navigate_to_page(page_url, timeout=page_timeout)
                 if on_screenshot:
-                    jpeg_bytes = self.screenshot()
-                    on_screenshot(jpeg_bytes)
+                    self._try_screenshot(on_screenshot)
                 behavior_script, behavior_timeout_custom = brozzler.behavior_script(
                         page_url, behavior_parameters,
                         behaviors_dir=behaviors_dir)
