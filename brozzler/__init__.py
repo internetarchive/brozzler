@@ -105,7 +105,7 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
     '''
     Returns the javascript behavior string populated with template_parameters.
     '''
-    import re, logging
+    import re, logging, json
     for behavior in behaviors(behaviors_dir=behaviors_dir):
         if re.match(behavior['url_regex'], url):
             parameters = dict()
@@ -118,7 +118,7 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
             script = template.render(parameters)
             logging.info(
                     'using template=%r populated with parameters=%r for %r',
-                    behavior['behavior_js_template'], parameters, url)
+                    behavior['behavior_js_template'], json.dumps(parameters), url)
             return script
     return None
 
