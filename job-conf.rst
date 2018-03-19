@@ -40,12 +40,11 @@ Example
 How inheritance works
 =====================
 
-Most of the available options apply to seeds. Such options can also be
-specified at the top level, in which case the seeds inherit the options. If
-an option is specified both at the top level and at the level of an individual
-seed, the results are merged with the seed-level value taking precedence in
-case of conflicts. It's probably easiest to make sense of this by way of an
-example.
+Most of the settings that apply to seeds can also be specified at the top
+level, in which case all seeds inherit those settings. If an option is
+specified both at the top level and at the level of an individual seed, the
+results are merged with the seed-level value taking precedence in case of
+conflicts. It's probably easiest to make sense of this by way of an example.
 
 In the example yaml above, ``warcprox_meta`` is specified at the top level and
 at the seed level for the seed http://one.example.org/. At the top level we
@@ -117,7 +116,7 @@ seeds starving out other jobs.
 +------------------------+----------+---------+
 List of seeds. Each item in the list is a dictionary (associative array) which
 defines the seed. It must specify ``url`` (see below) and can additionally
-specify any *seed* settings.
+specify any seed settings.
 
 Seed-level-only settings
 ------------------------
@@ -131,7 +130,7 @@ settings, which can also be specified at the top level.
 +========+==========+=========+
 | string | yes      | *n/a*   |
 +--------+----------+---------+
-The seed url.
+The seed url. Crawling starts here.
 
 ``username``
 ~~~~~~~~~~~~
@@ -140,6 +139,8 @@ The seed url.
 +========+==========+=========+
 | string | no       | *none*  |
 +--------+----------+---------+
+If set, used to populate automatically detected login forms. See explanation at
+"password" below.
 
 ``password``
 ~~~~~~~~~~~~
@@ -148,6 +149,14 @@ The seed url.
 +========+==========+=========+
 | string | no       | *none*  |
 +--------+----------+---------+
+If set, used to populate automatically detected login forms. If ``username``
+and ``password`` are configured for a seed, brozzler will look for a login form
+on each page it crawls for that seed. A form that has a single text or email
+field (the username), a single password field (``<input type="password">``),
+and has ``method="POST"`` is considered to be a login form. The form may have
+other fields like checkboxes and hidden fields. For these, brozzler will leave
+the default values in place. Login form detection and submission happen after
+page load, then brozzling proceeds as usual.
 
 Seed-level / top-level settings
 -------------------------------
