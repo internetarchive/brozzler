@@ -28,9 +28,9 @@
     interval: 2500
     actions:
       - selector: div.see-more
-        firstMatchOnly: 1
+        firstMatchOnly: true
       - selector: li.next
-        repeatSameElement: 1
+        repeatSameElement: true
 -
   url_regex: '^https?://(?:www\.)?marquette\.edu/.*$'
   behavior_js_template: marquette_edu.js
