@@ -33,8 +33,8 @@ class UmbraBehavior {
         // should match older default and simpleclicks behavior, and more
         var k = this.index;
         var selector = this.actions[k].selector;
-        var skipIDCheck = this.actions[k].skipIDcheck ? this.actions[k].skipIDcheck != false : false;
-        var onceOnly = this.actions[k].onceOnly ? this.actions[k].onceOnly != false: false;
+        var repeatSameElement = this.actions[k].repeatSameElement ? this.actions[k].repeatSameElement != false : false;
+        var firstMatchOnly = this.actions[k].firstMatchOnly ? this.actions[k].firstMatchOnly != false: false;
         var action = this.actions[k].do ? this.actions[k].do : 'click';
         var closeSelector = this.actions[k].closeSelector ? this.actions[k].closeSelector : null;
         var didSomething = false;
@@ -58,7 +58,7 @@ class UmbraBehavior {
                     doTarget(closeTargets[0], 'click');
                 }
             }
-            if (onceOnly) {
+            if (firstMatchOnly) {
                 var doTargets = [ documents[j].querySelector(selector) ];
             } else {
                 var doTargets = documents[j].querySelectorAll(selector);
@@ -68,7 +68,7 @@ class UmbraBehavior {
                 continue;
             }
             for ( var i = 0; i < doTargetsLength; i++) {
-                if (!skipIDCheck && this.alreadyDone.indexOf(doTargets[i]) > -1) {
+                if (!repeatSameElement && this.alreadyDone.indexOf(doTargets[i]) > -1) {
                     continue;
                 }
                 if (!this.isVisible(doTargets[i])) {
