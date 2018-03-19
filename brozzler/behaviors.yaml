@@ -22,6 +22,16 @@
   behavior_js_template: facebook.js
   request_idle_timeout_sec: 30
 -
+  url_regex: '^https?://americaspresidents\.si\.edu/gallery.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    interval: 2500
+    actions:
+      - selector: div.see-more
+        firstMatchOnly: true
+      - selector: li.next
+        repeatSameElement: true
+-
   url_regex: '^https?://(?:www\.)?marquette\.edu/.*$'
   behavior_js_template: marquette_edu.js
   request_idle_timeout_sec: 10
