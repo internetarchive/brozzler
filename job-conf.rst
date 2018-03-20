@@ -251,12 +251,26 @@ becomes::
 +============+==========+===========+
 | dictionary | no       | ``false`` |
 +------------+----------+-----------+
-Scope rules. *TODO*
+Scope specificaion for the seed. See the "Scoping" section which follows.
 
 Scoping
 =======
 
-*TODO* explanation of scoping and scope rules
+The scope of a seed determines which links are scheduled for crawling and which
+are not. Example::
+
+    scope:
+      accepts:
+      - parent_url_regex: ^https?://(www\.)?youtube.com/(user|channel)/.*$
+        regex: ^https?://(www\.)?youtube.com/watch\?.*$
+      - surt: +http://(com,google,video,
+      - surt: +http://(com,googlevideo,
+      blocks:
+      - domain: youngscholars.unimelb.edu.au
+        substring: wp-login.php?action=logout
+      - domain: malware.us
+      max_hops: 20
+      max_hops_off_surt: 0
 
 Scope settings
 --------------
@@ -285,6 +299,21 @@ Scope settings
 | list | no       | *none*  |
 +------+----------+---------+
 
+``max_hops``
+~~~~~~~~~~~~
++--------+----------+---------+
+| type   | required | default |
++========+==========+=========+
+| number | no       | *none*  |
++--------+----------+---------+
+
+``max_hops_off_surt``
+~~~~~~~~~~~~~~~~~~~~~
++--------+----------+---------+
+| type   | required | default |
++========+==========+=========+
+| number | no       | 0       |
++--------+----------+---------+
 
 Scope rule settings
 -------------------
