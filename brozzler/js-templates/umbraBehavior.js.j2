@@ -104,7 +104,7 @@ class UmbraBehavior {
         } else {
             var idleTimeMs = Date.now() - this.idleSince;
             if ((idleTimeMs / 1000) > (this.IDLE_TIMEOUT_SEC - 1) && (this.index < (this.actions.length - 1))) {
-                console.log("ready for next action");   // untested!
+                console.log("ready for next action");
                 this.index += 1;
                 this.idleSince = null;
                 window.scroll(0,0);
