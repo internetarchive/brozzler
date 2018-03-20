@@ -22,6 +22,16 @@
   behavior_js_template: facebook.js
   request_idle_timeout_sec: 30
 -
+  url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: a.coreSpriteDismissLarge
+      - selector: div._mck9w a
+        firstMatchOnly: true
+      - selector: a.coreSpriteRightPaginationArrow
+        repeatSameElement: true
+-
   url_regex: '^https?://americaspresidents\.si\.edu/gallery.*$'
   behavior_js_template: umbraBehavior.js.j2
   default_parameters:
@@ -42,10 +52,6 @@
 -
   url_regex: '^https?://(?:www\.)?psu24.psu.edu/.*$'
   behavior_js_template: psu24.js
-  request_idle_timeout_sec: 10
--
-  url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
-  behavior_js_template: instagram.js
   request_idle_timeout_sec: 10
 -
   url_regex: '^https?://(?:www\.)?pm\.gc\.ca/.*$'
