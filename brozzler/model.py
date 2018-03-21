@@ -203,10 +203,12 @@ class Site(doublethink.Document, ElapsedMixIn):
 
     def note_seed_redirect(self, url):
         new_scope_surt = brozzler.site_surt_canon(url).surt().decode("ascii")
+        if not "accepts" in self.scope:
+            self.scope["accepts"] = []
         if not new_scope_surt.startswith(self.scope["surt"]):
-            self.logger.info("changing site scope surt from {} to {}".format(
-                self.scope["surt"], new_scope_surt))
-            self.scope["surt"] = new_scope_surt
+            self.logger.info(
+                    "adding surt %s to scope accept rules", new_scope_surt)
+            self.scope.accepts.append({"surt": new_scope_surt})
 
     def extra_headers(self):
         hdrs = {}
