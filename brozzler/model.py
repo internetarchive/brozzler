@@ -183,9 +183,9 @@ class Site(doublethink.Document, ElapsedMixIn):
             self.last_claimed = brozzler.EPOCH_UTC
         if not "scope" in self:
             self.scope = {}
-        if not "surt" in self.scope and self.seed:
-            self.scope["surt"] = brozzler.site_surt_canon(
-                    self.seed).surt().decode('ascii')
+        if self.seed:
+            self._accept_ssurt_if_not_redundant(
+                    brozzler.site_surt_canon(self.seed).ssurt())
 
         if not "starts_and_stops" in self:
             if self.get("start_time"):   # backward compatibility
@@ -201,14 +201,20 @@ class Site(doublethink.Document, ElapsedMixIn):
     def __str__(self):
         return 'Site({"id":"%s","seed":"%s",...})' % (self.id, self.seed)
 
-    def note_seed_redirect(self, url):
-        new_scope_surt = brozzler.site_surt_canon(url).surt().decode("ascii")
+    def _accept_ssurt_if_not_redundant(self, ssurt):
         if not "accepts" in self.scope:
             self.scope["accepts"] = []
-        if not new_scope_surt.startswith(self.scope["surt"]):
+        simple_rule_ssurts = (
+            rule["ssurt"] for rule in self.scope["accepts"]
+            if set(rule.keys()) == {'ssurt'})
+        if not any(ssurt.startswith(ss) for ss in simple_rule_ssurts):
             self.logger.info(
-                    "adding surt %s to scope accept rules", new_scope_surt)
-            self.scope.accepts.append({"surt": new_scope_surt})
+                    "adding ssurt %s to scope accept rules", ssurt)
+            self.scope["accepts"].append({"ssurt": ssurt})
+
+    def note_seed_redirect(self, url):
+        self._accept_ssurt_if_not_redundant(
+                brozzler.site_surt_canon(url).ssurt())
 
     def extra_headers(self):
         hdrs = {}
@@ -217,9 +223,20 @@ class Site(doublethink.Document, ElapsedMixIn):
                     self.warcprox_meta, separators=(',', ':'))
         return hdrs
 
-    def is_in_scope(self, url, parent_page=None):
+    def accept_reject_or_neither(self, url, parent_page=None):
+        '''
+        Returns `True` (accepted), `False` (rejected), or `None` (no decision).
+
+        `None` usually means rejected, unless `max_hops_off` comes into play.
+        '''
         if not isinstance(url, urlcanon.ParsedUrl):
             url = urlcanon.semantic(url)
+
+        if not url.scheme in (b'http', b'https'):
+            # XXX doesn't belong here maybe (where? worker ignores unknown
+            # schemes?)
+            return False
+
         try_parent_urls = []
         if parent_page:
             try_parent_urls.append(urlcanon.semantic(parent_page.url))
@@ -227,44 +244,36 @@ class Site(doublethink.Document, ElapsedMixIn):
                 try_parent_urls.append(
                         urlcanon.semantic(parent_page.redirect_url))
 
-        might_accept = False
-        if not url.scheme in (b'http', b'https'):
-            # XXX doesn't belong here maybe (where? worker ignores unknown
-            # schemes?)
-            return False
-        elif (parent_page and "max_hops" in self.scope
+        # enforce max_hops
+        if (parent_page and "max_hops" in self.scope
                 and parent_page.hops_from_seed >= self.scope["max_hops"]):
-            pass
-        elif url.surt().startswith(self.scope["surt"].encode("utf-8")):
-            might_accept = True
-        elif parent_page and parent_page.hops_off_surt < self.scope.get(
-                "max_hops_off_surt", 0):
-            might_accept = True
-        elif "accepts" in self.scope:
-            for accept_rule in self.scope["accepts"]:
-                rule = urlcanon.MatchRule(**accept_rule)
+            return False
+
+        # enforce reject rules
+        if "blocks" in self.scope:
+            for block_rule in self.scope["blocks"]:
+                rule = urlcanon.MatchRule(**block_rule)
                 if try_parent_urls:
                     for parent_url in try_parent_urls:
                         if rule.applies(url, parent_url):
-                           might_accept = True
+                           return False
                 else:
                     if rule.applies(url):
-                        might_accept = True
+                        return False
 
-        if might_accept:
-            if "blocks" in self.scope:
-                for block_rule in self.scope["blocks"]:
-                    rule = urlcanon.MatchRule(**block_rule)
-                    if try_parent_urls:
-                        for parent_url in try_parent_urls:
-                            if rule.applies(url, parent_url):
-                               return False
-                    else:
-                        if rule.applies(url):
-                            return False
-            return True
-        else:
-            return False
+        # honor accept rules
+        for accept_rule in self.scope["accepts"]:
+            rule = urlcanon.MatchRule(**accept_rule)
+            if try_parent_urls:
+                for parent_url in try_parent_urls:
+                    if rule.applies(url, parent_url):
+                       return True
+            else:
+                if rule.applies(url):
+                    return True
+
+        # no decision if we reach here
+        return None
 
 class Page(doublethink.Document):
     logger = logging.getLogger(__module__ + "." + __qualname__)
