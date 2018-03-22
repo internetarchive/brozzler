@@ -155,6 +155,7 @@ class Chrome:
                 '--remote-debugging-port=%s' % self.port,
                 '--use-mock-keychain', # mac thing
                 '--user-data-dir=%s' % self._chrome_user_data_dir,
+                '--no-sandbox',
                 '--disable-background-networking',
                 '--disable-renderer-backgrounding', '--disable-hang-monitor',
                 '--disable-background-timer-throttling', '--mute-audio',
