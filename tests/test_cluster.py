@@ -454,8 +454,7 @@ def test_seed_redirect(httpd):
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site5/redirect/' % httpd.server_port,
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
-    assert site.scope == {
-            'accepts': [{'ssurt': b'localhost,//%s:http:/site5/redirect/' % httpd.server_port}]}
+    assert site.scope == {'accepts': [{'ssurt': ('localhost,//%s:http:/site5/redirect/' % httpd.server_port).encode('ascii')}]}
 
     frontier = brozzler.RethinkDbFrontier(rr)
     brozzler.new_site(frontier, site)
@@ -480,8 +479,8 @@ def test_seed_redirect(httpd):
 
     # check that scope has been updated properly
     assert site.scope == {'accepts': [
-        {'ssurt': b'localhost,//%s:http:/site5/redirect/' % httpd.server_port},
-        {'ssurt': b'localhost,//%s:http:/site5/destination/' % httpd.server_port}]}
+        {'ssurt': ('localhost,//%s:http:/site5/redirect/' % httpd.server_port).encode('ascii')},
+        {'ssurt': ('localhost,//%s:http:/site5/destination/' % httpd.server_port).encode('ascii')}]}
 
 def test_hashtags(httpd):
     test_id = 'test_hashtags-%s' % datetime.datetime.utcnow().isoformat()
