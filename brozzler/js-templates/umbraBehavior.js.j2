@@ -124,11 +124,7 @@ class UmbraBehavior {
     }
 
     isVisible(elem) {
-        if (elem) {
-            return !!(elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length);
-        } else {
-            return false;
-        }
+        return elem && !!(elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length);
     }
 
     doTarget(target, action) {
