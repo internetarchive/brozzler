@@ -183,6 +183,11 @@ class Site(doublethink.Document, ElapsedMixIn):
             self.last_claimed = brozzler.EPOCH_UTC
         if not "scope" in self:
             self.scope = {}
+        if ("max_hops_off_surt" in self.scope
+                and not "max_hops_off" in self.scope):
+            self.scope["max_hops_off"] = self.scope["max_hops_off_surt"]
+        if "max_hops_off_surt" in self.scope:
+            del self.scope["max_hops_off_surt"]
         if self.seed:
             self._accept_ssurt_if_not_redundant(
                     brozzler.site_surt_canon(self.seed).ssurt())

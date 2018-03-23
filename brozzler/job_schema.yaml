@@ -65,7 +65,7 @@ id:
       max_hops:
         type: integer
 
-      max_hops_off_surt:
+      max_hops_off:
         type: integer
 
   metadata:

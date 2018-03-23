@@ -271,7 +271,7 @@ are not. Example::
         substring: wp-login.php?action=logout
       - domain: malware.us
       max_hops: 20
-      max_hops_off_surt: 0
+      max_hops_off: 0
 
 Toward the end of the process of brozzling a page, brozzler obtains a list of
 navigational links (``<a href="...">`` and similar) on the page, and evaluates
@@ -356,7 +356,7 @@ List of scope rules.
 | number | no       | *none*  |
 +--------+----------+---------+
 
-``max_hops_off_surt``
+``max_hops_off``
 ~~~~~~~~~~~~~~~~~~~~~
 +--------+----------+---------+
 | type   | required | default |

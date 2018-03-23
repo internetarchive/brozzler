@@ -989,6 +989,10 @@ def test_max_hops_off():
     brozzler.new_site(frontier, site)
     site.refresh()  # get it back from the db
 
+    # renamed this param
+    assert not 'max_hops_off_surt' in site.scope
+    assert site.scope['max_hops_off'] == 1
+
     seed_page = frontier.seed_page(site.id)
 
     assert site.accept_reject_or_neither('http://foo.org/', seed_page) is None

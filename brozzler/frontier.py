@@ -338,7 +338,7 @@ class RethinkDbFrontier:
                 hops_off = 0
             elif decision is None:
                 decision = parent_page.hops_off < site.scope.get(
-                        'max_hops_off_surt', 0)
+                        'max_hops_off', 0)
                 hops_off = parent_page.hops_off + 1
             if decision is True:
                 if brozzler.is_permitted_by_robots(site, str(url_for_crawling)):
