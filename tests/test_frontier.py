@@ -977,3 +977,122 @@ def test_choose_warcprox():
     # clean up
     rr.table('sites').delete().run()
     rr.table('services').delete().run()
+
+def test_max_hops_off():
+    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    frontier = brozzler.RethinkDbFrontier(rr)
+    site = brozzler.Site(rr, {
+        'seed': 'http://example.com/',
+        'scope': {
+            'max_hops_off_surt': 1,
+            'blocks': [{'ssurt': b'domain,bad,'}]}})
+    brozzler.new_site(frontier, site)
+    site.refresh()  # get it back from the db
+
+    seed_page = frontier.seed_page(site.id)
+
+    assert site.accept_reject_or_neither('http://foo.org/', seed_page) is None
+    assert site.accept_reject_or_neither('https://example.com/toot', seed_page) is None
+    assert site.accept_reject_or_neither('http://example.com/toot', seed_page) is True
+    assert site.accept_reject_or_neither('https://some.bad.domain/something', seed_page) is False
+
+    # two of these are in scope because of max_hops_off
+    frontier.scope_and_schedule_outlinks(site, seed_page, [
+        'http://foo.org/', 'https://example.com/toot',
+        'http://example.com/toot', 'https://some.bad.domain/something'])
+
+    pages = sorted(list(frontier.site_pages(site.id)), key=lambda p: p.url)
+
+    assert len(pages) == 4
+    assert pages[0].url == 'http://example.com/'
+    assert pages[0].hops_off == 0
+    assert not 'hops_off_surt' in pages[0]
+    assert set(pages[0].outlinks['accepted']) == {
+            'https://example.com/toot', 'http://foo.org/',
+            'http://example.com/toot'}
+    assert pages[0].outlinks['blocked'] == []
+    assert pages[0].outlinks['rejected'] == [
+            'https://some.bad.domain/something']
+    assert {
+        'brozzle_count': 0,
+        'claimed': False,
+        'hashtags': [],
+        'hops_from_seed': 1,
+        'hops_off': 0,
+        'id': brozzler.Page.compute_id(site.id, 'http://example.com/toot'),
+        'job_id': None,
+        'needs_robots_check': False,
+        'priority': 12,
+        'site_id': site.id,
+        'url': 'http://example.com/toot',
+        'via_page_id': seed_page.id
+    } in pages
+    assert {
+        'brozzle_count': 0,
+        'claimed': False,
+        'hashtags': [],
+        'hops_from_seed': 1,
+        'hops_off': 1,
+        'id': brozzler.Page.compute_id(site.id, 'http://foo.org/'),
+        'job_id': None,
+        'needs_robots_check': False,
+        'priority': 12,
+        'site_id': site.id,
+        'url': 'http://foo.org/',
+        'via_page_id': seed_page.id
+    } in pages
+    assert {
+        'brozzle_count': 0,
+        'claimed': False,
+        'hashtags': [],
+        'hops_from_seed': 1,
+        'hops_off': 1,
+        'id': brozzler.Page.compute_id(site.id, 'https://example.com/toot'),
+        'job_id': None,
+        'needs_robots_check': False,
+        'priority': 12,
+        'site_id': site.id,
+        'url': 'https://example.com/toot',
+        'via_page_id': seed_page.id
+    } in pages
+
+    # next hop is past max_hops_off, but normal in scope url is in scope
+    foo_page = [pg for pg in pages if pg.url == 'http://foo.org/'][0]
+    frontier.scope_and_schedule_outlinks(site, foo_page, [
+        'http://foo.org/bar', 'http://example.com/blah'])
+    assert foo_page == {
+        'brozzle_count': 0,
+        'claimed': False,
+        'hashtags': [],
+        'hops_from_seed': 1,
+        'hops_off': 1,
+        'id': brozzler.Page.compute_id(site.id, 'http://foo.org/'),
+        'job_id': None,
+        'needs_robots_check': False,
+        'priority': 12,
+        'site_id': site.id,
+        'url': 'http://foo.org/',
+        'via_page_id': seed_page.id,
+        'outlinks': {
+            'accepted': ['http://example.com/blah'],
+            'blocked': [],
+            'rejected': ['http://foo.org/bar'],
+        }
+    }
+    pages = sorted(list(frontier.site_pages(site.id)), key=lambda p: p.url)
+    assert len(pages) == 5
+    assert {
+        'brozzle_count': 0,
+        'claimed': False,
+        'hashtags': [],
+        'hops_from_seed': 2,
+        'hops_off': 0,
+        'id': brozzler.Page.compute_id(site.id, 'http://example.com/blah'),
+        'job_id': None,
+        'needs_robots_check': False,
+        'priority': 11,
+        'site_id': site.id,
+        'url': 'http://example.com/blah',
+        'via_page_id': foo_page.id
+    } in pages
+
