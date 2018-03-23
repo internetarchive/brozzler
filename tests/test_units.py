@@ -94,28 +94,28 @@ blocks:
         'url': 'http://example.com/foo/bar?baz=quux#monkey',
         'site_id': site.id})
 
-    assert site.is_in_scope('http://example.com/foo/bar', page)
-    assert not site.is_in_scope('http://example.com/foo/baz', page)
+    assert site.accept_reject_or_neither('http://example.com/foo/bar', page) is True
+    assert site.accept_reject_or_neither('http://example.com/foo/baz', page) is None
 
-    assert not site.is_in_scope('http://foo.com/some.mp3', page)
-    assert site.is_in_scope('http://foo.com/blah/audio_file/some.mp3', page)
+    assert site.accept_reject_or_neither('http://foo.com/some.mp3', page) is None
+    assert site.accept_reject_or_neither('http://foo.com/blah/audio_file/some.mp3', page) is True
 
-    assert site.is_in_scope('http://a.b.vimeocdn.com/blahblah', page)
-    assert not site.is_in_scope('https://a.b.vimeocdn.com/blahblah', page)
+    assert site.accept_reject_or_neither('http://a.b.vimeocdn.com/blahblah', page) is True
+    assert site.accept_reject_or_neither('https://a.b.vimeocdn.com/blahblah', page) is None
 
-    assert site.is_in_scope('https://twitter.com/twit', page)
-    assert site.is_in_scope('https://twitter.com/twit?lang=en', page)
-    assert not site.is_in_scope('https://twitter.com/twit?lang=es', page)
+    assert site.accept_reject_or_neither('https://twitter.com/twit', page) is True
+    assert site.accept_reject_or_neither('https://twitter.com/twit?lang=en', page) is True
+    assert site.accept_reject_or_neither('https://twitter.com/twit?lang=es', page) is False
 
-    assert site.is_in_scope('https://www.facebook.com/whatevz', page)
+    assert site.accept_reject_or_neither('https://www.facebook.com/whatevz', page) is True
 
-    assert not site.is_in_scope(
-            'https://www.youtube.com/watch?v=dUIn5OAPS5s', page)
+    assert site.accept_reject_or_neither(
+            'https://www.youtube.com/watch?v=dUIn5OAPS5s', page) is None
     yt_user_page = brozzler.Page(None, {
         'url': 'https://www.youtube.com/user/SonoraSantaneraVEVO',
         'site_id': site.id, 'hops_from_seed': 10})
-    assert site.is_in_scope(
-            'https://www.youtube.com/watch?v=dUIn5OAPS5s', yt_user_page)
+    assert site.accept_reject_or_neither(
+            'https://www.youtube.com/watch?v=dUIn5OAPS5s', yt_user_page) is True
 
 def test_proxy_down():
     '''
