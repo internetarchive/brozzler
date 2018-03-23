@@ -99,7 +99,7 @@ def new_job(frontier, job_conf):
 
 def new_site(frontier, site):
     site.id = str(uuid.uuid4())
-    logging.info("new site {}".format(site))
+    logging.info("new site %s", site)
     # insert the Page into the database before the Site, to avoid situation
     # where a brozzler worker immediately claims the site, finds no pages
     # to crawl, and decides the site is finished
@@ -291,8 +291,12 @@ class Page(doublethink.Document):
             self.brozzle_count = 0
         if not "claimed" in self:
             self.claimed = False
-        if not "hops_off_surt" in self:
-            self.hops_off_surt = 0
+        if "hops_off_surt" in self and not "hops_off" in self:
+            self.hops_off = self.hops_off_surt
+        if "hops_off_surt" in self:
+            del self["hops_off_surt"]
+        if not "hops_off" in self:
+            self.hops_off = 0
         if not "needs_robots_check" in self:
             self.needs_robots_check = False
         if not "priority" in self:

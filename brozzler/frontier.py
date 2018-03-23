@@ -315,8 +315,8 @@ class RethinkDbFrontier:
         existing_page.priority += fresh_page.priority
         existing_page.hashtags = list(set(
             existing_page.hashtags + fresh_page.hashtags))
-        existing_page.hops_off_surt = min(
-                existing_page.hops_off_surt, fresh_page.hops_off_surt)
+        existing_page.hops_off = min(
+                existing_page.hops_off, fresh_page.hops_off)
 
     def _scope_and_enforce_robots(self, site, parent_page, outlinks):
         '''
@@ -337,9 +337,9 @@ class RethinkDbFrontier:
             if decision is True:
                 hops_off = 0
             elif decision is None:
-                decision = parent_page.hops_off_surt < site.scope.get(
+                decision = parent_page.hops_off < site.scope.get(
                         'max_hops_off_surt', 0)
-                hops_off = parent_page.hops_off_surt + 1
+                hops_off = parent_page.hops_off + 1
             if decision is True:
                 if brozzler.is_permitted_by_robots(site, str(url_for_crawling)):
                     fresh_page = self._build_fresh_page(

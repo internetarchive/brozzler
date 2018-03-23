@@ -106,7 +106,7 @@ def test_basics():
         'brozzle_count': 0,
         'claimed': False,
         'hops_from_seed': 0,
-        'hops_off_surt': 0,
+        'hops_off': 0,
         'id': brozzler.Page.compute_id(sites[0].id, 'http://example.com'),
         'job_id': job.id,
         'needs_robots_check': True,
@@ -120,7 +120,7 @@ def test_basics():
         'brozzle_count': 0,
         'claimed': False,
         'hops_from_seed': 0,
-        'hops_off_surt': 0,
+        'hops_off': 0,
         'id': brozzler.Page.compute_id(sites[1].id, 'https://example.org/'),
         'job_id': job.id,
         'needs_robots_check': True,
@@ -907,7 +907,7 @@ def test_choose_warcprox():
     svcreg = doublethink.ServiceRegistry(rr)
     frontier = brozzler.RethinkDbFrontier(rr)
 
-    # avoid this of error: https://travis-ci.org/internetarchive/brozzler/jobs/330991786#L1021
+    # avoid this error: https://travis-ci.org/internetarchive/brozzler/jobs/330991786#L1021
     rr.table('sites').wait().run()
     rr.table('services').wait().run()
     rr.table('sites').index_wait().run()
