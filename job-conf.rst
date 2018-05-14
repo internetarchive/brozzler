@@ -260,12 +260,12 @@ The scope of a seed determines which links are scheduled for crawling and which
 are not. Example::
 
     scope:
-      surt: https://(com,example,)/
       accepts:
       - parent_url_regex: ^https?://(www\.)?youtube.com/(user|channel)/.*$
         regex: ^https?://(www\.)?youtube.com/watch\?.*$
-      - surt: +http://(com,google,video,
-      - surt: +http://(com,googlevideo,
+      - ssurt: com,example,//https:/
+      - surt: http://(com,google,video,
+      - surt: http://(com,googlevideo,
       blocks:
       - domain: youngscholars.unimelb.edu.au
         substring: wp-login.php?action=logout
@@ -279,40 +279,33 @@ each link to determine whether it is in scope or out of scope for the crawl.
 Then, newly discovered links that are in scope are scheduled to be crawled, and
 previously discovered links get a priority bump.
 
-Scope settings
---------------
+How scope rules are applied
+---------------------------
+1. If any ``block`` rule matches, the url is out of scope.
+2. Otherwise, if any ``accept`` rule matches, the url is in scope.
+3. Otherwise (no rules match), the url is out of scope.
 
-``surt``
-~~~~~~~~
-+--------+----------+---------------------------+
-| type   | required | default                   |
-+========+==========+===========================+
-| string | no       | *generated from seed url* |
-+--------+----------+---------------------------+
-This setting can be thought of as the fundamental scope setting for the seed.
-Every seed has a ``scope.surt``. Brozzler will generate it from the seed url if
-it is not specified explicitly.
+In other words, by default urls are not in scope, and ``block`` rules take
+precedence over ``accept`` rules.
 
-SURT is defined at
-http://crawler.archive.org/articles/user_manual/glossary.html#surt.
+Automatic scoping based on seed urls
+------------------------------------
+Brozzler usually generates an ``accept`` scope rule based on the seed url. It
+does this to fulfill a crawl operator's expectation that everything "under" the
+seed will be crawled.
 
-    SURT stands for Sort-friendly URI Reordering Transform, and is a
-    transformation applied to URIs which makes their left-to-right
-    representation better match the natural hierarchy of domain names.
-
-Brozzler generates ``surt`` if not specified by canonicalizing the seed url
-using the `urlcanon <https://github.com/iipc/urlcanon>`_ library's "semantic"
-canonicalizer, then removing the query string if any, and finally serializing
-the result in SURT form. For example, a seed url of
+To generate the rule, brozzler canonicalizes the seed url using the `urlcanon
+<https://github.com/iipc/urlcanon>`_ library's "semantic" canonicalizer, then
+removing the query string if any, and finally serializing the result in SURT
+form. For example, a seed url of
 ``https://www.EXAMPLE.com:443/foo//bar?a=b&c=d#fdiap`` becomes
-``https://(com,example,www,)/foo/bar``.
+``com,example,www,//https:/foo/bar?a=b&c=d``.
 
 If the url in the browser location bar at the end of brozzling the seed page
-differs from the seed url, brozzler automatically adds an "accept" rule to
-ensure the site is in scope, as if the new url were the original seed url.
+differs from the seed url, brozzler automatically adds a second "accept" rule
+to ensure the site is in scope, as if the new url were the original seed url.
 It does this so that, for example, if ``http://example.com/`` redirects to
-``http://www.example.com/``, the rest of the ``www.example.com`` will also be
-in scope.
+``http://www.example.com/``, the rest of the ``www.example.com`` is in scope.
 
 Brozzler derives its general approach to the seed surt from Heritrix, but
 differs in a few respects.
@@ -320,16 +313,22 @@ differs in a few respects.
 1. Unlike heritrix, brozzler does not strip the path segment after the last
    slash.
 2. Canonicalization does not attempt to match heritrix exactly, though it
-   usually will match.
+   usually does match.
 3. When generating a SURT for an https url, heritrix changes the scheme to
    http. For example, the heritrix surt for ``https://www.example.com/`` is
    ``http://(com,example,www,)`` and this means that all of
-   ``http://www.example.com/*`` and ``https://www.example.com/*`` will be in
-   scope. It also means that a manually specified surt with scheme https will
+   ``http://www.example.com/*`` and ``https://www.example.com/*`` are in
+   scope. It also means that a manually specified surt with scheme "https" does
    not match anything. Brozzler does no scheme munging.
 4. Brozzler identifies seed "redirects" by retrieving the url from the
    browser's location bar at the end of brozzling the seed page, whereas
    heritrix follows http redirects.
+5. Brozzler uses ssurt instead of surt.
+6. There is currently no brozzler option to disable the automatic ``accept``
+   surt(s).
+
+Scope settings
+--------------
 
 ``accepts``
 ~~~~~~~~~~~
