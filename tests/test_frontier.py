@@ -1000,10 +1000,15 @@ def test_max_hops_off():
     assert site.accept_reject_or_neither('http://example.com/toot', seed_page) is True
     assert site.accept_reject_or_neither('https://some.bad.domain/something', seed_page) is False
 
-    # two of these are in scope because of max_hops_off
-    frontier.scope_and_schedule_outlinks(site, seed_page, [
-        'http://foo.org/', 'https://example.com/toot',
-        'http://example.com/toot', 'https://some.bad.domain/something'])
+    orig_is_permitted_by_robots = brozzler.is_permitted_by_robots
+    brozzler.is_permitted_by_robots = lambda *args: True
+    try:
+        # two of these are in scope because of max_hops_off
+        frontier.scope_and_schedule_outlinks(site, seed_page, [
+            'http://foo.org/', 'https://example.com/toot',
+            'http://example.com/toot', 'https://some.bad.domain/something'])
+    finally:
+        brozzler.is_permitted_by_robots = orig_is_permitted_by_robots
 
     pages = sorted(list(frontier.site_pages(site.id)), key=lambda p: p.url)
 
@@ -1062,8 +1067,13 @@ def test_max_hops_off():
 
     # next hop is past max_hops_off, but normal in scope url is in scope
     foo_page = [pg for pg in pages if pg.url == 'http://foo.org/'][0]
-    frontier.scope_and_schedule_outlinks(site, foo_page, [
-        'http://foo.org/bar', 'http://example.com/blah'])
+    orig_is_permitted_by_robots = brozzler.is_permitted_by_robots
+    brozzler.is_permitted_by_robots = lambda *args: True
+    try:
+        frontier.scope_and_schedule_outlinks(site, foo_page, [
+            'http://foo.org/bar', 'http://example.com/blah'])
+    finally:
+        brozzler.is_permitted_by_robots = orig_is_permitted_by_robots
     assert foo_page == {
         'brozzle_count': 0,
         'claimed': False,
