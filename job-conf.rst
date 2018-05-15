@@ -261,9 +261,9 @@ are not. Example::
 
     scope:
       accepts:
+      - ssurt: com,example,//https:/
       - parent_url_regex: ^https?://(www\.)?youtube.com/(user|channel)/.*$
         regex: ^https?://(www\.)?youtube.com/watch\?.*$
-      - ssurt: com,example,//https:/
       - surt: http://(com,google,video,
       - surt: http://(com,googlevideo,
       blocks:
@@ -279,14 +279,43 @@ each link to determine whether it is in scope or out of scope for the crawl.
 Then, newly discovered links that are in scope are scheduled to be crawled, and
 previously discovered links get a priority bump.
 
-How scope rules are applied
----------------------------
-1. If any ``block`` rule matches, the url is out of scope.
-2. Otherwise, if any ``accept`` rule matches, the url is in scope.
-3. Otherwise (no rules match), the url is out of scope.
+Applying scope rules
+--------------------
 
-In other words, by default urls are not in scope, and ``block`` rules take
-precedence over ``accept`` rules.
+Each scope rule has one or more conditions. If all of the conditions match,
+then the scope rule as a whole matches. For example::
+
+    - domain: youngscholars.unimelb.edu.au
+      substring: wp-login.php?action=logout
+
+This rule applies if the domain of the url is "youngscholars.unimelb.edu.au" or
+a subdomain, and the string "wp-login.php?action=logout" is found somewhere in
+the url.
+
+Brozzler applies these logical steps to decide whether a page url is in or out
+of scope:
+
+1. If the number of hops from seed is greater than ``max_hops``, the url is
+   **out of scope**.
+2. Otherwise, if any ``block`` rule matches, the url is **out of scope**.
+3. Otherwise, if any ``accept`` rule matches, the url is **in scope**.
+4. Otherwise, if the url is at most ``max_hops_off`` hops from the last page
+   that was in scope thanks to an ``accept`` rule, the url is **in scope**.
+5. Otherwise (no rules match), the url is **out of scope**.
+
+Notably, ``block`` rules take precedence over ``accept`` rules.
+
+It may also be helpful to think about a list of scope rules as a boolean
+expression. For example::
+
+    blocks:
+    - domain: youngscholars.unimelb.edu.au
+      substring: wp-login.php?action=logout
+    - domain: malware.us
+
+means block the url IF::
+
+    (domain: youngscholars.unimelb.edu.au AND substring: wp-login.php?action=logout) OR domain: malware.us
 
 Automatic scoping based on seed urls
 ------------------------------------
@@ -346,6 +375,7 @@ List of scope rules.
 +======+==========+=========+
 | list | no       | *none*  |
 +------+----------+---------+
+List of scope rules.
 
 ``max_hops``
 ~~~~~~~~~~~~
@@ -356,15 +386,15 @@ List of scope rules.
 +--------+----------+---------+
 
 ``max_hops_off``
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 +--------+----------+---------+
 | type   | required | default |
 +========+==========+=========+
 | number | no       | 0       |
 +--------+----------+---------+
 
-Scope rule settings
--------------------
+Scope rule conditions
+---------------------
 
 ``domain``
 ~~~~~~~~~
