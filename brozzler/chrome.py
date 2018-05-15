@@ -112,9 +112,17 @@ class Chrome:
         try:
             with sqlite3.connect(cookie_location) as conn:
                 cur = conn.cursor()
-                cur.execute('UPDATE cookies SET persistent = 1')
+                cur.execute('UPDATE cookies SET is_persistent = 1')
         except sqlite3.Error:
-            self.logger.error('exception updating cookie DB', exc_info=True)
+            try:
+                # db schema changed around version 66, this is the old schema
+                with sqlite3.connect(cookie_location) as conn:
+                    cur = conn.cursor()
+                    cur.execute('UPDATE cookies SET persistent = 1')
+            except sqlite3.Error:
+                self.logger.error(
+                        'exception updating cookie DB %s', cookie_location,
+                        exc_info=True)
 
         cookie_db = None
         try:
