@@ -42,9 +42,9 @@ How inheritance works
 
 Most of the settings that apply to seeds can also be specified at the top
 level, in which case all seeds inherit those settings. If an option is
-specified both at the top level and at the level of an individual seed, the
-results are merged with the seed-level value taking precedence in case of
-conflicts. It's probably easiest to make sense of this by way of an example.
+specified both at the top level and at seed level, the results are merged with
+the seed-level value taking precedence in case of conflicts. It's probably
+easiest to make sense of this by way of an example.
 
 In the example yaml above, ``warcprox_meta`` is specified at the top level and
 at the seed level for the seed http://one.example.org/. At the top level we
@@ -155,8 +155,8 @@ on each page it crawls for that seed. A form that has a single text or email
 field (the username), a single password field (``<input type="password">``),
 and has ``method="POST"`` is considered to be a login form. The form may have
 other fields like checkboxes and hidden fields. For these, brozzler will leave
-the default values in place. Login form detection and submission happen after
-page load, then brozzling proceeds as usual.
+the default values in place. Brozzler submits login forms after page load.
+Then brozzling proceeds as usual.
 
 Seed-level / top-level settings
 -------------------------------
@@ -168,7 +168,7 @@ case they are inherited by all seeds.
 +------------+----------+---------+
 | type       | required | default |
 +============+==========+=========+
-| dictionary | no      | *none*   |
+| dictionary | no       | *none*  |
 +------------+----------+---------+
 Arbitrary information about the crawl job or site. Merely informative, not used
 by brozzler for anything. Could be of use to some external process.
@@ -180,7 +180,7 @@ by brozzler for anything. Could be of use to some external process.
 +========+==========+=========+
 | number | no       | *none*  |
 +--------+----------+---------+
-Time limit in seconds. If not specified, there no time limit. Time limit is
+Time limit in seconds. If not specified, there is no time limit. Time limit is
 enforced at the seed level. If a time limit is specified at the top level, it
 is inherited by each seed as described above, and enforced individually on each
 seed.
@@ -279,8 +279,8 @@ each link to determine whether it is in scope or out of scope for the crawl.
 Then, newly discovered links that are in scope are scheduled to be crawled, and
 previously discovered links get a priority bump.
 
-Applying scope rules
---------------------
+How brozzler applies scope rules
+--------------------------------
 
 Each scope rule has one or more conditions. If all of the conditions match,
 then the scope rule as a whole matches. For example::
@@ -292,8 +292,8 @@ This rule applies if the domain of the url is "youngscholars.unimelb.edu.au" or
 a subdomain, and the string "wp-login.php?action=logout" is found somewhere in
 the url.
 
-Brozzler applies these logical steps to decide whether a page url is in or out
-of scope:
+Brozzler applies these logical steps to decide whether a url is in or out of
+scope:
 
 1. If the number of hops from seed is greater than ``max_hops``, the url is
    **out of scope**.
@@ -315,23 +315,23 @@ expression. For example::
 
 means block the url IF::
 
-    (domain: youngscholars.unimelb.edu.au AND substring: wp-login.php?action=logout) OR domain: malware.us
+    ("domain: youngscholars.unimelb.edu.au" AND "substring: wp-login.php?action=logout") OR "domain: malware.us"
 
 Automatic scoping based on seed urls
 ------------------------------------
 Brozzler usually generates an ``accept`` scope rule based on the seed url. It
-does this to fulfill a crawl operator's expectation that everything "under" the
-seed will be crawled.
+does this to fulfill the usual expectation that everything "under" the seed
+will be crawled.
 
 To generate the rule, brozzler canonicalizes the seed url using the `urlcanon
 <https://github.com/iipc/urlcanon>`_ library's "semantic" canonicalizer, then
-removing the query string if any, and finally serializing the result in SURT
-form. For example, a seed url of
+removes the query string if any, and finally serializes the result in SSURT
+[1]_ form. For example, a seed url of
 ``https://www.EXAMPLE.com:443/foo//bar?a=b&c=d#fdiap`` becomes
 ``com,example,www,//https:/foo/bar?a=b&c=d``.
 
 If the url in the browser location bar at the end of brozzling the seed page
-differs from the seed url, brozzler automatically adds a second "accept" rule
+differs from the seed url, brozzler automatically adds a second ``accept`` rule
 to ensure the site is in scope, as if the new url were the original seed url.
 It does this so that, for example, if ``http://example.com/`` redirects to
 ``http://www.example.com/``, the rest of the ``www.example.com`` is in scope.
@@ -343,7 +343,7 @@ differs in a few respects.
    slash.
 2. Canonicalization does not attempt to match heritrix exactly, though it
    usually does match.
-3. When generating a SURT for an https url, heritrix changes the scheme to
+3. When generating a surt for an https url, heritrix changes the scheme to
    http. For example, the heritrix surt for ``https://www.example.com/`` is
    ``http://(com,example,www,)`` and this means that all of
    ``http://www.example.com/*`` and ``https://www.example.com/*`` are in
@@ -351,10 +351,10 @@ differs in a few respects.
    not match anything. Brozzler does no scheme munging.
 4. Brozzler identifies seed "redirects" by retrieving the url from the
    browser's location bar at the end of brozzling the seed page, whereas
-   heritrix follows http redirects.
+   heritrix follows http 3xx redirects.
 5. Brozzler uses ssurt instead of surt.
-6. There is currently no brozzler option to disable the automatic ``accept``
-   surt(s).
+6. There is currently no brozzler option to disable the automatically generated
+   ``accept`` rules.
 
 Scope settings
 --------------
@@ -366,7 +366,9 @@ Scope settings
 +======+==========+=========+
 | list | no       | *none*  |
 +------+----------+---------+
-List of scope rules.
+List of scope rules. If any of the rules match, and the url is within
+``max_hops`` from seed, and none of the ``block`` rules apply, the url is in
+scope.
 
 ``blocks``
 ~~~~~~~~~~~
@@ -375,7 +377,7 @@ List of scope rules.
 +======+==========+=========+
 | list | no       | *none*  |
 +------+----------+---------+
-List of scope rules.
+List of scope rules. If any of the rules match, the url is deemed out of scope.
 
 ``max_hops``
 ~~~~~~~~~~~~
@@ -384,6 +386,7 @@ List of scope rules.
 +========+==========+=========+
 | number | no       | *none*  |
 +--------+----------+---------+
+Maximum number of hops from seed.
 
 ``max_hops_off``
 ~~~~~~~~~~~~~~~~
@@ -392,6 +395,8 @@ List of scope rules.
 +========+==========+=========+
 | number | no       | 0       |
 +--------+----------+---------+
+Expands the scope to include urls up to this many hops from the last page that
+was in scope thanks to an ``accept`` rule.
 
 Scope rule conditions
 ---------------------
@@ -403,6 +408,8 @@ Scope rule conditions
 +========+==========+=========+
 | string | no       | *none*  |
 +--------+----------+---------+
+Matches if the host part of the canonicalized url is ``domain`` or a
+subdomain.
 
 ``substring``
 ~~~~~~~~~~~~~
@@ -411,6 +418,7 @@ Scope rule conditions
 +========+==========+=========+
 | string | no       | *none*  |
 +--------+----------+---------+
+Matches if ``substring`` is found anywhere in the canonicalized url.
 
 ``regex``
 ~~~~~~~~~
@@ -419,6 +427,7 @@ Scope rule conditions
 +========+==========+=========+
 | string | no       | *none*  |
 +--------+----------+---------+
+Matches if the full canonicalized url matches ``regex``.
 
 ``ssurt``
 ~~~~~~~~~
@@ -427,6 +436,7 @@ Scope rule conditions
 +========+==========+=========+
 | string | no       | *none*  |
 +--------+----------+---------+
+Matches if the canonicalized url in SSURT [1]_ form starts with ``ssurt``.
 
 ``surt``
 ~~~~~~~~
@@ -435,6 +445,7 @@ Scope rule conditions
 +========+==========+=========+
 | string | no       | *none*  |
 +--------+----------+---------+
+Matches if the canonicalized url in SURT [2]_ form starts with ``surt``.
 
 ``parent_url_regex``
 ~~~~~~~~~~~~~~~~~~~~
@@ -443,4 +454,8 @@ Scope rule conditions
 +========+==========+=========+
 | string | no       | *none*  |
 +--------+----------+---------+
+Matches if the full canonicalized parent url matches ``regex``. The parent url
+is the url of the page in which the link was found.
 
+.. [1] SSURT is described at https://github.com/iipc/urlcanon/blob/master/ssurt.rst
+.. [2] SURT is described at http://crawler.archive.org/articles/user_manual/glossary.html
