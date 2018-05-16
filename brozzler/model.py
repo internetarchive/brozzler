@@ -183,14 +183,24 @@ class Site(doublethink.Document, ElapsedMixIn):
             self.last_claimed = brozzler.EPOCH_UTC
         if not "scope" in self:
             self.scope = {}
+
+        # backward compatibility
+        if "surt" in self.scope:
+            if not "accepts" in self.scope:
+                self.scope["accepts"] = []
+            self.scope["accepts"].append({"surt": self.scope["surt"]})
+            del self.scope["surt"]
+
+        # backward compatibility
         if ("max_hops_off_surt" in self.scope
                 and not "max_hops_off" in self.scope):
             self.scope["max_hops_off"] = self.scope["max_hops_off_surt"]
         if "max_hops_off_surt" in self.scope:
             del self.scope["max_hops_off_surt"]
+
         if self.seed:
             self._accept_ssurt_if_not_redundant(
-                    brozzler.site_surt_canon(self.seed).ssurt())
+                    brozzler.site_surt_canon(self.seed).ssurt().decode('ascii'))
 
         if not "starts_and_stops" in self:
             if self.get("start_time"):   # backward compatibility
@@ -219,7 +229,7 @@ class Site(doublethink.Document, ElapsedMixIn):
 
     def note_seed_redirect(self, url):
         self._accept_ssurt_if_not_redundant(
-                brozzler.site_surt_canon(url).ssurt())
+                brozzler.site_surt_canon(self.seed).ssurt().decode('ascii'))
 
     def extra_headers(self):
         hdrs = {}
