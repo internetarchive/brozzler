@@ -79,7 +79,7 @@ setuptools.setup(
         extras_require={
             'dashboard': ['flask>=0.11', 'gunicorn'],
             'easy': [
-                'warcprox>=2.4b1.dev145',
+                'warcprox>=2.4b2.dev173',
                 'pywb<2',
                 'flask>=0.11',
                 'gunicorn'
