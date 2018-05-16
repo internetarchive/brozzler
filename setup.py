@@ -69,7 +69,7 @@ setuptools.setup(
             'requests',
             'websocket-client!=0.39.0',
             'pillow==3.3.0',
-            'urlcanon>=0.1.dev16',
+            'urlcanon>=0.1.dev23',
             'doublethink>=0.2.0.dev88',
             'rethinkdb>=2.3,<2.4',
             'cerberus==1.0.1',
