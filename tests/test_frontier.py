@@ -73,7 +73,7 @@ def test_basics():
         'job_id': job.id,
         'last_claimed': brozzler.EPOCH_UTC,
         'last_disclaimed': brozzler.EPOCH_UTC,
-        'scope': {'accepts': [{'ssurt': b'com,example,//http:/'}]},
+        'scope': {'accepts': [{'ssurt': 'com,example,//http:/'}]},
         'seed': 'http://example.com',
         'starts_and_stops': [
             {
@@ -89,7 +89,7 @@ def test_basics():
         'job_id': job.id,
         'last_claimed': brozzler.EPOCH_UTC,
         'last_disclaimed': brozzler.EPOCH_UTC,
-        'scope': {'accepts': [{'ssurt': b'org,example,//https:/'}]},
+        'scope': {'accepts': [{'ssurt': 'org,example,//https:/'}]},
         'seed': 'https://example.org/',
         'starts_and_stops': [
             {
@@ -439,7 +439,7 @@ def test_field_defaults():
     brozzler.Site.table_ensure(rr)
     site = brozzler.Site(rr, {'seed': 'http://example.com/'})
     assert site.id is None
-    assert site.scope == {'accepts': [{'ssurt': b'com,example,//http:/'}]}
+    assert site.scope == {'accepts': [{'ssurt': 'com,example,//http:/'}]}
     site.save()
     assert site.id
     assert site.scope
@@ -633,15 +633,15 @@ def test_completed_page():
         'hops_from_seed': 0,
         'redirect_url':'http://example.com/b/', })
     page.save()
-    assert site.scope == {'accepts': [{'ssurt': b'com,example,//http:/a/'}]}
+    assert site.scope == {'accepts': [{'ssurt': 'com,example,//http:/a/'}]}
     frontier.completed_page(site, page)
     assert site.scope == {'accepts': [
-        {'ssurt': b'com,example,//http:/a/'},
-        {'ssurt': b'com,example,//http:/b/'}]}
+        {'ssurt': 'com,example,//http:/a/'},
+        {'ssurt': 'com,example,//http:/b/'}]}
     site.refresh()
     assert site.scope == {'accepts': [
-        {'ssurt': b'com,example,//http:/a/'},
-        {'ssurt': b'com,example,//http:/b/'}]}
+        {'ssurt': 'com,example,//http:/a/'},
+        {'ssurt': 'com,example,//http:/b/'}]}
     assert page.brozzle_count == 1
     assert page.claimed == False
     page.refresh()
@@ -660,11 +660,11 @@ def test_completed_page():
         'hops_from_seed': 0,
         'redirect_url':'http://example.com/a/x/', })
     page.save()
-    assert site.scope == {'accepts': [{'ssurt': b'com,example,//http:/a/'}]}
+    assert site.scope == {'accepts': [{'ssurt': 'com,example,//http:/a/'}]}
     frontier.completed_page(site, page)
-    assert site.scope == {'accepts': [{'ssurt': b'com,example,//http:/a/'}]}
+    assert site.scope == {'accepts': [{'ssurt': 'com,example,//http:/a/'}]}
     site.refresh()
-    assert site.scope == {'accepts': [{'ssurt': b'com,example,//http:/a/'}]}
+    assert site.scope == {'accepts': [{'ssurt': 'com,example,//http:/a/'}]}
     assert page.brozzle_count == 1
     assert page.claimed == False
     page.refresh()
@@ -682,11 +682,11 @@ def test_completed_page():
         'hops_from_seed': 1,
         'redirect_url':'http://example.com/d/', })
     page.save()
-    assert site.scope == {'accepts': [{'ssurt': b'com,example,//http:/a/'}]}
+    assert site.scope == {'accepts': [{'ssurt': 'com,example,//http:/a/'}]}
     frontier.completed_page(site, page)
-    assert site.scope == {'accepts': [{'ssurt': b'com,example,//http:/a/'}]}
+    assert site.scope == {'accepts': [{'ssurt': 'com,example,//http:/a/'}]}
     site.refresh()
-    assert site.scope == {'accepts': [{'ssurt': b'com,example,//http:/a/'}]}
+    assert site.scope == {'accepts': [{'ssurt': 'com,example,//http:/a/'}]}
     assert page.brozzle_count == 1
     assert page.claimed == False
     page.refresh()
@@ -726,7 +726,7 @@ def test_hashtag_seed():
     site = brozzler.Site(rr, {'seed': 'http://example.org/'})
     brozzler.new_site(frontier, site)
 
-    assert site.scope == {'accepts': [{'ssurt': b'org,example,//http:/'}]}
+    assert site.scope == {'accepts': [{'ssurt': 'org,example,//http:/'}]}
 
     pages = list(frontier.site_pages(site.id))
     assert len(pages) == 1
@@ -737,7 +737,7 @@ def test_hashtag_seed():
     site = brozzler.Site(rr, {'seed': 'http://example.org/#hash'})
     brozzler.new_site(frontier, site)
 
-    assert site.scope == {'accepts': [{'ssurt': b'org,example,//http:/'}]}
+    assert site.scope == {'accepts': [{'ssurt': 'org,example,//http:/'}]}
 
     pages = list(frontier.site_pages(site.id))
     assert len(pages) == 1
@@ -985,7 +985,7 @@ def test_max_hops_off():
         'seed': 'http://example.com/',
         'scope': {
             'max_hops_off_surt': 1,
-            'blocks': [{'ssurt': b'domain,bad,'}]}})
+            'blocks': [{'ssurt': 'domain,bad,'}]}})
     brozzler.new_site(frontier, site)
     site.refresh()  # get it back from the db
 
