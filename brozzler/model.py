@@ -229,7 +229,7 @@ class Site(doublethink.Document, ElapsedMixIn):
 
     def note_seed_redirect(self, url):
         self._accept_ssurt_if_not_redundant(
-                brozzler.site_surt_canon(self.seed).ssurt().decode('ascii'))
+                brozzler.site_surt_canon(url).ssurt().decode('ascii'))
 
     def extra_headers(self):
         hdrs = {}
