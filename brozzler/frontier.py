@@ -291,74 +291,79 @@ class RethinkDbFrontier:
                 {"start":doublethink.utcnow(), "stop":None})
         site.save()
 
+    def _build_fresh_page(self, site, parent_page, url, hops_off=0):
+        url_for_scoping = urlcanon.semantic(url)
+        url_for_crawling = urlcanon.whatwg(url)
+        hashtag = (url_for_crawling.hash_sign
+                   + url_for_crawling.fragment).decode('utf-8')
+        urlcanon.canon.remove_fragment(url_for_crawling)
+        page = brozzler.Page(self.rr, {
+            'url': str(url_for_crawling),
+            'site_id': site.id,
+            'job_id': site.job_id,
+            'hops_from_seed': parent_page.hops_from_seed + 1,
+            'via_page_id': parent_page.id,
+            'hops_off_surt': hops_off,
+            'hashtags': [hashtag] if hashtag else []})
+        return page
+
+    def _merge_page(self, existing_page, fresh_page):
+        '''
+        Utility method for merging info from `brozzler.Page` instances
+        representing the same url but with possibly different metadata.
+        '''
+        existing_page.priority += fresh_page.priority
+        existing_page.hashtags = list(set(
+            existing_page.hashtags + fresh_page.hashtags))
+        existing_page.hops_off = min(
+                existing_page.hops_off, fresh_page.hops_off)
+
     def _scope_and_enforce_robots(self, site, parent_page, outlinks):
         '''
         Returns tuple (
-            set of in scope urls (uncanonicalized) accepted by robots policy,
+            dict of {page_id: Page} of fresh `brozzler.Page` representing in
+                scope links accepted by robots policy,
             set of in scope urls (canonicalized) blocked by robots policy,
             set of out-of-scope urls (canonicalized)).
         '''
-        in_scope = set()
+        pages = {}  # {page_id: Page, ...}
         blocked = set()
         out_of_scope = set()
         for url in outlinks or []:
             url_for_scoping = urlcanon.semantic(url)
             url_for_crawling = urlcanon.whatwg(url)
-            urlcanon.canon.remove_fragment(url_for_crawling)
-            if site.is_in_scope(url_for_scoping, parent_page=parent_page):
+            decision = site.accept_reject_or_neither(
+                    url_for_scoping, parent_page=parent_page)
+            if decision is True:
+                hops_off = 0
+            elif decision is None:
+                decision = parent_page.hops_off < site.scope.get(
+                        'max_hops_off', 0)
+                hops_off = parent_page.hops_off + 1
+            if decision is True:
                 if brozzler.is_permitted_by_robots(site, str(url_for_crawling)):
-                    in_scope.add(url)
+                    fresh_page = self._build_fresh_page(
+                            site, parent_page, url, hops_off)
+                    if fresh_page.id in pages:
+                        self._merge_page(pages[fresh_page.id], fresh_page)
+                    else:
+                        pages[fresh_page.id] = fresh_page
                 else:
                     blocked.add(str(url_for_crawling))
             else:
                 out_of_scope.add(str(url_for_crawling))
-        return in_scope, blocked, out_of_scope
-
-    def _build_fresh_pages(self, site, parent_page, urls):
-        '''
-        Returns a dict of page_id => brozzler.Page.
-        '''
-        pages = {}
-        for url in urls:
-            url_for_scoping = urlcanon.semantic(url)
-            url_for_crawling = urlcanon.whatwg(url)
-            hashtag = (url_for_crawling.hash_sign
-                       + url_for_crawling.fragment).decode('utf-8')
-            urlcanon.canon.remove_fragment(url_for_crawling)
-            if not url_for_scoping.surt().startswith(
-                    site.scope['surt'].encode('utf-8')):
-                hops_off_surt = parent_page.hops_off_surt + 1
-            else:
-                hops_off_surt = 0
-            page = brozzler.Page(self.rr, {
-                'url': str(url_for_crawling),
-                'site_id': site.id,
-                'job_id': site.job_id,
-                'hops_from_seed': parent_page.hops_from_seed + 1,
-                'via_page_id': parent_page.id,
-                'hops_off_surt': hops_off_surt,
-                'hashtags': []})
-            if page.id in pages:
-                pages[page.id].priority += page.priority
-                page = pages[page.id]
-            else:
-                pages[page.id] = page
-            if hashtag:
-                page.hashtags = list(set(page.hashtags + [hashtag]))
-        return pages
+        return pages, blocked, out_of_scope
 
     def scope_and_schedule_outlinks(self, site, parent_page, outlinks):
         decisions = {'accepted':set(),'blocked':set(),'rejected':set()}
         counts = {'added':0,'updated':0,'rejected':0,'blocked':0}
 
-        in_scope, blocked, out_of_scope = self._scope_and_enforce_robots(
+        fresh_pages, blocked, out_of_scope = self._scope_and_enforce_robots(
                 site, parent_page, outlinks)
         decisions['blocked'] = blocked
         decisions['rejected'] = out_of_scope
         counts['blocked'] += len(blocked)
         counts['rejected'] += len(out_of_scope)
-
-        fresh_pages = self._build_fresh_pages(site, parent_page, in_scope)
 
         # get existing pages from rethinkdb
         results = self.rr.table('pages').get_all(*fresh_pages.keys()).run()
