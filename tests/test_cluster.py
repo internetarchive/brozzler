@@ -479,8 +479,8 @@ def test_seed_redirect(httpd):
 
     # check that scope has been updated properly
     assert site.scope == {'accepts': [
-        {'ssurt': ('localhost,//%s:http:/site5/redirect/' % httpd.server_port).encode('ascii')},
-        {'ssurt': ('localhost,//%s:http:/site5/destination/' % httpd.server_port).encode('ascii')}]}
+        {'ssurt': 'localhost,//%s:http:/site5/redirect/' % httpd.server_port},
+        {'ssurt': 'localhost,//%s:http:/site5/destination/' % httpd.server_port}]}
 
 def test_hashtags(httpd):
     test_id = 'test_hashtags-%s' % datetime.datetime.utcnow().isoformat()
