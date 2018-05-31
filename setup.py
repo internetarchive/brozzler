@@ -37,7 +37,7 @@ setuptools.setup(
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
         author_email='nlevitt@archive.org',
-        long_description=open('README.rst', mode='rb').read().decode('UTF-8'),
+        long_description=open('readme.rst', mode='rb').read().decode('UTF-8'),
         license='Apache License 2.0',
         packages=['brozzler', 'brozzler.dashboard'],
         package_data={
