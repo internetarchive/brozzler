@@ -224,11 +224,11 @@ contact the operator if the crawl is causing problems.
 +============+==========+===========+
 | dictionary | no       | ``false`` |
 +------------+----------+-----------+
-Specifies the Warcprox-Meta header to send with every request, if ``proxy`` is
-configured. The value of the Warcprox-Meta header is a json blob. It is used to
-pass settings and information to warcprox. Warcprox does not forward the header
-on to the remote site. See the warcprox docs for more information (XXX not yet
-written).
+Specifies the ``Warcprox-Meta`` header to send with every request, if ``proxy``
+is configured. The value of the ``Warcprox-Meta`` header is a json blob. It is
+used to pass settings and information to warcprox. Warcprox does not forward
+the header on to the remote site. For full documentation on ``warcprox-meta``
+see https://github.com/internetarchive/warcprox/blob/master/api.rst#warcprox-meta-http-request-header
 
 Brozzler takes the configured value of ``warcprox_meta``, converts it to
 json and populates the Warcprox-Meta header with that value. For example::
@@ -456,6 +456,48 @@ Matches if the canonicalized url in SURT [2]_ form starts with ``surt``.
 +--------+----------+---------+
 Matches if the full canonicalized parent url matches ``regex``. The parent url
 is the url of the page in which the link was found.
+
+Using ``warcprox_meta``
+=======================
+``warcprox_meta`` deserves some more discussion. It plays a very important role
+in brozzler job configuration. ``warcprox_meta`` is the way you set the
+filenames of the warcs for your crawl. For example, if each seed should have a
+different warc name prefix, you might have a job configured this way::
+
+    seeds:
+    - url: https://example.com/
+      warcprox_meta:
+        warc-prefix: seed1
+    - url: https://archive.org/
+      warcprox_meta:
+        warc-prefix: seed2
+
+``warcprox_meta`` is also the way to put limits on the size of the crawl job.
+For example, this configuration will stop the crawl after about 100 MB of novel
+content has been crawled::
+
+    seeds:
+    - url: https://example.com/
+    - url: https://archive.org/
+    warcprox_meta:
+      stats:
+        buckets:
+        - my-job
+      limits:
+        my-job/new/wire_bytes: 100000000
+
+To prevent any urls from a host from being captured, it's not sufficient to use
+a ``scope`` rule as described above. That kind of scoping only applies to
+navigational links discovered in crawled pages. To make absolutely sure no url
+from a given host is fetched, not even (say) an image embedded in a page, use
+``warcprox_meta`` like so::
+
+    warcprox_meta:
+      blocks:
+      - domain: spammy.com
+
+For complete documentation on the ``warcprox-meta`` request header, see
+https://github.com/internetarchive/warcprox/blob/master/api.rst#warcprox-meta-http-request-header
 
 .. [1] SSURT is described at https://github.com/iipc/urlcanon/blob/master/ssurt.rst
 .. [2] SURT is described at http://crawler.archive.org/articles/user_manual/glossary.html
