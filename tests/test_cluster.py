@@ -448,13 +448,13 @@ def test_login(httpd):
     assert ('WARCPROX_WRITE_RECORD thumbnail:http://localhost:%s/site2/login.html' % httpd.server_port) in meth_url
 
 def test_seed_redirect(httpd):
-    test_id = 'test_login-%s' % datetime.datetime.utcnow().isoformat()
+    test_id = 'test_seed_redirect-%s' % datetime.datetime.utcnow().isoformat()
     rr = doublethink.Rethinker('localhost', db='brozzler')
     seed_url = 'http://localhost:%s/site5/redirect/' % httpd.server_port
     site = brozzler.Site(rr, {
         'seed': 'http://localhost:%s/site5/redirect/' % httpd.server_port,
         'warcprox_meta': {'captures-table-extra-fields':{'test_id':test_id}}})
-    assert site.scope['surt'] == 'http://(localhost:%s,)/site5/redirect/' % httpd.server_port
+    assert site.scope == {'accepts': [{'ssurt': 'localhost,//%s:http:/site5/redirect/' % httpd.server_port}]}
 
     frontier = brozzler.RethinkDbFrontier(rr)
     brozzler.new_site(frontier, site)
@@ -478,7 +478,9 @@ def test_seed_redirect(httpd):
     assert pages[1].url == 'http://localhost:%s/site5/destination/page2.html' % httpd.server_port
 
     # check that scope has been updated properly
-    assert site.scope['surt'] == 'http://(localhost:%s,)/site5/destination/' % httpd.server_port
+    assert site.scope == {'accepts': [
+        {'ssurt': 'localhost,//%s:http:/site5/redirect/' % httpd.server_port},
+        {'ssurt': 'localhost,//%s:http:/site5/destination/' % httpd.server_port}]}
 
 def test_hashtags(httpd):
     test_id = 'test_hashtags-%s' % datetime.datetime.utcnow().isoformat()

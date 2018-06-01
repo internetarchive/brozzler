@@ -2,7 +2,7 @@
 '''
 setup.py - brozzler setup script
 
-Copyright (C) 2014-2017 Internet Archive
+Copyright (C) 2014-2018 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,12 +32,12 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.1b13.dev288',
+        version='1.1b13.dev290',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
         author_email='nlevitt@archive.org',
-        long_description=open('README.rst', mode='rb').read().decode('UTF-8'),
+        long_description=open('readme.rst', mode='rb').read().decode('UTF-8'),
         license='Apache License 2.0',
         packages=['brozzler', 'brozzler.dashboard'],
         package_data={
@@ -69,8 +69,8 @@ setuptools.setup(
             'requests',
             'websocket-client!=0.39.0',
             'pillow==3.3.0',
-            'urlcanon>=0.1.dev16',
-            'doublethink>=0.2.0.dev81',
+            'urlcanon>=0.1.dev23',
+            'doublethink>=0.2.0.dev88',
             'rethinkdb>=2.3,<2.4',
             'cerberus==1.0.1',
             'jinja2',
@@ -79,7 +79,7 @@ setuptools.setup(
         extras_require={
             'dashboard': ['flask>=0.11', 'gunicorn'],
             'easy': [
-                'warcprox>=2.4b1.dev145',
+                'warcprox>=2.4b2.dev173',
                 'pywb<2',
                 'flask>=0.11',
                 'gunicorn'

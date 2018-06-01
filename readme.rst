@@ -69,27 +69,19 @@ does not take advantage of brozzler's distributed nature.*
 Installation and Usage
 ----------------------
 
-To install brozzler only:
-
-::
+To install brozzler only::
 
     pip install brozzler  # in a virtualenv if desired
 
-Launch one or more workers:
-
-::
+Launch one or more workers::
 
     brozzler-worker --warcprox-auto
 
-Submit jobs:
-
-::
+Submit jobs::
 
     brozzler-new-job myjob.yaml
 
-Submit sites not tied to a job:
-
-::
+Submit sites not tied to a job::
 
     brozzler-new-site --time-limit=600 http://example.com/
 
@@ -208,7 +200,7 @@ Chrome's regular mode instead.
 License
 -------
 
-Copyright 2015-2017 Internet Archive
+Copyright 2015-2018 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may
 not use this software except in compliance with the License. You may
