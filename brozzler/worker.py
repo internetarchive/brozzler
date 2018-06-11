@@ -39,6 +39,16 @@ import rethinkdb as r
 import datetime
 import urllib.parse
 
+_orig_webpage_read_content = youtube_dl.extractor.generic.GenericIE._webpage_read_content
+def _webpage_read_content(self, *args, **kwargs):
+    content = _orig_webpage_read_content(self, *args, **kwargs)
+    if len(content) > 20000000:
+        logging.warn(
+                'bypassing youtube-dl extraction because content is '
+                'too large (%s characters)', len(content))
+        return ''
+youtube_dl.extractor.generic.GenericIE._webpage_read_content = _webpage_read_content
+
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
         self.extra_headers = extra_headers
