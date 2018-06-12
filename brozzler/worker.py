@@ -47,6 +47,7 @@ def _webpage_read_content(self, *args, **kwargs):
                 'bypassing youtube-dl extraction because content is '
                 'too large (%s characters)', len(content))
         return ''
+    return content
 youtube_dl.extractor.generic.GenericIE._webpage_read_content = _webpage_read_content
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
