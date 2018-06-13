@@ -27,7 +27,7 @@
   default_parameters:
     actions:
       - selector: a.coreSpriteDismissLarge
-      - selector: div._mck9w a
+      - selector: div._9AhH0
         firstMatchOnly: true
       - selector: a.coreSpriteRightPaginationArrow
         repeatSameElement: true
