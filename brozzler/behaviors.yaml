@@ -27,7 +27,7 @@
   default_parameters:
     actions:
       - selector: a.coreSpriteDismissLarge
-      - selector: div._9AhH0
+      - selector: a>div[role='button']
         firstMatchOnly: true
       - selector: a.coreSpriteRightPaginationArrow
         repeatSameElement: true
