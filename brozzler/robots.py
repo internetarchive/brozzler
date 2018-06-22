@@ -46,20 +46,21 @@ def _reppy_rules_getitem(self, agent):
     return self.agents.get('*')
 reppy.parser.Rules.__getitem__ = _reppy_rules_getitem
 
+class _SessionRaiseOn420(requests.Session):
+    timeout = 60
+    def get(self, url, *args, **kwargs):
+        res = super().get(url, timeout=self.timeout, *args, **kwargs)
+        if res.status_code == 420 and 'warcprox-meta' in res.headers:
+            raise brozzler.ReachedLimit(
+                    warcprox_meta=json.loads(res.headers['warcprox-meta']),
+                    http_payload=res.text)
+        else:
+            return res
+
 _robots_caches = {}  # {site_id:reppy.cache.RobotsCache}
 def _robots_cache(site, proxy=None):
-    class SessionRaiseOn420(requests.Session):
-        def get(self, url, *args, **kwargs):
-            res = super().get(url, *args, **kwargs)
-            if res.status_code == 420 and 'warcprox-meta' in res.headers:
-                raise brozzler.ReachedLimit(
-                        warcprox_meta=json.loads(res.headers['warcprox-meta']),
-                        http_payload=res.text)
-            else:
-                return res
-
     if not site.id in _robots_caches:
-        req_sesh = SessionRaiseOn420()
+        req_sesh = _SessionRaiseOn420()
         req_sesh.verify = False   # ignore cert errors
         if proxy:
             proxie = "http://%s" % proxy
@@ -68,7 +69,8 @@ def _robots_cache(site, proxy=None):
             req_sesh.headers.update(site.extra_headers())
         if site.user_agent:
             req_sesh.headers['User-Agent'] = site.user_agent
-        _robots_caches[site.id] = reppy.cache.RobotsCache(session=req_sesh)
+        _robots_caches[site.id] = reppy.cache.RobotsCache(
+                session=req_sesh, disallow_forbidden=False)
 
     return _robots_caches[site.id]
 
@@ -76,13 +78,9 @@ def is_permitted_by_robots(site, url, proxy=None):
     '''
     Checks if `url` is permitted by robots.txt.
 
-    In case of problems fetching robots.txt, different things can happen.
-    Reppy (the robots.txt parsing library) handles some exceptions internally
-    and applies an appropriate policy. It bubbles up other exceptions. Of
-    these, there are two kinds that this function raises for the caller to
-    handle, described below. Yet other types of exceptions are caught, and the
-    fetch is retried up to 10 times. In this case, after the 10th failure, the
-    function returns `False` (i.e. forbidden by robots).
+    Treats any kind of error fetching robots.txt as "allow all". See
+    http://builds.archive.org/javadoc/heritrix-3.x-snapshot/org/archive/modules/net/CrawlServer.html#updateRobots(org.archive.modules.CrawlURI)
+    for some background on that policy.
 
     Returns:
         bool: `True` if `site.ignore_robots` is set, or if `url` is permitted
@@ -95,29 +93,21 @@ def is_permitted_by_robots(site, url, proxy=None):
     if site.ignore_robots:
         return True
 
-    tries_left = 10
-    while True:
-        try:
-            result = _robots_cache(site, proxy).allowed(
-                    url, site.user_agent or "brozzler")
-            return result
-        except Exception as e:
-            if isinstance(e, reppy.exceptions.ServerError) and isinstance(
-                    e.args[0], brozzler.ReachedLimit):
-                raise e.args[0]
-            elif hasattr(e, 'args') and isinstance(
-                    e.args[0], requests.exceptions.ProxyError):
-                # reppy has wrapped an exception that we want to bubble up
-                raise brozzler.ProxyError(e)
-            else:
-                if tries_left > 0:
-                    logging.warn(
-                            "caught exception fetching robots.txt (%r tries "
-                            "left) for %r: %r", tries_left, url, e)
-                    tries_left -= 1
-                else:
-                    logging.error(
-                            "caught exception fetching robots.txt (0 tries "
-                            "left) for %r: %r", url, e, exc_info=True)
-                    return False
+    try:
+        result = _robots_cache(site, proxy).allowed(
+                url, site.user_agent or "brozzler")
+        return result
+    except Exception as e:
+        if isinstance(e, reppy.exceptions.ServerError) and isinstance(
+                e.args[0], brozzler.ReachedLimit):
+            raise e.args[0]
+        elif hasattr(e, 'args') and isinstance(
+                e.args[0], requests.exceptions.ProxyError):
+            # reppy has wrapped an exception that we want to bubble up
+            raise brozzler.ProxyError(e)
+        else:
+            logging.warn(
+                    "returning true (permitted) after problem fetching "
+                    "robots.txt for %r: %r", url, e)
+            return True
 

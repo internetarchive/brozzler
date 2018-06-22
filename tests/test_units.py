@@ -32,6 +32,7 @@ import uuid
 import socket
 import time
 import sys
+import threading
 
 logging.basicConfig(
         stream=sys.stderr, level=logging.INFO, format=(
@@ -66,6 +67,81 @@ def test_robots(httpd):
 
     site = brozzler.Site(None, {'seed':url,'user_agent':'im/a bAdBOt/uh huh'})
     assert not brozzler.is_permitted_by_robots(site, url)
+
+def test_robots_http_statuses():
+    for status in (
+            200, 204, 400, 401, 402, 403, 404, 405,
+            500, 501, 502, 503, 504, 505):
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                response = (b'HTTP/1.1 %s Meaningless message\r\n'
+                          + b'Content-length: 0\r\n'
+                          + b'\r\n') % status
+                self.connection.sendall(response)
+                # self.send_response(status)
+                # self.end_headers()
+        httpd = http.server.HTTPServer(('localhost', 0), Handler)
+        httpd_thread = threading.Thread(name='httpd', target=httpd.serve_forever)
+        httpd_thread.start()
+
+        try:
+            url = 'http://localhost:%s/' % httpd.server_port
+            site = brozzler.Site(None, {'seed': url})
+            assert brozzler.is_permitted_by_robots(site, url)
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            httpd_thread.join()
+
+def test_robots_empty_respone():
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.connection.shutdown(socket.SHUT_RDWR)
+            self.connection.close()
+    httpd = http.server.HTTPServer(('localhost', 0), Handler)
+    httpd_thread = threading.Thread(name='httpd', target=httpd.serve_forever)
+    httpd_thread.start()
+
+    try:
+        url = 'http://localhost:%s/' % httpd.server_port
+        site = brozzler.Site(None, {'seed': url})
+        assert brozzler.is_permitted_by_robots(site, url)
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        httpd_thread.join()
+
+def test_robots_socket_timeout():
+    stop_hanging = threading.Event()
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            stop_hanging.wait(60)
+            self.connection.sendall(
+                    b'HTTP/1.1 200 OK\r\nContent-length: 0\r\n\r\n')
+
+    orig_timeout = brozzler.robots._SessionRaiseOn420.timeout
+
+    httpd = http.server.HTTPServer(('localhost', 0), Handler)
+    httpd_thread = threading.Thread(name='httpd', target=httpd.serve_forever)
+    httpd_thread.start()
+
+    try:
+        url = 'http://localhost:%s/' % httpd.server_port
+        site = brozzler.Site(None, {'seed': url})
+        brozzler.robots._SessionRaiseOn420.timeout = 2
+        assert brozzler.is_permitted_by_robots(site, url)
+    finally:
+        brozzler.robots._SessionRaiseOn420.timeout = orig_timeout
+        stop_hanging.set()
+        httpd.shutdown()
+        httpd.server_close()
+        httpd_thread.join()
+
+def test_robots_dns_failure():
+    # .invalid. is guaranteed nonexistent per rfc 6761
+    url = 'http://whatever.invalid./'
+    site = brozzler.Site(None, {'seed': url})
+    assert brozzler.is_permitted_by_robots(site, url)
 
 def test_scoping():
     test_scope = yaml.load('''
