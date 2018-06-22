@@ -74,9 +74,9 @@ def test_robots_http_statuses():
             500, 501, 502, 503, 504, 505):
         class Handler(http.server.BaseHTTPRequestHandler):
             def do_GET(self):
-                response = (b'HTTP/1.1 %s Meaningless message\r\n'
-                          + b'Content-length: 0\r\n'
-                          + b'\r\n') % status
+                response = (('HTTP/1.1 %s Meaningless message\r\n'
+                          + 'Content-length: 0\r\n'
+                          + '\r\n') % status).encode('utf-8')
                 self.connection.sendall(response)
                 # self.send_response(status)
                 # self.end_headers()
@@ -93,7 +93,7 @@ def test_robots_http_statuses():
             httpd.server_close()
             httpd_thread.join()
 
-def test_robots_empty_respone():
+def test_robots_empty_response():
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
             self.connection.shutdown(socket.SHUT_RDWR)
@@ -140,6 +140,12 @@ def test_robots_socket_timeout():
 def test_robots_dns_failure():
     # .invalid. is guaranteed nonexistent per rfc 6761
     url = 'http://whatever.invalid./'
+    site = brozzler.Site(None, {'seed': url})
+    assert brozzler.is_permitted_by_robots(site, url)
+
+def test_robots_connection_failure():
+    # .invalid. is guaranteed nonexistent per rfc 6761
+    url = 'http://localhost:4/' # nobody listens on port 4
     site = brozzler.Site(None, {'seed': url})
     assert brozzler.is_permitted_by_robots(site, url)
 
