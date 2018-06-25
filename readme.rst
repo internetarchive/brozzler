@@ -1,4 +1,4 @@
-.. image:: https://travis-ci.org/internetarchive/brozzler.svg?branch=1.2
+.. image:: https://travis-ci.org/internetarchive/brozzler.svg?branch=master
     :target: https://travis-ci.org/internetarchive/brozzler
 
 .. |logo| image:: https://raw.githubusercontent.com/internetarchive/brozzler/1.1b12/brozzler/dashboard/static/brozzler.svg
