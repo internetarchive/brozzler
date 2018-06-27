@@ -46,18 +46,6 @@ var umbraState = {'idleSince':null,'expectingSomething':null,'bottomReachedScrol
 
 var umbraIntervalFunc = function() {
 
-		// for facebook groups, switch to Discussion tab url
-		fbURL = window.location.href;
-		if (fbURL.indexOf("/groups/") !== -1 && fbURL.indexOf("?ref=direct") === -1) {
-			navlinks = document.querySelectorAll('a._2yau');
-			navlinks[1].click();  // click current Discussion link
-			return;
-			//groupDiscussionURL = fbURL.match("https://www.facebook.com/groups/[^/]+")[0] + "/?ref=direct";
-			//if (groupDiscussionURL) {
-			//	window.location.href = groupDiscussionURL;
-			//	return;
-			//}
-		}
 		var thingsToScroll = document.querySelectorAll(UMBRA_THINGS_TO_SCROLL_SELECTOR);
 		var everythingScrolled = true;
 
