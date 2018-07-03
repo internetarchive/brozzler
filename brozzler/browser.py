@@ -452,7 +452,7 @@ class Browser:
                         extra_headers=extra_headers,
                         user_agent=user_agent)
                 self.navigate_to_page(page_url, timeout=page_timeout)
-                if password and not 'facebook.com/groups' in page_url:
+                if password:
                     self.try_login(username, password, timeout=page_timeout)
                     # if login redirected us, return to page_url
                     if page_url != self.url().split('#')[0]:
