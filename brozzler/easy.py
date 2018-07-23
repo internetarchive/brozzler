@@ -31,7 +31,7 @@ try:
 except ImportError as e:
     logging.critical(
             '%s: %s\n\nYou might need to run "pip install '
-            'brozzler[easy]".\nSee readme.rst for more information.',
+            'brozzler[easy]".\nSee README.rst for more information.',
             type(e).__name__, e)
     sys.exit(1)
 import argparse

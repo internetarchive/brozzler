@@ -769,7 +769,7 @@ def test_time_limit(httpd):
     rr = doublethink.Rethinker('localhost', db='brozzler')
     frontier = brozzler.RethinkDbFrontier(rr)
 
-    # create a new job with three sites that could be crawled forever
+    # create a new job with one seed that could be crawled forever
     job_conf = {'seeds': [{
         'url': 'http://localhost:%s/infinite/foo/' % httpd.server_port,
         'time_limit': 20}]}
@@ -789,6 +789,10 @@ def test_time_limit(httpd):
     assert sites[0].status == 'FINISHED_TIME_LIMIT'
 
     # all sites finished so job should be finished too
+    start = time.time()
     job.refresh()
+    while not job.status == 'FINISHED' and time.time() - start < 10:
+        time.sleep(0.5)
+        job.refresh()
     assert job.status == 'FINISHED'
 
