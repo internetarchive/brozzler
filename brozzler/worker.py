@@ -350,7 +350,8 @@ class BrozzlerWorker:
                 raise
 
     def full_and_thumb_jpegs(self, large_png):
-        img = PIL.Image.open(io.BytesIO(large_png))
+        # these screenshots never have any alpha (right?)
+        img = PIL.Image.open(io.BytesIO(large_png)).convert('RGB')
 
         out = io.BytesIO()
         img.save(out, "jpeg", quality=95)
