@@ -75,6 +75,7 @@ setuptools.setup(
             'cerberus==1.0.1',
             'jinja2',
             'cryptography!=2.1.1', # 2.1.1 installation is failing on ubuntu
+            'python-magic',
         ],
         extras_require={
             'dashboard': ['flask>=0.11', 'gunicorn'],

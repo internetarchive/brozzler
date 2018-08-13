@@ -199,10 +199,64 @@ class BrozzlerWorker:
                         'IS' if self._proxy_is_warcprox else 'IS NOT')
             return self._proxy_is_warcprox
         else:
+            # I should have commented when I originally wrote this code, but I
+            # think this works because `site.proxy` is only set when the proxy
+            # is warcprox
             return bool(site.proxy or self._warcprox_auto)
 
-
     def _youtube_dl(self, destdir, site):
+        class _YoutubeDL(youtube_dl.YoutubeDL):
+            logger = logging.getLogger(__module__ + "." + __qualname__)
+
+            def get_info_extractor(self, ie_key):
+                ie = super().get_info_extractor(ie_key)
+                self.logger.info('youtube-dl using extractor %s', ie)
+                return ie
+
+            # def process_ie_result(
+            #         ydl_self, ie_result, download=True, extra_info={}):
+            #     ie_result = super().process_ie_result(
+            #             ie_result, download, extra_info)
+            #     return ie_result
+
+            def process_info(ydl_self, info_dict):
+                _orig__finish_frag_download = youtube_dl.downloader.fragment.FragmentFD._finish_frag_download
+                def _finish_frag_download(ffd_self, ctx):
+                    _orig__finish_frag_download(ffd_self, ctx)
+                    if self._using_warcprox(site):
+                        try:
+                            import magic
+                            mimetype = magic.from_file(
+                                    ctx['filename'], mime=True)
+                        except ImportError as e:
+                            mimetype = 'video/%s' % info_dict['ext']
+                            ydl_self.logger.warn(
+                                    'guessing mimetype %s because %r',
+                                    mimetype, e)
+                        url = 'youtube-dl:%05d:%s' % (
+                                info_dict['playlist_index'],
+                                info_dict['webpage_url'])
+                        ydl_self.logger.info(
+                                'pushing %r video stitched-up as %s (%s '
+                                'bytes) to warcprox at %s with url %s',
+                                info_dict['format'], mimetype,
+                                ctx['complete_frags_downloaded_bytes'],
+                                self._proxy_for(site), url)
+                        with open(ctx['filename'], 'rb') as f:
+                            # include content-length header to avoid chunked
+                            # transfer, which warcprox currently does not
+                            # accept
+                            # XXX is `ctx['complete_frags_downloaded_bytes']`
+                            # always == `os.path.getsize(ctx['filename'])`?
+                            self._warcprox_write_record(
+                                    warcprox_address=self._proxy_for(site),
+                                    url=url, warc_type='resource',
+                                    content_type=mimetype, payload=f,
+                                    extra_headers={'content-length': ctx['complete_frags_downloaded_bytes']})
+
+                youtube_dl.downloader.fragment.FragmentFD._finish_frag_download = _finish_frag_download
+                return super().process_info(info_dict)
+
         def ydl_progress(*args, **kwargs):
             # in case youtube-dl takes a long time, heartbeat site.last_claimed
             # to prevent another brozzler-worker from claiming the site
@@ -236,11 +290,7 @@ class BrozzlerWorker:
         }
         if self._proxy_for(site):
             ydl_opts["proxy"] = "http://{}".format(self._proxy_for(site))
-            ## XXX (sometimes?) causes chrome debug websocket to go through
-            ## proxy. Maybe not needed thanks to hls_prefer_native.
-            ## # see https://github.com/rg3/youtube-dl/issues/6087
-            ## os.environ["http_proxy"] = "http://{}".format(self._proxy_for(site))
-        ydl = youtube_dl.YoutubeDL(ydl_opts)
+        ydl = _YoutubeDL(ydl_opts)
         if site.extra_headers():
             ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers()))
         ydl.brozzler_spy = YoutubeDLSpy()
@@ -314,9 +364,14 @@ class BrozzlerWorker:
                 # we do whatwg canonicalization here to avoid "<urlopen error
                 # no host given>" resulting in ProxyError
                 # needs automated test
-                info = ydl.extract_info(str(urlcanon.whatwg(page.url)))
+                ie_result = ydl.extract_info(str(urlcanon.whatwg(page.url)))
+                # ie_result = ydl.extract_info(
+                #         str(urlcanon.whatwg(page.url)), download=False)
+                # if ie_result.get('_type') in ('playlist', 'multi_video'):
+                #     ie_result = self._ydl_playlist(ie_result)
+                # else:
+                #     ie_result = process_ie_result(ie_result, download=True)
             self._remember_videos(page, ydl.brozzler_spy)
-            # logging.info('XXX %s', json.dumps(info))
             if self._using_warcprox(site):
                 info_json = json.dumps(info, sort_keys=True, indent=4)
                 self.logger.info(
@@ -576,7 +631,7 @@ class BrozzlerWorker:
                 # using brozzler-worker --proxy, nothing to do but try the
                 # same proxy again next time
                 logging.error(
-                        'proxy error (site.proxy=%r): %r', site.proxy, e)
+                        'proxy error (self._proxy=%r)', self._proxy, exc_info=1)
         except:
             self.logger.critical("unexpected exception", exc_info=True)
         finally:
