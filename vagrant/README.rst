@@ -25,26 +25,26 @@ the brozzler virtualenv.
 ::
 
     my-laptop$ vagrant ssh
-    vagrant@brozzler-easy:~$ source ~/brozzler-ve34/bin/activate
+    vagrant@brozzler-easy:~$ source /opt/brozzler-ve34/bin/activate
     (brozzler-ve34)vagrant@brozzler-easy:~$
 
 Then you can run brozzler-new-site:
 
 ::
 
-    (brozzler-ve34)vagrant@brozzler-easy:~$ brozzler-new-site \
-           --proxy=localhost:8000 http://example.com/
+    (brozzler-ve34)vagrant@brozzler-easy:~$ brozzler-new-site http://example.com/
 
 
 Or brozzler-new-job (make sure to set the proxy to localhost:8000):
 
 ::
 
-    (brozzler-ve34)vagrant@brozzler-easy:~$ cat >job1.yml
+    (brozzler-ve34)vagrant@brozzler-easy:~$ cat > job1.yml <<EOF
     id: job1
     proxy: localhost:8000 # point at warcprox for archiving
     seeds:
       - url: https://example.org/
+    EOF
     (brozzler-ve34)vagrant@brozzler-easy:~$ brozzler-new-job job1.yml
 
 WARC files will appear in ./warcs and brozzler, warcprox and rethinkdb logs in
