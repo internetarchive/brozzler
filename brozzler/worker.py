@@ -322,8 +322,8 @@ class BrozzlerWorker:
 
     def _already_fetched(self, page, ydl_fetches):
         if ydl_fetches:
-            for txn in final_bounces(ydl_fetches, page.url):
-                if (txn['method'] == 'GET' and txn['status_code'] == 200):
+            for fetch in ydl.final_bounces(ydl_fetches, page.url):
+                if (fetch['method'] == 'GET' and fetch['response_code'] == 200):
                     return True
         return False
 
