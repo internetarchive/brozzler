@@ -113,7 +113,11 @@ class YoutubeDLSpy(urllib.request.BaseHandler):
 class BrozzlerWorker:
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
-    HEARTBEAT_INTERVAL = 20.0
+    # 3⅓ min heartbeat interval => 10 min ttl
+    # This is kind of a long time, because `frontier.claim_sites()`, which runs
+    # in the same thread as the heartbeats, can take a while on a busy brozzler
+    # cluster with slow rethinkdb.
+    HEARTBEAT_INTERVAL = 200.0
     SITE_SESSION_MINUTES = 15
 
     def __init__(
@@ -347,7 +351,8 @@ class BrozzlerWorker:
                 raise
 
     def full_and_thumb_jpegs(self, large_png):
-        img = PIL.Image.open(io.BytesIO(large_png))
+        # these screenshots never have any alpha (right?)
+        img = PIL.Image.open(io.BytesIO(large_png)).convert('RGB')
 
         out = io.BytesIO()
         img.save(out, "jpeg", quality=95)

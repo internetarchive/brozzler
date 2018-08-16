@@ -156,13 +156,12 @@ def brozzle_page(argv=None):
             '--proxy', dest='proxy', default=None, help='http proxy')
     arg_parser.add_argument(
             '--skip-extract-outlinks', dest='skip_extract_outlinks',
-            action='store_true', help=argparse.SUPPRESS)
+            action='store_true')
     arg_parser.add_argument(
             '--skip-visit-hashtags', dest='skip_visit_hashtags',
-            action='store_true', help=argparse.SUPPRESS)
+            action='store_true')
     arg_parser.add_argument(
-            '--skip-youtube-dl', dest='skip_youtube_dl',
-            action='store_true', help=argparse.SUPPRESS)
+            '--skip-youtube-dl', dest='skip_youtube_dl', action='store_true')
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])

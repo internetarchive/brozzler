@@ -24,7 +24,7 @@ try:
 except ImportError as e:
     logging.critical(
             '%s: %s\n\nYou might need to run "pip install '
-            'brozzler[dashboard]".\nSee readme.rst for more information.',
+            'brozzler[dashboard]".\nSee README.rst for more information.',
             type(e).__name__, e)
     sys.exit(1)
 import doublethink
