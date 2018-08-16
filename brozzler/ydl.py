@@ -215,6 +215,7 @@ def _build_youtube_dl(worker, destdir, site):
          # "best: Select the best quality format represented by a single
          # file with video and audio."
         "format": "best/bestvideo+bestaudio",
+        "youtube_include_dash_manifest": False,
     }
     if worker._proxy_for(site):
         ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
