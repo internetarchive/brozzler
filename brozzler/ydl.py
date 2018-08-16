@@ -26,6 +26,8 @@ import tempfile
 import urlcanon
 import os
 import json
+import doublethink
+import datetime
 
 _orig_webpage_read_content = youtube_dl.extractor.generic.GenericIE._webpage_read_content
 def _webpage_read_content(self, *args, **kwargs):
@@ -133,12 +135,22 @@ def _build_youtube_dl(worker, destdir, site):
                         'extractor %r found a video in %s', ie.IE_NAME, url)
 
         def _push_stitched_up_vid_to_warcprox(self, site, info_dict, ctx):
-            try:
-                import magic
-                mimetype = magic.from_file(ctx['filename'], mime=True)
-            except ImportError as e:
-                mimetype = 'video/%s' % info_dict['ext']
-                self.logger.warn('guessing mimetype %s because %r', mimetype, e)
+            # XXX Don't know how to get the right content-type. Youtube-dl
+            # doesn't supply it. Sometimes (with --hls-prefer-native)
+            # youtube-dl produces a stitched-up video that /usr/bin/file fails
+            # to identify (says "application/octet-stream"). `ffprobe` doesn't
+            # give us a mimetype.
+            if info_dict.get('ext') == 'mp4':
+                mimetype = 'video/mp4'
+            else:
+                try:
+                    import magic
+                    mimetype = magic.from_file(ctx['filename'], mime=True)
+                except ImportError as e:
+                    mimetype = 'video/%s' % info_dict['ext']
+                    self.logger.warn(
+                            'guessing mimetype %s because %r', mimetype, e)
+
             url = 'youtube-dl:%05d:%s' % (
                     info_dict.get('playlist_index') or 1,
                     info_dict['webpage_url'])
