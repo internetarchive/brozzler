@@ -3,7 +3,7 @@
 test_cluster.py - integration tests for a brozzler cluster, expects brozzler,
 warcprox, pywb, rethinkdb and other dependencies to be running already
 
-Copyright (C) 2016-2017 Internet Archive
+Copyright (C) 2016-2018 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -795,4 +795,32 @@ def test_time_limit(httpd):
         time.sleep(0.5)
         job.refresh()
     assert job.status == 'FINISHED'
+
+def test_ydl_stitching(httpd):
+    test_id = 'test_ydl_stitching-%s' % datetime.datetime.utcnow().isoformat()
+    rr = doublethink.Rethinker('localhost', db='brozzler')
+    frontier = brozzler.RethinkDbFrontier(rr)
+    site = brozzler.Site(rr, {
+        'seed': 'http://localhost:%s/site10/' % httpd.server_port})
+    brozzler.new_site(frontier, site)
+
+    # the site should be brozzled fairly quickly
+    start = time.time()
+    while site.status != 'FINISHED' and time.time() - start < 300:
+        time.sleep(0.5)
+        site.refresh()
+    assert site.status == 'FINISHED'
+
+    # check page.videos
+    pages = list(frontier.site_pages(site.id))
+    assert len(pages) == 1
+    page = pages[0]
+    assert len(page.videos) == 6
+    assert {
+        'blame': 'youtube-dl',
+        'content-length': 267900,
+        'content-type': 'video/mp4',
+        'response_code': 204,
+        'url': 'youtube-dl:00001:http://localhost:%s/site10/' % httpd.server_port,
+    } in page.videos
 

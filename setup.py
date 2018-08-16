@@ -67,7 +67,7 @@ setuptools.setup(
             'youtube-dl',
             'reppy==0.3.4',
             'requests',
-            'websocket-client!=0.39.0',
+            'websocket-client!=0.39.0,!=0.49.0',
             'pillow>=5.2.0',
             'urlcanon>=0.1.dev23',
             'doublethink>=0.2.0.dev88',
@@ -75,6 +75,7 @@ setuptools.setup(
             'cerberus==1.0.1',
             'jinja2',
             'cryptography!=2.1.1', # 2.1.1 installation is failing on ubuntu
+            'python-magic',
         ],
         extras_require={
             'dashboard': ['flask>=0.11', 'gunicorn'],
