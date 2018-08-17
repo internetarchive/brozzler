@@ -32,12 +32,12 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.1b13.dev291',
+        version='1.4.dev299',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
         author_email='nlevitt@archive.org',
-        long_description=open('readme.rst', mode='rb').read().decode('UTF-8'),
+        long_description=open('README.rst', mode='rb').read().decode('UTF-8'),
         license='Apache License 2.0',
         packages=['brozzler', 'brozzler.dashboard'],
         package_data={
@@ -63,26 +63,29 @@ setuptools.setup(
             ],
         },
         install_requires=[
-            'PyYAML',
-            'youtube-dl',
+            'PyYAML>=3.12',
+            'youtube-dl>=2018.7.21',
             'reppy==0.3.4',
-            'requests',
-            'websocket-client!=0.39.0',
-            'pillow==3.3.0',
+            'requests>=2.18.4',
+            'websocket-client>=0.39.0,!=0.49.0',
+            'pillow>=5.2.0',
             'urlcanon>=0.1.dev23',
             'doublethink>=0.2.0.dev88',
-            'rethinkdb>=2.3,<2.4',
-            'cerberus==1.0.1',
-            'jinja2',
-            'cryptography!=2.1.1', # 2.1.1 installation is failing on ubuntu
+            'rethinkdb>=2.3',
+            'cerberus>=1.0.1',
+            'jinja2>=2.10',
+            'cryptography>=2.3',
         ],
         extras_require={
-            'dashboard': ['flask>=0.11', 'gunicorn'],
+            'dashboard': [
+                'flask>=0.11',
+                'gunicorn>=19.8.1'
+            ],
             'easy': [
                 'warcprox>=2.4b2.dev173',
-                'pywb<2',
+                'pywb>=0.33.2,<2',
                 'flask>=0.11',
-                'gunicorn'
+                'gunicorn>=19.8.1'
             ],
         },
         zip_safe=False,
