@@ -53,9 +53,9 @@ def test_run_command(capsys, cmd):
     proc = subprocess.Popen(
         [cmd, '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
+    assert err == b''
     assert out == ('brozzler %s - %s\n' % (
         brozzler.__version__, cmd)).encode('ascii')
-    assert err == b''
 
 def test_rethinkdb_up():
     '''Check that rethinkdb is up and running.'''
