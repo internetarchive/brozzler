@@ -66,7 +66,7 @@ setuptools.setup(
             'PyYAML>=3.12,<=3.12',
             'youtube-dl>=2018.7.21,<=2018.7.21',
             'reppy==0.3.4',
-            'requests>=2.18.4,<=2.18.4',
+            'requests>=2.18.4,<=2.19.1',
             'websocket-client>=0.39.0,<=0.48.0',
             'pillow>=5.2.0,<=5.2.0',
             'urlcanon>=0.1.dev23,<=0.2.dev27',
