@@ -137,6 +137,8 @@ To start the app, run
 
 At this point Brozzler Dashboard will be accessible at http://localhost:8000/.
 
+.. image:: Brozzler-Dashboard.png
+
 See ``brozzler-dashboard --help`` for configuration options.
 
 Brozzler Wayback
@@ -177,6 +179,8 @@ Run pywb like so:
     $ PYWB_CONFIG_FILE=pywb.yml brozzler-wayback
 
 Then browse http://localhost:8880/brozzler/.
+
+.. image:: Brozzler-Wayback.png
 
 Headless Chrome (experimental)
 ------------------------------
