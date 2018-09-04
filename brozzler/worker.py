@@ -446,6 +446,7 @@ class BrozzlerWorker:
         Raises:
             NoBrowsersAvailable if none available
         '''
+        # acquire_multi() raises NoBrowsersAvailable if none available
         browsers = self._browser_pool.acquire_multi(
                 (self._browser_pool.num_available() + 1) // 2)
         try:
@@ -468,22 +469,26 @@ class BrozzlerWorker:
                 self._browser_pool.release(browsers[i])
 
     def run(self):
-        self.logger.info("brozzler worker starting")
+        self.logger.notice("brozzler worker starting")
+        last_nothing_to_claim = 0
         try:
             while not self._shutdown.is_set():
                 self._service_heartbeat_if_due()
-                try:
-                    self._start_browsing_some_sites()
-                except brozzler.browser.NoBrowsersAvailable:
-                    logging.trace(
-                            "all %s browsers are in use", self._max_browsers)
-                except brozzler.NothingToClaim:
-                    logging.trace(
-                            "all active sites are already claimed by a "
-                            "brozzler worker")
+                if time.time() - last_nothing_to_claim > 20:
+                    try:
+                        self._start_browsing_some_sites()
+                    except brozzler.browser.NoBrowsersAvailable:
+                        logging.trace(
+                                "all %s browsers are in use",
+                                self._max_browsers)
+                    except brozzler.NothingToClaim:
+                        last_nothing_to_claim = time.time()
+                        logging.trace(
+                                "nothing to claim, all available active sites "
+                                "are already claimed by a brozzler worker")
                 time.sleep(0.5)
 
-            self.logger.info("shutdown requested")
+            self.logger.notice("shutdown requested")
         except r.ReqlError as e:
             self.logger.error(
                     "caught rethinkdb exception, will try to proceed",

@@ -94,6 +94,7 @@ class RethinkDbFrontier:
                         k, expected, result))
 
     def claim_sites(self, n=1):
+        self.logger.trace('claiming up to %s sites to brozzle', n)
         result = (
             self.rr.table('sites').get_all(r.args(
                 r.db(self.rr.dbname).table('sites', read_mode='majority')
@@ -145,6 +146,7 @@ class RethinkDbFrontier:
                         result["changes"][i]["old_val"]["last_claimed"])
             site = brozzler.Site(self.rr, result["changes"][i]["new_val"])
             sites.append(site)
+        self.logger.debug('claimed %s sites', len(sites))
         if sites:
             return sites
         else:

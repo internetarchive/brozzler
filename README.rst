@@ -1,4 +1,4 @@
-.. image:: https://travis-ci.org/internetarchive/brozzler.svg?branch=master
+.. image:: https://travis-ci.org/internetarchive/brozzler.svg?branch=1.4
     :target: https://travis-ci.org/internetarchive/brozzler
 
 .. |logo| image:: https://cdn.rawgit.com/internetarchive/brozzler/1.1b12/brozzler/dashboard/static/brozzler.svg
@@ -73,7 +73,7 @@ To install brozzler only::
 
     pip install brozzler  # in a virtualenv if desired
 
-Launch one or more workers::
+Launch one or more workers: [*]_ ::
 
     brozzler-worker --warcprox-auto
 
@@ -84,6 +84,14 @@ Submit jobs::
 Submit sites not tied to a job::
 
     brozzler-new-site --time-limit=600 http://example.com/
+
+.. [*] A note about ``--warcprox-auto``: this option tells brozzler to
+   look for a healthy warcprox instance in the `rethinkdb service registry
+   <https://github.com/internetarchive/doublethink#service-registry>`_. For
+   this to work you need to have at least one instance of warcprox running,
+   with the ``--rethinkdb-services-url`` option pointing to the same rethinkdb
+   services table that brozzler is using. Using ``--warcprox-auto`` is
+   recommended for clustered deployments.
 
 Job Configuration
 -----------------
@@ -129,6 +137,8 @@ To start the app, run
 
 At this point Brozzler Dashboard will be accessible at http://localhost:8000/.
 
+.. image:: Brozzler-Dashboard.png
+
 See ``brozzler-dashboard --help`` for configuration options.
 
 Brozzler Wayback
@@ -169,6 +179,8 @@ Run pywb like so:
     $ PYWB_CONFIG_FILE=pywb.yml brozzler-wayback
 
 Then browse http://localhost:8880/brozzler/.
+
+.. image:: Brozzler-Wayback.png
 
 Headless Chrome (experimental)
 ------------------------------

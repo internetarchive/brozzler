@@ -17,6 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import logging
 from pkg_resources import get_distribution as _get_distribution
 __version__ = _get_distribution('brozzler').version
 
@@ -57,18 +58,22 @@ class ReachedLimit(Exception):
     def __str__(self):
         return self.__repr__()
 
-# monkey-patch log level TRACE
-TRACE = 5
-import logging
-def _logging_trace(msg, *args, **kwargs):
-    logging.root.trace(msg, *args, **kwargs)
+# monkey-patch log levels TRACE and NOTICE
+logging.TRACE = (logging.NOTSET + logging.DEBUG) // 2
 def _logger_trace(self, msg, *args, **kwargs):
-    if self.isEnabledFor(TRACE):
-        self._log(TRACE, msg, args, **kwargs)
-logging.trace = _logging_trace
+    if self.isEnabledFor(logging.TRACE):
+        self._log(logging.TRACE, msg, args, **kwargs)
 logging.Logger.trace = _logger_trace
-logging._levelToName[TRACE] = 'TRACE'
-logging._nameToLevel['TRACE'] = TRACE
+logging.trace = logging.root.trace
+logging.addLevelName(logging.TRACE, 'TRACE')
+
+logging.NOTICE = (logging.INFO + logging.WARN) // 2
+def _logger_notice(self, msg, *args, **kwargs):
+    if self.isEnabledFor(logging.NOTICE):
+        self._log(logging.NOTICE, msg, args, **kwargs)
+logging.Logger.notice = _logger_notice
+logging.notice = logging.root.notice
+logging.addLevelName(logging.NOTICE, 'NOTICE')
 
 # see https://github.com/internetarchive/brozzler/issues/91
 def _logging_handler_handle(self, record):
