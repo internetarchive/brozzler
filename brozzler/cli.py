@@ -43,15 +43,14 @@ def add_common_options(arg_parser, argv=None):
     argv = argv or sys.argv
     arg_parser.add_argument(
             '-q', '--quiet', dest='log_level', action='store_const',
-            default=logging.INFO, const=logging.WARN, help=(
-                'quiet logging, only warnings and errors'))
+            default=logging.INFO, const=logging.NOTICE, help='quiet logging')
     arg_parser.add_argument(
             '-v', '--verbose', dest='log_level', action='store_const',
             default=logging.INFO, const=logging.DEBUG, help=(
                 'verbose logging'))
     arg_parser.add_argument(
             '--trace', dest='log_level', action='store_const',
-            default=logging.INFO, const=brozzler.TRACE, help=(
+            default=logging.INFO, const=logging.TRACE, help=(
                 'very verbose logging'))
     # arg_parser.add_argument(
     #         '-s', '--silent', dest='log_level', action='store_const',
