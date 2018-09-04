@@ -32,7 +32,7 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.4',
+        version='1.5.dev302',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
@@ -63,29 +63,29 @@ setuptools.setup(
             ],
         },
         install_requires=[
-            'PyYAML>=3.12,<=3.12',
-            'youtube-dl>=2018.7.21,<=2018.7.21',
+            'PyYAML>=3.12',
+            'youtube-dl>=2018.7.21',
             'reppy==0.3.4',
-            'requests>=2.18.4,<=2.19.1',
+            'requests>=2.18.4',
             'websocket-client>=0.39.0,<=0.48.0',
-            'pillow>=5.2.0,<=5.2.0',
-            'urlcanon>=0.1.dev23,<=0.2.dev27',
-            'doublethink>=0.2.0.dev88,<=0.2.0.dev88',
-            'rethinkdb>=2.3,<=2.3.0.post6',
-            'cerberus>=1.0.1,<=1.0.1',
-            'jinja2>=2.10,<=2.10',
-            'cryptography>=2.3,<=2.3.1',
+            'pillow>=5.2.0',
+            'urlcanon>=0.1.dev23',
+            'doublethink>=0.2.0.dev88',
+            'rethinkdb>=2.3',
+            'cerberus>=1.0.1',
+            'jinja2>=2.10',
+            'cryptography>=2.3',
         ],
         extras_require={
             'dashboard': [
-                'flask>=0.11,<=1.0.2',
-                'gunicorn>=19.8.1,<=19.8.1'
+                'flask>=0.11',
+                'gunicorn>=19.8.1'
             ],
             'easy': [
-                'warcprox>=2.4b2.dev173,<=2.4b3.dev183',
+                'warcprox>=2.4b2.dev173',
                 'pywb>=0.33.2,<2',
-                'flask>=0.11,<=1.0.2',
-                'gunicorn>=19.8.1,<=19.8.1'
+                'flask>=0.11',
+                'gunicorn>=19.8.1'
             ],
         },
         zip_safe=False,
