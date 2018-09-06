@@ -23,6 +23,7 @@ import threading
 import os
 import brozzler
 import brozzler.chrome
+import brozzler.ydl
 import logging
 import yaml
 import datetime
@@ -227,9 +228,8 @@ def test_proxy_down():
 
         # youtube-dl fetch
         with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
-            ydl = worker._youtube_dl(tempdir, site)
             with pytest.raises(brozzler.ProxyError):
-                worker._try_youtube_dl(ydl, site, page)
+                brozzler.ydl.do_youtube_dl(worker, site, page)
 
         # raw fetch
         with pytest.raises(brozzler.ProxyError):
@@ -404,18 +404,19 @@ def test_needs_browsing():
     page = brozzler.Page(None, {
         'url':'http://example.com/a'})
 
-    spy = brozzler.worker.YoutubeDLSpy()
-    spy.transactions.append({
+    spy = brozzler.ydl.YoutubeDLSpy()
+    spy.fetches.append({
         'url': 'http://example.com/a',
         'method': 'HEAD',
-        'status_code': 301,
+        'response_code': 301,
         'response_headers': ConvenientHeaders({'Location': '/b'})})
-    spy.transactions.append({
+    spy.fetches.append({
         'url': 'http://example.com/b',
         'method': 'GET',
-        'status_code': 200,
+        'response_code': 200,
         'response_headers': ConvenientHeaders({
             'Content-Type': 'application/pdf'})})
 
-    assert not brozzler.worker.BrozzlerWorker._needs_browsing(None, page, spy)
+    assert not brozzler.worker.BrozzlerWorker._needs_browsing(
+            None, page, spy.fetches)
 

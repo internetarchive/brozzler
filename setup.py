@@ -75,6 +75,7 @@ setuptools.setup(
             'cerberus>=1.0.1',
             'jinja2>=2.10',
             'cryptography>=2.3',
+            'python-magic>=0.4.15',
         ],
         extras_require={
             'dashboard': [
