@@ -470,6 +470,7 @@ class Browser:
                     outlinks = []
                 else:
                     outlinks = self.extract_outlinks()
+                    outlinks = outlinks.union(self.extract_tertiary_assets())
                 if not skip_visit_hashtags:
                     self.visit_hashtags(self.url(), hashtags, outlinks)
                 final_page_url = self.url()
@@ -563,6 +564,30 @@ class Browser:
         else:
             self.logger.error(
                     'problem extracting outlinks, result message: %s', message)
+            return frozenset()
+
+    def extract_tertiary_assets(self, timeout=60):
+        self.logger.info('extracting tertiary assets')
+        self.websock_thread.expect_result(self._command_id.peek())
+        js = brozzler.jinja2_environment().get_template(
+                'extract-tertiary-assets.js').render()
+        msg_id = self.send_to_chrome(
+                method='Runtime.evaluate', params={'expression': js})
+        self._wait_for(
+                lambda: self.websock_thread.received_result(msg_id),
+                timeout=timeout)
+        message = self.websock_thread.pop_result(msg_id)
+        if ('result' in message and 'result' in message['result']
+                and 'value' in message['result']['result']):
+            if message['result']['result']['value']:
+                return frozenset(
+                        message['result']['result']['value'].split('\n'))
+            else:
+                # no links found
+                return frozenset()
+        else:
+            self.logger.error(
+                    'problem extracting tertiary assets, result message: %s', message)
             return frozenset()
 
     def screenshot(self, timeout=45):
