@@ -801,7 +801,10 @@ def test_ydl_stitching(httpd):
     rr = doublethink.Rethinker('localhost', db='brozzler')
     frontier = brozzler.RethinkDbFrontier(rr)
     site = brozzler.Site(rr, {
-        'seed': 'http://localhost:%s/site10/' % httpd.server_port})
+        'seed': 'http://localhost:%s/site10/' % httpd.server_port,
+        'warcprox_meta':  {
+            'warc-prefix': 'test_ydl_stitching',
+            'captures-table-extra-fields': {'test_id':test_id}}})
     brozzler.new_site(frontier, site)
 
     # the site should be brozzled fairly quickly
@@ -816,11 +819,21 @@ def test_ydl_stitching(httpd):
     assert len(pages) == 1
     page = pages[0]
     assert len(page.videos) == 6
+    stitched_url = 'youtube-dl:00001:http://localhost:%s/site10/' % httpd.server_port
     assert {
         'blame': 'youtube-dl',
         'content-length': 267900,
         'content-type': 'video/mp4',
         'response_code': 204,
-        'url': 'youtube-dl:00001:http://localhost:%s/site10/' % httpd.server_port,
+        'url': stitched_url,
     } in page.videos
 
+    time.sleep(2)   # in case warcprox hasn't finished processing urls
+    # take a look at the captures table
+    captures = list(rr.table('captures').filter({'test_id':test_id}).run())
+    l = [c for c in captures if c['url'] == stitched_url]
+    assert len(l) == 1
+    c = l[0]
+    assert c['filename'].startswith('test_ydl_stitching')
+    assert c['content_type'] == 'video/mp4'
+    assert c['http_method'] == 'WARCPROX_WRITE_RECORD'
