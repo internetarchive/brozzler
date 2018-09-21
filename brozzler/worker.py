@@ -191,6 +191,8 @@ class BrozzlerWorker:
                 ydl_fetches = ydl.do_youtube_dl(self, site, page)
             except brozzler.ReachedLimit as e:
                 raise
+            except brozzler.PageInterstitialShown as e:
+                raise
             except brozzler.ShutdownRequested:
                 raise
             except brozzler.ProxyError:
@@ -369,6 +371,8 @@ class BrozzlerWorker:
             self.logger.info("shutdown requested")
         except brozzler.NothingToClaim:
             self.logger.info("no pages left for site %s", site)
+        except brozzler.PageInterstitialShown:
+            pass
         except brozzler.ReachedLimit as e:
             self._frontier.reached_limit(site, e)
         except brozzler.ReachedTimeLimit as e:
