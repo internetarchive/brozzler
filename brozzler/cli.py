@@ -198,6 +198,8 @@ def brozzle_page(argv=None):
         logging.info('outlinks: \n\t%s', '\n\t'.join(sorted(outlinks)))
     except brozzler.ReachedLimit as e:
         logging.error('reached limit %s', e)
+    except brozzler.PageInterstitialShown as e:
+        logging.error('page interstitial shown %s', e)
     finally:
         browser.stop()
 
