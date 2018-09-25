@@ -241,10 +241,12 @@ class WebsockReceiverThread(threading.Thread):
                 if self.on_request:
                     self.on_request(message)
             elif message['method'] == 'Page.interstitialShown':
-                # for AITFIVE-1529: handle http auth
-                # for now, we should consider killing the browser when we receive Page.interstitialShown and
-                # consider the page finished—-first we should figure out when else that event might happen
-                self.logger.info('Page.interstitialShown received')
+                # AITFIVE-1529: handle http auth
+                # we should kill the browser when we receive Page.interstitialShown and
+                # consider the page finished, until this is fixed:
+                # https://bugs.chromium.org/p/chromium/issues/detail?id=764505
+                self.logger.info('Page.interstialShown (likely unsupported http auth request)')
+                brozzler.thread_raise(self.calling_thread, brozzler.PageInterstitialShown)
             elif message['method'] == 'Inspector.targetCrashed':
                 self.logger.error(
                         '''chrome tab went "aw snap" or "he's dead jim"!''')

@@ -28,6 +28,9 @@ import os
 import json
 import doublethink
 import datetime
+import threading
+
+global_ydl_lock = threading.Lock()
 
 _orig_webpage_read_content = youtube_dl.extractor.generic.GenericIE._webpage_read_content
 def _webpage_read_content(self, *args, **kwargs):
@@ -162,10 +165,12 @@ def _build_youtube_dl(worker, destdir, site):
             with open(ctx['filename'], 'rb') as f:
                 # include content-length header to avoid chunked
                 # transfer, which warcprox currently rejects
+                extra_headers = dict(site.extra_headers())
+                extra_headers['content-length'] = size
                 request, response = worker._warcprox_write_record(
                         warcprox_address=worker._proxy_for(site), url=url,
                         warc_type='resource', content_type=mimetype, payload=f,
-                        extra_headers={'content-length': size})
+                        extra_headers=extra_headers)
                 # consulted by _remember_videos()
                 self.stitch_ups.append({
                     'url': url,
@@ -182,8 +187,14 @@ def _build_youtube_dl(worker, destdir, site):
                 if worker._using_warcprox(site):
                     self._push_stitched_up_vid_to_warcprox(site, info_dict, ctx)
 
-            youtube_dl.downloader.fragment.FragmentFD._finish_frag_download = _finish_frag_download
-            return super().process_info(info_dict)
+            # lock this section to prevent race condition between threads that
+            # want to monkey patch _finish_frag_download() at the same time
+            with global_ydl_lock:
+                try:
+                    youtube_dl.downloader.fragment.FragmentFD._finish_frag_download = _finish_frag_download
+                    return super().process_info(info_dict)
+                finally:
+                    youtube_dl.downloader.fragment.FragmentFD._finish_frag_download = _orig__finish_frag_download
 
     def maybe_heartbeat_site_last_claimed(*args, **kwargs):
         # in case youtube-dl takes a long time, heartbeat site.last_claimed

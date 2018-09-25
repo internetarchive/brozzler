@@ -58,6 +58,28 @@ class ReachedLimit(Exception):
     def __str__(self):
         return self.__repr__()
 
+class PageInterstitialShown(Exception):
+    def __init__(self, http_error=None, warcprox_meta=None, http_payload=None):
+        import json
+        if http_error:
+            if "warcprox-meta" in http_error.headers:
+                self.warcprox_meta = json.loads(
+                        http_error.headers["warcprox-meta"])
+            else:
+                self.warcprox_meta = None
+            self.http_payload = http_error.read()
+        elif warcprox_meta:
+            self.warcprox_meta = warcprox_meta
+            self.http_payload = http_payload
+
+    def __repr__(self):
+        return "PageInterstitialShown(warcprox_meta=%r,http_payload=%r)" % (
+                self.warcprox_meta if hasattr(self, 'warcprox_meta') else None,
+                self.http_payload if hasattr(self, 'http_payload') else None)
+
+    def __str__(self):
+        return self.__repr__()
+
 # monkey-patch log levels TRACE and NOTICE
 logging.TRACE = (logging.NOTSET + logging.DEBUG) // 2
 def _logger_trace(self, msg, *args, **kwargs):
