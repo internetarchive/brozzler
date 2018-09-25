@@ -602,6 +602,9 @@ def brozzler_purge(argv=None):
             '--site', dest='site', metavar='SITE_ID', help=(
                 'delete crawl state from rethinkdb for a site, including all '
                 'pages'))
+    arg_parser.add_argument(
+            '--force', dest='force', action='store_true', help=(
+                'purge even if job or site is still has status ACTIVE'))
     add_rethinkdb_options(arg_parser)
     add_common_options(arg_parser, argv)
 
@@ -609,15 +612,43 @@ def brozzler_purge(argv=None):
     configure_logging(args)
 
     rr = rethinker(args)
-    import pdb; pdb.set_trace()
+    frontier = brozzler.RethinkDbFrontier(rr)
     if args.job:
         try:
             job_id = int(args.job)
         except ValueError:
             job_id = args.job
+        job = brozzler.Job.load(rr, job_id)
+        if not job:
+            logging.fatal('no such job %r', job_id)
+            sys.exit(1)
+        if job.status == 'ACTIVE':
+            if args.force:
+                logging.warn(
+                        'job %s has status ACTIVE, purging anyway because '
+                        '--force was supplied', job_id)
+            else:
+                logging.fatal(
+                        'refusing to purge job %s because status is ACTIVE '
+                        '(override with --force)', job_id)
+                sys.exit(1)
         _purge_job(rr, job_id)
     elif args.site:
         site_id = args.site
+        site = brozzler.Site.load(rr, site_id)
+        if not site:
+            logging.fatal('no such job %r', job_id)
+            sys.exit(1)
+        if site.status == 'ACTIVE':
+            if args.force:
+                logging.warn(
+                        'site %s has status ACTIVE, purging anyway because '
+                        '--force was supplied', site_id)
+            else:
+                logging.fatal(
+                        'refusing to purge site %s because status is ACTIVE '
+                        '(override with --force)', site_id)
+                sys.exit(1)
         _purge_site(rr, site_id)
 
 def _purge_site(rr, site_id):
@@ -625,14 +656,14 @@ def _purge_site(rr, site_id):
                     [site_id, r.minval, r.minval],
                     [site_id, r.maxval, r.maxval],
                     index='priority_by_site').delete()
-    logging.debug('deleting pages for site %s: %s', site_id, reql)
+    logging.debug('purging pages for site %s: %s', site_id, reql)
     result = reql.run()
-    logging.info('deleted pages for site %s: %s', site_id, result)
+    logging.info('purged pages for site %s: %s', site_id, result)
 
     reql = rr.table('sites').get(site_id).delete()
-    logging.debug('deleting site %s: %s', site_id, reql)
+    logging.debug('purging site %s: %s', site_id, reql)
     result = reql.run()
-    logging.info('deleted site %s: %s', site_id, result)
+    logging.info('purged site %s: %s', site_id, result)
 
 def _purge_job(rr, job_id):
     reql = rr.table('sites').get_all(job_id, index='job_id').get_field('id')
@@ -642,9 +673,9 @@ def _purge_job(rr, job_id):
         _purge_site(rr, site_id)
 
     reql = rr.table('jobs').get(job_id).delete()
-    logging.debug('deleting job %s: %s', job_id, reql)
+    logging.debug('purging job %s: %s', job_id, reql)
     result = reql.run()
-    logging.info('deleted job %s: %s', job_id, result)
+    logging.info('purged job %s: %s', job_id, result)
 
 def brozzler_list_captures(argv=None):
     '''
