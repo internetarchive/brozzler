@@ -210,9 +210,19 @@ class BrozzlerWorker:
 
         if self._needs_browsing(page, ydl_fetches):
             self.logger.info('needs browsing: %s', page)
+<<<<<<< HEAD
             browser_outlinks = self._browse_page(
                     browser, site, page, on_screenshot, on_request)
             outlinks.update(browser_outlinks)
+=======
+            try:
+                outlinks = self._browse_page(browser, site, page, on_screenshot,
+                                            on_request)
+                return outlinks
+            except brozzler.PageInterstitialShown:
+                self.logger.info('page interstitial shown (http auth): %s', page)
+                return []
+>>>>>>> d9f7997... except log and return []
         else:
             if not self._already_fetched(page, ydl_fetches):
                 self.logger.info('needs fetch: %s', page)
@@ -377,8 +387,6 @@ class BrozzlerWorker:
             self._frontier.finished(site, "FINISHED_TIME_LIMIT")
         except brozzler.CrawlStopped:
             self._frontier.finished(site, "FINISHED_STOP_REQUESTED")
-        except brozzler.PageInterstitialShown:
-            self.logger.info("{} shut down after unsupported http auth request".format(browser))
         # except brozzler.browser.BrowsingAborted:
         #     self.logger.info("{} shut down".format(browser))
         except brozzler.ProxyError as e:
