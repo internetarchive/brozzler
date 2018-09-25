@@ -57,6 +57,7 @@ setuptools.setup(
                 'brozzler-list-sites=brozzler.cli:brozzler_list_sites',
                 'brozzler-list-pages=brozzler.cli:brozzler_list_pages',
                 'brozzler-stop-crawl=brozzler.cli:brozzler_stop_crawl',
+                'brozzler-purge=brozzler.cli:brozzler_purge',
                 'brozzler-dashboard=brozzler.dashboard:main',
                 'brozzler-easy=brozzler.easy:main',
                 'brozzler-wayback=brozzler.pywb:main',

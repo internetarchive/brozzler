@@ -588,6 +588,64 @@ def brozzler_list_pages(argv=None):
             for result in results:
                 print(json.dumps(result, cls=Jsonner, indent=2))
 
+def brozzler_purge(argv=None):
+    argv = argv or sys.argv
+    arg_parser = argparse.ArgumentParser(
+            prog=os.path.basename(argv[0]),
+            formatter_class=BetterArgumentDefaultsHelpFormatter)
+    group = arg_parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+            '--job', dest='job', metavar='JOB_ID', help=(
+                'delete crawl state from rethinkdb for a job, including all '
+                'sites and pages'))
+    group.add_argument(
+            '--site', dest='site', metavar='SITE_ID', help=(
+                'delete crawl state from rethinkdb for a site, including all '
+                'pages'))
+    add_rethinkdb_options(arg_parser)
+    add_common_options(arg_parser, argv)
+
+    args = arg_parser.parse_args(args=argv[1:])
+    configure_logging(args)
+
+    rr = rethinker(args)
+    import pdb; pdb.set_trace()
+    if args.job:
+        try:
+            job_id = int(args.job)
+        except ValueError:
+            job_id = args.job
+        _purge_job(rr, job_id)
+    elif args.site:
+        site_id = args.site
+        _purge_site(rr, site_id)
+
+def _purge_site(rr, site_id):
+    reql = rr.table('pages').between(
+                    [site_id, r.minval, r.minval],
+                    [site_id, r.maxval, r.maxval],
+                    index='priority_by_site').delete()
+    logging.debug('deleting pages for site %s: %s', site_id, reql)
+    result = reql.run()
+    logging.info('deleted pages for site %s: %s', site_id, result)
+
+    reql = rr.table('sites').get(site_id).delete()
+    logging.debug('deleting site %s: %s', site_id, reql)
+    result = reql.run()
+    logging.info('deleted site %s: %s', site_id, result)
+
+def _purge_job(rr, job_id):
+    reql = rr.table('sites').get_all(job_id, index='job_id').get_field('id')
+    logging.debug('querying rethinkdb: %s', reql)
+    site_ids = list(reql.run())
+    for site_id in site_ids:
+        _purge_site(rr, site_id)
+
+    reql = rr.table('jobs').get(job_id).delete()
+    logging.debug('deleting job %s: %s', job_id, reql)
+    result = reql.run()
+    logging.info('deleted job %s: %s', job_id, result)
+
 def brozzler_list_captures(argv=None):
     '''
     Handy utility for looking up entries in the rethinkdb "captures" table by
