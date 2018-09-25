@@ -592,15 +592,16 @@ def brozzler_purge(argv=None):
     argv = argv or sys.argv
     arg_parser = argparse.ArgumentParser(
             prog=os.path.basename(argv[0]),
+            description='brozzler-purge - purge crawl state from rethinkdb',
             formatter_class=BetterArgumentDefaultsHelpFormatter)
     group = arg_parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
             '--job', dest='job', metavar='JOB_ID', help=(
-                'delete crawl state from rethinkdb for a job, including all '
+                'purge crawl state from rethinkdb for a job, including all '
                 'sites and pages'))
     group.add_argument(
             '--site', dest='site', metavar='SITE_ID', help=(
-                'delete crawl state from rethinkdb for a site, including all '
+                'purge crawl state from rethinkdb for a site, including all '
                 'pages'))
     arg_parser.add_argument(
             '--force', dest='force', action='store_true', help=(
