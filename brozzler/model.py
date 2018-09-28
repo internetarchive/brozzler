@@ -125,7 +125,7 @@ def new_site(frontier, site):
     # where a brozzler worker immediately claims the site, finds no pages
     # to crawl, and decides the site is finished
     try:
-        page = new_page(frontier, site)
+        page = new_seed_page(frontier, site)
         page.save()
         logging.info("queued page %s", page)
     finally:
