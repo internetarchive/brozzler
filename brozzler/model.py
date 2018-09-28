@@ -84,35 +84,48 @@ def new_job(frontier, job_conf):
     job.save()
 
     sites = []
+    pages = []
     for seed_conf in job_conf["seeds"]:
         merged_conf = merge(seed_conf, job_conf)
         merged_conf.pop("seeds")
         merged_conf["job_id"] = job.id
         merged_conf["seed"] = merged_conf.pop("url")
         site = brozzler.Site(frontier.rr, merged_conf)
+        site.id = str(uuid.uuid4())
         sites.append(site)
+        pages.append(new_seed_page(frontier, site))
 
-    for site in sites:
-        new_site(frontier, site)
+    # insert in batches to avoid this error
+    # rethinkdb.errors.ReqlDriverError: Query size (167883036) greater than maximum (134217727) in:
+    for batch in (pages[i:i+500] for i in range(0, len(pages), 500)):
+        logging.info('inserting batch of %s pages', len(batch))
+        result = frontier.rr.table('pages').insert(batch).run()
+    for batch in (sites[i:i+100]  for i in range(0, len(sites), 100)):
+        logging.info('inserting batch of %s sites', len(batch))
+        result = frontier.rr.table('sites').insert(batch).run()
+    logging.info('job %s fully started', job.id)
 
     return job
 
+def new_seed_page(frontier, site):
+    url = urlcanon.parse_url(site.seed)
+    hashtag = (url.hash_sign + url.fragment).decode("utf-8")
+    urlcanon.canon.remove_fragment(url)
+    page = brozzler.Page(frontier.rr, {
+        "url": str(url), "site_id": site.get("id"),
+        "job_id": site.get("job_id"), "hops_from_seed": 0,
+        "priority": 1000, "needs_robots_check": True})
+    if hashtag:
+        page.hashtags = [hashtag,]
+    return page
+
 def new_site(frontier, site):
-    site.id = str(uuid.uuid4())
     logging.info("new site %s", site)
     # insert the Page into the database before the Site, to avoid situation
     # where a brozzler worker immediately claims the site, finds no pages
     # to crawl, and decides the site is finished
     try:
-        url = urlcanon.parse_url(site.seed)
-        hashtag = (url.hash_sign + url.fragment).decode("utf-8")
-        urlcanon.canon.remove_fragment(url)
-        page = brozzler.Page(frontier.rr, {
-            "url": str(url), "site_id": site.get("id"),
-            "job_id": site.get("job_id"), "hops_from_seed": 0,
-            "priority": 1000, "needs_robots_check": True})
-        if hashtag:
-            page.hashtags = [hashtag,]
+        page = new_page(frontier, site)
         page.save()
         logging.info("queued page %s", page)
     finally:
