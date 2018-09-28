@@ -591,6 +591,96 @@ def brozzler_list_pages(argv=None):
             for result in results:
                 print(json.dumps(result, cls=Jsonner, indent=2))
 
+def brozzler_purge(argv=None):
+    argv = argv or sys.argv
+    arg_parser = argparse.ArgumentParser(
+            prog=os.path.basename(argv[0]),
+            description='brozzler-purge - purge crawl state from rethinkdb',
+            formatter_class=BetterArgumentDefaultsHelpFormatter)
+    group = arg_parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+            '--job', dest='job', metavar='JOB_ID', help=(
+                'purge crawl state from rethinkdb for a job, including all '
+                'sites and pages'))
+    group.add_argument(
+            '--site', dest='site', metavar='SITE_ID', help=(
+                'purge crawl state from rethinkdb for a site, including all '
+                'pages'))
+    arg_parser.add_argument(
+            '--force', dest='force', action='store_true', help=(
+                'purge even if job or site is still has status ACTIVE'))
+    add_rethinkdb_options(arg_parser)
+    add_common_options(arg_parser, argv)
+
+    args = arg_parser.parse_args(args=argv[1:])
+    configure_logging(args)
+
+    rr = rethinker(args)
+    frontier = brozzler.RethinkDbFrontier(rr)
+    if args.job:
+        try:
+            job_id = int(args.job)
+        except ValueError:
+            job_id = args.job
+        job = brozzler.Job.load(rr, job_id)
+        if not job:
+            logging.fatal('no such job %r', job_id)
+            sys.exit(1)
+        if job.status == 'ACTIVE':
+            if args.force:
+                logging.warn(
+                        'job %s has status ACTIVE, purging anyway because '
+                        '--force was supplied', job_id)
+            else:
+                logging.fatal(
+                        'refusing to purge job %s because status is ACTIVE '
+                        '(override with --force)', job_id)
+                sys.exit(1)
+        _purge_job(rr, job_id)
+    elif args.site:
+        site_id = args.site
+        site = brozzler.Site.load(rr, site_id)
+        if not site:
+            logging.fatal('no such job %r', job_id)
+            sys.exit(1)
+        if site.status == 'ACTIVE':
+            if args.force:
+                logging.warn(
+                        'site %s has status ACTIVE, purging anyway because '
+                        '--force was supplied', site_id)
+            else:
+                logging.fatal(
+                        'refusing to purge site %s because status is ACTIVE '
+                        '(override with --force)', site_id)
+                sys.exit(1)
+        _purge_site(rr, site_id)
+
+def _purge_site(rr, site_id):
+    reql = rr.table('pages').between(
+                    [site_id, r.minval, r.minval],
+                    [site_id, r.maxval, r.maxval],
+                    index='priority_by_site').delete()
+    logging.debug('purging pages for site %s: %s', site_id, reql)
+    result = reql.run()
+    logging.info('purged pages for site %s: %s', site_id, result)
+
+    reql = rr.table('sites').get(site_id).delete()
+    logging.debug('purging site %s: %s', site_id, reql)
+    result = reql.run()
+    logging.info('purged site %s: %s', site_id, result)
+
+def _purge_job(rr, job_id):
+    reql = rr.table('sites').get_all(job_id, index='job_id').get_field('id')
+    logging.debug('querying rethinkdb: %s', reql)
+    site_ids = list(reql.run())
+    for site_id in site_ids:
+        _purge_site(rr, site_id)
+
+    reql = rr.table('jobs').get(job_id).delete()
+    logging.debug('purging job %s: %s', job_id, reql)
+    result = reql.run()
+    logging.info('purged job %s: %s', job_id, result)
+
 def brozzler_list_captures(argv=None):
     '''
     Handy utility for looking up entries in the rethinkdb "captures" table by
