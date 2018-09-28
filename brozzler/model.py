@@ -121,6 +121,7 @@ def new_seed_page(frontier, site):
 
 def new_site(frontier, site):
     logging.info("new site %s", site)
+    site.id = site.id or str(uuid.uuid4())
     # insert the Page into the database before the Site, to avoid situation
     # where a brozzler worker immediately claims the site, finds no pages
     # to crawl, and decides the site is finished
