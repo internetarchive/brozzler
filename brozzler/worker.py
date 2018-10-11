@@ -473,7 +473,8 @@ class BrozzlerWorker:
                 self._browser_pool.release(browsers[i])
 
     def run(self):
-        self.logger.notice("brozzler worker starting")
+        self.logger.notice(
+                'brozzler %s - brozzler-worker starting', brozzler.__version__)
         last_nothing_to_claim = 0
         try:
             while not self._shutdown.is_set():
