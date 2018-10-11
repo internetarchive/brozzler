@@ -127,12 +127,31 @@ def _build_youtube_dl(worker, destdir, site):
     class _YoutubeDL(youtube_dl.YoutubeDL):
         logger = logging.getLogger(__module__ + "." + __qualname__)
 
+        def urlopen(self, req):
+            try:
+                url = req.full_url
+            except AttributeError:
+                url = req
+            self.logger.debug('fetching %r', url)
+            return super().urlopen(req)
+
+        # def _match_entry(self, info_dict, incomplete):
+        #     return super()._match_entry(info_dict, incomplete)
+
         def add_default_extra_info(self, ie_result, ie, url):
             # hook in some logging
             super().add_default_extra_info(ie_result, ie, url)
             if ie_result.get('_type') == 'playlist':
                 self.logger.info(
                         'extractor %r found playlist in %s', ie.IE_NAME, url)
+                if ie.IE_NAME == 'youtube:playlist':
+                    self.logger.info(
+                            'setting skip_download because this is a youtube '
+                            'playlist and we expect to capture videos from '
+                            'individual watch pages')
+                    # XXX good enuf? still fetches metadata for each video
+                    # if we want to not do that, implement self._match_entry()
+                    self.params['skip_download'] = True
             else:
                 self.logger.info(
                         'extractor %r found a video in %s', ie.IE_NAME, url)
