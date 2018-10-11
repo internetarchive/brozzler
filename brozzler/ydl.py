@@ -180,16 +180,16 @@ def _build_youtube_dl(worker, destdir, site):
                 })
 
         def process_info(self, info_dict):
-            _orig__finish_frag_download = youtube_dl.downloader.fragment.FragmentFD._finish_frag_download
-
-            def _finish_frag_download(ffd_self, ctx):
-                _orig__finish_frag_download(ffd_self, ctx)
-                if worker._using_warcprox(site):
-                    self._push_stitched_up_vid_to_warcprox(site, info_dict, ctx)
-
             # lock this section to prevent race condition between threads that
             # want to monkey patch _finish_frag_download() at the same time
             with global_ydl_lock:
+                _orig__finish_frag_download = youtube_dl.downloader.fragment.FragmentFD._finish_frag_download
+
+                def _finish_frag_download(ffd_self, ctx):
+                    _orig__finish_frag_download(ffd_self, ctx)
+                    if worker._using_warcprox(site):
+                        self._push_stitched_up_vid_to_warcprox(site, info_dict, ctx)
+
                 try:
                     youtube_dl.downloader.fragment.FragmentFD._finish_frag_download = _finish_frag_download
                     return super().process_info(info_dict)
