@@ -244,33 +244,15 @@ class Chrome:
             while not self._shutdown.is_set():
                 buf = readline_nonblock(self.chrome_process.stdout)
                 if buf:
-                    if re.search(
-                            b'Xlib:  extension|'
-                            b'CERT_PKIXVerifyCert for [^ ]* failed|'
-                            b'^ALSA lib|ERROR:gl_surface_glx.cc|'
-                            b'ERROR:gpu_child_thread.cc', buf):
-                        self.logger.trace(
-                                'chrome pid %s STDOUT %s',
-                                self.chrome_process.pid, buf)
-                    else:
-                        self.logger.debug(
-                                'chrome pid %s STDOUT %s',
-                                self.chrome_process.pid, buf)
+                    self.logger.trace(
+                            'chrome pid %s STDOUT %s',
+                            self.chrome_process.pid, buf)
 
                 buf = readline_nonblock(self.chrome_process.stderr)
                 if buf:
-                    if re.search(
-                            b'Xlib:  extension|'
-                            b'CERT_PKIXVerifyCert for [^ ]* failed|'
-                            b'^ALSA lib|ERROR:gl_surface_glx.cc|'
-                            b'ERROR:gpu_child_thread.cc', buf):
-                        self.logger.trace(
-                                'chrome pid %s STDOUT %s',
-                                self.chrome_process.pid, buf)
-                    else:
-                        self.logger.debug(
-                                'chrome pid %s STDERR %s',
-                                self.chrome_process.pid, buf)
+                    self.logger.trace(
+                            'chrome pid %s STDERR %s',
+                            self.chrome_process.pid, buf)
         except:
             self.logger.error('unexpected exception', exc_info=True)
 
