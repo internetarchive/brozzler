@@ -379,10 +379,10 @@ def do_youtube_dl(worker, site, page):
     with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
         ydl = _build_youtube_dl(worker, tempdir, site)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
-        outlinks = []
-        if ie_result['extractor'] == 'youtube:playlist':
+        outlinks = set()
+        if ie_result and ie_result.get('extractor') == 'youtube:playlist':
             # youtube watch pages as outlinks
-            outlinks = ['https://www.youtube.com/watch?v=%s' % e['id']
-                        for e in ie_result.get('entries_no_dl', [])]
+            outlinks = {'https://www.youtube.com/watch?v=%s' % e['id']
+                        for e in ie_result.get('entries_no_dl', [])}
         # any outlinks for other cases?
         return ydl.fetch_spy.fetches, outlinks
