@@ -244,19 +244,23 @@ def _build_youtube_dl(worker, destdir, site):
 
     ydl_opts = {
         "outtmpl": "{}/ydl%(autonumber)s.out".format(destdir),
-        "verbose": False,
         "retries": 1,
-        "logger": logging.getLogger("youtube_dl"),
         "nocheckcertificate": True,
         "hls_prefer_native": True,
         "noprogress": True,
         "nopart": True,
         "no_color": True,
         "progress_hooks": [maybe_heartbeat_site_last_claimed],
+
          # https://github.com/rg3/youtube-dl/blob/master/README.md#format-selection
          # "best: Select the best quality format represented by a single
          # file with video and audio."
         "format": "best/bestvideo+bestaudio",
+
+        ### we do our own logging
+        # "logger": logging.getLogger("youtube_dl"),
+        "verbose": False,
+        "quiet": True,
     }
     if worker._proxy_for(site):
         ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
