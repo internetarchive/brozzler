@@ -218,7 +218,6 @@ def _build_youtube_dl(worker, destdir, site):
             See comment above on `_finish_frag_download()`
             '''
             def ffd_callback(ffd_self, ctx):
-                logging.info('%s')
                 if worker._using_warcprox(site):
                     self._push_stitched_up_vid_to_warcprox(site, info_dict, ctx)
             try:
