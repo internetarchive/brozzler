@@ -1,8 +1,6 @@
 '''
 brozzler/ydl.py - youtube-dl support for brozzler
 
-This code was extracted from worker.py and 
-
 Copyright (C) 2018 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,7 +126,7 @@ def _build_youtube_dl(worker, destdir, site):
     - if brozzling through warcprox and downloading segmented videos (e.g.
       HLS), pushes the stitched-up video created by youtube-dl to warcprox
       using a WARCPROX_WRITE_RECORD request
-    - adds some logging
+    - some logging
 
     Args:
         worker (brozzler.BrozzlerWorker): the calling brozzler worker
@@ -150,17 +148,6 @@ def _build_youtube_dl(worker, destdir, site):
             self.logger.debug('fetching %r', url)
             return super().urlopen(req)
 
-        # def _match_entry(self, info_dict, incomplete):
-        #     if self.dl_disabled:
-        #         return 'Downloading disabled (probably youtube playlist)'
-
-        # def extract_info(self, *args, **kwargs):
-        #     self.dl_disabled = False
-        #     try:
-        #         return super().extract_info(*args, **kwargs)
-        #     finally:
-        #         self.dl_disabled = False
-
         def add_default_extra_info(self, ie_result, ie, url):
             # hook in some logging
             super().add_default_extra_info(ie_result, ie, url)
@@ -176,11 +163,10 @@ def _build_youtube_dl(worker, destdir, site):
                     ie_result['entries_no_dl'] = list(ie_result['entries'])
                     ie_result['entries'] = []
                     self.logger.info(
-                            'setting skip_download because this is a youtube '
-                            'playlist (%s entries) and we expect to capture '
-                            'videos from individual watch pages',
+                            'not downoading %s videos from this youtube '
+                            'playlist because we expect to capture them from '
+                            'individual watch pages',
                             len(ie_result['entries_no_dl']))
-                    # self.dl_disabled = True
             else:
                 self.logger.info(
                         'extractor %r found a video in %s', ie.IE_NAME, url)
@@ -380,20 +366,23 @@ def do_youtube_dl(worker, site, page):
         page (brozzler.Page): the page we are brozzling
 
     Returns:
-        `list` of `dict`: with info about urls fetched:
-
-            [{
-                'url': ...,
-                'method': ...,
-                'response_code': ...,
-                'response_headers': ...,
-            }, ...]
+        tuple with two entries:
+            `list` of `dict`: with info about urls fetched:
+                [{
+                    'url': ...,
+                    'method': ...,
+                    'response_code': ...,
+                    'response_headers': ...,
+                }, ...]
+            `list` of `str`: outlink urls
     '''
     with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
         ydl = _build_youtube_dl(worker, tempdir, site)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
         outlinks = []
         if ie_result['extractor'] == 'youtube:playlist':
+            # youtube watch pages as outlinks
             outlinks = ['https://www.youtube.com/watch?v=%s' % e['id']
                         for e in ie_result.get('entries_no_dl', [])]
+        # any outlinks for other cases?
         return ydl.fetch_spy.fetches, outlinks
