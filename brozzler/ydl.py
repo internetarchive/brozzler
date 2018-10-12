@@ -151,7 +151,15 @@ def _build_youtube_dl(worker, destdir, site):
             return super().urlopen(req)
 
         # def _match_entry(self, info_dict, incomplete):
-        #     return super()._match_entry(info_dict, incomplete)
+        #     if self.dl_disabled:
+        #         return 'Downloading disabled (probably youtube playlist)'
+
+        # def extract_info(self, *args, **kwargs):
+        #     self.dl_disabled = False
+        #     try:
+        #         return super().extract_info(*args, **kwargs)
+        #     finally:
+        #         self.dl_disabled = False
 
         def add_default_extra_info(self, ie_result, ie, url):
             # hook in some logging
@@ -160,13 +168,19 @@ def _build_youtube_dl(worker, destdir, site):
                 self.logger.info(
                         'extractor %r found playlist in %s', ie.IE_NAME, url)
                 if ie.IE_NAME == 'youtube:playlist':
+                    # At this point ie_result['entries'] is an iterator that
+                    # will fetch more metadata from youtube to list all the
+                    # videos. We unroll that iterator here partly because
+                    # otherwise `process_ie_result()` will clobber it, and we
+                    # use it later to extract the watch pages as outlinks.
+                    ie_result['entries_no_dl'] = list(ie_result['entries'])
+                    ie_result['entries'] = []
                     self.logger.info(
                             'setting skip_download because this is a youtube '
-                            'playlist and we expect to capture videos from '
-                            'individual watch pages')
-                    # XXX good enuf? still fetches metadata for each video
-                    # if we want to not do that, implement self._match_entry()
-                    self.params['skip_download'] = True
+                            'playlist (%s entries) and we expect to capture '
+                            'videos from individual watch pages',
+                            len(ie_result['entries_no_dl']))
+                    # self.dl_disabled = True
             else:
                 self.logger.info(
                         'extractor %r found a video in %s', ie.IE_NAME, url)
@@ -334,11 +348,12 @@ def _try_youtube_dl(worker, ydl, site, page):
                     content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                     payload=info_json.encode("utf-8"),
                     extra_headers=site.extra_headers())
+        return ie_result
     except brozzler.ShutdownRequested as e:
         raise
-    except BaseException as e:
+    except Exception as e:
         if hasattr(e, "exc_info") and e.exc_info[0] == youtube_dl.utils.UnsupportedError:
-            pass
+            return None
         elif (hasattr(e, "exc_info")
                 and e.exc_info[0] == urllib.error.HTTPError
                 and hasattr(e.exc_info[1], "code")
@@ -376,5 +391,9 @@ def do_youtube_dl(worker, site, page):
     '''
     with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
         ydl = _build_youtube_dl(worker, tempdir, site)
-        _try_youtube_dl(worker, ydl, site, page)
-        return ydl.fetch_spy.fetches
+        ie_result = _try_youtube_dl(worker, ydl, site, page)
+        outlinks = []
+        if ie_result['extractor'] == 'youtube:playlist':
+            outlinks = ['https://www.youtube.com/watch?v=%s' % e['id']
+                        for e in ie_result.get('entries_no_dl', [])]
+        return ydl.fetch_spy.fetches, outlinks
