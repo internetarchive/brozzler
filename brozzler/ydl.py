@@ -1,8 +1,6 @@
 '''
 brozzler/ydl.py - youtube-dl support for brozzler
 
-This code was extracted from worker.py and 
-
 Copyright (C) 2018 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,7 +28,21 @@ import doublethink
 import datetime
 import threading
 
-global_ydl_lock = threading.Lock()
+thread_local = threading.local()
+_orig__finish_frag_download = youtube_dl.downloader.fragment.FragmentFD._finish_frag_download
+def _finish_frag_download(ffd_self, ctx):
+    '''
+    We monkey-patch this youtube-dl internal method `_finish_frag_download()`
+    because it gets called after downloading the last segment of a segmented
+    video, which is a good time to upload the stitched-up video that youtube-dl
+    creates for us to warcprox. We have it call a thread-local callback
+    since different threads may be youtube-dl'ing at the same time.
+    '''
+    result = _orig__finish_frag_download(ffd_self, ctx)
+    if hasattr(thread_local, 'finish_frag_download_callback'):
+        thread_local.finish_frag_download_callback(ffd_self, ctx)
+    return result
+youtube_dl.downloader.fragment.FragmentFD._finish_frag_download = _finish_frag_download
 
 _orig_webpage_read_content = youtube_dl.extractor.generic.GenericIE._webpage_read_content
 def _webpage_read_content(self, *args, **kwargs):
@@ -111,9 +123,10 @@ def _build_youtube_dl(worker, destdir, site):
 
     - keeps track of urls fetched using a `YoutubeDLSpy`
     - periodically updates `site.last_claimed` in rethinkdb
-    - if brozzling through warcprox and downloading fragmented (DASH) videos,
-      pushes the stitched together video to warcprox using a
-      WARCPROX_WRITE_RECORD request
+    - if brozzling through warcprox and downloading segmented videos (e.g.
+      HLS), pushes the stitched-up video created by youtube-dl to warcprox
+      using a WARCPROX_WRITE_RECORD request
+    - some logging
 
     Args:
         worker (brozzler.BrozzlerWorker): the calling brozzler worker
@@ -135,9 +148,6 @@ def _build_youtube_dl(worker, destdir, site):
             self.logger.debug('fetching %r', url)
             return super().urlopen(req)
 
-        # def _match_entry(self, info_dict, incomplete):
-        #     return super()._match_entry(info_dict, incomplete)
-
         def add_default_extra_info(self, ie_result, ie, url):
             # hook in some logging
             super().add_default_extra_info(ie_result, ie, url)
@@ -145,13 +155,18 @@ def _build_youtube_dl(worker, destdir, site):
                 self.logger.info(
                         'extractor %r found playlist in %s', ie.IE_NAME, url)
                 if ie.IE_NAME == 'youtube:playlist':
+                    # At this point ie_result['entries'] is an iterator that
+                    # will fetch more metadata from youtube to list all the
+                    # videos. We unroll that iterator here partly because
+                    # otherwise `process_ie_result()` will clobber it, and we
+                    # use it later to extract the watch pages as outlinks.
+                    ie_result['entries_no_dl'] = list(ie_result['entries'])
+                    ie_result['entries'] = []
                     self.logger.info(
-                            'setting skip_download because this is a youtube '
-                            'playlist and we expect to capture videos from '
-                            'individual watch pages')
-                    # XXX good enuf? still fetches metadata for each video
-                    # if we want to not do that, implement self._match_entry()
-                    self.params['skip_download'] = True
+                            'not downoading %s videos from this youtube '
+                            'playlist because we expect to capture them from '
+                            'individual watch pages',
+                            len(ie_result['entries_no_dl']))
             else:
                 self.logger.info(
                         'extractor %r found a video in %s', ie.IE_NAME, url)
@@ -199,21 +214,17 @@ def _build_youtube_dl(worker, destdir, site):
                 })
 
         def process_info(self, info_dict):
-            # lock this section to prevent race condition between threads that
-            # want to monkey patch _finish_frag_download() at the same time
-            with global_ydl_lock:
-                _orig__finish_frag_download = youtube_dl.downloader.fragment.FragmentFD._finish_frag_download
-
-                def _finish_frag_download(ffd_self, ctx):
-                    _orig__finish_frag_download(ffd_self, ctx)
-                    if worker._using_warcprox(site):
-                        self._push_stitched_up_vid_to_warcprox(site, info_dict, ctx)
-
-                try:
-                    youtube_dl.downloader.fragment.FragmentFD._finish_frag_download = _finish_frag_download
-                    return super().process_info(info_dict)
-                finally:
-                    youtube_dl.downloader.fragment.FragmentFD._finish_frag_download = _orig__finish_frag_download
+            '''
+            See comment above on `_finish_frag_download()`
+            '''
+            def ffd_callback(ffd_self, ctx):
+                if worker._using_warcprox(site):
+                    self._push_stitched_up_vid_to_warcprox(site, info_dict, ctx)
+            try:
+                thread_local.finish_frag_download_callback = ffd_callback
+                return super().process_info(info_dict)
+            finally:
+                delattr(thread_local, 'finish_frag_download_callback')
 
     def maybe_heartbeat_site_last_claimed(*args, **kwargs):
         # in case youtube-dl takes a long time, heartbeat site.last_claimed
@@ -232,19 +243,23 @@ def _build_youtube_dl(worker, destdir, site):
 
     ydl_opts = {
         "outtmpl": "{}/ydl%(autonumber)s.out".format(destdir),
-        "verbose": False,
         "retries": 1,
-        "logger": logging.getLogger("youtube_dl"),
         "nocheckcertificate": True,
         "hls_prefer_native": True,
         "noprogress": True,
         "nopart": True,
         "no_color": True,
         "progress_hooks": [maybe_heartbeat_site_last_claimed],
+
          # https://github.com/rg3/youtube-dl/blob/master/README.md#format-selection
          # "best: Select the best quality format represented by a single
          # file with video and audio."
         "format": "best/bestvideo+bestaudio",
+
+        ### we do our own logging
+        # "logger": logging.getLogger("youtube_dl"),
+        "verbose": False,
+        "quiet": True,
     }
     if worker._proxy_for(site):
         ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
@@ -318,11 +333,12 @@ def _try_youtube_dl(worker, ydl, site, page):
                     content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                     payload=info_json.encode("utf-8"),
                     extra_headers=site.extra_headers())
+        return ie_result
     except brozzler.ShutdownRequested as e:
         raise
-    except BaseException as e:
+    except Exception as e:
         if hasattr(e, "exc_info") and e.exc_info[0] == youtube_dl.utils.UnsupportedError:
-            pass
+            return None
         elif (hasattr(e, "exc_info")
                 and e.exc_info[0] == urllib.error.HTTPError
                 and hasattr(e.exc_info[1], "code")
@@ -349,16 +365,23 @@ def do_youtube_dl(worker, site, page):
         page (brozzler.Page): the page we are brozzling
 
     Returns:
-        `list` of `dict`: with info about urls fetched:
-
-            [{
-                'url': ...,
-                'method': ...,
-                'response_code': ...,
-                'response_headers': ...,
-            }, ...]
+        tuple with two entries:
+            `list` of `dict`: with info about urls fetched:
+                [{
+                    'url': ...,
+                    'method': ...,
+                    'response_code': ...,
+                    'response_headers': ...,
+                }, ...]
+            `list` of `str`: outlink urls
     '''
     with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
         ydl = _build_youtube_dl(worker, tempdir, site)
-        _try_youtube_dl(worker, ydl, site, page)
-        return ydl.fetch_spy.fetches
+        ie_result = _try_youtube_dl(worker, ydl, site, page)
+        outlinks = set()
+        if ie_result and ie_result.get('extractor') == 'youtube:playlist':
+            # youtube watch pages as outlinks
+            outlinks = {'https://www.youtube.com/watch?v=%s' % e['id']
+                        for e in ie_result.get('entries_no_dl', [])}
+        # any outlinks for other cases?
+        return ydl.fetch_spy.fetches, outlinks
