@@ -111,6 +111,12 @@ def test_aw_snap_hes_dead_jim():
         with pytest.raises(brozzler.BrowsingException):
             browser.browse_page('chrome://crash')
 
+def test_page_interstitial_exception():
+    chrome_exe = brozzler.suggest_default_chrome_exe()
+    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        with pytest.raises(brozzler.PageInterstitialShown):
+            browser.browse_page('https://monitor.archive.org/cgi-bin/nagios3/status.cgi?hostgroup=38.wbgrp')
+
 def test_on_response(httpd):
     response_urls = []
     def on_response(msg):
