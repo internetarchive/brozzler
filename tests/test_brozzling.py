@@ -63,8 +63,8 @@ def httpd(request):
                 self.end_headers()
                 self.wfile.write(payload)
             elif self.path == '/401':
-                self.send_response(401, 'Unauthorized')
-                self.send_header('Connection', 'close')
+                self.send_response(401, 'Authenticate')
+                self.send_header('WWW-Authenticate', 'Basic realm=JSL')
                 self.end_headers()
             else:
                 super().do_GET()
