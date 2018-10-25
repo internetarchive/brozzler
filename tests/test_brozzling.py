@@ -63,11 +63,24 @@ def httpd(request):
                 self.end_headers()
                 self.wfile.write(payload)
             elif self.path == '/401':
-                self.send_response(401, 'Authenticate')
-                self.send_header('WWW-Authenticate', 'Basic realm=JSL')
-                self.end_headers()
+                self.key = ''
+                if self.headers.getheader('Authorization') is None:
+                    self.do_AUTHHEAD()
+                    self.wfile.write('no auth header received')
+                elif self.headers.getheader('Authorization') == 'Basic' + self.key:
+                    self.do_GET(self)
+                else:
+                    self.do_AUTHHEAD()
+                    self.wfile.write(self.headers.getheader('Authorization'))
+                    self.wfile.write('not autheticated')
             else:
                 super().do_GET()
+
+        def do_AUTHHEAD(self):
+            self.send_response(401)
+            self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
 
     # SimpleHTTPRequestHandler always uses CWD so we have to chdir
     os.chdir(os.path.join(os.path.dirname(__file__), 'htdocs'))
@@ -115,7 +128,7 @@ def test_aw_snap_hes_dead_jim():
         with pytest.raises(brozzler.BrowsingException):
             browser.browse_page('chrome://crash')
 
-def test_page_interstitial_exception():
+def test_page_interstitial_exception(httpd):
     chrome_exe = brozzler.suggest_default_chrome_exe()
     url = 'http://localhost:%s/401' % httpd.server_port
     with brozzler.Browser(chrome_exe=chrome_exe) as browser:
