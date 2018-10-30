@@ -186,9 +186,10 @@ class BrozzlerWorker:
                      on_request=None, enable_youtube_dl=True):
         self.logger.info("brozzling {}".format(page))
         ydl_fetches = None
+        outlinks = set()
         if enable_youtube_dl:
             try:
-                ydl_fetches = ydl.do_youtube_dl(self, site, page)
+                ydl_fetches, outlinks = ydl.do_youtube_dl(self, site, page)
             except brozzler.ReachedLimit as e:
                 raise
             except brozzler.ShutdownRequested:
@@ -210,10 +211,10 @@ class BrozzlerWorker:
         if self._needs_browsing(page, ydl_fetches):
             self.logger.info('needs browsing: %s', page)
             try:
-                outlinks = self._browse_page(browser, site, page, on_screenshot,
-                                            on_request)
+                browser_outlinks = self._browse_page(
+                        browser, site, page, on_screenshot, on_request)
+                outlinks.update(browser_outlinks)
             except brozzler.PageInterstitialShown:
-                outlinks = []
                 self.logger.info('page interstitial shown (http auth): %s', page)
             return outlinks
         else:
@@ -222,7 +223,8 @@ class BrozzlerWorker:
                 self._fetch_url(site, page)
             else:
                 self.logger.info('already fetched: %s', page)
-            return []
+
+        return outlinks
 
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
         def _on_screenshot(screenshot_png):
