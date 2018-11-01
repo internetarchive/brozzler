@@ -219,16 +219,23 @@ class Chrome:
                             'of %d seconds): %s', json_url, timeout_sec, e)
                     self._last_warning = time.time()
             finally:
-                if time.time() - self._start > timeout_sec:
-                    self.logger.error(
-                            'killing chrome, failed to retrieve %s after % '
-                            'seconds', json_url, time.time() - self._start)
-                    self.stop()
-                    raise Exception(
-                            'killed chrome, failed to retrieve %s after %s '
-                            'seconds' % (json_url, time.time() - self._start))
+                e = None
+                if self.chrome_process:
+                    if time.time() - self._start > timeout_sec:
+                        e = Exception(
+                                'killing chrome, failed to retrieve %s after '
+                                '%s seconds' % (
+                                    json_url, time.time() - self._start))
+                    elif self.chrome_process.poll() is not None:
+                        e = Exception(
+                                'chrome process died with status %s' % self.chrome_process.poll())
+                    else:
+                        time.sleep(0.5)
                 else:
-                    time.sleep(0.5)
+                    e = Exception('??? self.chrome_process is not set ???')
+                if e:
+                    self.stop()
+                    raise e
 
     def _read_stderr_stdout(self):
         # XXX select doesn't work on windows
