@@ -345,7 +345,7 @@ class BrozzlerWorker:
                     self._proxy_for(site), site)
             while time.time() - start < self.SITE_SESSION_MINUTES * 60:
                 site.refresh()
-                self._frontier.enforce_time_limit(site, time.time() - start)
+                self._frontier.enforce_time_limit(site)
                 self._frontier.honor_stop_request(site)
                 page = self._frontier.claim_page(site, "%s:%s" % (
                     socket.gethostname(), browser.chrome.port))
