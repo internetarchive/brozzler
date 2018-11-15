@@ -52,6 +52,12 @@ def httpd(request):
             self.extensions_map['.mpd'] = 'video/vnd.mpeg.dash.mpd'
             http.server.SimpleHTTPRequestHandler.__init__(self, *args, **kwargs)
 
+        def do_AUTHHEAD(self):
+            self.send_response(401)
+            self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+
         def do_GET(self):
             if self.path == '/420':
                 self.send_response(420, 'Reached limit')
@@ -63,24 +69,12 @@ def httpd(request):
                 self.end_headers()
                 self.wfile.write(payload)
             elif self.path == '/401':
-                self.key = ''
-                if self.headers.getheader('Authorization') is None:
-                    self.do_AUTHHEAD()
-                    self.wfile.write('no auth header received')
-                elif self.headers.getheader('Authorization') == 'Basic' + self.key:
-                    self.do_GET(self)
-                else:
-                    self.do_AUTHHEAD()
-                    self.wfile.write(self.headers.getheader('Authorization'))
-                    self.wfile.write('not autheticated')
+                self.do_AUTHHEAD()
+                self.wfile.write(self.headers.getheader('Authorization'))
+                self.wfile.write('not authenticated')
+                pass
             else:
                 super().do_GET()
-
-        def do_AUTHHEAD(self):
-            self.send_response(401)
-            self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
 
     # SimpleHTTPRequestHandler always uses CWD so we have to chdir
     os.chdir(os.path.join(os.path.dirname(__file__), 'htdocs'))
@@ -127,13 +121,6 @@ def test_aw_snap_hes_dead_jim():
     with brozzler.Browser(chrome_exe=chrome_exe) as browser:
         with pytest.raises(brozzler.BrowsingException):
             browser.browse_page('chrome://crash')
-
-def test_page_interstitial_exception_live():
-    url = 'https://monitor.archive.org/cgi-bin/nagios3/status.cgi?hostgroup=38.wbgrp'
-    chrome_exe = brozzler.suggest_default_chrome_exe()
-    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
-        with pytest.raises(brozzler.PageInterstitialShown):
-            browser.browse_page(url)
 
 def test_page_interstitial_exception(httpd):
     chrome_exe = brozzler.suggest_default_chrome_exe()
