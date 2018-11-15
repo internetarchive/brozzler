@@ -52,12 +52,6 @@ def httpd(request):
             self.extensions_map['.mpd'] = 'video/vnd.mpeg.dash.mpd'
             http.server.SimpleHTTPRequestHandler.__init__(self, *args, **kwargs)
 
-        def do_AUTHHEAD(self):
-            self.send_response(401)
-            self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-
         def do_GET(self):
             if self.path == '/420':
                 self.send_response(420, 'Reached limit')
@@ -69,10 +63,12 @@ def httpd(request):
                 self.end_headers()
                 self.wfile.write(payload)
             elif self.path == '/401':
-                self.do_AUTHHEAD()
+                self.send_response(401)
+                self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
                 self.wfile.write(self.headers.getheader('Authorization'))
                 self.wfile.write('not authenticated')
-                pass
             else:
                 super().do_GET()
 
