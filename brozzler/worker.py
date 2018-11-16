@@ -212,11 +212,10 @@ class BrozzlerWorker:
             self.logger.info('needs browsing: %s', page)
             try:
                 browser_outlinks = self._browse_page(
-                        browser, site, page, on_screenshot, on_request)
+                    browser, site, page, on_screenshot, on_request)
                 outlinks.update(browser_outlinks)
             except brozzler.PageInterstitialShown:
                 self.logger.info('page interstitial shown (http auth): %s', page)
-            return outlinks
         else:
             if not self._already_fetched(page, ydl_fetches):
                 self.logger.info('needs fetch: %s', page)
