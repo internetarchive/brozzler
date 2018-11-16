@@ -30,6 +30,9 @@ class NothingToClaim(Exception):
 class CrawlStopped(Exception):
     pass
 
+class PageInterstitialShown(Exception):
+    pass
+
 class ProxyError(Exception):
     pass
 

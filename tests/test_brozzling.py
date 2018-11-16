@@ -62,6 +62,13 @@ def httpd(request):
                 self.send_header('Content-Length', len(payload))
                 self.end_headers()
                 self.wfile.write(payload)
+            elif self.path == '/401':
+                self.send_response(401)
+                self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+                self.wfile.write(self.headers.getheader('Authorization'))
+                self.wfile.write('not authenticated')
             else:
                 super().do_GET()
 
@@ -110,6 +117,13 @@ def test_aw_snap_hes_dead_jim():
     with brozzler.Browser(chrome_exe=chrome_exe) as browser:
         with pytest.raises(brozzler.BrowsingException):
             browser.browse_page('chrome://crash')
+
+def test_page_interstitial_exception(httpd):
+    chrome_exe = brozzler.suggest_default_chrome_exe()
+    url = 'http://localhost:%s/401' % httpd.server_port
+    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        with pytest.raises(brozzler.PageInterstitialShown):
+            browser.browse_page(url)
 
 def test_on_response(httpd):
     response_urls = []
