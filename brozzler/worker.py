@@ -322,7 +322,7 @@ class BrozzlerWorker:
                     verify=False)
         except requests.exceptions.ProxyError as e:
             raise brozzler.ProxyError(
-                    'proxy error fetching %s' % page.url) from e
+                    'proxy error fetching %s' % url) from e
 
     def _needs_browsing(self, page, ydl_fetches):
         if ydl_fetches:
