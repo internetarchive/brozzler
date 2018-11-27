@@ -219,7 +219,7 @@ class BrozzlerWorker:
         else:
             if not self._already_fetched(page, ydl_fetches):
                 self.logger.info('needs fetch: %s', page)
-                self._fetch_url(site, page)
+                self._fetch_url(site, page.url)
             else:
                 self.logger.info('already fetched: %s', page)
 
@@ -274,6 +274,16 @@ class BrozzlerWorker:
                     page.videos = []
                 page.videos.append(video)
 
+        sw_fetched = set()
+        def _on_service_worker_version_updated(chrome_msg):
+            # https://github.com/internetarchive/brozzler/issues/140
+            self.logger.trace('%r', chrome_msg)
+            url = chrome_msg.get('params', {}).get('versions', [{}])[0].get('scriptURL')
+            if url not in sw_fetched:
+                self.logger.info('fetching service worker script %s', url)
+                self._fetch_url(site, url)
+                sw_fetched.add(url)
+
         if not browser.is_running():
             browser.start(
                     proxy=self._proxy_for(site),
@@ -284,7 +294,9 @@ class BrozzlerWorker:
                 username=site.get('username'), password=site.get('password'),
                 user_agent=site.get('user_agent'),
                 on_screenshot=_on_screenshot, on_response=_on_response,
-                on_request=on_request, hashtags=page.hashtags,
+                on_request=on_request,
+                on_service_worker_version_updated=_on_service_worker_version_updated,
+                hashtags=page.hashtags,
                 skip_extract_outlinks=self._skip_extract_outlinks,
                 skip_visit_hashtags=self._skip_visit_hashtags,
                 skip_youtube_dl=self._skip_youtube_dl,
@@ -294,7 +306,7 @@ class BrozzlerWorker:
             page.note_redirect(final_page_url)
         return outlinks
 
-    def _fetch_url(self, site, page):
+    def _fetch_url(self, site, url):
         proxies = None
         if self._proxy_for(site):
             proxies = {
@@ -302,11 +314,11 @@ class BrozzlerWorker:
                 'https': 'http://%s' % self._proxy_for(site),
             }
 
-        self.logger.info('fetching %s', page)
+        self.logger.info('fetching %s', url)
         try:
             # response is ignored
             requests.get(
-                    page.url, proxies=proxies, headers=site.extra_headers(),
+                    url, proxies=proxies, headers=site.extra_headers(),
                     verify=False)
         except requests.exceptions.ProxyError as e:
             raise brozzler.ProxyError(
