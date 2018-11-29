@@ -152,17 +152,15 @@ class RethinkDbFrontier:
         else:
             raise brozzler.NothingToClaim
 
-    def enforce_time_limit(self, site, session_time=0):
+    def enforce_time_limit(self, site):
         '''
         Raises `brozzler.ReachedTimeLimit` if appropriate.
         '''
-        if (site.time_limit
-                and site.time_limit > 0
-                and (site.active_brozzling_time or 0) + session_time > site.time_limit):
+        if (site.time_limit and site.time_limit > 0
+                and site.elapsed() > site.time_limit):
             self.logger.debug(
                     "site FINISHED_TIME_LIMIT! time_limit=%s "
-                    "active_brozzling_time=%s %s", site.time_limit,
-                    site.active_brozzling_time, site)
+                    "elapsed=%s %s", site.time_limit, site.elapsed(), site)
             raise brozzler.ReachedTimeLimit
 
     def claim_page(self, site, worker_id):
