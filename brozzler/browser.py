@@ -152,6 +152,7 @@ class WebsockReceiverThread(threading.Thread):
 
         self.on_request = None
         self.on_response = None
+        self.on_service_worker_version_updated = None
 
         self._result_messages = {}
 
@@ -261,6 +262,9 @@ class WebsockReceiverThread(threading.Thread):
                     and 'params' in message and 'errorText' in message['params']
                     and message['params']['errorText'] == 'net::ERR_PROXY_CONNECTION_FAILED'):
                 brozzler.thread_raise(self.calling_thread, brozzler.ProxyError)
+            elif message['method'] == 'ServiceWorker.workerVersionUpdated':
+                if self.on_service_worker_version_updated:
+                    self.on_service_worker_version_updated(message)
             # else:
             #     self.logger.debug("%s %s", message["method"], json_message)
         elif 'result' in message:
@@ -345,13 +349,14 @@ class Browser:
             self.send_to_chrome(method='Page.enable')
             self.send_to_chrome(method='Console.enable')
             self.send_to_chrome(method='Runtime.enable')
+            self.send_to_chrome(method='ServiceWorker.enable')
+            self.send_to_chrome(method='ServiceWorker.setForceUpdateOnPageLoad')
 
             # disable google analytics
             self.send_to_chrome(
                 method='Network.setBlockedURLs',
                 params={'urls': ['*google-analytics.com/analytics.js',
-                                 '*google-analytics.com/ga.js']}
-                )
+                                 '*google-analytics.com/ga.js']})
 
     def stop(self):
         '''
@@ -395,7 +400,8 @@ class Browser:
     def browse_page(
             self, page_url, extra_headers=None,
             user_agent=None, behavior_parameters=None, behaviors_dir=None,
-            on_request=None, on_response=None, on_screenshot=None,
+            on_request=None, on_response=None,
+            on_service_worker_version_updated=None, on_screenshot=None,
             username=None, password=None, hashtags=None,
             skip_extract_outlinks=False, skip_visit_hashtags=False,
             skip_youtube_dl=False, page_timeout=300, behavior_timeout=900):
@@ -422,10 +428,18 @@ class Browser:
             on_response: callback to invoke on every Network.responseReceived
                 event, takes one argument, the json-decoded message (default
                 None)
+            on_service_worker_version_updated: callback to invoke on every
+                ServiceWorker.workerVersionUpdated event, takes one argument,
+                the json-decoded message (default None)
             on_screenshot: callback to invoke when screenshot is obtained,
                 takes one argument, the the raw jpeg bytes (default None)
                 # XXX takes two arguments, the url of the page at the time the
                 # screenshot was taken, and the raw jpeg bytes (default None)
+            username: username string to use to try logging in if a login form
+                is found in the page (default None)
+            password: password string to use to try logging in if a login form
+                is found in the page (default None)
+            ... (there are more)
 
         Returns:
             A tuple (final_page_url, outlinks).
@@ -448,6 +462,9 @@ class Browser:
             self.websock_thread.on_request = on_request
         if on_response:
             self.websock_thread.on_response = on_response
+        if on_service_worker_version_updated:
+            self.websock_thread.on_service_worker_version_updated = \
+                    on_service_worker_version_updated
         try:
             with brozzler.thread_accept_exceptions():
                 self.configure_browser(
