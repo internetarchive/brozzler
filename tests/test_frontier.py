@@ -21,6 +21,7 @@ limitations under the License.
 import argparse
 import datetime
 import logging
+import time
 
 import doublethink
 import pytest
@@ -375,15 +376,10 @@ def test_time_limit():
     assert site.starts_and_stops[1]['start']
     assert site.starts_and_stops[1]['stop'] is None
 
-    # time limit not reached yet
+    # no time limit set
     frontier.enforce_time_limit(site)
 
-    assert site.status == 'ACTIVE'
-    assert len(site.starts_and_stops) == 2
-    assert site.starts_and_stops[1]['start']
-    assert site.starts_and_stops[1]['stop'] is None
-
-    site.time_limit = 0.1
+    site.time_limit = 10
     site.claimed = True
     site.save()
 
@@ -394,19 +390,11 @@ def test_time_limit():
     assert site.starts_and_stops[1]['start']
     assert site.starts_and_stops[1]['stop'] is None
 
-    site.active_brozzling_time = 0.2  # this is why the time limit will be hit
+    site.time_limit = 0.1
+    time.sleep(0.1)
 
-    try:
+    with pytest.raises(brozzler.ReachedTimeLimit):
         frontier.enforce_time_limit(site)
-    except brozzler.ReachedTimeLimit:
-        frontier.finished(site, 'FINISHED_TIME_LIMIT')
-
-    assert site.status == 'FINISHED_TIME_LIMIT'
-    assert not site.claimed
-    assert len(site.starts_and_stops) == 2
-    assert site.starts_and_stops[1]['start']
-    assert site.starts_and_stops[1]['stop']
-    assert site.starts_and_stops[1]['stop'] > site.starts_and_stops[0]['start']
 
 def test_field_defaults():
     rr = doublethink.Rethinker('localhost', db='ignoreme')
