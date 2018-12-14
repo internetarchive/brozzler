@@ -26,7 +26,7 @@
   behavior_js_template: umbraBehavior18q4.js.j2
   default_parameters:
     interval: 500
-    iframes: false
+    skip_iframes: true
     actions:
       - selector: button.coreSpriteDismissLarge
       - selector: 'a>.eLAPa>.KL4Bh'

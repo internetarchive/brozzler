@@ -256,6 +256,8 @@ class WebsockReceiverThread(threading.Thread):
                 self.logger.debug(
                         'console.%s %s', message['params']['message']['level'],
                         message['params']['message']['text'])
+            elif message['method'] == 'Runtime.exceptionThrown':
+                self.logger.debug('uncaught exception: %s', message)
             elif message['method'] == 'Page.javascriptDialogOpening':
                 self._javascript_dialog_opening(message)
             elif (message['method'] == 'Network.loadingFailed'

@@ -278,11 +278,13 @@ class BrozzlerWorker:
         def _on_service_worker_version_updated(chrome_msg):
             # https://github.com/internetarchive/brozzler/issues/140
             self.logger.trace('%r', chrome_msg)
-            url = chrome_msg.get('params', {}).get('versions', [{}])[0].get('scriptURL')
-            if url not in sw_fetched:
-                self.logger.info('fetching service worker script %s', url)
-                self._fetch_url(site, url)
-                sw_fetched.add(url)
+            if chrome_msg.get('params', {}).get('versions'):
+                url = chrome_msg.get('params', {}).get('versions')[0]\
+                        .get('scriptURL')
+                if url and url not in sw_fetched:
+                    self.logger.info('fetching service worker script %s', url)
+                    self._fetch_url(site, url)
+                    sw_fetched.add(url)
 
         if not browser.is_running():
             browser.start(

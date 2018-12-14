@@ -26,7 +26,11 @@ class UmbraBehavior {
         this.idleSince = null;
         this.intervalId = null;
         this.intervalTimeMs = {{interval or 300}};
-        this.doIframes = {{iframes or true}};
+        {% if skip_iframes %}
+        this.skipIframes = true;
+        {% else %}
+        this.skipIframes = false;
+        {% endif %}
         this.index = 0;
     }
 
@@ -44,7 +48,7 @@ class UmbraBehavior {
 
         var documents = [];
         documents[0] = document;
-        if (this.doIframes) {
+        if (!(this.skipIframes)) {
             var iframes = document.querySelectorAll("iframe");
             var iframesLength = iframes.length;
             for (var i = 0; i < iframesLength; i++) {
