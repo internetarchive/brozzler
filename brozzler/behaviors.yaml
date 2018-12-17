@@ -23,7 +23,7 @@
   request_idle_timeout_sec: 30
 -
   url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
-  behavior_js_template: umbraBehavior18q4.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
     interval: 500
     skip_iframes: true
