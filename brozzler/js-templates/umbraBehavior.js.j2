@@ -26,6 +26,11 @@ class UmbraBehavior {
         this.idleSince = null;
         this.intervalId = null;
         this.intervalTimeMs = {{interval or 300}};
+        {% if skip_iframes %}
+        this.skipIframes = true;
+        {% else %}
+        this.skipIframes = false;
+        {% endif %}
         this.index = 0;
     }
 
@@ -41,12 +46,14 @@ class UmbraBehavior {
         var somethingLeftAbove = false;
         var somethingLeftBelow = false;
 
-        var iframes = document.querySelectorAll("iframe");
-        var iframesLength = iframes.length;
-        var documents = Array(iframesLength + 1);
+        var documents = [];
         documents[0] = document;
-        for (var i = 0; i < iframesLength; i++) {
-            documents[i+1] = iframes[i].contentWindow.document;
+        if (!(this.skipIframes)) {
+            var iframes = document.querySelectorAll("iframe");
+            var iframesLength = iframes.length;
+            for (var i = 0; i < iframesLength; i++) {
+                documents.push(iframes[i].contentWindow.document);
+            }
         }
         var documentsLength = documents.length;
         for (var j = 0; j < documentsLength; j++) {
