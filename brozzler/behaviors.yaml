@@ -25,9 +25,11 @@
   url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
   behavior_js_template: umbraBehavior.js.j2
   default_parameters:
+    interval: 500
+    skip_iframes: true
     actions:
-      - selector: a.coreSpriteDismissLarge
-      - selector: a>div[role='button']
+      - selector: button.coreSpriteDismissLarge
+      - selector: 'a>.eLAPa>.KL4Bh'
         firstMatchOnly: true
       - selector: a.coreSpriteRightPaginationArrow
         repeatSameElement: true
