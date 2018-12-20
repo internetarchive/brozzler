@@ -52,7 +52,13 @@ class UmbraBehavior {
             var iframes = document.querySelectorAll("iframe");
             var iframesLength = iframes.length;
             for (var i = 0; i < iframesLength; i++) {
-                documents.push(iframes[i].contentWindow.document);
+                try {
+                    documents.push(iframes[i].contentWindow.document);
+                } catch (e) {
+                    // it'd be too much logging because this is common:
+                    // SecurityError: Blocked a frame with origin "..." from accessing a cross-origin frame
+                    // console.log("exception looking at iframe" + iframes[i] + ": " + e);
+                }
             }
         }
         var documentsLength = documents.length;
