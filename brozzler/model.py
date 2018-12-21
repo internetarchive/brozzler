@@ -242,8 +242,19 @@ class Site(doublethink.Document, ElapsedMixIn):
             self.scope["accepts"].append({"ssurt": ssurt})
 
     def note_seed_redirect(self, url):
+        canon_seed_redirect = brozzler.site_surt_canon(url)
+        canon_seed = brozzler.site_surt_canon(self.seed)
+
+        # if http://foo.com/ redirects to https://foo.com/a/b/c let's also
+        # put all of https://foo.com/ in scope
+        if (canon_seed_redirect.authority == canon_seed.authority
+                and canon_seed_redirect.scheme != canon_seed.scheme):
+            canon_seed.scheme = canon_seed_redirect.scheme
+            self._accept_ssurt_if_not_redundant(
+                    canon_seed.ssurt().decode('ascii'))
+
         self._accept_ssurt_if_not_redundant(
-                brozzler.site_surt_canon(url).ssurt().decode('ascii'))
+                canon_seed_redirect.ssurt().decode('ascii'))
 
     def extra_headers(self):
         hdrs = {}
