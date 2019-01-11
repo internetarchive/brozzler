@@ -420,3 +420,22 @@ def test_needs_browsing():
     assert not brozzler.worker.BrozzlerWorker._needs_browsing(
             None, page, spy.fetches)
 
+def test_seed_redirect():
+    site = brozzler.Site(None, {'seed': 'http://foo.com/'})
+    site.note_seed_redirect('https://foo.com/a/b/c')
+    assert site.scope == {'accepts': [
+        {'ssurt': 'com,foo,//http:/',},
+        {'ssurt': 'com,foo,//https:/',}]}
+
+    site = brozzler.Site(None, {'seed': 'https://foo.com/'})
+    site.note_seed_redirect('http://foo.com/a/b/c')
+    assert site.scope == {'accepts': [
+        {'ssurt': 'com,foo,//https:/',},
+        {'ssurt': 'com,foo,//http:/',}]}
+
+    site = brozzler.Site(None, {'seed': 'http://foo.com/'})
+    site.note_seed_redirect('https://bar.com/a/b/c')
+    assert site.scope == {'accepts': [
+        {'ssurt': 'com,foo,//http:/',},
+        {'ssurt': 'com,bar,//https:/a/b/c',}]}
+
