@@ -1,7 +1,7 @@
 #
 # brozzler/behaviors.yaml - behavior configuration
 #
-# Copyright (C) 2014-2018 Internet Archive
+# Copyright (C) 2014-2019 Internet Archive
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,11 +72,10 @@
   request_idle_timeout_sec: 10
 -
   url_regex: '^https?://(?:www\.)?brooklynmuseum\.org/exhibitions/.*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: img.img-responsive
-     click_until_hard_timeout: False
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: img.img-responsive
 - # https://webarchive.jira.com/browse/ARI-5517
   url_regex: '^https?://(?:www\.)?thejewishnews.com/.*$'
   behavior_js_template: umbraBehavior.js.j2
@@ -85,11 +84,10 @@
       - selector: a#get_more
 - # acalog https://webarchive.jira.com/browse/ARI-3775
   url_regex: '^https?://.*[?&]catoid=[^?]*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: a[onclick]
-     click_until_hard_timeout: False
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: a[onclick]
 - # https://webarchive.jira.com/browse/ARI-5294
   url_regex: '^https?://citymedfordwi\.civicweb\.net/.*$'
   behavior_js_template: umbraBehavior.js.j2
@@ -98,53 +96,46 @@
       - selector: div.meeting-document-type-buttons button.button-small
 - # https://webarchive.jira.com/browse/ARI-5409
   url_regex: '^https?://(?:www\.)?tuebingen.de/.*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: a.kl
-     click_until_hard_timeout: False
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: a.kl
 - # https://webarchive.jira.com/browse/ARI-3956
   url_regex: '^https?://(?:www\.)?usask.ca/.*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: a[id='feature-next']
-     click_until_hard_timeout: False
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: a[id='feature-next']
 - # https://webarchive.jira.com/browse/AITFIVE-451
   url_regex: '^https?://(?:www\.)?soundcloud.com/.*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: button.sc-button-play, .playButton, div.compactTrackListItem
-     click_until_hard_timeout: False
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: button.sc-button-play, .playButton, div.compactTrackListItem
 - # https://webarchive.jira.com/browse/AITFIVE-463
   url_regex: '^https?://(?:www\.)?christophercerrone.com/.*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: button.playButton.medium
-     click_until_hard_timeout: False
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: button.playButton.medium
 - # https://webarchive.jira.com/browse/ARI-4690
   url_regex: '^https?://(?:www\.)?youtube.com/.*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: span.load-more-text
-     click_until_hard_timeout: False
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: span.load-more-text
 - # https://webarchive.jira.com/browse/ARI-5453
   url_regex: '^https?://.*\.wixsite.com/.*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: .ddm1repeaterButtonlabel
-     click_until_hard_timeout: False
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: .ddm1repeaterButtonlabel
 - # https://webarchive.jira.com/browse/ARI-4725
   url_regex: '^https?://(?:www\.)?moma.org/.*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: button[data-more-results-bottom-button]
-     click_until_hard_timeout: True
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: button[data-more-results-bottom-button]
 - # https://webarchive.jira.com/browse/ARI-4692
   url_regex: '^https?://(?:www\.)?fec.gov/data/.*$'
   behavior_js_template: fec_gov.js
@@ -157,39 +148,35 @@
         do: mouseover
 - # https://webarchive.jira.com/browse/ARI-5259
   url_regex: '^https?://blog\.sina\.com\.cn/.*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: li.SG_pgnext a
-     click_until_hard_timeout: False
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: li.SG_pgnext a
 - # https://webarchive.jira.com/browse/ARI-5313
   url_regex: '^https?://.*\.ky\.gov/.*$'
-  behavior_js_template: mouseovers.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     mouseover_css_selector: .zz1_AgencyListingMenu_1
-     mouseover_until_hard_timeout: False
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: .zz1_AgencyListingMenu_1
+        do: mouseover
 - # https://webarchive.jira.com/browse/ARI-5384
   url_regex: '^https?://issuu\.com/.*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: button#ird3-button-next
-     click_until_hard_timeout: True
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: button#ird3-button-next
 - # https://webarchive.jira.com/browse/ARI-5241
   url_regex: '^https?://(?:www\.)?colonialart\.org/.*$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: img.link-overlay
-     click_until_hard_timeout: False
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: img.link-overlay
 - # https://webarchive.jira.com/browse/ARI-4960
   url_regex: '^https?://(?:www\.)?fortstjames.ca/community-events-calendar/$'
-  behavior_js_template: simpleclicks.js.j2
+  behavior_js_template: umbraBehavior.js.j2
   default_parameters:
-     click_css_selector: img#navForward1
-     click_until_hard_timeout: True
-  request_idle_timeout_sec: 10
+    actions:
+      - selector: img#navForward1
 - # default fallback behavior
   url_regex: '^.*$'
   behavior_js_template: umbraBehavior.js.j2
