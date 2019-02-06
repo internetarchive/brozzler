@@ -62,7 +62,8 @@ def check_version(chrome_exe):
 class Chrome:
     logger = logging.getLogger(__module__ + '.' + __qualname__)
 
-    def __init__(self, chrome_exe, port=9222, ignore_cert_errors=False):
+    def __init__(self, chrome_exe, port=9222, ignore_cert_errors=False,
+                 disk_cache=None, disk_cache_size=None):
         '''
         Initializes instance of this class.
 
@@ -79,6 +80,8 @@ class Chrome:
         self.ignore_cert_errors = ignore_cert_errors
         self._shutdown = threading.Event()
         self.chrome_process = None
+        self.disk_cache = disk_cache
+        self.disk_cache_size = disk_cache_size
 
     def __enter__(self):
         '''
@@ -134,7 +137,8 @@ class Chrome:
                     cookie_location, exc_info=True)
         return cookie_db
 
-    def start(self, proxy=None, cookie_db=None):
+    def start(self, proxy=None, cookie_db=None, disk_cache=None,
+              disk_cache_size=None):
         '''
         Starts chrome/chromium process.
 
@@ -144,7 +148,12 @@ class Chrome:
                 which, if supplied, will be written to
                 {chrome_user_data_dir}/Default/Cookies before running the
                 browser (default None)
-
+            disk_cache: use disk cache. If True, use default cache location inside
+                `self._home_tmpdir`. If its a string, try to use that path for
+                disk cache (default None)
+            disk_cache_size: Forces the maximum disk space to be used by the disk
+                cache, in bytes. Used only when `cache` is a disk path.
+                (default None)
         Returns:
             websocket url to chrome window with about:blank loaded
         '''
@@ -154,6 +163,10 @@ class Chrome:
             self._home_tmpdir.name, 'chrome-user-data')
         if cookie_db:
             self._init_cookie_db(cookie_db)
+        if disk_cache:
+            self.disk_cache = disk_cache
+        if disk_cache_size:
+            self.disk_cache_size = disk_cache_size
         self._shutdown.clear()
 
         new_env = os.environ.copy()
@@ -166,12 +179,22 @@ class Chrome:
                 '--disable-background-networking',
                 '--disable-renderer-backgrounding', '--disable-hang-monitor',
                 '--disable-background-timer-throttling', '--mute-audio',
-                '--disable-web-sockets', '--disable-cache',
+                '--disable-web-sockets',
                 '--window-size=1100,900', '--no-default-browser-check',
                 '--disable-first-run-ui', '--no-first-run',
                 '--homepage=about:blank', '--disable-direct-npapi-requests',
                 '--disable-web-security', '--disable-notifications',
                 '--disable-extensions', '--disable-save-password-bubble']
+
+        if self.disk_cache:
+            if isinstance(self.disk_cache, str):
+                chrome_args.append('--disk-cache-dir=%s' % self.disk_cache)
+                if self.disk_cache_size:
+                    chrome_args.append('--disk-cache-size=%s' %
+                                       self.disk_cache_size)
+        else:
+            chrome_args.append('--disable-cache')
+
         if self.ignore_cert_errors:
             chrome_args.append('--ignore-certificate-errors')
         if proxy:
