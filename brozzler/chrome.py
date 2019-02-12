@@ -151,8 +151,7 @@ class Chrome:
             disk_cache_dir: use directory for disk cache. The default location
                 is inside `self._home_tmpdir` (default None).
             disk_cache_size: Forces the maximum disk space to be used by the disk
-                cache, in bytes. Used only when `cache` is a disk path.
-                (default None)
+                cache, in bytes. (default None)
         Returns:
             websocket url to chrome window with about:blank loaded
         '''
