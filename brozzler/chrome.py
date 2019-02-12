@@ -134,7 +134,8 @@ class Chrome:
                     cookie_location, exc_info=True)
         return cookie_db
 
-    def start(self, proxy=None, cookie_db=None):
+    def start(self, proxy=None, cookie_db=None, disk_cache_dir=None,
+              disk_cache_size=None):
         '''
         Starts chrome/chromium process.
 
@@ -144,7 +145,10 @@ class Chrome:
                 which, if supplied, will be written to
                 {chrome_user_data_dir}/Default/Cookies before running the
                 browser (default None)
-
+            disk_cache_dir: use directory for disk cache. The default location
+                is inside `self._home_tmpdir` (default None).
+            disk_cache_size: Forces the maximum disk space to be used by the disk
+                cache, in bytes. (default None)
         Returns:
             websocket url to chrome window with about:blank loaded
         '''
@@ -166,12 +170,17 @@ class Chrome:
                 '--disable-background-networking',
                 '--disable-renderer-backgrounding', '--disable-hang-monitor',
                 '--disable-background-timer-throttling', '--mute-audio',
-                '--disable-web-sockets', '--disable-cache',
+                '--disable-web-sockets',
                 '--window-size=1100,900', '--no-default-browser-check',
                 '--disable-first-run-ui', '--no-first-run',
                 '--homepage=about:blank', '--disable-direct-npapi-requests',
                 '--disable-web-security', '--disable-notifications',
                 '--disable-extensions', '--disable-save-password-bubble']
+
+        if disk_cache_dir:
+            chrome_args.append('--disk-cache-dir=%s' % disk_cache_dir)
+        if disk_cache_size:
+            chrome_args.append('--disk-cache-size=%s' % disk_cache_size)
         if self.ignore_cert_errors:
             chrome_args.append('--ignore-certificate-errors')
         if proxy:
