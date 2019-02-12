@@ -62,8 +62,7 @@ def check_version(chrome_exe):
 class Chrome:
     logger = logging.getLogger(__module__ + '.' + __qualname__)
 
-    def __init__(self, chrome_exe, port=9222, ignore_cert_errors=False,
-                 disk_cache_dir=None, disk_cache_size=None):
+    def __init__(self, chrome_exe, port=9222, ignore_cert_errors=False):
         '''
         Initializes instance of this class.
 
@@ -80,8 +79,6 @@ class Chrome:
         self.ignore_cert_errors = ignore_cert_errors
         self._shutdown = threading.Event()
         self.chrome_process = None
-        self.disk_cache_dir = disk_cache_dir
-        self.disk_cache_size = disk_cache_size
 
     def __enter__(self):
         '''
@@ -161,10 +158,6 @@ class Chrome:
             self._home_tmpdir.name, 'chrome-user-data')
         if cookie_db:
             self._init_cookie_db(cookie_db)
-        if disk_cache_dir:
-            self.disk_cache_dir = disk_cache_dir
-        if disk_cache_size:
-            self.disk_cache_size = disk_cache_size
         self._shutdown.clear()
 
         new_env = os.environ.copy()
@@ -184,10 +177,10 @@ class Chrome:
                 '--disable-web-security', '--disable-notifications',
                 '--disable-extensions', '--disable-save-password-bubble']
 
-        if self.disk_cache_dir:
-            chrome_args.append('--disk-cache-dir=%s' % self.disk_cache_dir)
-        if self.disk_cache_size:
-            chrome_args.append('--disk-cache-size=%s' % self.disk_cache_size)
+        if disk_cache_dir:
+            chrome_args.append('--disk-cache-dir=%s' % disk_cache_dir)
+        if disk_cache_size:
+            chrome_args.append('--disk-cache-size=%s' % disk_cache_size)
         if self.ignore_cert_errors:
             chrome_args.append('--ignore-certificate-errors')
         if proxy:
