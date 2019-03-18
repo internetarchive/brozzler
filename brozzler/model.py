@@ -35,7 +35,7 @@ import yaml
 def load_schema():
     schema_file = os.path.join(os.path.dirname(__file__), 'job_schema.yaml')
     with open(schema_file) as f:
-        return yaml.load(f)
+        return yaml.safe_load(f)
 
 class JobValidator(cerberus.Validator):
     def _validate_type_url(self, value):
@@ -68,7 +68,7 @@ def new_job_file(frontier, job_conf_file):
     '''Returns new Job.'''
     logging.info("loading %s", job_conf_file)
     with open(job_conf_file) as f:
-        job_conf = yaml.load(f)
+        job_conf = yaml.safe_load(f)
         return new_job(frontier, job_conf)
 
 def new_job(frontier, job_conf):

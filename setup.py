@@ -2,7 +2,7 @@
 '''
 setup.py - brozzler setup script
 
-Copyright (C) 2014-2018 Internet Archive
+Copyright (C) 2014-2019 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.5.1',
+        version='1.5.2',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
@@ -98,6 +98,7 @@ setuptools.setup(
             'Programming Language :: Python :: 3.4',
             'Programming Language :: Python :: 3.5',
             'Programming Language :: Python :: 3.6',
+            'Programming Language :: Python :: 3.7',
             'Topic :: Internet :: WWW/HTTP',
             'Topic :: System :: Archiving',
         ])

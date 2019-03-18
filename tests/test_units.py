@@ -151,7 +151,7 @@ def test_robots_connection_failure():
     assert brozzler.is_permitted_by_robots(site, url)
 
 def test_scoping():
-    test_scope = yaml.load('''
+    test_scope = yaml.safe_load('''
 max_hops: 100
 accepts:
 - url_match: REGEX_MATCH

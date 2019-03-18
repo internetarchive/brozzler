@@ -106,7 +106,7 @@ def behaviors(behaviors_dir=None):
         d = behaviors_dir or os.path.dirname(__file__)
         behaviors_yaml = os.path.join(d, 'behaviors.yaml')
         with open(behaviors_yaml) as fin:
-            _behaviors = yaml.load(fin)
+            _behaviors = yaml.safe_load(fin)
     return _behaviors
 
 def behavior_script(url, template_parameters=None, behaviors_dir=None):
