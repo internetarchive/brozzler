@@ -9,8 +9,14 @@
   become: true
   apt: name={{item}} state=present
   with_items:
-  - vnc4server
   - chromium-browser
+  - vnc4server
+  - libjpeg-turbo8-dev
+  - zlib1g-dev
+  - gcc
+  - python3-dev
+  - python3-dbg
+  - adobe-flashplugin
   - xfonts-base
   - fonts-arphic-bkai00mp
   - fonts-arphic-bsmi00lp
@@ -24,28 +30,21 @@
   - fonts-sil-padauk
   - fonts-unfonts-extra
   - fonts-unfonts-core
-  - ttf-indic-fonts
+  - fonts-indic
   - fonts-thai-tlwg
   - fonts-lklug-sinhala
-  - git
-  - libjpeg-turbo8-dev
-  - zlib1g-dev
-  - gcc
-  - g++
-  - libpython3.4-dev
-  - adobe-flashplugin
 - name: install Xvnc upstart config /etc/init/Xvnc.conf
   template: src=templates/Xvnc.conf.j2 dest=/etc/init/Xvnc.conf
   become: true
   notify:
   - restart Xvnc
-- name: mkdir {{venv_root}}/websockify-ve34
+- name: mkdir {{venv_root}}/websockify-ve3
   become: true
-  file: path={{venv_root}}/websockify-ve34 state=directory owner={{user}}
+  file: path={{venv_root}}/websockify-ve3 state=directory owner={{user}}
 - name: install websockify in virtualenv
   pip: name=git+https://github.com/kanaka/websockify.git#egg=websockify
-       virtualenv={{venv_root}}/websockify-ve34
-       virtualenv_python=python3.4
+       virtualenv={{venv_root}}/websockify-ve3
+       virtualenv_python=python3
        extra_args='--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
   become: true
   become_user: '{{user}}'
@@ -54,15 +53,15 @@
   become: true
   notify:
   - restart vnc-websock
-- name: mkdir {{venv_root}}/brozzler-ve34
+- name: mkdir {{venv_root}}/brozzler-ve3
   become: true
-  file: path={{venv_root}}/brozzler-ve34 state=directory owner={{user}}
+  file: path={{venv_root}}/brozzler-ve3 state=directory owner={{user}}
 - name: install brozzler in virtualenv
-  pip: # name=git+https://github.com/internetarchive/brozzler.git#egg=brozzler
-       name='{{brozzler_pip_name}}'
-       virtualenv={{venv_root}}/brozzler-ve34
-       virtualenv_python=python3.4
-       extra_args='--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
+  pip:
+    name: '{{brozzler_pip_name}}'
+    virtualenv: '{{venv_root}}/brozzler-ve3'
+    virtualenv_python: python3
+    extra_args: '--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
   become: true
   become_user: '{{user}}'
   notify:

@@ -18,22 +18,22 @@
 
 # this clause is a workaround for travis-ci, which only wants to install in /usr
 # see https://travis-ci.org/internetarchive/brozzler/builds/174338601
-# but it complains that /usr/lib/python3.4/site-packages doesn't exist
+# but it complains that /usr/lib/python3.5/site-packages doesn't exist
 # see https://travis-ci.org/internetarchive/brozzler/builds/174094831
 - file: path={{item}} state=directory
   with_items:
-  - /usr/lib/python3.4/site-packages
-  - /usr/lib/python3.4/dist-packages
+  - /usr/lib/python3.5/site-packages
+  - /usr/lib/python3.5/dist-packages
   become: true
 
 - name: run "python3 setup.py install" in /tmp/pip-9.0.1
   command: python3 setup.py install
            chdir=/tmp/pip-9.0.1
-           creates=/usr/local/lib/python3.4/dist-packages/pip-9.0.1-py3.4.egg/pip/__init__.py
+           creates=/usr/local/lib/python3.5/dist-packages/pip-9.0.1-py3.5.egg/pip/__init__.py
   become: true
 - name: run "pip install virtualenv"
   command: pip install virtualenv
-           creates=/usr/local/lib/python3.4/dist-packages/virtualenv.py
+           creates=/usr/local/lib/python3.5/dist-packages/virtualenv.py
   become: true
 - command: id {{user}}
   register: id_user

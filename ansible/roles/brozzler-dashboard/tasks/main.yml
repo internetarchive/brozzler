@@ -1,12 +1,12 @@
 ---
-- name: mkdir {{venv_root}}/brozzler-dashboard-ve34
-  file: path={{venv_root}}/brozzler-dashboard-ve34 state=directory
+- name: mkdir {{venv_root}}/brozzler-dashboard-ve3
+  file: path={{venv_root}}/brozzler-dashboard-ve3 state=directory
         owner={{user}}
   become: true
 - name: install brozzler[dashboard] in virtualenv
   pip: name='{{brozzler_pip_name}}[dashboard]'
-       virtualenv={{venv_root}}/brozzler-dashboard-ve34
-       virtualenv_python=python3.4
+       virtualenv={{venv_root}}/brozzler-dashboard-ve3
+       virtualenv_python=python3
        extra_args='--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
   become: true
   become_user: '{{user}}'

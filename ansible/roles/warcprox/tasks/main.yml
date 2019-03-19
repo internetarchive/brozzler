@@ -4,19 +4,18 @@
   apt: name={{item}} state=present
   with_items:
   - gcc
-  - python3.4
-  - libpython3.4-dev
+  - python3-dev
   - libffi-dev
   - libssl-dev
   - tor
   - git
-- name: mkdir {{venv_root}}/warcprox-ve34
+- name: mkdir {{venv_root}}/warcprox-ve3
   become: true
-  file: path={{venv_root}}/warcprox-ve34 state=directory owner={{user}}
+  file: path={{venv_root}}/warcprox-ve3 state=directory owner={{user}}
 - name: install warcprox in virtualenv
   pip: name=git+https://github.com/internetarchive/warcprox.git#egg=warcprox
-       virtualenv={{venv_root}}/warcprox-ve34
-       virtualenv_python=python3.4
+       virtualenv={{venv_root}}/warcprox-ve3
+       virtualenv_python=python3
        extra_args='--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
   become: true
   become_user: '{{user}}'

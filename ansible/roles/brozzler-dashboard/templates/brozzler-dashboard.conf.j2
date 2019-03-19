@@ -3,8 +3,7 @@ description "brozzler-dashboard"
 start on runlevel [2345]
 stop on runlevel [!2345]
 
-env PYTHONPATH={{venv_root}}/brozzler-dashboard-ve34/lib/python3.4/site-packages
-env PATH={{venv_root}}/brozzler-dashboard-ve34/bin:/usr/bin:/bin
+env PATH={{venv_root}}/brozzler-dashboard-ve3/bin:/usr/bin:/bin
 env LC_ALL=C.UTF-8
 
 env WAYBACK_BASEURL=http://{{groups['pywb'][0]}}:8880/brozzler

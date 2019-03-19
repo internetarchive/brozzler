@@ -7,8 +7,7 @@ setuid {{user}}
 
 console log
 
-env PYTHONPATH={{venv_root}}/websockify-ve34/lib/python3.4/site-packages
-env PATH={{venv_root}}/websockify-ve34/bin:/usr/bin:/bin
+env PATH={{venv_root}}/websockify-ve3/bin:/usr/bin:/bin
 
 # port 8901 is hard-coded in brozzler/dashboard/static/partials/workers.html
 exec nice websockify 0.0.0.0:8901 localhost:5901

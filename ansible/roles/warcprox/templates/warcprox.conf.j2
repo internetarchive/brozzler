@@ -3,9 +3,6 @@ description "warcprox"
 start on runlevel [2345]
 stop on runlevel [!2345]
 
-env PYTHONPATH={{venv_root}}/warcprox-ve34/lib/python3.4/site-packages
-env PATH={{venv_root}}/warcprox-ve34/bin:/usr/bin:/bin
-
 # by default warcprox creates some files/dirs relative to cwd
 chdir {{work_dir}}
 setuid {{user}}
@@ -13,7 +10,7 @@ setuid {{user}}
 console log
 
 # --profile
-exec nice warcprox \
+exec nice {{venv_root}}/warcprox-ve3/bin/python {{venv_root}}/warcprox-ve3/bin/warcprox \
          --address=0.0.0.0 \
          --dir={{warcs_dir}} \
          --base32 \
