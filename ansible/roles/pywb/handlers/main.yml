@@ -1,5 +1,9 @@
 ---
 - name: restart pywb
-  service: name=pywb state=restarted
+  svc:
+    name: pywb
+    state: restarted
+    service_dir: /etc/service
   become: true
+
 

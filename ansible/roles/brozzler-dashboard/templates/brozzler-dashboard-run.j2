@@ -1,0 +1,13 @@
+#!/bin/bash
+
+logfile=/var/log/brozzler-dashboard.log
+touch $logfile
+chown {{user}} $logfile
+
+exec nice setuidgid {{user}} \
+    env WAYBACK_BASEURL=http://{{groups['pywb'][0]}}:8880/brozzler \
+        RETHINKDB_SERVERS={{groups['rethinkdb'] | join(',')}} \
+        RETHINKDB_DB=brozzler LANG=en_US.UTF-8 LC_COLLATE=C \
+    gunicorn --bind=0.0.0.0:8881 brozzler.dashboard:app \
+    >> $logfile 2>&1
+

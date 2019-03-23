@@ -74,11 +74,9 @@ def main(argv=[]):
     os.chdir(os.path.dirname(__file__))
 
     cmd = (
-        'PYTHONPATH=/home/vagrant/brozzler-ve34/lib/python3.4/site-packages '
-        '/home/vagrant/brozzler-ve34/bin/python '
-        '/home/vagrant/brozzler-ve34/bin/brozzler-new-site '
-        '--proxy=localhost:8000 %s %s') % (
-                ' '.join(options), args.seed)
+        '/home/vagrant/brozzler-ve3/bin/python '
+        '/home/vagrant/brozzler-ve3/bin/brozzler-new-site '
+        '--proxy=localhost:8000 %s %s') % (' '.join(options), args.seed)
     subprocess.call(['vagrant', 'ssh', '--', cmd])
 
 if __name__ == '__main__':

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+logfile=/var/log/pywb.log
+touch $logfile
+chown {{user}} $logfile
+
+exec nice setuidgid {{user}} env PYWB_CONFIG_FILE=/etc/pywb.yml \
+    {{venv_root}}/pywb-ve3/bin/python {{venv_root}}/pywb-ve3/bin/brozzler-wayback \
+    >> $logfile 2>&1
+

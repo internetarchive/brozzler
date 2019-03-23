@@ -1,0 +1,17 @@
+#!/bin/bash
+
+logfile=/var/log/brozzler-worker.log
+touch $logfile
+chown {{user}} $logfile
+
+source {{venv_root}}/brozzler-ve3/bin/activate
+
+exec nice setuidgid {{user}} \
+    env LANG=en_US.UTF-8 LC_COLLATE=C \
+    brozzler-worker \
+     --rethinkdb-servers={{groups['rethinkdb'] | join(',')}} \
+     --max-browsers=4 \
+     --verbose \
+     --warcprox-auto \
+     >> $logfile 2>&1
+
