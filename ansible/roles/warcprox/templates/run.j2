@@ -1,11 +1,12 @@
 #!/bin/bash
 
-
 logfile=/var/log/warcprox.log
 touch $logfile
 chown {{user}} $logfile
 
 ulimit -n 4096
+
+cd {{work_dir}}
 
 source {{venv_root}}/warcprox-ve3/bin/activate
 
