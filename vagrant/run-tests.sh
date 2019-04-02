@@ -10,11 +10,11 @@ cd $(dirname "${BASH_SOURCE[0]}")
 vagrant up
 
 echo service status:
-vagrant ssh -- 'status warcprox ;
-                status Xvnc ;
-                status brozzler-worker ;
-                status brozzler-dashboard ;
-                status vnc-websock'
+vagrant ssh -- 'sudo svcstat /etc/service/warcprox ;
+                sudo svcstat /etc/service/Xvnc ;
+                sudo svcstat /etc/service/brozzler-worker ;
+                sudo svcstat /etc/service/brozzler-dashboard ;
+                sudo svcstat /etc/service/vnc-websock'
 echo
 
 vagrant ssh -- 'set -x ; source /opt/brozzler-ve3/bin/activate && pip install pytest && pip install --upgrade --pre "warcprox>=2.1b1.dev86"'

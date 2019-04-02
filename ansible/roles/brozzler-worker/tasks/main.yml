@@ -36,13 +36,12 @@
   - fonts-thai-tlwg
   - fonts-lklug-sinhala
 
-- name: mkdir /etc/service/warcprox
+- name: mkdir /etc/service/{Xvnc,vnc-websock,brozzler-worker}
   file:
     path: '/etc/service/{{item}}'
     state: directory
   with_items:
   - Xvnc
-  - websockify
   - vnc-websock
   - brozzler-worker
   become: true

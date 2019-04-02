@@ -35,10 +35,10 @@ import logging
 import warcprox
 
 def start_service(service):
-    subprocess.check_call(['sudo', 'service', service, 'start'])
+    subprocess.check_call(['sudo', 'svc', '-u', '/etc/service/' + service])
 
 def stop_service(service):
-    subprocess.check_call(['sudo', 'service', service, 'stop'])
+    subprocess.check_call(['sudo', 'svc', '-d', '/etc/service/' + service])
 
 @pytest.fixture(scope='module')
 def httpd(request):
