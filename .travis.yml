@@ -16,8 +16,9 @@ install:
 - sudo apt-get update
 - sudo apt-get install --only-upgrade chromium-browser
 - chromium-browser --version
+- ps -fHe
 - sudo cat /var/log/Xvnc.log
-- DISPLAY=:1 timeout 20 chromium-browser
+- DISPLAY=:1 time timeout 20 chromium-browser
 - sudo svc -t /etc/service/brozzler-worker
 - sleep 10
 - sudo cat /var/log/brozzler-worker.log
