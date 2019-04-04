@@ -18,8 +18,8 @@ install:
 - chromium-browser --version
 - ps ww -fHe
 - sudo cat /var/log/Xvnc.log
-- time DISPLAY=:1 timeout 20 chromium-browser --disable-extensions
-- time DISPLAY=:1 timeout 20 chromium-browser
+- time DISPLAY=:1 timeout 20 chromium-browser || true
+- time DISPLAY=:1 timeout 20 chromium-browser --disable-extensions || true
 - sudo svc -t /etc/service/brozzler-worker
 - sleep 10
 - sudo cat /var/log/brozzler-worker.log
