@@ -11,7 +11,7 @@ exec nice setuidgid {{user}} \
     brozzler-worker \
      --rethinkdb-servers={{groups['rethinkdb'] | join(',')}} \
      --max-browsers=4 \
-     --verbose \
+     --trace \
      --warcprox-auto \
      >> $logfile 2>&1
 
