@@ -2,7 +2,7 @@
 brozzler/models.py - model classes representing jobs, sites, and pages, with
 related logic
 
-Copyright (C) 2014-2018 Internet Archive
+Copyright (C) 2014-2019 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ class InvalidJobConf(Exception):
 
 def validate_conf(job_conf, schema=load_schema()):
     v = JobValidator(schema)
-    if not v.validate(job_conf):
+    if not v.validate(job_conf, normalize=False):
         raise InvalidJobConf(v.errors)
 
 def merge(a, b):
