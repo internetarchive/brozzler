@@ -48,7 +48,7 @@ _orig_webpage_read_content = youtube_dl.extractor.generic.GenericIE._webpage_rea
 def _webpage_read_content(self, *args, **kwargs):
     content = _orig_webpage_read_content(self, *args, **kwargs)
     if len(content) > 20000000:
-        logging.warn(
+        logging.warning(
                 'bypassing youtube-dl extraction because content is '
                 'too large (%s characters)', len(content))
         return ''
@@ -185,7 +185,7 @@ def _build_youtube_dl(worker, destdir, site):
                     mimetype = magic.from_file(ctx['filename'], mime=True)
                 except ImportError as e:
                     mimetype = 'video/%s' % info_dict['ext']
-                    self.logger.warn(
+                    self.logger.warning(
                             'guessing mimetype %s because %r', mimetype, e)
 
             url = 'youtube-dl:%05d:%s' % (

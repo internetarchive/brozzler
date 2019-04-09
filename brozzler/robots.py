@@ -106,7 +106,7 @@ def is_permitted_by_robots(site, url, proxy=None):
             # reppy has wrapped an exception that we want to bubble up
             raise brozzler.ProxyError(e)
         else:
-            logging.warn(
+            logging.warning(
                     "returning true (permitted) after problem fetching "
                     "robots.txt for %r: %r", url, e)
             return True

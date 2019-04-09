@@ -147,13 +147,13 @@ class BrozzlerWorker:
         try:
             with urllib.request.urlopen(request, timeout=600) as response:
                 if response.getcode() != 204:
-                    self.logger.warn(
+                    self.logger.warning(
                             'got "%s %s" response on warcprox '
                             'WARCPROX_WRITE_RECORD request (expected 204)',
                             response.getcode(), response.reason)
                 return request, response
         except urllib.error.HTTPError as e:
-            self.logger.warn(
+            self.logger.warning(
                     'got "%s %s" response on warcprox '
                     'WARCPROX_WRITE_RECORD request (expected 204)',
                     e.getcode(), e.info())
@@ -370,7 +370,7 @@ class BrozzlerWorker:
                 if (page.needs_robots_check and
                         not brozzler.is_permitted_by_robots(
                             site, page.url, self._proxy_for(site))):
-                    logging.warn("page %s is blocked by robots.txt", page.url)
+                    logging.warning("page %s is blocked by robots.txt", page.url)
                     page.blocked_by_robots = True
                     self._frontier.completed_page(site, page)
                 else:
@@ -544,7 +544,7 @@ class BrozzlerWorker:
     def start(self):
         with self._start_stop_lock:
             if self._thread:
-                self.logger.warn(
+                self.logger.warning(
                         'ignoring start request because self._thread is '
                         'not None')
                 return

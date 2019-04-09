@@ -684,7 +684,7 @@ def test_warcprox_outage_resiliency(httpd):
         try:
             stop_service('warcprox')
         except Exception as e:
-            logging.warn('problem stopping warcprox service: %s', e)
+            logging.warning('problem stopping warcprox service: %s', e)
 
         # queue the site for brozzling
         brozzler.new_site(frontier, site)
