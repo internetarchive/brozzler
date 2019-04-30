@@ -1,8 +1,8 @@
 Brozzler Job Configuration
 **************************
 
-Jobs are used to brozzle multiple seeds and/or apply settings and scope rules, 
-as defined byusing YAML files. At least one seed URL must be specified. 
+Jobs are used to brozzle multiple seeds and/or apply settings and scope rules,
+as defined byusing YAML files. At least one seed URL must be specified.
 All other configurartions are optional.
 
 .. contents::
@@ -43,7 +43,7 @@ How inheritance works
 
 Most of the settings that apply to seeds can also be specified at the top
 level, in which case all seeds inherit those settings. If an option is
-specified both at the top level and at the seed level, the results are merged. 
+specified both at the top level and at the seed level, the results are merged.
 In cases of coflict, the seed-level value takes precedence.
 
 In the example yaml above, ``warcprox_meta`` is specified at the top level and
@@ -170,8 +170,8 @@ case they are inherited by all seeds.
 +============+==========+=========+
 | dictionary | no       | *none*  |
 +------------+----------+---------+
-Information about the crawl job or site. Could be useful for external 
-descriptive or informative metadata, but not used by brozzler in the course of 
+Information about the crawl job or site. Could be useful for external
+descriptive or informative metadata, but not used by brozzler in the course of
 archiving.
 
 ``time_limit``
@@ -203,8 +203,8 @@ warcprox for archival crawling.
 +=========+==========+===========+
 | boolean | no       | ``false`` |
 +---------+----------+-----------+
-If set to ``true``, brozzler will fetch pages that would otherwise be blocked 
-by `robots.txt rules 
+If set to ``true``, brozzler will fetch pages that would otherwise be blocked
+by `robots.txt rules
 <https://en.wikipedia.org/wiki/Robots_exclusion_standard>`_.
 
 ``user_agent``
@@ -216,7 +216,7 @@ by `robots.txt rules
 +---------+----------+---------+
 The ``User-Agent`` header brozzler will send to identify itself to web servers.
 It is good ettiquette to include a project URL with a notice to webmasters that
-explains why you are crawling, how to block the crawler via robots.txt, and how 
+explains why you are crawling, how to block the crawler via robots.txt, and how
 to contact the operator if the crawl is causing problems.
 
 ``warcprox_meta``
@@ -229,8 +229,8 @@ to contact the operator if the crawl is causing problems.
 Specifies the ``Warcprox-Meta`` header to send with every request, if ``proxy``
 is configured. The value of the ``Warcprox-Meta`` header is a json blob. It is
 used to pass settings and information to warcprox. Warcprox does not forward
-the header on to the remote site. For further explanation of this field and 
-its uses see 
+the header on to the remote site. For further explanation of this field and
+its uses see
 https://github.com/internetarchive/warcprox/blob/master/api.rst
 
 Brozzler takes the configured value of ``warcprox_meta``, converts it to
@@ -259,7 +259,7 @@ Scope specificaion for the seed. See the "Scoping" section which follows.
 Scoping
 =======
 
-The scope of a seed determines which links are scheduled for crawling ("in 
+The scope of a seed determines which links are scheduled for crawling ("in
 scope") and which are not. For example::
 
     scope:
@@ -330,9 +330,9 @@ To generate the rule, brozzler canonicalizes the seed URL using the `urlcanon
 removes the query string if any, and finally serializes the result in SSURT
 [1]_ form. For example, a seed URL of
 ``https://www.EXAMPLE.com:443/foo//bar?a=b&c=d#fdiap`` becomes
-``com,example,www,//https:/foo/bar?a=b&c=d``.
+``com,example,www,//https:/foo/bar``.
 
-Brozzler derives its general approach to the seed surt from `heritrix 
+Brozzler derives its general approach to the seed surt from `heritrix
 <https://github.com/internetarchive/heritrix3>`_, but differs in a few respects.
 
 1. Unlike heritrix, brozzler does not strip the path segment after the last
@@ -347,11 +347,11 @@ Brozzler derives its general approach to the seed surt from `heritrix
    not match anything. Brozzler does no scheme munging.
 4. Brozzler identifies seed "redirects" by retrieving the URL from the
    browser's location bar at the end of brozzling the seed page, whereas
-   heritrix follows HTTP 3XX redirects. If the URL in the browser 
-   location bar at the end of brozzling the seed page differs from the seed 
-   URL, brozzler automatically adds a second ``accept`` rule to ensure the 
-   site is in scope, as if the new URL were the original seed URL. For example, 
-   if ``http://example.com/`` redirects to ``http://www.example.com/``, the 
+   heritrix follows HTTP 3XX redirects. If the URL in the browser
+   location bar at the end of brozzling the seed page differs from the seed
+   URL, brozzler automatically adds a second ``accept`` rule to ensure the
+   site is in scope, as if the new URL were the original seed URL. For example,
+   if ``http://example.com/`` redirects to ``http://www.example.com/``, the
    rest of the ``www.example.com`` is in scope.
 5. Brozzler uses SSURT instead of SURT.
 6. There is currently no brozzler option to disable the automatically generated
@@ -368,7 +368,7 @@ Scope settings
 | list | no       | *none*  |
 +------+----------+---------+
 List of scope rules. If any of the rules match, the URL is within
-``max_hops`` from seed, and none of the ``block`` rules apply, then the URL is 
+``max_hops`` from seed, and none of the ``block`` rules apply, then the URL is
 in scope and brozzled.
 
 ``blocks``
@@ -378,7 +378,7 @@ in scope and brozzled.
 +======+==========+=========+
 | list | no       | *none*  |
 +------+----------+---------+
-List of scope rules. If any of the rules match, then the URL is deemed out 
+List of scope rules. If any of the rules match, then the URL is deemed out
 of scope and NOT brozzled.
 
 ``max_hops``
@@ -438,7 +438,7 @@ Matches if the full canonicalized URL matches a regular expression.
 +========+==========+=========+
 | string | no       | *none*  |
 +--------+----------+---------+
-Matches if the canonicalized URL in SSURT [1]_ form starts with the ``ssurt`` 
+Matches if the canonicalized URL in SSURT [1]_ form starts with the ``ssurt``
 value.
 
 ``surt``
@@ -448,7 +448,7 @@ value.
 +========+==========+=========+
 | string | no       | *none*  |
 +--------+----------+---------+
-Matches if the canonicalized URL in SURT [2]_ form starts with the ``surt`` 
+Matches if the canonicalized URL in SURT [2]_ form starts with the ``surt``
 value.
 
 ``parent_url_regex``
@@ -458,14 +458,14 @@ value.
 +========+==========+=========+
 | string | no       | *none*  |
 +--------+----------+---------+
-Matches if the full canonicalized parent URL matches a regular expression. 
+Matches if the full canonicalized parent URL matches a regular expression.
 The parent URL is the URL of the page in which a link is found.
 
 Using ``warcprox_meta``
 =======================
-``warcprox_meta`` plays a very important role in brozzler job configuration. 
-It sets the filenames of the WARC files created by a job. For example, if each 
-seed should have a different WARC filename prefix, you might configure a job 
+``warcprox_meta`` plays a very important role in brozzler job configuration.
+It sets the filenames of the WARC files created by a job. For example, if each
+seed should have a different WARC filename prefix, you might configure a job
 this way::
 
     seeds:
@@ -476,8 +476,8 @@ this way::
       warcprox_meta:
         warc-prefix: seed2
 
-``warcprox_meta`` may also be used to limit the size of the job. For example, 
-this configuration will stop the crawl after about 100 MB of novel content has 
+``warcprox_meta`` may also be used to limit the size of the job. For example,
+this configuration will stop the crawl after about 100 MB of novel content has
 been archived::
 
     seeds:
@@ -492,7 +492,7 @@ been archived::
 
 To prevent any URLs from a host from being captured, it is not sufficient to use
 a ``scope`` rule as described above. That kind of scoping only applies to
-navigational links discovered in crawled pages. To make absolutely sure that no 
+navigational links discovered in crawled pages. To make absolutely sure that no
 url from a given host is fetched--not even an image embedded in a page--use
 ``warcprox_meta`` like so::
 
