@@ -134,12 +134,13 @@ class Chrome:
                     cookie_location, exc_info=True)
         return cookie_db
 
-    def start(self, proxy=None, cookie_db=None, disk_cache_dir=None,
-              disk_cache_size=None):
+    def start(self, headless=False, proxy=None, cookie_db=None,
+              disk_cache_dir=None, disk_cache_size=None):
         '''
         Starts chrome/chromium process.
 
         Args:
+            headless: run in headless mode, without X windows (default: False)
             proxy: http proxy 'host:port' (default None)
             cookie_db: raw bytes of chrome/chromium sqlite3 cookies database,
                 which, if supplied, will be written to
@@ -176,7 +177,8 @@ class Chrome:
                 '--homepage=about:blank', '--disable-direct-npapi-requests',
                 '--disable-web-security', '--disable-notifications',
                 '--disable-extensions', '--disable-save-password-bubble']
-
+        if headless:
+            chrome_args.append('--headless')
         if disk_cache_dir:
             chrome_args.append('--disk-cache-dir=%s' % disk_cache_dir)
         if disk_cache_size:
