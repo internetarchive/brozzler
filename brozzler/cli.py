@@ -307,6 +307,9 @@ def brozzler_worker(argv=None):
             '-n', '--max-browsers', dest='max_browsers', default='1',
             help='max number of chrome instances simultaneously browsing pages')
     arg_parser.add_argument(
+            '--headless', dest='headless', action='store_true', default=False,
+            help='use chrome in headless mode')
+    arg_parser.add_argument(
             '--proxy', dest='proxy', default=None, help='http proxy')
     arg_parser.add_argument(
             '--warcprox-auto', dest='warcprox_auto', action='store_true',
@@ -354,7 +357,7 @@ def brozzler_worker(argv=None):
     service_registry = doublethink.ServiceRegistry(rr)
     worker = brozzler.worker.BrozzlerWorker(
             frontier, service_registry, max_browsers=int(args.max_browsers),
-            chrome_exe=args.chrome_exe, proxy=args.proxy,
+            chrome_exe=args.chrome_exe, headless=headless, proxy=args.proxy,
             warcprox_auto=args.warcprox_auto,
             skip_extract_outlinks=args.skip_extract_outlinks,
             skip_visit_hashtags=args.skip_visit_hashtags,
