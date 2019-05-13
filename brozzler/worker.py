@@ -50,7 +50,8 @@ class BrozzlerWorker:
             self, frontier, service_registry=None, max_browsers=1,
             chrome_exe="chromium-browser", warcprox_auto=False, proxy=None,
             skip_extract_outlinks=False, skip_visit_hashtags=False,
-            skip_youtube_dl=False, page_timeout=300, behavior_timeout=900):
+            skip_youtube_dl=False, page_timeout=300, behavior_timeout=900,
+            headless=False):
         self._frontier = frontier
         self._service_registry = service_registry
         self._max_browsers = max_browsers
@@ -66,7 +67,8 @@ class BrozzlerWorker:
         self._behavior_timeout = behavior_timeout
 
         self._browser_pool = brozzler.browser.BrowserPool(
-                max_browsers, chrome_exe=chrome_exe, ignore_cert_errors=True)
+            max_browsers, chrome_exe=chrome_exe, headless=headless,
+            ignore_cert_errors=True)
         self._browsing_threads = set()
         self._browsing_threads_lock = threading.Lock()
 
