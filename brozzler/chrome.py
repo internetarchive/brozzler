@@ -62,7 +62,8 @@ def check_version(chrome_exe):
 class Chrome:
     logger = logging.getLogger(__module__ + '.' + __qualname__)
 
-    def __init__(self, chrome_exe, port=9222, ignore_cert_errors=False):
+    def __init__(self, chrome_exe, port=9222, headless=False,
+                 ignore_cert_errors=False):
         '''
         Initializes instance of this class.
 
@@ -71,11 +72,13 @@ class Chrome:
         Args:
             chrome_exe: filesystem path to chrome/chromium executable
             port: chrome debugging protocol port (default 9222)
+            headless: run in headless mode, without X windows (default: False)
             ignore_cert_errors: configure chrome to accept all certs (default
                 False)
         '''
         self.port = port
         self.chrome_exe = chrome_exe
+        self.headless = headless
         self.ignore_cert_errors = ignore_cert_errors
         self._shutdown = threading.Event()
         self.chrome_process = None
@@ -134,13 +137,12 @@ class Chrome:
                     cookie_location, exc_info=True)
         return cookie_db
 
-    def start(self, headless=False, proxy=None, cookie_db=None,
+    def start(self, proxy=None, cookie_db=None,
               disk_cache_dir=None, disk_cache_size=None):
         '''
         Starts chrome/chromium process.
 
         Args:
-            headless: run in headless mode, without X windows (default: False)
             proxy: http proxy 'host:port' (default None)
             cookie_db: raw bytes of chrome/chromium sqlite3 cookies database,
                 which, if supplied, will be written to
@@ -177,7 +179,7 @@ class Chrome:
                 '--homepage=about:blank', '--disable-direct-npapi-requests',
                 '--disable-web-security', '--disable-notifications',
                 '--disable-extensions', '--disable-save-password-bubble']
-        if headless:
+        if self.headless:
             chrome_args.append('--headless')
         if disk_cache_dir:
             chrome_args.append('--disk-cache-dir=%s' % disk_cache_dir)
