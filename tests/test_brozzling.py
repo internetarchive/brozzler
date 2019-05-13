@@ -114,14 +114,14 @@ def test_httpd(httpd):
 
 def test_aw_snap_hes_dead_jim():
     chrome_exe = brozzler.suggest_default_chrome_exe()
-    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+    with brozzler.Browser(chrome_exe=chrome_exe, headless=True) as browser:
         with pytest.raises(brozzler.BrowsingException):
             browser.browse_page('chrome://crash')
 
 def test_page_interstitial_exception(httpd):
     chrome_exe = brozzler.suggest_default_chrome_exe()
     url = 'http://localhost:%s/401' % httpd.server_port
-    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+    with brozzler.Browser(chrome_exe=chrome_exe, headless=True) as browser:
         with pytest.raises(brozzler.PageInterstitialShown):
             browser.browse_page(url)
 
@@ -132,7 +132,7 @@ def test_on_response(httpd):
 
     chrome_exe = brozzler.suggest_default_chrome_exe()
     url = 'http://localhost:%s/site3/page.html' % httpd.server_port
-    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+    with brozzler.Browser(chrome_exe=chrome_exe, headless=True) as browser:
         browser.browse_page(url, on_response=on_response)
     assert response_urls[0] == 'http://localhost:%s/site3/page.html' % httpd.server_port
     assert response_urls[1] == 'http://localhost:%s/site3/brozzler.svg' % httpd.server_port
@@ -141,7 +141,7 @@ def test_on_response(httpd):
 def test_420(httpd):
     chrome_exe = brozzler.suggest_default_chrome_exe()
     url = 'http://localhost:%s/420' % httpd.server_port
-    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+    with brozzler.Browser(chrome_exe=chrome_exe, headless=True) as browser:
         with pytest.raises(brozzler.ReachedLimit) as excinfo:
             browser.browse_page(url)
         assert excinfo.value.warcprox_meta == WARCPROX_META_420
@@ -149,7 +149,7 @@ def test_420(httpd):
 def test_js_dialogs(httpd):
     chrome_exe = brozzler.suggest_default_chrome_exe()
     url = 'http://localhost:%s/site4/alert.html' % httpd.server_port
-    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+    with brozzler.Browser(chrome_exe=chrome_exe, headless=True) as browser:
         # before commit d2ed6b97a24 these would hang and eventually raise
         # brozzler.browser.BrowsingTimeout, which would cause this test to fail
         browser.browse_page(
@@ -170,7 +170,7 @@ def test_page_videos(httpd):
     site = brozzler.Site(None, {})
     page = brozzler.Page(None, {
         'url':'http://localhost:%s/site6/' % httpd.server_port})
-    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+    with brozzler.Browser(chrome_exe=chrome_exe, headless=True) as browser:
         worker.brozzle_page(browser, site, page)
     assert page.videos
     assert len(page.videos) == 4
@@ -211,7 +211,7 @@ def test_extract_outlinks(httpd):
     site = brozzler.Site(None, {})
     page = brozzler.Page(None, {
         'url':'http://localhost:%s/site8/' % httpd.server_port})
-    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+    with brozzler.Browser(chrome_exe=chrome_exe, headless=True) as browser:
         outlinks = worker.brozzle_page(browser, site, page)
     assert outlinks == {
         'http://example.com/offsite',
@@ -238,10 +238,10 @@ def test_proxy_down():
         page = brozzler.Page(None, {'url': 'http://example.com/'})
 
         worker = brozzler.BrozzlerWorker(
-                frontier=None, proxy=not_listening_proxy)
+                frontier=None, proxy=not_listening_proxy, headless=True)
         chrome_exe = brozzler.suggest_default_chrome_exe()
 
-        with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        with brozzler.Browser(chrome_exe=chrome_exe, headless=True) as browser:
             with pytest.raises(brozzler.ProxyError):
                 worker.brozzle_page(browser, site, page)
 
