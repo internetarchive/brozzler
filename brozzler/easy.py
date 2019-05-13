@@ -88,7 +88,9 @@ def _build_arg_parser(argv=None):
             type=int, default=1, help=(
                 'max number of chrome instances simultaneously '
                 'browsing pages'))
-
+    arg_parser.add_argument(
+            '--headless', dest='headless', action='store_true', default=False,
+            help='use chrome in headless mode')
     # pywb args
     arg_parser.add_argument(
             '--pywb-address', dest='pywb_address',
@@ -141,7 +143,7 @@ class BrozzlerEasyController:
         worker = brozzler.worker.BrozzlerWorker(
                 frontier, service_registry, chrome_exe=args.chrome_exe,
                 proxy='%s:%s' % self.warcprox_controller.proxy.server_address,
-                max_browsers=args.max_browsers)
+                max_browsers=args.max_browsers, headless=args.headless)
         return worker
 
     def _init_pywb(self, args):
