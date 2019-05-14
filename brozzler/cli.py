@@ -627,7 +627,7 @@ def brozzler_purge(argv=None):
             sys.exit(1)
         if job.status == 'ACTIVE':
             if args.force:
-                logging.warn(
+                logging.warning(
                         'job %s has status ACTIVE, purging anyway because '
                         '--force was supplied', job_id)
             else:
@@ -644,7 +644,7 @@ def brozzler_purge(argv=None):
             sys.exit(1)
         if site.status == 'ACTIVE':
             if args.force:
-                logging.warn(
+                logging.warning(
                         'site %s has status ACTIVE, purging anyway because '
                         '--force was supplied', site_id)
             else:
@@ -712,7 +712,7 @@ def brozzler_list_captures(argv=None):
 
     if args.url_or_sha1[:5] == 'sha1:':
         if args.prefix:
-            logging.warn(
+            logging.warning(
                     'ignoring supplied --prefix option which does not apply '
                     'to lookup by sha1')
         # assumes it's already base32 (XXX could detect if hex and convert)

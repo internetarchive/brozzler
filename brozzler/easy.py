@@ -260,7 +260,7 @@ class BrozzlerEasyController:
             state_strs.append(str(th))
             stack = traceback.format_stack(sys._current_frames()[th.ident])
             state_strs.append(''.join(stack))
-        logging.warn('dumping state (caught signal {})\n{}'.format(
+        logging.warning('dumping state (caught signal {})\n{}'.format(
             signum, '\n'.join(state_strs)))
 
 def main(argv=None):

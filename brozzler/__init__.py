@@ -159,7 +159,7 @@ class ThreadExceptionGate:
     def queue_exception(self, e):
         with self.lock:
             if self.pending_exception:
-                self.logger.warn(
+                self.logger.warning(
                         '%r already pending for thread %r, discarding %r',
                         self.pending_exception, self.thread, e)
             else:
