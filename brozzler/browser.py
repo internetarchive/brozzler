@@ -241,6 +241,13 @@ class WebsockReceiverThread(threading.Thread):
             elif message['method'] == 'Network.requestWillBeSent':
                 if self.on_request:
                     self.on_request(message)
+            elif message['method'] == 'Network.requestIntercepted':
+                if 'params' in message and 'authChallenge' in message['params']:
+                    auth_challenge = message['params']['authChallenge']
+                    self.logger.info('Network.requestIntercepted AuthChallenge %s %s',
+                                     auth_challenge['scheme'], auth_challenge['origin'])
+                else:
+                    self.logger.info('Network.requestIntercepted non-AuthChallenge')
             elif message['method'] == 'Page.interstitialShown':
                 # AITFIVE-1529: handle http auth
                 # we should kill the browser when we receive Page.interstitialShown and
