@@ -2,7 +2,7 @@
 brozzler/models.py - model classes representing jobs, sites, and pages, with
 related logic
 
-Copyright (C) 2014-2018 Internet Archive
+Copyright (C) 2014-2019 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import yaml
 def load_schema():
     schema_file = os.path.join(os.path.dirname(__file__), 'job_schema.yaml')
     with open(schema_file) as f:
-        return yaml.load(f)
+        return yaml.safe_load(f)
 
 class JobValidator(cerberus.Validator):
     def _validate_type_url(self, value):
@@ -48,7 +48,7 @@ class InvalidJobConf(Exception):
 
 def validate_conf(job_conf, schema=load_schema()):
     v = JobValidator(schema)
-    if not v.validate(job_conf):
+    if not v.validate(job_conf, normalize=False):
         raise InvalidJobConf(v.errors)
 
 def merge(a, b):
@@ -68,7 +68,7 @@ def new_job_file(frontier, job_conf_file):
     '''Returns new Job.'''
     logging.info("loading %s", job_conf_file)
     with open(job_conf_file) as f:
-        job_conf = yaml.load(f)
+        job_conf = yaml.safe_load(f)
         return new_job(frontier, job_conf)
 
 def new_job(frontier, job_conf):

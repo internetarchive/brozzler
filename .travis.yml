@@ -1,8 +1,10 @@
+dist: xenial
 language: python
 python:
 - 3.4
 - 3.5
 - 3.6
+- 3.7
 sudo: required
 before_install:
 - sudo pip install --upgrade setuptools pip
