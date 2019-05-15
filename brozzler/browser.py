@@ -242,12 +242,11 @@ class WebsockReceiverThread(threading.Thread):
                 if self.on_request:
                     self.on_request(message)
             elif message['method'] == 'Network.requestIntercepted':
-                if 'params' in message and 'authChallenge' in message['params']:
-                    auth_challenge = message['params']['authChallenge']
-                    self.logger.info('Network.requestIntercepted AuthChallenge %s %s',
-                                     auth_challenge['scheme'], auth_challenge['origin'])
-                else:
-                    self.logger.info('Network.requestIntercepted non-AuthChallenge')
+                if 'params' in message:
+                    for p in message['params']:
+                        self.logger.info(
+                            'Network.requestIntercepted param  %s: %s',
+                            p, message['params'][p])
             elif message['method'] == 'Page.interstitialShown':
                 # AITFIVE-1529: handle http auth
                 # we should kill the browser when we receive Page.interstitialShown and
@@ -358,6 +357,10 @@ class Browser:
             self.send_to_chrome(method='Page.enable')
             self.send_to_chrome(method='Console.enable')
             self.send_to_chrome(method='Runtime.enable')
+            self.send_to_chrome(
+                method='Network.setRequestInterception',
+                params={'patterns': [{'urlPattern': '*'}]})
+
             self.send_to_chrome(method='ServiceWorker.enable')
             self.send_to_chrome(method='ServiceWorker.setForceUpdateOnPageLoad')
 
