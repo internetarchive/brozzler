@@ -339,12 +339,12 @@ Brozzler derives its general approach to the seed surt from `heritrix
    slash.
 2. Canonicalization does not attempt to match heritrix exactly, though it
    usually does match.
-3. When generating a SURT for an HTTPS URL, heritrix changes the scheme to
-   HTTP. For example, the heritrix SURT for ``https://www.example.com/`` is
-   ``http://(com,example,www,)`` and this means that all of
-   ``http://www.example.com/*`` and ``https://www.example.com/*`` are in
-   scope. It also means that a manually specified SURT with scheme "https" does
-   not match anything. Brozzler does no scheme munging.
+3. Brozzler does no scheme munging. (When generating a SURT for an HTTPS URL,
+   heritrix changes the scheme to HTTP. For example, the heritrix SURT for
+   ``https://www.example.com/`` is ``http://(com,example,www,)`` and this means
+   that all of ``http://www.example.com/*`` and ``https://www.example.com/*``
+   are in scope. It also means that a manually specified SURT with scheme
+   "https" does not match anything.)
 4. Brozzler identifies seed "redirects" by retrieving the URL from the
    browser's location bar at the end of brozzling the seed page, whereas
    heritrix follows HTTP 3XX redirects. If the URL in the browser
