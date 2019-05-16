@@ -32,7 +32,7 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.5.5',
+        version='1.5.6',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
@@ -64,7 +64,7 @@ setuptools.setup(
             ],
         },
         install_requires=[
-            'PyYAML>=5.8',
+            'PyYAML>=5.1',
             'youtube-dl>=2018.7.21',
             'reppy==0.3.4',
             'requests>=2.21',
