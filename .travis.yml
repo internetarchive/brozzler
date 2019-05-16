@@ -12,7 +12,7 @@ before_install:
 install:
 - ansible-playbook --extra-vars="brozzler_pip_name=file://$TRAVIS_BUILD_DIR#egg=brozzler user=travis" --inventory-file=ansible/hosts-localhost ansible/playbook.yml
 - head -999 /etc/service/*/run
-- pip install $TRAVIS_BUILD_DIR git+https://github.com/internetarchive/warcprox.git#egg=warcprox pytest
+- pip install $TRAVIS_BUILD_DIR git+https://github.com/internetarchive/warcprox.git#egg=warcprox pytest==4.3.0
 - chromium-browser --version
 - sudo apt-get update
 - sudo apt-get install --only-upgrade chromium-browser

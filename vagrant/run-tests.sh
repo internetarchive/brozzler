@@ -17,5 +17,5 @@ vagrant ssh -- 'sudo svstat /etc/service/warcprox ;
                 sudo svstat /etc/service/vnc-websock'
 echo
 
-vagrant ssh -- 'set -x ; source /opt/brozzler-ve3/bin/activate && pip install pytest && pip install --upgrade --pre "warcprox>=2.1b1.dev86"'
-vagrant ssh -- "source /opt/brozzler-ve3/bin/activate && DISPLAY=:1 py.test -v /brozzler/tests $@"
+vagrant ssh -- 'set -x ; source /opt/brozzler-ve3/bin/activate && pip install pytest==4.3.0 && pip install --upgrade --pre "warcprox>=2.1b1.dev86"'
+vagrant ssh -- "source /opt/brozzler-ve3/bin/activate && DISPLAY=:1 py.test --tb=native -v /brozzler/tests $@"
