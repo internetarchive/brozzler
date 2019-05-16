@@ -223,7 +223,7 @@ class Chrome:
                 raise
             except Exception as e:
                 if time.time() - self._last_warning > 30:
-                    self.logger.warn(
+                    self.logger.warning(
                             'problem with %s (will keep trying until timeout '
                             'of %d seconds): %s', json_url, timeout_sec, e)
                     self._last_warning = time.time()
@@ -294,7 +294,7 @@ class Chrome:
                                 'chrome pid %s exited normally',
                                 self.chrome_process.pid)
                     else:
-                        self.logger.warn(
+                        self.logger.warning(
                                 'chrome pid %s exited with nonzero status %s',
                                 self.chrome_process.pid, status)
 
@@ -305,13 +305,13 @@ class Chrome:
                     return
                 time.sleep(0.5)
 
-            self.logger.warn(
+            self.logger.warning(
                     'chrome pid %s still alive %.1f seconds after sending '
                     'SIGTERM, sending SIGKILL', self.chrome_process.pid,
                     time.time() - t0)
             os.killpg(self.chrome_process.pid, signal.SIGKILL)
             status = self.chrome_process.wait()
-            self.logger.warn(
+            self.logger.warning(
                     'chrome pid %s reaped (status=%s) after killing with '
                     'SIGKILL', self.chrome_process.pid, status)
 

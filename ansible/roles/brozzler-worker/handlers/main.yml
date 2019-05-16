@@ -1,13 +1,22 @@
 ---
 - name: restart Xvnc
-  service: name=Xvnc state=restarted
+  svc:
+    name: Xvnc
+    state: restarted
+    service_dir: /etc/service
   become: true
-- name: restart websockify
-  service: name=websockify state=restarted
-  become: true
+
 - name: restart vnc-websock
-  service: name=vnc-websock state=restarted
+  svc:
+    name: vnc-websock
+    state: restarted
+    service_dir: /etc/service
   become: true
+
 - name: restart brozzler-worker
-  service: name=brozzler-worker state=restarted
+  svc:
+    name: brozzler-worker
+    state: restarted
+    service_dir: /etc/service
   become: true
+

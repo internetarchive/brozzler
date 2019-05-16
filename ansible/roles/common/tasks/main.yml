@@ -1,44 +1,74 @@
 ---
-# get latest pip (had problems with version from apt-get, specifically
-# "pip install pyopenssl" did not install the dependency "cryptography")
-# http://stackoverflow.com/questions/34587473/what-is-get-pip-py-checksum-where-can-i-get-it-for-sure
-- name: install setuptools for python 2 and 3
+- apt:
+    name:
+    - python3-setuptools
+    - python3-pip
+    - python3-virtualenv
+    - daemontools
+    - daemontools-run
+    state: present
+    update_cache: yes
+    cache_valid_time: 86400 # one day
   become: true
-  apt: name={{item}} state=present
-  with_items:
-  - python-setuptools
-  - python3-setuptools
-- name: download pip-9.0.1.tar.gz
-  get_url:
-    url: https://pypi.python.org/packages/11/b6/abcb525026a4be042b486df43905d6893fb04f05aac21c32c638e939e447/pip-9.0.1.tar.gz
-    dest: /tmp
-    checksum: sha1:57ff41e99cb01b6a1c2b0999161589b726f0ec8b
-- name: extract pip-9.0.1.tar.gz
-  unarchive: src=/tmp/pip-9.0.1.tar.gz dest=/tmp copy=no
+
+# # get recent virtualenv, which bundles a recent pip
+# - find:
+#     paths:
+#     - /usr/local/lib/python3.4/dist-packages
+#     - /usr/local/lib/python3.5/dist-packages
+#     recurse: true
+#     patterns: virtualenv.py
+#     contains: '__version__ = "16.4.3"'
+#   register: virtualenv_py_16_4_3
+# 
+# - command: mktemp -d
+#   register: mktempd_out
+#   when: virtualenv_py_16_4_3.matched == 0
+# 
+# - name: download virtualenv-16.4.3
+#   get_url:
+#     url: https://files.pythonhosted.org/packages/37/db/89d6b043b22052109da35416abc3c397655e4bd3cff031446ba02b9654fa/virtualenv-16.4.3.tar.gz
+#     dest: '{{mktempd_out.stdout}}'
+#     checksum: sha256:984d7e607b0a5d1329425dd8845bd971b957424b5ba664729fab51ab8c11bc39
+#   when: virtualenv_py_16_4_3.matched == 0
+# 
+# - name: extract virtualenv-16.4.3.tar.gz
+#   unarchive:
+#     src: '{{mktempd_out.stdout}}/virtualenv-16.4.3.tar.gz'
+#     dest: '{{mktempd_out.stdout}}'
+#     copy: no
+#   when: virtualenv_py_16_4_3.matched == 0
+# 
+# - name: run "python3 setup.py install" in {{mktempd_out.stdout}}/virtualenv-16.4.3
+#   become: true
+#   command: python3 setup.py install
+#   args:
+#     chdir: '{{mktempd_out.stdout}}/virtualenv-16.4.3'
+#   when: virtualenv_py_16_4_3.matched == 0
+# 
+# - file:
+#     path: '{{mktempd_out.stdout}}'
+#     state: absent
+#   become: true
+#   when: virtualenv_py_16_4_3.matched == 0
 
 # this clause is a workaround for travis-ci, which only wants to install in /usr
 # see https://travis-ci.org/internetarchive/brozzler/builds/174338601
-# but it complains that /usr/lib/python3.4/site-packages doesn't exist
+# but it complains that /usr/lib/python3.5/site-packages doesn't exist
 # see https://travis-ci.org/internetarchive/brozzler/builds/174094831
-- file: path={{item}} state=directory
+- file:
+    path: '{{item}}'
+    state: directory
   with_items:
-  - /usr/lib/python3.4/site-packages
-  - /usr/lib/python3.4/dist-packages
+  - /usr/lib/python3.5/site-packages
+  - /usr/lib/python3.5/dist-packages
   become: true
 
-- name: run "python3 setup.py install" in /tmp/pip-9.0.1
-  command: python3 setup.py install
-           chdir=/tmp/pip-9.0.1
-           creates=/usr/local/lib/python3.4/dist-packages/pip-9.0.1-py3.4.egg/pip/__init__.py
-  become: true
-- name: run "pip install virtualenv"
-  command: pip install virtualenv
-           creates=/usr/local/lib/python3.4/dist-packages/virtualenv.py
-  become: true
 - command: id {{user}}
   register: id_user
   ignore_errors: true
   changed_when: false
+
 - name: ensure service user {{user}} exists
   user: name={{user}} system=yes createhome=no home=/nonexistent
         shell=/usr/sbin/nologin

@@ -4,26 +4,37 @@
   apt: name={{item}} state=present
   with_items:
   - gcc
-  - python3.4
-  - libpython3.4-dev
+  - python3-dev
   - libffi-dev
   - libssl-dev
   - tor
   - git
-- name: mkdir {{venv_root}}/warcprox-ve34
+- name: mkdir {{venv_root}}/warcprox-ve3
   become: true
-  file: path={{venv_root}}/warcprox-ve34 state=directory owner={{user}}
+  file: path={{venv_root}}/warcprox-ve3 state=directory owner={{user}}
 - name: install warcprox in virtualenv
-  pip: name=git+https://github.com/internetarchive/warcprox.git#egg=warcprox
-       virtualenv={{venv_root}}/warcprox-ve34
-       virtualenv_python=python3.4
-       extra_args='--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
+  pip:
+    name: git+https://github.com/internetarchive/warcprox.git#egg=warcprox
+    virtualenv: '{{venv_root}}/warcprox-ve3'
+    virtualenv_python: python3
+    extra_args: --no-input --upgrade --pre --cache-dir=/tmp/pip-cache
+    virtualenv_command: python3 /usr/lib/python3/dist-packages/virtualenv.py
   become: true
   become_user: '{{user}}'
   notify:
   - restart warcprox
-- name: install upstart config /etc/init/warcprox.conf
+
+- name: mkdir /etc/service/warcprox
+  file:
+    path: /etc/service/warcprox
+    state: directory
   become: true
-  template: src=templates/warcprox.conf.j2 dest=/etc/init/warcprox.conf
+
+- name: install /etc/service/warcprox/run
+  template:
+    src: templates/run.j2
+    dest: /etc/service/warcprox/run
+    mode: 0755
   notify:
   - restart warcprox
+  become: true

@@ -11,19 +11,22 @@ before_install:
 - sudo pip install ansible==2.1.3.0
 install:
 - ansible-playbook --extra-vars="brozzler_pip_name=file://$TRAVIS_BUILD_DIR#egg=brozzler user=travis" --inventory-file=ansible/hosts-localhost ansible/playbook.yml
-- pip install $TRAVIS_BUILD_DIR git+https://github.com/internetarchive/warcprox.git#egg=warcprox pytest
+- pip install $TRAVIS_BUILD_DIR git+https://github.com/internetarchive/warcprox.git#egg=warcprox pytest==4.3.0
 - chromium-browser --version
 - sudo apt-get update
 - sudo apt-get install --only-upgrade chromium-browser
 - chromium-browser --version
-- sudo service brozzler-worker restart
+- ps ww -fHe
+- sudo cat /var/log/Xvnc.log
+- sudo cat /var/log/brozzler-worker.log
+- sudo cat /var/log/warcprox.log
 script:
 - DISPLAY=:1 py.test --tb=native -v tests
 after_failure:
 - chromium-browser --version
-- sudo cat /var/log/upstart/warcprox.log
-- sudo cat /var/log/upstart/brozzler-worker.log
-- sudo cat /var/log/upstart/pywb.log
+- sudo cat /var/log/warcprox.log
+- sudo cat /var/log/brozzler-worker.log
+- sudo cat /var/log/pywb.log
 notifications:
   slack:
     secure: KPPXSscXnmSEQ2NXBZFKrzDEYHg067Kv1WR7RTRUH8EIlSS9MHTyErRa7HkaRPmqOllj4vvPbplNU2ALnCfhP4cqW+MvF0xv3GuEGXQ7Om2sBvVUQ3w0JJ5rLq9ferAfGdSnQFeViqfDix5LA3fMNZGouUHQdUHq7iO8E9n9jntvkKO9Jff7Dyo0K5KvOZOJfM9KsqFZLlFO5zoNB6Y9jubIT7+Ulk3EDto/Kny34VPIyJIm7y0cHHlYLEq780AweY0EIwMyMg/VPSRrVAsbLSrilO0YRgsQpjPC9Ci/rAWNWooaOk0eA+bwv1uHQnGtH0z446XUMXr3UZ2QlD4DE/uoP2okkl8EtqvlmEyjV8eO86TqYFDRgKfYpvlK6hHtb7SAHX28QeXQjbKNc5f7KpKO5PtZqaoBRL7acLlKyS8xQGiRtonTPFSBTFR2A+s6dZmKO9dDboglptiHk4dvL1ZD4S8qLJn1JjTJqvIU6tpCY3BpNErn4n1MkDjN5nqdXf7Q9Vmui8vRetwnMf1oXcsKj9FEt2utNfDqFNXcFsN+Mnr9rhXQ1++gt/7Zo844OowiARcxqZTNy5LqSD01WgGCvNMy3Odf+FTQ8PcDOF+001+g8La1R99U0o9/hT/gy+WYk2prYneWru4pQHF/a6goZgkLTwkskcaPVpDJtDs=

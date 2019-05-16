@@ -1,4 +1,8 @@
 ---
 - name: restart brozzler-dashboard
-  service: name=brozzler-dashboard state=restarted
+  svc:
+    name: brozzler-dashboard
+    state: restarted
+    service_dir: /etc/service
   become: true
+

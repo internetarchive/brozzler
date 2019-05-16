@@ -1,0 +1,10 @@
+#!/bin/bash
+
+logfile=/var/log/vnc-websock.log
+touch $logfile
+chown {{user}} $logfile
+
+source /opt/websockify-ve3/bin/activate
+
+exec nice setuidgid {{user}} websockify 0.0.0.0:8901 localhost:5901 >> $logfile 2>&1
+
