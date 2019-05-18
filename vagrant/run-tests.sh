@@ -10,12 +10,12 @@ cd $(dirname "${BASH_SOURCE[0]}")
 vagrant up
 
 echo service status:
-vagrant ssh -- 'status warcprox ;
-                status Xvnc ;
-                status brozzler-worker ;
-                status brozzler-dashboard ;
-                status vnc-websock'
+vagrant ssh -- 'sudo svstat /etc/service/warcprox ;
+                sudo svstat /etc/service/Xvnc ;
+                sudo svstat /etc/service/brozzler-worker ;
+                sudo svstat /etc/service/brozzler-dashboard ;
+                sudo svstat /etc/service/vnc-websock'
 echo
 
-vagrant ssh -- 'set -x ; source /opt/brozzler-ve34/bin/activate && pip install pytest && pip install --upgrade --pre "warcprox>=2.1b1.dev86"'
-vagrant ssh -- "source /opt/brozzler-ve34/bin/activate && DISPLAY=:1 py.test -v /brozzler/tests $@"
+vagrant ssh -- 'set -x ; source /opt/brozzler-ve3/bin/activate && pip install pytest==4.3.0 && pip install --upgrade --pre "warcprox>=2.1b1.dev86"'
+vagrant ssh -- "source /opt/brozzler-ve3/bin/activate && DISPLAY=:1 py.test --tb=native -v /brozzler/tests $@"

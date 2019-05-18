@@ -1,8 +1,9 @@
 Vagrant.configure(2) do |config|
-  config.vm.box = "ubuntu/trusty64"
+  config.vm.box = "ubuntu/xenial64"
   config.vm.define "10.9.9.9"
   config.vm.hostname = "brzl"
   config.vm.network :private_network, ip: "10.9.9.9"
+  config.disksize.size = '50GB'
 
   config.vm.synced_folder "..", "/brozzler"
 
@@ -14,6 +15,7 @@ Vagrant.configure(2) do |config|
   config.vm.provision "ansible" do |ansible|
     ansible.inventory_path = "../ansible/hosts-vagrant"
     ansible.playbook = "../ansible/playbook.yml"
+    # ansible.verbose = "-vvv"
   end
 
   config.vm.provider 'virtualbox' do |v|

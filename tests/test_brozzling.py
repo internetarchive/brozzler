@@ -67,8 +67,8 @@ def httpd(request):
                 self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
-                self.wfile.write(self.headers.getheader('Authorization'))
-                self.wfile.write('not authenticated')
+                self.wfile.write(self.headers.get('Authorization', b''))
+                self.wfile.write(b'not authenticated')
             else:
                 super().do_GET()
 

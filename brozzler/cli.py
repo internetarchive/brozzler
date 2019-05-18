@@ -2,7 +2,7 @@
 '''
 brozzler/cli.py - brozzler command line executables
 
-Copyright (C) 2014-2017 Internet Archive
+Copyright (C) 2014-2019 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -606,6 +606,10 @@ def brozzler_purge(argv=None):
             '--site', dest='site', metavar='SITE_ID', help=(
                 'purge crawl state from rethinkdb for a site, including all '
                 'pages'))
+    group.add_argument(
+            '--finished-before', dest='finished_before', metavar='YYYY-MM-DD',
+            help=('purge crawl state from rethinkdb for a jobs that ended '
+                  'before this date'))
     arg_parser.add_argument(
             '--force', dest='force', action='store_true', help=(
                 'purge even if job or site is still has status ACTIVE'))
@@ -628,7 +632,7 @@ def brozzler_purge(argv=None):
             sys.exit(1)
         if job.status == 'ACTIVE':
             if args.force:
-                logging.warn(
+                logging.warning(
                         'job %s has status ACTIVE, purging anyway because '
                         '--force was supplied', job_id)
             else:
@@ -645,7 +649,7 @@ def brozzler_purge(argv=None):
             sys.exit(1)
         if site.status == 'ACTIVE':
             if args.force:
-                logging.warn(
+                logging.warning(
                         'site %s has status ACTIVE, purging anyway because '
                         '--force was supplied', site_id)
             else:
@@ -654,6 +658,20 @@ def brozzler_purge(argv=None):
                         '(override with --force)', site_id)
                 sys.exit(1)
         _purge_site(rr, site_id)
+    elif args.finished_before:
+        finished_before = datetime.datetime.strptime(
+                args.finished_before, '%Y-%m-%d').replace(
+                        tzinfo=doublethink.UTC)
+        reql = rr.table('jobs').filter(
+                r.row['finished'].default(r.maxval).lt(finished_before).or_(
+                    r.row['starts_and_stops'].nth(-1)['stop'].default(r.maxval).lt(finished_before)))
+        logging.debug(
+                'retrieving jobs older than %s: %s', finished_before, reql)
+        for job in reql.run():
+            # logging.info('job %s finished=%s starts_and_stops[-1]["stop"]=%s',
+            #         job['id'], job.get('finished'),
+            #         job.get('starts_and_stops', [{'stop':None}])[-1]['stop'])
+            _purge_job(rr, job['id'])
 
 def _purge_site(rr, site_id):
     reql = rr.table('pages').between(
@@ -713,7 +731,7 @@ def brozzler_list_captures(argv=None):
 
     if args.url_or_sha1[:5] == 'sha1:':
         if args.prefix:
-            logging.warn(
+            logging.warning(
                     'ignoring supplied --prefix option which does not apply '
                     'to lookup by sha1')
         # assumes it's already base32 (XXX could detect if hex and convert)

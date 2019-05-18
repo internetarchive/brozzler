@@ -1,7 +1,9 @@
 [all:vars]
 warcs_dir=/vagrant/warcs
-brozzler_pip_name='-e /brozzler'
+# brozzler_pip_name='-e /brozzler' # not working anymore? :(
+brozzler_pip_name='/brozzler'
 user=vagrant
+ansible_python_interpreter=/usr/bin/python3
 ### possible values for a prod deployment
 # brozzler_pip_name=brozzler  # get it from pypi
 # brozzler_pip_name=git+https://github.com/internetarchive/brozzler.git#egg=brozzler

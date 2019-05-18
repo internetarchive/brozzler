@@ -138,7 +138,7 @@ class RethinkDbFrontier:
         sites = []
         for i in range(result["replaced"]):
             if result["changes"][i]["old_val"]["claimed"]:
-                self.logger.warn(
+                self.logger.warning(
                         "re-claimed site that was still marked 'claimed' "
                         "because it was last claimed a long time ago "
                         "at %s, and presumably some error stopped it from "
@@ -225,7 +225,7 @@ class RethinkDbFrontier:
         if not job:
             return False
         if job.status.startswith("FINISH"):
-            self.logger.warn("%s is already %s", job, job.status)
+            self.logger.warning("%s is already %s", job, job.status)
             return True
 
         results = self.rr.table("sites").get_all(job_id, index="job_id").run()
@@ -415,7 +415,7 @@ class RethinkDbFrontier:
         assert isinstance(e, brozzler.ReachedLimit)
         if (site.reached_limit
                 and site.reached_limit != e.warcprox_meta["reached-limit"]):
-            self.logger.warn(
+            self.logger.warning(
                     "reached limit %s but site had already reached limit %s",
                     e.warcprox_meta["reached-limit"], self.reached_limit)
         else:
@@ -434,7 +434,7 @@ class RethinkDbFrontier:
                 index="priority_by_site").filter({"hops_from_seed":0}).run()
         pages = list(results)
         if len(pages) > 1:
-            self.logger.warn(
+            self.logger.warning(
                     "more than one seed page for site_id %s ?", site_id)
         if len(pages) < 1:
             return None
