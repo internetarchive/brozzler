@@ -2,8 +2,8 @@ Brozzler Job Configuration
 **************************
 
 Jobs are used to brozzle multiple seeds and/or apply settings and scope rules,
-as defined byusing YAML files. At least one seed URL must be specified.
-All other configurartions are optional.
+and defined using YAML files. At least one seed URL must be specified.
+All other configurations are optional.
 
 .. contents::
 
