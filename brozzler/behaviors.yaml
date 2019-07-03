@@ -127,7 +127,7 @@
   behavior_js_template: umbraBehavior.js.j2
   default_parameters:
     actions:
-      - selector: button.sc-button-play, .playButton, div.compactTrackListItem
+      - selector: .sc-button-play, .playButton, div.compactTrackListItem
 - # https://webarchive.jira.com/browse/AITFIVE-463
   url_regex: '^https?://(?:www\.)?christophercerrone.com/.*$'
   behavior_js_template: umbraBehavior.js.j2
