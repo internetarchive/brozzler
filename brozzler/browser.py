@@ -358,9 +358,10 @@ class Browser:
             self.send_to_chrome(method='Page.enable')
             self.send_to_chrome(method='Console.enable')
             self.send_to_chrome(method='Runtime.enable')
-            self.send_to_chrome(
-                method='Network.setRequestInterception',
-                params={'patterns': [{'urlPattern': '*'}]})
+            # Network.requestIntercepted needs more work...
+            #self.send_to_chrome(
+            #    method='Network.setRequestInterception',
+            #    params={'patterns': [{'urlPattern': '*'}]})
 
             self.send_to_chrome(method='ServiceWorker.enable')
             self.send_to_chrome(method='ServiceWorker.setForceUpdateOnPageLoad')
