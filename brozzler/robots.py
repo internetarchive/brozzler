@@ -90,7 +90,7 @@ def is_permitted_by_robots(site, url, proxy=None):
         brozzler.ReachedLimit: if warcprox responded with 420 Reached Limit
         requests.exceptions.ProxyError: if the proxy is down
     '''
-    if site.ignore_robots:
+    if site.ignore_robots and not site.user_agent:
         return True
 
     try:
