@@ -163,13 +163,21 @@ def _build_youtube_dl(worker, destdir, site):
                     ie_result['entries_no_dl'] = list(ie_result['entries'])
                     ie_result['entries'] = []
                     self.logger.info(
-                            'not downoading %s videos from this youtube '
+                            'not downloading %s videos from this youtube '
                             'playlist because we expect to capture them from '
                             'individual watch pages',
                             len(ie_result['entries_no_dl']))
+                elif ie.IE_NAME == 'soundcloud:user':
+                    ie_result['entries_no_dl'] = list(ie_result['entries'])
+                    ie_result['entries'] = []
+                    self.logger.info(
+                            'not downloading %s tracks from this soundcloud '
+                            'user page because we expect to capture them from '
+                            'individual track pages',
+                            len(ie_result['entries_no_dl']))
             else:
                 self.logger.info(
-                        'extractor %r found a video in %s', ie.IE_NAME, url)
+                        'extractor %r found a download in %s', ie.IE_NAME, url)
 
         def _push_stitched_up_vid_to_warcprox(self, site, info_dict, ctx):
             # XXX Don't know how to get the right content-type. Youtube-dl
