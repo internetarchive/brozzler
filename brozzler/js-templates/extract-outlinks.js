@@ -8,6 +8,14 @@ var __brzl_compileOutlinks = function(frame) {
         if (frame && frame.document) {
             outlinks = Array.prototype.slice.call(
                 frame.document.querySelectorAll('a[href], area[href]'));
+            popups = Array.prototype.slice.call(
+                frame.document.querySelectorAll('a[onclick]'));
+            if (popups && popups.length > 0) {
+                for (var p=0; p < popups.length; p++) {
+                    popups[p] = popups[p].onclick.toString().split("'")[1];
+                }
+                outlinks = outlinks.concat(popups);
+            }
             for (var i = 0; i < frame.frames.length; i++) {
                 if (frame.frames[i] && !__brzl_framesDone.has(frame.frames[i])) {
                     outlinks = outlinks.concat(

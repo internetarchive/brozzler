@@ -366,11 +366,12 @@ class Browser:
             self.send_to_chrome(method='ServiceWorker.enable')
             self.send_to_chrome(method='ServiceWorker.setForceUpdateOnPageLoad')
 
-            # disable google analytics
+            # disable google analytics and amp analytics
             self.send_to_chrome(
                 method='Network.setBlockedURLs',
                 params={'urls': ['*google-analytics.com/analytics.js',
-                                 '*google-analytics.com/ga.js']})
+                                 '*google-analytics.com/ga.js',
+                                 '*cdn.ampproject.org/*/amp-analytics*.js']})
 
     def stop(self):
         '''
