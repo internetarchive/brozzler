@@ -43,6 +43,7 @@ class UmbraBehavior {
 
         var documents = [];
         documents[0] = document;
+
         var iframes = document.querySelectorAll("iframe");
         var iframesLength = iframes.length;
         for (var i = 0; i < iframesLength; i++) {
@@ -54,25 +55,27 @@ class UmbraBehavior {
                 // console.log("exception looking at iframe" + iframes[i] + ": " + e);
             }
         }
+
         var documentsLength = documents.length;
         for (var j = 0; j < documentsLength; j++) {
             if (closeSelector) {
                 var closeTargets = documents[j].querySelectorAll(closeSelector);
-                if ((closeTargets.length > 0) &&
-                    (this.alreadyDone.indexOf(closeTargets[0]) === -1) &&
-                    (this.isVisible(closeTargets[0]))) {
-                    doTarget(closeTargets[0], 'click');
+                for (var i = 0; i < closeTargets.length; i++) {
+                    this.doTarget(closeTargets[i], "click", "close");
                 }
             }
+
             if (firstMatchOnly) {
                 var doTargets = [ documents[j].querySelector(selector) ];
             } else {
                 var doTargets = documents[j].querySelectorAll(selector);
             }
+
             var doTargetsLength = doTargets.length;
             if (!(doTargetsLength > 0)) {
                 continue;
             }
+
             for ( var i = 0; i < doTargetsLength; i++) {
                 if (!repeatSameElement && this.alreadyDone.indexOf(doTargets[i]) > -1) {
                     continue;
@@ -82,7 +85,7 @@ class UmbraBehavior {
                 }
                 var where = this.aboveBelowOrOnScreen(doTargets[i]);
                 if (where == 0) {
-                    this.doTarget(doTargets[i], action);
+                    this.doTarget(doTargets[i], action, 'open');
                     didSomething = true;
                     break;
                 } else if (where > 0) {
@@ -133,7 +136,7 @@ class UmbraBehavior {
         return elem && !!(elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length);
     }
 
-    doTarget(target, action) {
+    doTarget(target, action, type) {
         // console.log("doing " + action + target.outerHTML);
         // do mouse over event on target
         // since some urls are requsted only on
@@ -147,7 +150,12 @@ class UmbraBehavior {
             target.click();
         } // add new do's here!
 
-        this.alreadyDone.push(target);
+        // Only push the element to alreadyDone if it's
+        // an element we want to open. No need to track
+        // the close selectors
+        if (type == "open") {
+            this.alreadyDone.push(target);
+        }
         this.idleSince = null;
     }
 
