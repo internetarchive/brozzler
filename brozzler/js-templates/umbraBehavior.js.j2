@@ -58,10 +58,8 @@ class UmbraBehavior {
         for (var j = 0; j < documentsLength; j++) {
             if (closeSelector) {
                 var closeTargets = documents[j].querySelectorAll(closeSelector);
-                if ((closeTargets.length > 0) &&
-                    (this.alreadyDone.indexOf(closeTargets[0]) === -1) &&
-                    (this.isVisible(closeTargets[0]))) {
-                    doTarget(closeTargets[0], 'click');
+                for (var i = 0; i < closeTargets.length; i++) {
+                    this.doTarget(closeTargets[i], "click");
                 }
             }
             if (firstMatchOnly) {
