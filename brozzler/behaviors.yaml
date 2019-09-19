@@ -18,6 +18,15 @@
 
 # first matched behavior is used, so order matters here
 -
+  url_regex: '^https?://(?:www\.)?facebook\.com/ads/library/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  request_idle_timeout_sec: 30
+  default_parameters:
+    interval: 500
+    actions:
+      - selector: 'a[data-testid="snapshot_footer_link"]'
+        closeSelector: 'div._7lq1 > button'
+-
   url_regex: '^https?://(?:www\.)?facebook\.com/.*$'
   behavior_js_template: facebook.js
   request_idle_timeout_sec: 30
