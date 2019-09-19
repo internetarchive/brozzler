@@ -154,9 +154,9 @@ class UmbraBehavior {
         // an element we want to open. No need to track
         // the close selectors
         if (type == "open") {
+            this.idleSince = null;
             this.alreadyDone.push(target);
         }
-        this.idleSince = null;
     }
 
     start() {
