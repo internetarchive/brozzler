@@ -1,7 +1,7 @@
 '''
 brozzler/ydl.py - youtube-dl support for brozzler
 
-Copyright (C) 2018 Internet Archive
+Copyright (C) 2018-2019 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -175,7 +175,15 @@ def _build_youtube_dl(worker, destdir, site):
                             'user page because we expect to capture them from '
                             'individual track pages',
                             len(ie_result['entries_no_dl']))
-            else:
+                elif ie.IE_NAME == 'instagram:user':
+                    ie_result['entries_no_dl'] = list(ie_result['entries'])
+                    ie_result['entries'] = []
+                    self.logger.info(
+                            'not downloading %s videos from this instagram '
+                            'user page because we expect to capture them from '
+                            'individual detail pages',
+                            len(ie_result['entries_no_dl']))
+             else:
                 self.logger.info(
                         'extractor %r found a download in %s', ie.IE_NAME, url)
 
