@@ -39,10 +39,12 @@ The easiest way to get started with brozzler for web archiving is with
 wayback, and brozzler-dashboard, configured to work with each other in a single
 process.
 
-Mac instructions:
+macOS instructions:
 
 ::
 
+    # install chromium
+    brew cask install chromium
     # install and start rethinkdb
     brew install rethinkdb
     # no brew? try rethinkdb's installer: https://www.rethinkdb.com/docs/install/osx/
