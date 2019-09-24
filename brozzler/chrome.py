@@ -250,10 +250,16 @@ class Chrome:
         # XXX select doesn't work on windows
         def readline_nonblock(f):
             buf = b''
-            while not self._shutdown.is_set() and (
+            try:
+                while not self._shutdown.is_set() and (
                     len(buf) == 0 or buf[-1] != 0xa) and select.select(
                             [f],[],[],0.5)[0]:
-                buf += f.read(1)
+                    buf += f.read(1)
+            except (ValueError, OSError):
+                # When the chrome process crashes, stdout & stderr are closed
+                # and trying to read from them raises these exceptions. We just
+                # stop reading and return current `buf`.
+                pass
             return buf
 
         try:
