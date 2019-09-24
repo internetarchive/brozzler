@@ -617,6 +617,7 @@ class Browser:
                 method='Runtime.evaluate', suppress_logging=True,
                 params={'expression': behavior_script})
 
+        check_interval = min(timeout, 7)
         start = time.time()
         while True:
             elapsed = time.time() - start
@@ -625,7 +626,7 @@ class Browser:
                         'behavior reached hard timeout after %.1fs', elapsed)
                 return
 
-            brozzler.sleep(7)
+            brozzler.sleep(check_interval)
 
             self.websock_thread.expect_result(self._command_id.peek())
             msg_id = self.send_to_chrome(
