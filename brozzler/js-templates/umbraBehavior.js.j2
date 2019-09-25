@@ -61,7 +61,9 @@ class UmbraBehavior {
             if (closeSelector) {
                 var closeTargets = documents[j].querySelectorAll(closeSelector);
                 for (var i = 0; i < closeTargets.length; i++) {
-                    this.doTarget(closeTargets[i], "click", "close");
+                    if (this.isVisible(closeTargets[i])) {
+                        closeTargets[i].click();
+                    }
                 }
             }
 
@@ -85,7 +87,7 @@ class UmbraBehavior {
                 }
                 var where = this.aboveBelowOrOnScreen(doTargets[i]);
                 if (where == 0) {
-                    this.doTarget(doTargets[i], action, 'open');
+                    this.doTarget(doTargets[i], action);
                     didSomething = true;
                     break;
                 } else if (where > 0) {
@@ -136,7 +138,7 @@ class UmbraBehavior {
         return elem && !!(elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length);
     }
 
-    doTarget(target, action, type) {
+    doTarget(target, action) {
         // console.log("doing " + action + target.outerHTML);
         // do mouse over event on target
         // since some urls are requsted only on
@@ -153,9 +155,7 @@ class UmbraBehavior {
         // Only push the element to alreadyDone if it's
         // an element we want to open. No need to track
         // the close selectors
-        if (type == "open") {
-            this.alreadyDone.push(target);
-        }
+        this.alreadyDone.push(target);
         this.idleSince = null;
     }
 
