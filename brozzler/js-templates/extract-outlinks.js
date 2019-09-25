@@ -1,7 +1,7 @@
 // we have problems if the page has changed the definition of Set or Array
 // http://www.polyvore.com/ does this for example
 var __brzl_framesDone = new Set();
-var __brzl_popup_re = /window.open\(.*?(['"])((?:https?)?\/\/.*?)\1,/
+var __brzl_popup_re = /window.open\(\s*(['"])(.*?)\1/
 var __brzl_compileOutlinks = function(frame) {
     __brzl_framesDone.add(frame);
     var outlinks = [];
@@ -18,7 +18,6 @@ var __brzl_compileOutlinks = function(frame) {
                         outlinks.push(m[2]);
                     }
                 }
-                outlinks = outlinks.concat(popups);
             }
             for (var i = 0; i < frame.frames.length; i++) {
                 if (frame.frames[i] && !__brzl_framesDone.has(frame.frames[i])) {
