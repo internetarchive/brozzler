@@ -63,6 +63,8 @@ class UmbraBehavior {
                 for (var i = 0; i < closeTargets.length; i++) {
                     if (this.isVisible(closeTargets[i])) {
                         closeTargets[i].click();
+                        didSomething = true;
+                        break;
                     }
                 }
             }
