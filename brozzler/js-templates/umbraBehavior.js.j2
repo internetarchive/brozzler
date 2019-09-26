@@ -43,6 +43,7 @@ class UmbraBehavior {
 
         var documents = [];
         documents[0] = document;
+
         var iframes = document.querySelectorAll("iframe");
         var iframesLength = iframes.length;
         for (var i = 0; i < iframesLength; i++) {
@@ -54,25 +55,31 @@ class UmbraBehavior {
                 // console.log("exception looking at iframe" + iframes[i] + ": " + e);
             }
         }
+
         var documentsLength = documents.length;
         for (var j = 0; j < documentsLength; j++) {
             if (closeSelector) {
                 var closeTargets = documents[j].querySelectorAll(closeSelector);
-                if ((closeTargets.length > 0) &&
-                    (this.alreadyDone.indexOf(closeTargets[0]) === -1) &&
-                    (this.isVisible(closeTargets[0]))) {
-                    doTarget(closeTargets[0], 'click');
+                for (var i = 0; i < closeTargets.length; i++) {
+                    if (this.isVisible(closeTargets[i])) {
+                        closeTargets[i].click();
+                        didSomething = true;
+                        break;
+                    }
                 }
             }
+
             if (firstMatchOnly) {
                 var doTargets = [ documents[j].querySelector(selector) ];
             } else {
                 var doTargets = documents[j].querySelectorAll(selector);
             }
+
             var doTargetsLength = doTargets.length;
             if (!(doTargetsLength > 0)) {
                 continue;
             }
+
             for ( var i = 0; i < doTargetsLength; i++) {
                 if (!repeatSameElement && this.alreadyDone.indexOf(doTargets[i]) > -1) {
                     continue;
