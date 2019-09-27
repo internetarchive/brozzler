@@ -349,8 +349,12 @@ class Browser:
             # tell browser to send us messages we're interested in
             self.send_to_chrome(method='Network.enable')
             self.send_to_chrome(method='Page.enable')
-            self.send_to_chrome(method='Console.enable')
-            self.send_to_chrome(method='Runtime.enable')
+            # Enable Console & Runtime output only when debugging.
+            # After all, we just print these events with debug(), we don't use
+            # them in Brozzler logic.
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.send_to_chrome(method='Console.enable')
+                self.send_to_chrome(method='Runtime.enable')
             self.send_to_chrome(method='ServiceWorker.enable')
             self.send_to_chrome(method='ServiceWorker.setForceUpdateOnPageLoad')
 
