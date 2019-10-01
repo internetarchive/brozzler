@@ -609,9 +609,14 @@ class Browser:
                 'extract-tertiary-assets.js').render()
         msg_id = self.send_to_chrome(
                 method='Runtime.evaluate', params={'expression': js})
-        self._wait_for(
-                lambda: self.websock_thread.received_result(msg_id),
-                timeout=timeout)
+        try:
+            self._wait_for(
+                    lambda: self.websock_thread.received_result(msg_id),
+                    timeout=timeout)
+        except brozzler.browser.BrowsingTimeout:
+            self.logger.error(
+                    'time out trying to extract tertiary assets')
+            return frozenset()
         message = self.websock_thread.pop_result(msg_id)
         if ('result' in message and 'result' in message['result']
                 and 'value' in message['result']['result']):
