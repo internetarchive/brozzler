@@ -356,13 +356,12 @@ class Browser:
             # tell browser to send us messages we're interested in
             self.send_to_chrome(method='Network.enable')
             self.send_to_chrome(method='Page.enable')
-            self.send_to_chrome(method='Console.enable')
-            self.send_to_chrome(method='Runtime.enable')
-            # Network.requestIntercepted needs more work...
-            #self.send_to_chrome(
-            #    method='Network.setRequestInterception',
-            #    params={'patterns': [{'urlPattern': '*'}]})
-
+            # Enable Console & Runtime output only when debugging.
+            # After all, we just print these events with debug(), we don't use
+            # them in Brozzler logic.
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.send_to_chrome(method='Console.enable')
+                self.send_to_chrome(method='Runtime.enable')
             self.send_to_chrome(method='ServiceWorker.enable')
             self.send_to_chrome(method='ServiceWorker.setForceUpdateOnPageLoad')
 
@@ -661,6 +660,7 @@ class Browser:
                 method='Runtime.evaluate', suppress_logging=True,
                 params={'expression': behavior_script})
 
+        check_interval = min(timeout, 7)
         start = time.time()
         while True:
             elapsed = time.time() - start
@@ -669,7 +669,7 @@ class Browser:
                         'behavior reached hard timeout after %.1fs', elapsed)
                 return
 
-            brozzler.sleep(7)
+            brozzler.sleep(check_interval)
 
             self.websock_thread.expect_result(self._command_id.peek())
             msg_id = self.send_to_chrome(
