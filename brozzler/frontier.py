@@ -313,6 +313,9 @@ class RethinkDbFrontier:
         representing the same url but with possibly different metadata.
         '''
         existing_page.priority += fresh_page.priority
+        self.logger.trace(
+                'adding hashtags %r to existing hashtags %r for page %s',
+                existing_page.hashtags, fresh_page.hashtags)
         existing_page.hashtags = list(set(
             existing_page.hashtags + fresh_page.hashtags))
         existing_page.hops_off = min(
@@ -375,9 +378,7 @@ class RethinkDbFrontier:
             decisions['accepted'].add(fresh_page.url)
             if fresh_page.id in pages:
                 page = pages[fresh_page.id]
-                page.hashtags = list(set((page.hashtags or [])
-                                         + fresh_page.hashtags))
-                page.priority += fresh_page.priority
+                self._merge_page(page, fresh_page)
                 counts['updated'] += 1
             else:
                 pages[fresh_page.id] = fresh_page
