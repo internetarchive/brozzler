@@ -32,7 +32,15 @@ import requests
 import subprocess
 import http.server
 import logging
+import sys
 import warcprox
+
+logging.root.handlers = []
+logging.basicConfig(
+        stream=sys.stderr, level=0, format=(
+            '%(asctime)s %(process)d %(levelname)s %(threadName)s '
+            '%(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s'))
+logging.trace('hi')
 
 # https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
 def _local_address():
