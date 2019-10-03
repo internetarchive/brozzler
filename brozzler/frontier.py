@@ -317,7 +317,7 @@ class RethinkDbFrontier:
                 'adding hashtags %r to existing hashtags %r for page %s',
                 existing_page.hashtags, fresh_page.hashtags, fresh_page.url)
         existing_page.hashtags = list(set(
-            existing_page.hashtags + fresh_page.hashtags))
+            (existing_page.hashtags or []) + (fresh_page.hashtags or [])))
         existing_page.hops_off = min(
                 existing_page.hops_off, fresh_page.hops_off)
 
