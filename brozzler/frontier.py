@@ -315,7 +315,7 @@ class RethinkDbFrontier:
         existing_page.priority += fresh_page.priority
         self.logger.trace(
                 'adding hashtags %r to existing hashtags %r for page %s',
-                existing_page.hashtags, fresh_page.hashtags)
+                existing_page.hashtags, fresh_page.hashtags, fresh_page.url)
         existing_page.hashtags = list(set(
             existing_page.hashtags + fresh_page.hashtags))
         existing_page.hops_off = min(
@@ -371,6 +371,8 @@ class RethinkDbFrontier:
         # get existing pages from rethinkdb
         results = self.rr.table('pages').get_all(*fresh_pages.keys()).run()
         pages = {doc['id']: brozzler.Page(self.rr, doc) for doc in results}
+        self.logger.trace('fresh_pages.keys()=%r', fresh_pages.keys())
+        self.logger.trace('existing pages.keys()=%r', pages.keys())
 
         # build list of pages to save, consisting of new pages, and existing
         # pages updated with higher priority and new hashtags
