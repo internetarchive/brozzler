@@ -19,7 +19,7 @@ Brozzler is designed to work in conjuction with warcprox for web archiving.
 Requirements
 ------------
 
-- Python 3.4 or later
+- Python 3.5 or later
 - RethinkDB deployment
 - Chromium or Google Chrome >= version 64
 
