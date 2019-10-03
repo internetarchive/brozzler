@@ -528,6 +528,8 @@ def test_hashtags(httpd):
         site.refresh()
     assert site.status == 'FINISHED'
 
+    print(datetime.datetime.utcnow().isoformat() + ' finished brozzling site, loading pages from rethinkdb')
+
     # check that we the page we expected
     pages = sorted(list(frontier.site_pages(site.id)), key=lambda p: p.url)
     assert len(pages) == 2

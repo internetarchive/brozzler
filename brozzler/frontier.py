@@ -395,8 +395,9 @@ class RethinkDbFrontier:
             try:
                 self.logger.debug(
                         'inserting/replacing batch of %s pages', len(batch))
-                result = self.rr.table('pages').insert(
-                        batch, conflict='replace').run()
+                reql = self.rr.table('pages').insert(batch, conflict='replace')
+                self.logger.trace('running query: %r', reql)
+                result = reql.run()
             except Exception as e:
                 self.logger.error(
                         'problem inserting/replacing batch of %s pages',
@@ -453,12 +454,14 @@ class RethinkDbFrontier:
         Returns:
             iterator of brozzler.Page
         '''
-        results = self.rr.table("pages").between(
+        query = self.rr.table("pages").between(
                 [site_id, 1 if brozzled is True else 0,
                     r.minval, r.minval],
                 [site_id, 0 if brozzled is False else r.maxval,
                     r.maxval, r.maxval],
-                index="priority_by_site").run()
+                index="priority_by_site")
+        self.logger.trace("running query: %r", query)
+        results = query.run()
         for result in results:
             yield brozzler.Page(self.rr, result)
 
