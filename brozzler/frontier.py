@@ -463,5 +463,6 @@ class RethinkDbFrontier:
         self.logger.trace("running query: %r", query)
         results = query.run()
         for result in results:
+            self.logger.trace("yielding result: %r", result)
             yield brozzler.Page(self.rr, result)
 
