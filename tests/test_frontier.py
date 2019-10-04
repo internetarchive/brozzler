@@ -732,7 +732,9 @@ def test_hashtag_seed():
     assert pages[0].url == 'http://example.org/'
     assert pages[0].hashtags == ['#hash',]
 
-def test_hashtag_links():
+def test_hashtag_links(caplog):
+    caplog.set_level(0) # https://docs.pytest.org/en/latest/logging.html
+
     rr = doublethink.Rethinker('localhost', db='test_hashtag_links')
     frontier = brozzler.RethinkDbFrontier(rr)
 
