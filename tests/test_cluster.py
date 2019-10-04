@@ -35,13 +35,6 @@ import logging
 import sys
 import warcprox
 
-logging.root.handlers = []
-logging.basicConfig(
-        stream=sys.stderr, level=0, format=(
-            '%(asctime)s %(process)d %(levelname)s %(threadName)s '
-            '%(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s'))
-logging.trace('hi')
-
 # https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
 def _local_address():
     import socket
@@ -517,7 +510,10 @@ def test_seed_redirect(httpd):
         {'ssurt': '%s//%s:http:/site5/redirect/' % (local_address, httpd.server_port)},
         {'ssurt': '%s//%s:http:/site5/destination/' % (local_address, httpd.server_port)}]}
 
-def test_hashtags(httpd):
+def test_hashtags(httpd, caplog):
+    caplog.set_level(0) # https://docs.pytest.org/en/latest/logging.html
+    logging.trace('here we are in test_hashtags')
+
     test_id = 'test_hashtags-%s' % datetime.datetime.utcnow().isoformat()
     rr = doublethink.Rethinker('localhost', db='brozzler')
     seed_url = make_url(httpd, '/site7/')
