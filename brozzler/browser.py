@@ -612,9 +612,9 @@ class Browser:
             self._wait_for(
                     lambda: self.websock_thread.received_result(msg_id),
                     timeout=timeout)
-        except brozzler.browser.BrowsingTimeout:
+        except brozzler.browser.BrowsingTimeout as e:
             self.logger.error(
-                    'time out trying to extract tertiary assets')
+                    'browsing timeout extracting tertiary assets: %s', e)
             return frozenset()
         message = self.websock_thread.pop_result(msg_id)
         if ('result' in message and 'result' in message['result']

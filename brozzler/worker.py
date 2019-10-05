@@ -408,6 +408,8 @@ class BrozzlerWorker:
                 # same proxy again next time
                 logging.error(
                         'proxy error (self._proxy=%r)', self._proxy, exc_info=1)
+        except brozzler.browser.BrowsingTimeout as e:
+            self.logger.error('browsing timeout error: %s', e)
         except:
             self.logger.critical("unexpected exception", exc_info=True)
         finally:
