@@ -39,10 +39,6 @@
       - selector: button.coreSpriteDismissLarge
       - selector: 'a>.eLAPa>.KL4Bh'
         closeSelector: .ckWGn
-      - selector: 'a>.eLAPa>.KL4Bh'
-        firstMatchOnly: true
-      - selector: a.coreSpriteRightPaginationArrow
-        repeatSameElement: true
 -
   url_regex: '^https?://americaspresidents\.si\.edu/gallery.*$'
   behavior_js_template: umbraBehavior.js.j2
