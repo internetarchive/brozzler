@@ -154,7 +154,7 @@ def _build_youtube_dl(worker, destdir, site):
             if ie_result.get('_type') == 'playlist':
                 self.logger.info(
                         'extractor %r found playlist in %s', ie.IE_NAME, url)
-                if ie.IE_NAME == 'youtube:playlist':
+                if ie.IE_NAME in {'youtube:playlist', 'soundcloud:user', 'instagram:user'}:
                     # At this point ie_result['entries'] is an iterator that
                     # will fetch more metadata from youtube to list all the
                     # videos. We unroll that iterator here partly because
@@ -163,17 +163,9 @@ def _build_youtube_dl(worker, destdir, site):
                     ie_result['entries_no_dl'] = list(ie_result['entries'])
                     ie_result['entries'] = []
                     self.logger.info(
-                            'not downloading %s videos from this youtube '
+                            'not downloading %s media files from this '
                             'playlist because we expect to capture them from '
-                            'individual watch pages',
-                            len(ie_result['entries_no_dl']))
-                elif ie.IE_NAME == 'soundcloud:user':
-                    ie_result['entries_no_dl'] = list(ie_result['entries'])
-                    ie_result['entries'] = []
-                    self.logger.info(
-                            'not downloading %s tracks from this soundcloud '
-                            'user page because we expect to capture them from '
-                            'individual track pages',
+                            'individual watch/track/detail pages',
                             len(ie_result['entries_no_dl']))
             else:
                 self.logger.info(
