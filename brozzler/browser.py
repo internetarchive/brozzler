@@ -487,8 +487,6 @@ class Browser:
                             'login navigated away from %s; returning!',
                             page_url)
                         self.navigate_to_page(page_url, timeout=page_timeout)
-                if on_screenshot:
-                    self._try_screenshot(on_screenshot, screenshot_full_page)
                 behavior_script = brozzler.behavior_script(
                         page_url, behavior_parameters,
                         behaviors_dir=behaviors_dir)
@@ -499,6 +497,8 @@ class Browser:
                     outlinks = self.extract_outlinks()
                 if not skip_visit_hashtags:
                     self.visit_hashtags(self.url(), hashtags, outlinks)
+                if on_screenshot:
+                    self._try_screenshot(on_screenshot, screenshot_full_page)
                 final_page_url = self.url()
                 return final_page_url, outlinks
         except brozzler.ReachedLimit:
