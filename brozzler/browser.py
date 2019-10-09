@@ -491,14 +491,14 @@ class Browser:
                         page_url, behavior_parameters,
                         behaviors_dir=behaviors_dir)
                 self.run_behavior(behavior_script, timeout=behavior_timeout)
+                if on_screenshot:
+                    self._try_screenshot(on_screenshot, screenshot_full_page)
                 if skip_extract_outlinks:
                     outlinks = []
                 else:
                     outlinks = self.extract_outlinks()
                 if not skip_visit_hashtags:
                     self.visit_hashtags(self.url(), hashtags, outlinks)
-                if on_screenshot:
-                    self._try_screenshot(on_screenshot, screenshot_full_page)
                 final_page_url = self.url()
                 return final_page_url, outlinks
         except brozzler.ReachedLimit:
