@@ -410,8 +410,9 @@ class Browser:
             on_request=None, on_response=None,
             on_service_worker_version_updated=None, on_screenshot=None,
             username=None, password=None, hashtags=None,
-            skip_extract_outlinks=False, skip_visit_hashtags=False,
-            skip_youtube_dl=False, page_timeout=300, behavior_timeout=900):
+            screenshot_full_page=False, skip_extract_outlinks=False,
+            skip_visit_hashtags=False, skip_youtube_dl=False, page_timeout=300,
+            behavior_timeout=900):
         '''
         Browses page in browser.
 
@@ -486,12 +487,12 @@ class Browser:
                             'login navigated away from %s; returning!',
                             page_url)
                         self.navigate_to_page(page_url, timeout=page_timeout)
-                if on_screenshot:
-                    self._try_screenshot(on_screenshot)
                 behavior_script = brozzler.behavior_script(
                         page_url, behavior_parameters,
                         behaviors_dir=behaviors_dir)
                 self.run_behavior(behavior_script, timeout=behavior_timeout)
+                if on_screenshot:
+                    self._try_screenshot(on_screenshot, screenshot_full_page)
                 if skip_extract_outlinks:
                     outlinks = []
                 else:
@@ -512,10 +513,15 @@ class Browser:
             self.websock_thread.on_request = None
             self.websock_thread.on_response = None
 
-    def _try_screenshot(self, on_screenshot):
+    def _try_screenshot(self, on_screenshot, full_page=False):
+        """The browser instance must be scrolled to the top of the page before
+        trying to get a screenshot.
+        """
+        self.send_to_chrome(method='Runtime.evaluate', suppress_logging=True,
+                            params={'expression': 'window.scroll(0,0)'})
         for i in range(3):
             try:
-                jpeg_bytes = self.screenshot()
+                jpeg_bytes = self.screenshot(full_page)
                 on_screenshot(jpeg_bytes)
                 return
             except BrowsingTimeout as e:
@@ -591,10 +597,36 @@ class Browser:
                     'problem extracting outlinks, result message: %s', message)
             return frozenset()
 
-    def screenshot(self, timeout=45):
+    def screenshot(self, full_page=False, timeout=45):
+        """Optionally capture full page screenshot using puppeteer as an
+        inspiration:
+        https://github.com/GoogleChrome/puppeteer/blob/master/lib/Page.js#L898
+        """
         self.logger.info('taking screenshot')
+        if full_page:
+            self.websock_thread.expect_result(self._command_id.peek())
+            msg_id = self.send_to_chrome(method='Page.getLayoutMetrics')
+            self._wait_for(
+                lambda: self.websock_thread.received_result(msg_id),
+                timeout=timeout)
+            message = self.websock_thread.pop_result(msg_id)
+            width = message['result']['contentSize']['width']
+            height = message['result']['contentSize']['height']
+            clip = dict(x=0, y=0, width=width, height=height, scale=1)
+            deviceScaleFactor = 1
+            screenOrientation = {'angle': 0, 'type': 'portraitPrimary'}
+            self.send_to_chrome(
+                method='Emulation.setDeviceMetricsOverride',
+                params=dict(mobile=False, width=width, height=height,
+                            deviceScaleFactor=deviceScaleFactor,
+                            screenOrientation=screenOrientation)
+                )
+            capture_params = {'format': 'jpeg', 'quality': 95, 'clip': clip}
+        else:
+            capture_params = {'format': 'jpeg', 'quality': 95}
         self.websock_thread.expect_result(self._command_id.peek())
-        msg_id = self.send_to_chrome(method='Page.captureScreenshot')
+        msg_id = self.send_to_chrome(method='Page.captureScreenshot',
+                                     params=capture_params)
         self._wait_for(
                 lambda: self.websock_thread.received_result(msg_id),
                 timeout=timeout)
