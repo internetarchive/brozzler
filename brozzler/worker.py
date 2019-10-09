@@ -165,22 +165,16 @@ class BrozzlerWorker:
             raise brozzler.ProxyError(
                     'proxy error on WARCPROX_WRITE_RECORD %s' % url) from e
 
-    def full_and_thumb_jpegs(self, large_png):
-        # these screenshots never have any alpha (right?)
-        img = PIL.Image.open(io.BytesIO(large_png)).convert('RGB')
-
-        out = io.BytesIO()
-        img.save(out, "jpeg", quality=95)
-        full_jpeg = out.getbuffer()
-
+    def thumb_jpeg(self, full_jpeg):
+        """Create JPEG thumbnail.
+        """
+        img = PIL.Image.open(io.BytesIO(full_jpeg))
         thumb_width = 300
         thumb_height = (thumb_width / img.size[0]) * img.size[1]
         img.thumbnail((thumb_width, thumb_height))
         out = io.BytesIO()
         img.save(out, "jpeg", quality=95)
-        thumb_jpeg = out.getbuffer()
-
-        return full_jpeg, thumb_jpeg
+        return out.getbuffer()
 
     def brozzle_page(self, browser, site, page, on_screenshot=None,
                      on_request=None, enable_youtube_dl=True):
@@ -226,15 +220,14 @@ class BrozzlerWorker:
         return outlinks
 
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
-        def _on_screenshot(screenshot_png):
+        def _on_screenshot(screenshot_jpeg):
             if on_screenshot:
-                on_screenshot(screenshot_png)
+                on_screenshot(screenshot_jpeg)
             if self._using_warcprox(site):
                 self.logger.info(
                         "sending WARCPROX_WRITE_RECORD request to %s with "
                         "screenshot for %s", self._proxy_for(site), page)
-                screenshot_jpeg, thumbnail_jpeg = self.full_and_thumb_jpegs(
-                        screenshot_png)
+                thumbnail_jpeg = self.thumb_jpeg(screenshot_jpeg)
                 self._warcprox_write_record(
                         warcprox_address=self._proxy_for(site),
                         url="screenshot:%s" % str(urlcanon.semantic(page.url)),

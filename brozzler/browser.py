@@ -514,6 +514,11 @@ class Browser:
             self.websock_thread.on_response = None
 
     def _try_screenshot(self, on_screenshot, full_page=False):
+        """The browser instance must be scrolled to the top of the page before
+        trying to get a screenshot.
+        """
+        self.send_to_chrome(method='Runtime.evaluate', suppress_logging=True,
+                            params={'expression': 'window.scroll(0,0)'})
         for i in range(3):
             try:
                 jpeg_bytes = self.screenshot(full_page)
@@ -616,9 +621,9 @@ class Browser:
                             deviceScaleFactor=deviceScaleFactor,
                             screenOrientation=screenOrientation)
                 )
-            capture_params = {'format': 'jpeg', quality: 95, 'clip': clip}
+            capture_params = {'format': 'jpeg', 'quality': 95, 'clip': clip}
         else:
-            capture_params = {'format': 'jpeg', quality: 95}
+            capture_params = {'format': 'jpeg', 'quality': 95}
         self.websock_thread.expect_result(self._command_id.peek())
         msg_id = self.send_to_chrome(method='Page.captureScreenshot',
                                      params=capture_params)
