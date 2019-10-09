@@ -35,7 +35,7 @@
   behavior_js_template: umbraBehavior.js.j2
   default_parameters:
     actions:
-      - selector: button.coreSpriteDismissLarge
+      - selector: .glyphsSpriteGrey_Close
       - selector: 'a>.eLAPa>.KL4Bh'
         firstMatchOnly: true
       - selector: a.coreSpriteRightPaginationArrow
