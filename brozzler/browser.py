@@ -616,9 +616,9 @@ class Browser:
                             deviceScaleFactor=deviceScaleFactor,
                             screenOrientation=screenOrientation)
                 )
-            capture_params = {'format': 'jpeg', 'clip': clip}
+            capture_params = {'format': 'jpeg', quality: 95, 'clip': clip}
         else:
-            capture_params = {'format': 'jpeg'}
+            capture_params = {'format': 'jpeg', quality: 95}
         self.websock_thread.expect_result(self._command_id.peek())
         msg_id = self.send_to_chrome(method='Page.captureScreenshot',
                                      params=capture_params)
