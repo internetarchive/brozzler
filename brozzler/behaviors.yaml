@@ -42,7 +42,7 @@
     actions:
       - selector: .glyphsSpriteGrey_Close
       - selector: 'a>.eLAPa>.KL4Bh'
-        firstMatchOnly: true
+        limit: 1
       - selector: a.coreSpriteRightPaginationArrow
         repeatSameElement: true
 -
@@ -52,7 +52,7 @@
     interval: 2500
     actions:
       - selector: div.see-more
-        firstMatchOnly: true
+        limit: 1
       - selector: li.next
         repeatSameElement: true
 -
