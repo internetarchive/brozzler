@@ -100,7 +100,7 @@ class UmbraBehavior {
             }
 
             if (didSomething && limit && limit === i+1) {
-                nextAction();
+                this.nextAction();
                 break;
             }
         }
@@ -122,7 +122,7 @@ class UmbraBehavior {
         } else {
             var idleTimeMs = Date.now() - this.idleSince;
             if ((idleTimeMs / 1000) > (this.IDLE_TIMEOUT_SEC - 1) && (this.index < (this.actions.length - 1))) {
-                nextAction();
+                this.nextAction();
             }
         }
     }
