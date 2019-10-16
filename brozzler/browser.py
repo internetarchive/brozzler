@@ -361,8 +361,15 @@ class Browser:
             # disable google analytics and amp analytics
             self.send_to_chrome(
                 method='Network.setBlockedURLs',
-                params={'urls': ['*google-analytics.com/analytics.js',
-                                 '*google-analytics.com/ga.js',
+                params={'urls': ['*google-analytics.com/analytics.js*',
+                                 '*google-analytics.com/ga.js*',
+                                 '*google-analytics.com/ga_exp.js*',
+                                 '*google-analytics.com/urchin.js*',
+                                 '*google-analytics.com/collect*',
+                                 '*google-analytics.com/r/collect*',
+                                 '*google-analytics.com/__utm.gif*',
+                                 '*google-analytics.com/gtm/js?*',
+                                 '*google-analytics.com/cx/api.js*',
                                  '*cdn.ampproject.org/*/amp-analytics*.js']})
 
     def stop(self):
