@@ -655,7 +655,24 @@ class Browser:
         message = self.websock_thread.pop_result(msg_id)
         return message['result']['result']['value']
 
+    def page_is_html(self, timeout=10):
+        '''
+        Check if current page is HTML.
+        '''
+        self.websock_thread.expect_result(self._command_id.peek())
+        msg_id = self.send_to_chrome(
+                method='Runtime.evaluate', suppress_logging=True,
+                params={'expression': 'document.contentType'})
+        self._wait_for(lambda: self.websock_thread.received_result(msg_id),
+                       timeout=timeout)
+        message = self.websock_thread.pop_result(msg_id)
+        return 'html' in message['result']['result']['value']
+
     def run_behavior(self, behavior_script, timeout=900):
+        # Skip running JS behavior if page is not HTML.
+        if not self.page_is_html():
+            return
+
         self.send_to_chrome(
                 method='Runtime.evaluate', suppress_logging=True,
                 params={'expression': behavior_script})
