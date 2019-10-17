@@ -386,6 +386,12 @@ class RethinkDbFrontier:
                 pages[fresh_page.id] = fresh_page
                 counts['added'] += 1
 
+        # make sure we're not stepping on our own toes in case we have a link
+        # back to parent_page, which I think happens because of hashtags
+        if parent_page.id in pages:
+            self._merge_page(parent_page, pages[parent_page.id])
+            del pages[parent_page.id]
+
         # insert/replace in batches of 50 to try to avoid this error:
         # "rethinkdb.errors.ReqlDriverError: Query size (167883036) greater than maximum (134217727) in:"
         # there can be many pages and each one can be very large (many videos,
