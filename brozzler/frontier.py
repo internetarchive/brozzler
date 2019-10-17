@@ -396,7 +396,9 @@ class RethinkDbFrontier:
                 self.logger.debug(
                         'inserting/replacing batch of %s pages', len(batch))
                 reql = self.rr.table('pages').insert(batch, conflict='replace')
-                self.logger.trace('running query: %r', reql)
+                self.logger.trace(
+                        'running query self.rr.table("pages").insert(%r, '
+                        'conflict="replace")', batch)
                 result = reql.run()
             except Exception as e:
                 self.logger.error(
