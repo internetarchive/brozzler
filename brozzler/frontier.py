@@ -314,7 +314,7 @@ class RethinkDbFrontier:
         '''
         existing_page.priority += fresh_page.priority
         existing_page.hashtags = list(set(
-            existing_page.hashtags + fresh_page.hashtags))
+            (existing_page.hashtags or []) + (fresh_page.hashtags or [])))
         existing_page.hops_off = min(
                 existing_page.hops_off, fresh_page.hops_off)
 
@@ -375,13 +375,17 @@ class RethinkDbFrontier:
             decisions['accepted'].add(fresh_page.url)
             if fresh_page.id in pages:
                 page = pages[fresh_page.id]
-                page.hashtags = list(set((page.hashtags or [])
-                                         + fresh_page.hashtags))
-                page.priority += fresh_page.priority
+                self._merge_page(page, fresh_page)
                 counts['updated'] += 1
             else:
                 pages[fresh_page.id] = fresh_page
                 counts['added'] += 1
+
+        # make sure we're not stepping on our own toes in case we have a link
+        # back to parent_page, which I think happens because of hashtags
+        if parent_page.id in pages:
+            self._merge_page(parent_page, pages[parent_page.id])
+            del pages[parent_page.id]
 
         # insert/replace in batches of 50 to try to avoid this error:
         # "rethinkdb.errors.ReqlDriverError: Query size (167883036) greater than maximum (134217727) in:"
@@ -392,8 +396,11 @@ class RethinkDbFrontier:
             try:
                 self.logger.debug(
                         'inserting/replacing batch of %s pages', len(batch))
-                result = self.rr.table('pages').insert(
-                        batch, conflict='replace').run()
+                reql = self.rr.table('pages').insert(batch, conflict='replace')
+                self.logger.trace(
+                        'running query self.rr.table("pages").insert(%r, '
+                        'conflict="replace")', batch)
+                result = reql.run()
             except Exception as e:
                 self.logger.error(
                         'problem inserting/replacing batch of %s pages',
@@ -450,12 +457,15 @@ class RethinkDbFrontier:
         Returns:
             iterator of brozzler.Page
         '''
-        results = self.rr.table("pages").between(
+        query = self.rr.table("pages").between(
                 [site_id, 1 if brozzled is True else 0,
                     r.minval, r.minval],
                 [site_id, 0 if brozzled is False else r.maxval,
                     r.maxval, r.maxval],
-                index="priority_by_site").run()
+                index="priority_by_site")
+        self.logger.trace("running query: %r", query)
+        results = query.run()
         for result in results:
+            self.logger.trace("yielding result: %r", result)
             yield brozzler.Page(self.rr, result)
 
