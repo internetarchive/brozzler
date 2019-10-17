@@ -510,10 +510,7 @@ def test_seed_redirect(httpd):
         {'ssurt': '%s//%s:http:/site5/redirect/' % (local_address, httpd.server_port)},
         {'ssurt': '%s//%s:http:/site5/destination/' % (local_address, httpd.server_port)}]}
 
-def test_hashtags(httpd, caplog):
-    caplog.set_level(0) # https://docs.pytest.org/en/latest/logging.html
-    logging.trace('here we are in test_hashtags')
-
+def test_hashtags(httpd):
     test_id = 'test_hashtags-%s' % datetime.datetime.utcnow().isoformat()
     rr = doublethink.Rethinker('localhost', db='brozzler')
     seed_url = make_url(httpd, '/site7/')
@@ -531,8 +528,6 @@ def test_hashtags(httpd, caplog):
         time.sleep(0.5)
         site.refresh()
     assert site.status == 'FINISHED'
-
-    print(datetime.datetime.utcnow().isoformat() + ' finished brozzling site, loading pages from rethinkdb')
 
     # check that we the page we expected
     pages = sorted(list(frontier.site_pages(site.id)), key=lambda p: p.url)
