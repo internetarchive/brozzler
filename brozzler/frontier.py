@@ -414,6 +414,10 @@ class RethinkDbFrontier:
                 counts['added'], counts['updated'], counts['rejected'],
                 counts['blocked'], parent_page)
 
+        for page_id in pages:
+            page = self.rr.table('pages').get(page_id).run()
+            self.logger.trace('retrieved page after save: %r', page)
+
     def reached_limit(self, site, e):
         self.logger.info("reached_limit site=%s e=%s", site, e)
         assert isinstance(e, brozzler.ReachedLimit)

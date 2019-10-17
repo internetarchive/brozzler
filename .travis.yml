@@ -23,6 +23,8 @@ script:
 - DISPLAY=:1 py.test --tb=native -v tests
 after_failure:
 - chromium-browser --version
+- sudo kill -QUIT $(sudo svstat /etc/service/warcprox | egrep -o 'pid [0-9]+' | awk '{print $2}')
+- sudo kill -QUIT $(sudo svstat /etc/service/brozzler-worker | egrep -o 'pid [0-9]+' | awk '{print $2}')
 - sudo cat /var/log/warcprox.log
 - sudo cat /var/log/brozzler-worker.log
 - sudo cat /var/log/pywb.log
