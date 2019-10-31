@@ -31,9 +31,9 @@
   behavior_js_template: umbraBehavior.js.j2
   request_idle_timeout_sec: 30
   default_parameters:
-    interval: 500
+    interval: 200
     actions:
-      - selector: 'a[id="expanding_cta_close_button"], a[rel="theater"]'
+      - selector: a[rel="theater"], a[id="expanding_cta_close_button"]
         closeSelector: 'a._xlt'
 -
   url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
