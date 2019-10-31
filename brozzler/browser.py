@@ -594,8 +594,8 @@ class Browser:
         if ('result' in message and 'result' in message['result']
                 and 'value' in message['result']['result']):
             if message['result']['result']['value']:
-                return frozenset(
-                        message['result']['result']['value'].split('\n'))
+                return frozenset([str(urlcanon.whatwg(link)) for link in
+                                  message['result']['result']['value'].split('\n')])
             else:
                 # no links found
                 return frozenset()
