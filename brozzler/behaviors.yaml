@@ -22,9 +22,10 @@
   behavior_js_template: umbraBehavior.js.j2
   request_idle_timeout_sec: 30
   default_parameters:
-    interval: 500
+    interval: 1000
     actions:
-      - selector: 'a[data-testid="snapshot_footer_link"]'
+      - selector: a[data-testid="snapshot_footer_link"]
+        childSelector: i[class="_271o img sp_fqSuadPtkdx sx_6986f4"]
         closeSelector: 'div._7lq1 > button'
 -
   url_regex: '^https?://(?:www\.)?facebook\.com/.*$'
