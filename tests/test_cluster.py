@@ -32,6 +32,7 @@ import requests
 import subprocess
 import http.server
 import logging
+import sys
 import warcprox
 
 # https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib

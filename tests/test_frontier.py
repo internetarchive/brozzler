@@ -733,7 +733,7 @@ def test_hashtag_seed():
     assert pages[0].hashtags == ['#hash',]
 
 def test_hashtag_links():
-    rr = doublethink.Rethinker('localhost', db='ignoreme')
+    rr = doublethink.Rethinker('localhost', db='test_hashtag_links')
     frontier = brozzler.RethinkDbFrontier(rr)
 
     site = brozzler.Site(rr, {'seed': 'http://example.org/'})

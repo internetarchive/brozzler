@@ -154,6 +154,9 @@ def brozzle_page(argv=None):
     arg_parser.add_argument(
             '--proxy', dest='proxy', default=None, help='http proxy')
     arg_parser.add_argument(
+            '--screenshot-full-page', dest='screenshot_full_page',
+            action='store_true')
+    arg_parser.add_argument(
             '--skip-extract-outlinks', dest='skip_extract_outlinks',
             action='store_true')
     arg_parser.add_argument(
@@ -174,19 +177,20 @@ def brozzle_page(argv=None):
         'id': -1, 'seed': args.url, 'behavior_parameters': behavior_parameters,
         'username': args.username, 'password': args.password})
     page = brozzler.Page(None, {'url': args.url, 'site_id': site.id})
-    worker = brozzler.BrozzlerWorker(frontier=None, proxy=args.proxy,
-        skip_extract_outlinks=args.skip_extract_outlinks,
-        skip_visit_hashtags=args.skip_visit_hashtags,
-        skip_youtube_dl=args.skip_youtube_dl)
+    worker = brozzler.BrozzlerWorker(
+            frontier=None, proxy=args.proxy,
+            skip_extract_outlinks=args.skip_extract_outlinks,
+            skip_visit_hashtags=args.skip_visit_hashtags,
+            skip_youtube_dl=args.skip_youtube_dl,
+            screenshot_full_page=args.screenshot_full_page)
 
-    def on_screenshot(screenshot_png):
-        OK_CHARS = (string.ascii_letters + string.digits)
-        filename = '/tmp/{}-{:%Y%m%d%H%M%S}.png'.format(
+    def on_screenshot(screenshot_jpeg):
+        OK_CHARS = string.ascii_letters + string.digits
+        filename = '/tmp/{}-{:%Y%m%d%H%M%S}.jpg'.format(
                 ''.join(ch if ch in OK_CHARS else '_' for ch in args.url),
                 datetime.datetime.now())
-        # logging.info('len(screenshot_png)=%s', len(screenshot_png))
         with open(filename, 'wb') as f:
-            f.write(screenshot_png)
+            f.write(screenshot_jpeg)
         logging.info('wrote screenshot to %s', filename)
 
     browser = brozzler.Browser(chrome_exe=args.chrome_exe)

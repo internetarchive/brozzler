@@ -32,7 +32,7 @@ def find_package_data(package):
 
 setuptools.setup(
         name='brozzler',
-        version='1.5.8',
+        version='1.5.11',
         description='Distributed web crawling with browsers',
         url='https://github.com/internetarchive/brozzler',
         author='Noah Levitt',
@@ -95,7 +95,6 @@ setuptools.setup(
             'Development Status :: 5 - Production/Stable',
             'Environment :: Console',
             'License :: OSI Approved :: Apache Software License',
-            'Programming Language :: Python :: 3.4',
             'Programming Language :: Python :: 3.5',
             'Programming Language :: Python :: 3.6',
             'Programming Language :: Python :: 3.7',
