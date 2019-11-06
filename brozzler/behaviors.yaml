@@ -39,6 +39,7 @@
   url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
   behavior_js_template: umbraBehavior.js.j2
   default_parameters:
+    interval: 500
     actions:
       - selector: .glyphsSpriteGrey_Close
         rmSelector: '.RnEpo'

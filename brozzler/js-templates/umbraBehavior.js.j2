@@ -109,6 +109,10 @@ class UmbraBehavior {
                     somethingLeftAbove = true;
                 }
             }
+            if (limit && limit == i) {
+                this.nextAction();
+                break;
+            }
         }
 
         if (!didSomething) {
