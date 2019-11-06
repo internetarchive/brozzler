@@ -1,7 +1,7 @@
 /*
  * brozzler/js-templates/umbrabehavior.js.j2 - an umbra/brozzler behavior class
  *
- * Copyright (C) 2017-2018 Internet Archive
+ * Copyright (C) 2017-2019 Internet Archive
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,8 +35,9 @@ class UmbraBehavior {
         var selector = this.actions[k].selector;
         var childSelector = this.actions[k].childSelector;
         var repeatSameElement = this.actions[k].repeatSameElement ? this.actions[k].repeatSameElement : false;
-        var firstMatchOnly = this.actions[k].firstMatchOnly ? this.actions[k].firstMatchOnly : false;
+        var limit = this.actions[k].limit ? this.actions[k].limit : false;
         var action = this.actions[k].do ? this.actions[k].do : 'click';
+        var rmSelector = this.actions[k].rmSelector ? this.actions[k].rmSelector : null;
         var closeSelector = this.actions[k].closeSelector ? this.actions[k].closeSelector : null;
         var didSomething = false;
         var somethingLeftAbove = false;
@@ -59,6 +60,16 @@ class UmbraBehavior {
 
         var documentsLength = documents.length;
         for (var j = 0; j < documentsLength; j++) {
+            if (rmSelector) {
+                var rmTargets = documents[j].querySelectorAll(rmSelector);
+                for (var i = 0; i < rmTargets.length; i++) {
+                    if (this.isVisible(rmTargets[i])) {
+                        rmTargets[i].remove();
+                        didSomething = true;
+                        break;
+                    }
+                }
+            }
             if (closeSelector) {
                 var closeTargets = documents[j].querySelectorAll(closeSelector);
                 for (var i = 0; i < closeTargets.length; i++) {
@@ -70,18 +81,18 @@ class UmbraBehavior {
                 }
             }
 
-            if (firstMatchOnly) {
-                var doTargets = [ documents[j].querySelector(selector) ];
-            } else {
-                var doTargets = documents[j].querySelectorAll(selector);
+            var doTargets = documents[j].querySelectorAll(selector);
+
+            var repeats = doTargets.length;
+            if (limit && limit < repeats) {
+                repeats = limit;
             }
 
-            var doTargetsLength = doTargets.length;
-            if (!(doTargetsLength > 0)) {
+            if (!(repeats > 0)) {
                 continue;
             }
 
-            for ( var i = 0; i < doTargetsLength; i++) {
+            for ( var i = 0; i < repeats; i++) {
                 if (!repeatSameElement && this.alreadyDone.indexOf(doTargets[i]) > -1) {
                     continue;
                 }
@@ -110,6 +121,11 @@ class UmbraBehavior {
                     somethingLeftAbove = true;
                 }
             }
+
+            if (limit && limit == i) {
+                this.nextAction();
+                break;
+            }
         }
 
         if (!didSomething) {
@@ -129,10 +145,7 @@ class UmbraBehavior {
         } else {
             var idleTimeMs = Date.now() - this.idleSince;
             if ((idleTimeMs / 1000) > (this.IDLE_TIMEOUT_SEC - 1) && (this.index < (this.actions.length - 1))) {
-                console.log("ready for next action");
-                this.index += 1;
-                this.idleSince = null;
-                window.scroll(0,0);
+                this.nextAction();
             }
         }
     }
@@ -168,6 +181,13 @@ class UmbraBehavior {
 
         this.alreadyDone.push(target);
         this.idleSince = null;
+    }
+
+    nextAction() {
+        console.log("ready for next action");
+        this.index += 1;
+        this.idleSince = null;
+        window.scroll(0,0);
     }
 
     start() {
