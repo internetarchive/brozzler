@@ -33,7 +33,7 @@
   default_parameters:
     interval: 500
     actions:
-      - selector: 'a[id="expanding_cta_close_button"], a[rel="theater"]'
+      - selector: a[rel="theater"], a[id="expanding_cta_close_button"]
         closeSelector: 'a._xlt'
 -
   url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
