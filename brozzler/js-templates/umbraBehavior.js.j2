@@ -33,6 +33,7 @@ class UmbraBehavior {
         // should match older default and simpleclicks behavior, and more
         var k = this.index;
         var selector = this.actions[k].selector;
+        var childSelector = this.actions[k].childSelector;
         var repeatSameElement = this.actions[k].repeatSameElement ? this.actions[k].repeatSameElement : false;
         var limit = this.actions[k].limit ? this.actions[k].limit : false;
         var action = this.actions[k].do ? this.actions[k].do : 'click';
@@ -101,6 +102,17 @@ class UmbraBehavior {
                 var where = this.aboveBelowOrOnScreen(doTargets[i]);
                 if (where == 0) {
                     this.doTarget(doTargets[i], action);
+                    if (childSelector) {
+                        var childSelectors = documents[j].querySelectorAll(childSelector);
+                        while (childSelectors.length > 0) {
+                            for (var i = 0; i < childSelectors.length; i++) {
+                                if (this.isVisible(childSelectors[i])) {
+                                    childSelectors[i].click();
+                                }
+                            }
+                            childSelectors = documents[j].querySelectorAll(childSelector);
+                        }
+                    }
                     didSomething = true;
                     break;
                 } else if (where > 0) {
@@ -116,11 +128,11 @@ class UmbraBehavior {
         }
 
         if (!didSomething) {
-            if (somethingLeftAbove) {
-                window.scrollBy(0, -500);
-                this.idleSince = null;
-            } else if (somethingLeftBelow || ( (window.scrollY + window.innerHeight) < document.documentElement.scrollHeight)) {
+            if (somethingLeftBelow || ( (window.scrollY + window.innerHeight) < document.documentElement.scrollHeight)) {
                 window.scrollBy(0, 200);
+                this.idleSince = null;
+            } else if (somethingLeftAbove) {
+                window.scrollBy(0, -500);
                 this.idleSince = null;
             } else if (this.idleSince == null) {
                 this.idleSince = Date.now();
