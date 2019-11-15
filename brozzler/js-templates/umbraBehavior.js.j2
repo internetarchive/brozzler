@@ -129,11 +129,11 @@ class UmbraBehavior {
         }
 
         if (!didSomething) {
-            if (somethingLeftAbove) {
-                window.scrollBy(0, -500);
-                this.idleSince = null;
-            } else if (somethingLeftBelow || ( (window.scrollY + window.innerHeight) < document.documentElement.scrollHeight)) {
+            if (somethingLeftBelow || ( (window.scrollY + window.innerHeight) < document.documentElement.scrollHeight)) {
                 window.scrollBy(0, 200);
+                this.idleSince = null;
+            } else if (somethingLeftAbove) {
+                window.scrollBy(0, -500);
                 this.idleSince = null;
             } else if (this.idleSince == null) {
                 this.idleSince = Date.now();
