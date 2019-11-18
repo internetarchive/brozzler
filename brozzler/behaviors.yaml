@@ -32,7 +32,6 @@
   behavior_js_template: umbraBehavior.js.j2
   request_idle_timeout_sec: 30
   default_parameters:
-    interval: 500
     actions:
       - selector: a[rel="theater"], a[id="expanding_cta_close_button"]
         closeSelector: 'a._xlt'
