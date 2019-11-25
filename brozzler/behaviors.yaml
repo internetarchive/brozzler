@@ -25,7 +25,7 @@
     interval: 1000
     actions:
       - selector: a[data-testid="snapshot_footer_link"]
-        childSelector: i[class="_271o img sp_-vbjDsgypf1 sx_1de63f"]
+        childSelector: i[class="_271o img sp_KBE8sh--02o sx_5d0205"]
         closeSelector: 'div._7lq1 > button'
 -
   url_regex: '^https?://(?:www\.)?facebook\.com/.*$'
