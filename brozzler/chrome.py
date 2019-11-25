@@ -170,13 +170,16 @@ class Chrome:
                 '--disable-background-networking',
                 '--disable-renderer-backgrounding', '--disable-hang-monitor',
                 '--disable-background-timer-throttling', '--mute-audio',
-                '--disable-web-sockets', '--no-sandbox',
+                '--disable-web-sockets',
                 '--window-size=1100,900', '--no-default-browser-check',
                 '--disable-first-run-ui', '--no-first-run',
                 '--homepage=about:blank', '--disable-direct-npapi-requests',
                 '--disable-web-security', '--disable-notifications',
                 '--disable-extensions', '--disable-save-password-bubble']
 
+        extra_chrome_args = os.environ.get('BROZZLER_EXTRA_CHROME_ARGS')
+        if extra_chrome_args:
+            chrome_args.append(extra_chrome_args)
         if disk_cache_dir:
             chrome_args.append('--disk-cache-dir=%s' % disk_cache_dir)
         if disk_cache_size:
