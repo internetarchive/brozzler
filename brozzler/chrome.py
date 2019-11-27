@@ -179,7 +179,7 @@ class Chrome:
 
         extra_chrome_args = os.environ.get('BROZZLER_EXTRA_CHROME_ARGS')
         if extra_chrome_args:
-            chrome_args.append(extra_chrome_args)
+            chrome_args.extend(extra_chrome_args.split())
         if disk_cache_dir:
             chrome_args.append('--disk-cache-dir=%s' % disk_cache_dir)
         if disk_cache_size:
