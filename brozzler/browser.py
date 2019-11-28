@@ -573,12 +573,16 @@ class Browser:
                     params={'userAgent': user_agent})
 
     def navigate_to_page(self, page_url, timeout=300):
-        self.logger.info('navigating to page %s', page_url)
-        self.websock_thread.got_page_load_event = None
-        self.send_to_chrome(method='Page.navigate', params={'url': page_url})
-        self._wait_for(
-                lambda: self.websock_thread.got_page_load_event,
-                timeout=timeout)
+        try:
+            for i in range(2):
+                self.logger.info('navigating to page %s', page_url)
+                self.websock_thread.got_page_load_event = None
+                self.send_to_chrome(method='Page.navigate', params={'url': page_url})
+                self._wait_for(
+                        lambda: self.websock_thread.got_page_load_event,
+                        timeout=timeout)
+        except BrowsingTimeout as e:
+            logging.error('attempt %s/2: %s', i + 1, e)
 
     def extract_outlinks(self, timeout=60):
         self.logger.info('extracting outlinks')
