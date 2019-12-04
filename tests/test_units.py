@@ -34,6 +34,7 @@ import socket
 import time
 import sys
 import threading
+from unittest import mock
 
 logging.basicConfig(
         stream=sys.stderr, level=logging.INFO, format=(
@@ -438,4 +439,56 @@ def test_seed_redirect():
     assert site.scope == {'accepts': [
         {'ssurt': 'com,foo,//http:/',},
         {'ssurt': 'com,bar,//https:/a/b/c',}]}
+
+def test_limit_failures():
+    page = mock.Mock()
+    page.failed_attempts = None
+    page.brozzle_count = 0
+
+    site = mock.Mock()
+    site.status = 'ACTIVE'
+    site.active_brozzling_time = 0
+    site.starts_and_stops = [{'start':datetime.datetime.utcnow()}]
+
+    rr = mock.Mock()
+    rr.servers = [mock.Mock()]
+    rethink_query = mock.Mock(run=mock.Mock(return_value=[]))
+    rr.db_list = mock.Mock(return_value=rethink_query)
+    rr.table_list = mock.Mock(return_value=rethink_query)
+    rr.table = mock.Mock(
+            return_value=mock.Mock(
+                between=mock.Mock(
+                    return_value=mock.Mock(
+                        limit=mock.Mock(
+                            return_value=rethink_query)))))
+    assert rr.table().between().limit().run() == []
+    frontier = brozzler.RethinkDbFrontier(rr)
+    frontier.enforce_time_limit = mock.Mock()
+    frontier.honor_stop_request = mock.Mock()
+    frontier.claim_page = mock.Mock(return_value=page)
+    frontier._maybe_finish_job = mock.Mock()
+
+    browser = mock.Mock()
+
+    worker = brozzler.BrozzlerWorker(frontier)
+    worker.brozzle_page = mock.Mock(side_effect=Exception)
+
+    assert page.failed_attempts is None
+    assert page.brozzle_count == 0
+    assert site.status == 'ACTIVE'
+
+    worker.brozzle_site(browser, site)
+    assert page.failed_attempts == 1
+    assert page.brozzle_count == 0
+    assert site.status == 'ACTIVE'
+
+    worker.brozzle_site(browser, site)
+    assert page.failed_attempts == 2
+    assert page.brozzle_count == 0
+    assert site.status == 'ACTIVE'
+
+    worker.brozzle_site(browser, site)
+    assert page.failed_attempts == 3
+    assert page.brozzle_count == 1
+    assert site.status == 'FINISHED'
 
