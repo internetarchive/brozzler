@@ -43,13 +43,20 @@ class JobValidator(cerberus.Validator):
         return url.scheme in ('http', 'https', 'ftp')
 
 class InvalidJobConf(Exception):
-    def __init__(self, errors):
-        self.errors = errors
+    def __init__(self, validator):
+        self.errors = validator.errors
+        try:
+            # Cerberus does a nice job hiding the bad value. In the case I
+            # debugged, I found it here. Maybe there's a better way to see it.
+            value = validator._errors[0].info[0][0].info[0][0].value
+            self.errors['bad value'] = value
+        except:
+            value = None
 
 def validate_conf(job_conf, schema=load_schema()):
     v = JobValidator(schema)
     if not v.validate(job_conf, normalize=False):
-        raise InvalidJobConf(v.errors)
+        raise InvalidJobConf(v)
 
 def merge(a, b):
     if isinstance(a, dict) and isinstance(b, dict):
