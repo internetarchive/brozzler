@@ -405,7 +405,18 @@ class BrozzlerWorker:
                 logging.error(
                         'proxy error (self._proxy=%r)', self._proxy, exc_info=1)
         except:
-            self.logger.critical("unexpected exception", exc_info=True)
+            self.logger.error(
+                    'unexpected exception site=%r page=%r', site, page,
+                    exc_info=True)
+            if page:
+                page.failed_attempts = (page.failed_attempts or 0) + 1
+                if page.failed_attempts >= brozzler.MAX_PAGE_FAILURES:
+                    self.logger.info(
+                            'marking page "completed" after %s unexpected '
+                            'exceptions attempting to brozzle %s',
+                            page.failed_attempts, page)
+                    self._frontier.completed_page(site, page)
+                    page = None
         finally:
             if start:
                 site.active_brozzling_time = (site.active_brozzling_time or 0) + time.time() - start

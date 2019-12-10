@@ -286,6 +286,9 @@ import datetime
 EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(
         tzinfo=doublethink.UTC)
 
+# we could make this configurable if there's a good reason
+MAX_PAGE_FAILURES = 3
+
 from brozzler.worker import BrozzlerWorker
 from brozzler.robots import is_permitted_by_robots
 from brozzler.frontier import RethinkDbFrontier
