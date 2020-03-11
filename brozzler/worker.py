@@ -82,8 +82,11 @@ class BrozzlerWorker:
         if not warcproxes:
             return None
         warcproxes.sort(key=lambda warcprox: (warcprox['load']))
+        num_choices = 5
+        if len(warcproxes) < num_choices:
+            num_choices = len(warcproxes)
         # XXX make this heuristic more advanced?
-        return random.choice(warcproxes[0:5])
+        return random.choice(warcproxes[0:num_choices])
 
     def _proxy_for(self, site):
         if self._proxy:
