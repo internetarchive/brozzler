@@ -28,6 +28,7 @@ import json
 import PIL.Image
 import io
 import socket
+import random
 import requests
 import doublethink
 import tempfile
@@ -82,7 +83,7 @@ class BrozzlerWorker:
             return None
         warcproxes.sort(key=lambda warcprox: (warcprox['load']))
         # XXX make this heuristic more advanced?
-        return warcproxes[0]
+        return random.choice(warcproxes[0:5])
 
     def _proxy_for(self, site):
         if self._proxy:
