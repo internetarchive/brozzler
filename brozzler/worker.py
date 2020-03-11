@@ -28,6 +28,7 @@ import json
 import PIL.Image
 import io
 import socket
+import random
 import requests
 import doublethink
 import tempfile
@@ -80,19 +81,12 @@ class BrozzlerWorker:
         warcproxes = self._service_registry.available_services('warcprox')
         if not warcproxes:
             return None
-        reql = self._frontier.rr.table('sites').between(
-                ['ACTIVE', r.minval], ['ACTIVE', r.maxval],
-                index='sites_last_disclaimed')
-        active_sites = list(reql.run())
-        for warcprox in warcproxes:
-            address = '%s:%s' % (warcprox['host'], warcprox['port'])
-            warcprox['assigned_sites'] = len([
-                site for site in active_sites
-                if 'proxy' in site and site['proxy'] == address])
-        warcproxes.sort(key=lambda warcprox: (
-            warcprox['assigned_sites'], warcprox['load']))
+        warcproxes.sort(key=lambda warcprox: (warcprox['load']))
+        num_choices = 5
+        if len(warcproxes) < num_choices:
+            num_choices = len(warcproxes)
         # XXX make this heuristic more advanced?
-        return warcproxes[0]
+        return random.choice(warcproxes[0:num_choices])
 
     def _proxy_for(self, site):
         if self._proxy:
