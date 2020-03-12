@@ -81,12 +81,23 @@ class BrozzlerWorker:
         warcproxes = self._service_registry.available_services('warcprox')
         if not warcproxes:
             return None
-        warcproxes.sort(key=lambda warcprox: (warcprox['load']))
-        num_choices = 5
-        if len(warcproxes) < num_choices:
-            num_choices = len(warcproxes)
+        # .group('proxy').count() makes this query about 99% more efficient
+        reql = self._frontier.rr.table('sites').between(
+                ['ACTIVE', r.minval], ['ACTIVE', r.maxval],
+                index='sites_last_disclaimed').group('proxy').count()
+        # returns results like 
+        # {
+        #    "wbgrp-svc030.us.archive.org:8000": 148,
+        #    "wbgrp-svc030.us.archive.org:8001": 145
+        # }
+        proxy_scoreboard = dict(reql.run())
+        for warcprox in warcproxes:
+            address = '%s:%s' % (warcprox['host'], warcprox['port'])
+            warcprox['assigned_sites'] = proxy_scoreboard.get(address, 0)
+        warcproxes.sort(key=lambda warcprox: (
+            warcprox['assigned_sites'], warcprox['load']))
         # XXX make this heuristic more advanced?
-        return random.choice(warcproxes[0:num_choices])
+        return warcproxes[0]
 
     def _proxy_for(self, site):
         if self._proxy:
