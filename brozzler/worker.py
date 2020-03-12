@@ -86,21 +86,11 @@ class BrozzlerWorker:
                 ['ACTIVE', r.minval], ['ACTIVE', r.maxval],
                 index='sites_last_disclaimed').group('proxy').count()
         # returns results like 
-        # [ {
-        #    "group": "wbgrp-svc030.us.archive.org:8000" ,
-        #    "reduction": 148
-        # } ,
-        # {
-        #     "group": "wbgrp-svc030.us.archive.org:8001" ,
-        #     "reduction": 145
-        # }]
-        proxy_list = list(reql.run())
-        # convert to structure like:
         # {
         #    "wbgrp-svc030.us.archive.org:8000": 148,
         #    "wbgrp-svc030.us.archive.org:8001": 145
         # }
-        proxy_scoreboard = {proxy['group']: proxy['reduction'] for proxy in proxy_list}
+        proxy_scoreboard = list(reql.run())
         for warcprox in warcproxes:
             address = '%s:%s' % (warcprox['host'], warcprox['port'])
             warcprox['assigned_sites'] = proxy_scoreboard.get('address', 0)
