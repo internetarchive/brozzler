@@ -93,7 +93,7 @@ class BrozzlerWorker:
         proxy_scoreboard = dict(reql.run())
         for warcprox in warcproxes:
             address = '%s:%s' % (warcprox['host'], warcprox['port'])
-            warcprox['assigned_sites'] = proxy_scoreboard.get('address', 0)
+            warcprox['assigned_sites'] = proxy_scoreboard.get(address, 0)
         warcproxes.sort(key=lambda warcprox: (
             warcprox['assigned_sites'], warcprox['load']))
         # XXX make this heuristic more advanced?
