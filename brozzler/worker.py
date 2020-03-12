@@ -90,7 +90,7 @@ class BrozzlerWorker:
         #    "wbgrp-svc030.us.archive.org:8000": 148,
         #    "wbgrp-svc030.us.archive.org:8001": 145
         # }
-        proxy_scoreboard = list(reql.run())
+        proxy_scoreboard = dict(reql.run())
         for warcprox in warcproxes:
             address = '%s:%s' % (warcprox['host'], warcprox['port'])
             warcprox['assigned_sites'] = proxy_scoreboard.get('address', 0)
