@@ -51,7 +51,7 @@ class BrozzlerWorker:
             self, frontier, service_registry=None, max_browsers=1,
             chrome_exe="chromium-browser", warcprox_auto=False, proxy=None,
             skip_extract_outlinks=False, skip_visit_hashtags=False,
-            skip_youtube_dl=False, screenshot_full_page=False,
+            skip_youtube_dl=False, simpler404=False, screenshot_full_page=False,
             page_timeout=300, behavior_timeout=900):
         self._frontier = frontier
         self._service_registry = service_registry
@@ -64,6 +64,7 @@ class BrozzlerWorker:
         self._skip_extract_outlinks = skip_extract_outlinks
         self._skip_visit_hashtags = skip_visit_hashtags
         self._skip_youtube_dl = skip_youtube_dl
+        self._simpler404 = simpler404
         self._screenshot_full_page = screenshot_full_page
         self._page_timeout = page_timeout
         self._behavior_timeout = behavior_timeout
@@ -302,6 +303,7 @@ class BrozzlerWorker:
                 skip_extract_outlinks=self._skip_extract_outlinks,
                 skip_visit_hashtags=self._skip_visit_hashtags,
                 skip_youtube_dl=self._skip_youtube_dl,
+                simpler404=self._simpler404,
                 screenshot_full_page=self._screenshot_full_page,
                 page_timeout=self._page_timeout,
                 behavior_timeout=self._behavior_timeout)

@@ -422,8 +422,8 @@ class Browser:
             on_service_worker_version_updated=None, on_screenshot=None,
             username=None, password=None, hashtags=None,
             screenshot_full_page=False, skip_extract_outlinks=False,
-            skip_visit_hashtags=False, skip_youtube_dl=False, page_timeout=300,
-            behavior_timeout=900):
+            skip_visit_hashtags=False, skip_youtube_dl=False, simpler404=False,
+            page_timeout=300, behavior_timeout=900):
         '''
         Browses page in browser.
 
@@ -502,9 +502,10 @@ class Browser:
                 # in running behaviors, outlink and hashtag extraction as we
                 # didn't get a valid page. Screenshot should run because i
                 # may be useful to have a picture of the error page.
+                # This is only enabled with option `simpler404`.
                 run_behaviors = True
-                if self.websock_thread.page_status is None or \
-                        self.websock_thread.page_status >= 400:
+                if simpler404 and (self.websock_thread.page_status is None or
+                                   self.websock_thread.page_status >= 400):
                     run_behaviors = False
 
                 if run_behaviors:
