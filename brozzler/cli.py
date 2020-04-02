@@ -164,6 +164,8 @@ def brozzle_page(argv=None):
             action='store_true')
     arg_parser.add_argument(
             '--skip-youtube-dl', dest='skip_youtube_dl', action='store_true')
+    arg_parser.add_argument(
+            '--simpler404', dest='simpler404', action='store_true')
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -182,6 +184,7 @@ def brozzle_page(argv=None):
             skip_extract_outlinks=args.skip_extract_outlinks,
             skip_visit_hashtags=args.skip_visit_hashtags,
             skip_youtube_dl=args.skip_youtube_dl,
+            simpler404=args.simpler404,
             screenshot_full_page=args.screenshot_full_page)
 
     def on_screenshot(screenshot_jpeg):

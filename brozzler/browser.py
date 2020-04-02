@@ -148,6 +148,7 @@ class WebsockReceiverThread(threading.Thread):
 
         self.is_open = False
         self.got_page_load_event = None
+        self.page_status = None     # Loaded page HTTP status code
         self.reached_limit = None
 
         self.on_request = None
@@ -202,9 +203,9 @@ class WebsockReceiverThread(threading.Thread):
                     message, exc_info=True)
 
     def _network_response_received(self, message):
-        if (message['params']['response']['status'] == 420
-                and 'Warcprox-Meta' in CaseInsensitiveDict(
-                    message['params']['response']['headers'])):
+        status = message['params']['response'].get('status')
+        if (status == 420 and 'Warcprox-Meta' in CaseInsensitiveDict(
+                message['params']['response']['headers'])):
             if not self.reached_limit:
                 warcprox_meta = json.loads(CaseInsensitiveDict(
                     message['params']['response']['headers'])['Warcprox-Meta'])
@@ -219,6 +220,9 @@ class WebsockReceiverThread(threading.Thread):
                         'assuming the calling thread is already handling this')
         if self.on_response:
             self.on_response(message)
+
+        if status and self.page_status is None:
+            self.page_status = status
 
     def _javascript_dialog_opening(self, message):
         self.logger.info('javascript dialog opened: %s', message)
@@ -418,8 +422,8 @@ class Browser:
             on_service_worker_version_updated=None, on_screenshot=None,
             username=None, password=None, hashtags=None,
             screenshot_full_page=False, skip_extract_outlinks=False,
-            skip_visit_hashtags=False, skip_youtube_dl=False, page_timeout=300,
-            behavior_timeout=900):
+            skip_visit_hashtags=False, skip_youtube_dl=False, simpler404=False,
+            page_timeout=300, behavior_timeout=900):
         '''
         Browses page in browser.
 
@@ -494,19 +498,30 @@ class Browser:
                             'login navigated away from %s; returning!',
                             page_url)
                         self.navigate_to_page(page_url, timeout=page_timeout)
-                behavior_script = brozzler.behavior_script(
-                        page_url, behavior_parameters,
-                        behaviors_dir=behaviors_dir)
-                self.run_behavior(behavior_script, timeout=behavior_timeout)
+                # If the target page HTTP status is 4xx/5xx, there is no point
+                # in running behaviors, outlink and hashtag extraction as we
+                # didn't get a valid page. Screenshot should run because i
+                # may be useful to have a picture of the error page.
+                # This is only enabled with option `simpler404`.
+                run_behaviors = True
+                if simpler404 and (self.websock_thread.page_status is None or
+                                   self.websock_thread.page_status >= 400):
+                    run_behaviors = False
+
+                if run_behaviors:
+                    behavior_script = brozzler.behavior_script(
+                            page_url, behavior_parameters,
+                            behaviors_dir=behaviors_dir)
+                    self.run_behavior(behavior_script, timeout=behavior_timeout)
+                final_page_url = self.url()
                 if on_screenshot:
                     self._try_screenshot(on_screenshot, screenshot_full_page)
-                if skip_extract_outlinks:
+                if not run_behaviors or skip_extract_outlinks:
                     outlinks = []
                 else:
                     outlinks = self.extract_outlinks()
-                if not skip_visit_hashtags:
-                    self.visit_hashtags(self.url(), hashtags, outlinks)
-                final_page_url = self.url()
+                if run_behaviors and not skip_visit_hashtags:
+                    self.visit_hashtags(final_page_url, hashtags, outlinks)
                 return final_page_url, outlinks
         except brozzler.ReachedLimit:
             # websock_thread has stashed the ReachedLimit exception with
@@ -575,6 +590,7 @@ class Browser:
     def navigate_to_page(self, page_url, timeout=300):
         self.logger.info('navigating to page %s', page_url)
         self.websock_thread.got_page_load_event = None
+        self.websock_thread.page_status = None
         self.send_to_chrome(method='Page.navigate', params={'url': page_url})
         self._wait_for(
                 lambda: self.websock_thread.got_page_load_event,
