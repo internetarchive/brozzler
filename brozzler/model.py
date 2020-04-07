@@ -153,7 +153,10 @@ class ElapsedMixIn(object):
         '''
         dt = 0
         for ss in self.starts_and_stops[:-1]:
-            dt += (ss['stop'] - ss['start']).total_seconds()
+            if ss['stop']:
+                dt += (ss['stop'] - ss['start']).total_seconds()
+            else:
+                dt += (doublethink.utcnow() - ss['start']).total_seconds()
         ss = self.starts_and_stops[-1]
         if ss['stop']:
             dt += (ss['stop'] - ss['start']).total_seconds()
