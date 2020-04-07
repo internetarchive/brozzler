@@ -156,6 +156,7 @@ class ElapsedMixIn(object):
             if ss['stop']:
                 dt += (ss['stop'] - ss['start']).total_seconds()
             else:
+                self.logger.warning("missing expected ss['stop']")
                 dt += (doublethink.utcnow() - ss['start']).total_seconds()
         ss = self.starts_and_stops[-1]
         if ss['stop']:
