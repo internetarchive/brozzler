@@ -80,6 +80,8 @@ def httpd(request):
                 self.send_header('Content-Length', len(payload))
                 self.end_headers()
                 self.wfile.write(payload)
+            else:
+                super().do_POST()
 
 
     # SimpleHTTPRequestHandler always uses CWD so we have to chdir
