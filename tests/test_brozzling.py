@@ -72,6 +72,18 @@ def httpd(request):
             else:
                 super().do_GET()
 
+        def do_POST(self):
+            if self.path == '/login-action':
+                self.send_response(200)
+                payload = b'login successfull\n'
+                self.send_header('Content-Type', 'text/plain;charset=utf-8')
+                self.send_header('Content-Length', len(payload))
+                self.end_headers()
+                self.wfile.write(payload)
+            else:
+                super().do_POST()
+
+
     # SimpleHTTPRequestHandler always uses CWD so we have to chdir
     os.chdir(os.path.join(os.path.dirname(__file__), 'htdocs'))
 
@@ -247,3 +259,43 @@ def test_proxy_down():
             with pytest.raises(brozzler.ProxyError):
                 worker.brozzle_page(browser, site, page)
 
+def test_try_login(httpd):
+    """Test try_login behavior.
+    """
+    response_urls = []
+    def on_response(msg):
+        response_urls.append(msg['params']['response']['url'])
+    chrome_exe = brozzler.suggest_default_chrome_exe()
+    form_url = 'http://localhost:%s/site11/form1.html' % httpd.server_port
+    favicon_url = 'http://localhost:%s/favicon.ico' % httpd.server_port
+    login_url = 'http://localhost:%s/login-action' % httpd.server_port
+    # When username and password are defined and initial page has login form,
+    # detect login form, submit login, and then return to the initial page.
+    username = 'user1'
+    password = 'pass1'
+    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        browser.browse_page(form_url, username=username, password=password,
+                            on_response=on_response)
+    assert len(response_urls) == 4
+    assert response_urls[0] == form_url
+    assert response_urls[1] == favicon_url
+    assert response_urls[2] == login_url
+    assert response_urls[3] == form_url
+
+    # When username and password are not defined, just load the initial page.
+    response_urls = []
+    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        browser.browse_page(form_url, on_response=on_response)
+    assert len(response_urls) == 2
+    assert response_urls[0] == form_url
+    assert response_urls[1] == favicon_url
+
+    # when the page doesn't have a form with username/password, don't submit it
+    response_urls = []
+    form_without_login_url = 'http://localhost:%s/site11/form-no-login.html' % httpd.server_port
+    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        browser.browse_page(form_without_login_url, username=username,
+                            password=password, on_response=on_response)
+    assert len(response_urls) == 2
+    assert response_urls[0] == form_without_login_url
+    assert response_urls[1] == favicon_url
