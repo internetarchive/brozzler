@@ -1,6 +1,11 @@
 var __brzl_tryLoginState = 'trying';
 
 var __brzl_tryLogin = function() {
+    for(var x = 0; x < document.querySelectorAll("[class^='login-open']").length; x++){
+        button = document.querySelectorAll("[class^='login-open']")[x];
+        button.click();
+    }
+
     for (var i = 0; i < document.forms.length; i++) {
         var form = document.forms[i];
         if (form.method != 'post') {
@@ -48,6 +53,39 @@ var __brzl_tryLogin = function() {
             return;
         }
     }
+     
+
+    if(__brzl_tryLoginState === 'trying'){
+        var submit = undefined;
+        var usernameInput = undefined;
+        var passwordField = undefined;
+
+        for (var z = 0; z < document.querySelectorAll("[class^='login']").length; z++){
+            var input = document.querySelectorAll("[class^='login']")[z];
+
+            if (input.type === "text" || input.type == "email") {
+                usernameField = input;
+            } else if (input.type === "password") {
+                passwordField = input;
+            }  else if(input.onclick != null) {
+                submit = input; 
+            } else if (input.type == "textarea") {
+                usernameField = undefined;
+                passwordField = undefined;
+                break;
+            }
+        }
+
+
+        if (submit && usernameField && passwordField){
+            usernameField.value = {{username|json}};
+            passwordField.value = {{password|json}};
+            submit.click();
+            __brzl_tryLoginState = 'maybe-submitted-form';
+            return;
+        }
+    }
+
     __brzl_tryLoginState = 'login-form-not-found';
 };
 
