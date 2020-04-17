@@ -80,6 +80,8 @@ def httpd(request):
                 self.send_header('Content-Length', len(payload))
                 self.end_headers()
                 self.wfile.write(payload)
+            else:
+                super().do_POST()
 
 
     # SimpleHTTPRequestHandler always uses CWD so we have to chdir
@@ -265,6 +267,7 @@ def test_try_login(httpd):
         response_urls.append(msg['params']['response']['url'])
     chrome_exe = brozzler.suggest_default_chrome_exe()
     form_url = 'http://localhost:%s/site11/form1.html' % httpd.server_port
+    form_url_other = 'http://localhost:%s/site11/form2.html' % httpd.server_port
     favicon_url = 'http://localhost:%s/favicon.ico' % httpd.server_port
     login_url = 'http://localhost:%s/login-action' % httpd.server_port
     # When username and password are defined and initial page has login form,
@@ -279,6 +282,19 @@ def test_try_login(httpd):
     assert response_urls[1] == favicon_url
     assert response_urls[2] == login_url
     assert response_urls[3] == form_url
+
+    # We are now supporting a different type of form, we'll test that here.
+    response_urls = []
+    username = 'user1'
+    password = 'pass1'
+    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        browser.browse_page(form_url_other, username=username, password=password,
+                            on_response=on_response)
+    assert len(response_urls) == 4
+    assert response_urls[0] == form_url_other
+    assert response_urls[1] == favicon_url
+    assert response_urls[2] == login_url
+    assert response_urls[3] == form_url_other
 
     # When username and password are not defined, just load the initial page.
     response_urls = []
