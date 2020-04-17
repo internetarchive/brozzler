@@ -14,9 +14,9 @@ var __brzl_compileOutlinks = function(frame) {
             if (popups && popups.length > 0) {
                 for (var p=0; p < popups.length; p++) {
                     if (popups[p].onclick){
-                        m = popups[p].onclick.toString().match(__brzl_popup_re);
+                        m = __brzl_popup_re[Symbol.match](popups[p].onclick.toString());
                     } else {
-                        m = popups[p].ondblclick.toString().match(__brzl_popup_re);
+                        m = __brzl_popup_re[Symbol.match](popups[p].ondblclick.toString());
                     }
                     if (m) {
                         outlinks.push(m[2]);
