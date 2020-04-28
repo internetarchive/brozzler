@@ -256,6 +256,9 @@ def _build_youtube_dl(worker, destdir, site):
          # file with video and audio."
         "format": "best/bestvideo+bestaudio",
 
+        # --cache-dir local or...
+        "no_cache_dir": True,
+
         ### we do our own logging
         # "logger": logging.getLogger("youtube_dl"),
         "verbose": False,
