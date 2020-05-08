@@ -41,7 +41,7 @@
   default_parameters:
     interval: 2000
     actions:
-      - selector: .glyphsSpriteGrey_Close
+      - selector: ._7UhW9, .glyphsSpriteGrey_Close
         rmSelector: '.RnEpo'
       - selector: 'a>.eLAPa>.KL4Bh'
         limit: 1
