@@ -111,12 +111,12 @@ def behaviors(behaviors_dir=None, conf='behaviors.yaml'):
             _behaviors = yaml.safe_load(fin)
     return _behaviors
 
-def behavior_script(url, template_parameters=None, behaviors_dir=None):
+def behavior_script(url, template_parameters=None, behaviors_dir=None, behaviors=None):
     '''
     Returns the javascript behavior string populated with template_parameters.
     '''
     import re, logging, json
-    for behavior in behaviors(behaviors_dir=behaviors_dir):
+    for behavior in behaviors:
         if re.match(behavior['url_regex'], url):
             parameters = dict()
             if 'default_parameters' in behavior:

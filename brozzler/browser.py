@@ -491,6 +491,15 @@ class Browser:
                         user_agent=user_agent)
                 self.navigate_to_page(page_url, timeout=page_timeout)
                 if password:
+                    login_behaviors = brozzler.behaviors(
+                        behaviors_dir=behaviors_dir, conf='login-behaviors.yaml'
+                        )
+                    login_behavior_script = brozzler.behavior_script(
+                            page_url, behavior_parameters,
+                            behaviors_dir=behaviors_dir,
+                            behaviors=login_behaviors)
+                    self.run_behavior(login_behavior_script,
+                                      timeout=behavior_timeout)
                     self.try_login(username, password, timeout=page_timeout)
                     # if login redirected us, return to page_url
                     if page_url != self.url().split('#')[0]:
@@ -509,9 +518,11 @@ class Browser:
                     run_behaviors = False
 
                 if run_behaviors:
+                    behaviors = brozzler.behaviors(behaviors_dir=behaviors_dir)
                     behavior_script = brozzler.behavior_script(
                             page_url, behavior_parameters,
-                            behaviors_dir=behaviors_dir)
+                            behaviors_dir=behaviors_dir,
+                            behaviors=behaviors)
                     self.run_behavior(behavior_script, timeout=behavior_timeout)
                 final_page_url = self.url()
                 if on_screenshot:
