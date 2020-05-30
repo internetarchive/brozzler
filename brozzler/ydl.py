@@ -245,7 +245,7 @@ def _build_youtube_dl(worker, destdir, site):
         "outtmpl": "{}/ydl%(autonumber)s.out".format(destdir),
         "retries": 1,
         "nocheckcertificate": True,
-        "hls_prefer_native": True,
+        "hls_prefer_native": False,
         "noprogress": True,
         "nopart": True,
         "no_color": True,
