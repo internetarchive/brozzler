@@ -58,7 +58,23 @@
 - name: mkdir {{venv_root}}/websockify-ve3
   become: true
   file: path={{venv_root}}/websockify-ve3 state=directory owner={{user}}
-
+ 
+#get python3 version for checks below 
+- shell: "python --version"
+  register: python_installed
+  
+ #websockify's dependency numpy's latest version no longer supports 3.5
+- name: install old version of numpy for websockify
+  pip:
+    name: numpy==1.18.4
+    virtualenv: '{{venv_root}}/websockify-ve3'
+    virtualenv_python: python3
+    virtualenv_command: python3 /usr/lib/python3/dist-packages/virtualenv.py
+    extra_args: '--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
+  become: true
+  become_user: '{{user}}'
+  when: '"Python 3.5" in python_installed.stdout'
+ 
 - name: install websockify in virtualenv
   pip:
     name: git+https://github.com/kanaka/websockify.git#egg=websockify
