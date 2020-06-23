@@ -164,7 +164,7 @@ def _build_youtube_dl(worker, destdir, site):
                         ie_result['entries_no_dl'] = list(ie_result['entries'])
                     except Exception as e:
                         self.logger.warning(
-                                "failed to unroll ie_result['entries']? for %s, %s; exception {}",
+                                "failed to unroll ie_result['entries']? for %s, %s; exception %s",
                                 ie.IE_NAME, url, e)
                         ie_result['entries_no_dl'] =[]
                     ie_result['entries'] = []
