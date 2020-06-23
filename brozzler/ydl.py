@@ -160,7 +160,13 @@ def _build_youtube_dl(worker, destdir, site):
                     # videos. We unroll that iterator here partly because
                     # otherwise `process_ie_result()` will clobber it, and we
                     # use it later to extract the watch pages as outlinks.
-                    ie_result['entries_no_dl'] = list(ie_result['entries'])
+                    try:
+                        ie_result['entries_no_dl'] = list(ie_result['entries'])
+                    except Exception as e:
+                        self.logger.warning(
+                                "failed to unroll ie_result['entries']? for %s, %s; exception {}",
+                                ie.IE_NAME, url, e)
+                        ie_result['entries_no_dl'] =[]
                     ie_result['entries'] = []
                     self.logger.info(
                             'not downloading %s media files from this '
