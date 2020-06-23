@@ -187,10 +187,6 @@ class BrozzlerWorker:
     def brozzle_page(self, browser, site, page, on_screenshot=None,
                      on_request=None, enable_youtube_dl=True):
         self.logger.info("brozzling {}".format(page))
-        if page.url.startswith('https://www.instagram.com/'):
-            self.logger.info(
-                    'skipping youtube-dl for %s', page.url)
-            enable_youtube_dl = False
         ydl_fetches = None
         outlinks = set()
         if enable_youtube_dl:
