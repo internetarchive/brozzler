@@ -363,9 +363,9 @@ class Browser:
             self.send_to_chrome(method='ServiceWorker.setForceUpdateOnPageLoad')
 
             # traffic shaping used by SPN2 to aid warcprox resilience
-            # 4294967296 bytes/second = 4GB/second
+            # 4294967296 bytes/second = 4MB/second
             self.send_to_chrome(method='Network.emulateNetworkConditions',
-                params={'downloadThroughput': 4294967296})
+                params={'downloadThroughput': 4194304})
 
             # disable google analytics and amp analytics
             self.send_to_chrome(
