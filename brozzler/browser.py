@@ -1,7 +1,7 @@
 '''
 brozzler/browser.py - manages the browsers for brozzler
 
-Copyright (C) 2014-2018 Internet Archive
+Copyright (C) 2014-2020 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -361,6 +361,11 @@ class Browser:
                 self.send_to_chrome(method='Runtime.enable')
             self.send_to_chrome(method='ServiceWorker.enable')
             self.send_to_chrome(method='ServiceWorker.setForceUpdateOnPageLoad')
+
+            # traffic shaping used by SPN2 to aid warcprox resilience
+            # 4294967296 bytes/second = 4MB/second
+            self.send_to_chrome(method='Network.emulateNetworkConditions',
+                params={'downloadThroughput': 4194304})
 
             # disable google analytics and amp analytics
             self.send_to_chrome(
