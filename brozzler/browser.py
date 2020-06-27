@@ -362,11 +362,6 @@ class Browser:
             self.send_to_chrome(method='ServiceWorker.enable')
             self.send_to_chrome(method='ServiceWorker.setForceUpdateOnPageLoad')
 
-            # traffic shaping used by SPN2 to aid warcprox resilience
-            # 4294967296 bytes/second = 4MB/second
-            self.send_to_chrome(method='Network.emulateNetworkConditions',
-                params={'downloadThroughput': 4194304})
-
             # disable google analytics and amp analytics
             self.send_to_chrome(
                 method='Network.setBlockedURLs',
@@ -428,7 +423,7 @@ class Browser:
             username=None, password=None, hashtags=None,
             screenshot_full_page=False, skip_extract_outlinks=False,
             skip_visit_hashtags=False, skip_youtube_dl=False, simpler404=False,
-            page_timeout=300, behavior_timeout=900):
+            page_timeout=300, behavior_timeout=900, download_throughput=-1):
         '''
         Browses page in browser.
 
@@ -493,7 +488,8 @@ class Browser:
             with brozzler.thread_accept_exceptions():
                 self.configure_browser(
                         extra_headers=extra_headers,
-                        user_agent=user_agent)
+                        user_agent=user_agent,
+                        download_throughput=download_throughput)
                 self.navigate_to_page(page_url, timeout=page_timeout)
                 if password:
                     self.try_login(username, password, timeout=page_timeout)
@@ -577,7 +573,7 @@ class Browser:
             # run behavior again with short timeout?
             # retrieve outlinks again and append to list?
 
-    def configure_browser(self, extra_headers=None, user_agent=None):
+    def configure_browser(self, extra_headers=None, user_agent=None, download_throughput=-1):
         headers = extra_headers or {}
         headers['Accept-Encoding'] = 'gzip'  # avoid encodings br, sdch
         self.websock_thread.expect_result(self._command_id.peek())
@@ -591,6 +587,11 @@ class Browser:
             msg_id = self.send_to_chrome(
                     method='Network.setUserAgentOverride',
                     params={'userAgent': user_agent})
+        if download_throughput > -1:
+            # traffic shaping already used by SPN2 to aid warcprox resilience
+            # parameter value as bytes/second, or -1 to disable (default)
+            msg_id = self.send_to_chrome(method='Network.emulateNetworkConditions',
+                params={'downloadThroughput': download_throughput})
 
     def navigate_to_page(self, page_url, timeout=300):
         self.logger.info('navigating to page %s', page_url)
