@@ -20,7 +20,7 @@ install:
 - sudo cat /var/log/brozzler-worker.log
 - sudo cat /var/log/warcprox.log
 script:
-- DISPLAY=:1 py.test --tb=native -v tests
+- travis_wait "DISPLAY=:1 py.test --tb=native -v tests"
 after_failure:
 - chromium-browser --version
 - sudo kill -QUIT $(sudo svstat /etc/service/warcprox | egrep -o 'pid [0-9]+' | awk '{print $2}')
