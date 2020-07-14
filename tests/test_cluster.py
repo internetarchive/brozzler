@@ -846,6 +846,9 @@ def test_ydl_stitching(httpd):
     pages = list(frontier.site_pages(site.id))
     assert len(pages) == 1
     page = pages[0]
+    while time.time() - start < 600 and not page.videos:
+        time.sleep(0.5)
+        page.refresh()
     assert len(page.videos) == 6
     stitched_url = 'youtube-dl:00001:%s' % make_url(httpd, '/site10/')
     assert {
