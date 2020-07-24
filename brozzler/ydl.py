@@ -246,6 +246,7 @@ def _build_youtube_dl(worker, destdir, site):
         "retries": 1,
         "nocheckcertificate": True,
         "hls_prefer_native": True,
+        "noplaylist": True,
         "noprogress": True,
         "nopart": True,
         "no_color": True,
