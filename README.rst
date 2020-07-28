@@ -104,7 +104,6 @@ however everything else is optional. For details, see `<job-conf.rst>`_.
 
     id: myjob
     time_limit: 60 # seconds
-    proxy: 127.0.0.1:8000 # point at warcprox for archiving
     ignore_robots: false
     warcprox_meta: null
     metadata: {}
