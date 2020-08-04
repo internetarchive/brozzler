@@ -509,7 +509,7 @@ class Browser:
                                    self.websock_thread.page_status >= 400):
                     run_behaviors = False
 
-                if run_behaviors:
+                if run_behaviors and behavior_timeout > 0:
                     behavior_script = brozzler.behavior_script(
                             page_url, behavior_parameters,
                             behaviors_dir=behaviors_dir)
