@@ -1,10 +1,14 @@
+os: linux
 dist: xenial
 language: python
 python:
 - 3.5
 - 3.6
 - 3.7
-sudo: required
+- 3.8
+jobs:
+  allow_failures:
+    - python: "3.8"
 before_install:
 - sudo pip install --upgrade setuptools pip
 - sudo pip install ansible==2.1.3.0
@@ -30,6 +34,5 @@ after_failure:
 - sudo cat /var/log/pywb.log
 notifications:
   slack:
-    secure: KPPXSscXnmSEQ2NXBZFKrzDEYHg067Kv1WR7RTRUH8EIlSS9MHTyErRa7HkaRPmqOllj4vvPbplNU2ALnCfhP4cqW+MvF0xv3GuEGXQ7Om2sBvVUQ3w0JJ5rLq9ferAfGdSnQFeViqfDix5LA3fMNZGouUHQdUHq7iO8E9n9jntvkKO9Jff7Dyo0K5KvOZOJfM9KsqFZLlFO5zoNB6Y9jubIT7+Ulk3EDto/Kny34VPIyJIm7y0cHHlYLEq780AweY0EIwMyMg/VPSRrVAsbLSrilO0YRgsQpjPC9Ci/rAWNWooaOk0eA+bwv1uHQnGtH0z446XUMXr3UZ2QlD4DE/uoP2okkl8EtqvlmEyjV8eO86TqYFDRgKfYpvlK6hHtb7SAHX28QeXQjbKNc5f7KpKO5PtZqaoBRL7acLlKyS8xQGiRtonTPFSBTFR2A+s6dZmKO9dDboglptiHk4dvL1ZD4S8qLJn1JjTJqvIU6tpCY3BpNErn4n1MkDjN5nqdXf7Q9Vmui8vRetwnMf1oXcsKj9FEt2utNfDqFNXcFsN+Mnr9rhXQ1++gt/7Zo844OowiARcxqZTNy5LqSD01WgGCvNMy3Odf+FTQ8PcDOF+001+g8La1R99U0o9/hT/gy+WYk2prYneWru4pQHF/a6goZgkLTwkskcaPVpDJtDs=
     secure: jopAXO8j3AkNWhF02GIzlkHJmqcCfrDEDPHcLHwxGB1vKrJqfMtcmV1+JXv7jGPwT8hBkkZItD1fTbsA1UMTtZCsadhqwrH9sh/BtJy4mf1jDDK0Hq4bPdbpB/mHKBfjD+ZedPZphCiwRQm94QdMOAsmCsj1BluFn+ySHuNAnwyXCNohut5a3aFBszOwBNgZMwBmu+weAUpMrDbr/dhqOtU0IaNvhTJ2Ykyex7Of86L05lBI8MiGtq/J73uDiDINWViBXqG5+/LKIVLvnjzCxZOnOVtSVorRNY0OsClfLJILuWOXk0/C3p+lBCyq5iatWweNqcqqpMifUSdVp4x8GnPyvl4O5YuIZW674mpGmH6UW10MqEnqxFQIcZpArir/zToK/cIKsUse20n8U5LUgOSWeNM1RIBvc4ckeDuthjwvyfmP0hrnNxrPFxRez2J2r6alWFABvD0H83a3hn56AtGXqV+9gt9d4J0+vnBJkXMidQaORBnyRkPlTROxqkoK8r0PME8xr6GwDWHpUN7/Ibo9gS/zpA7zpJUIsAsevVKOSaITZwKqbCMTI3uy/tJcnzRUrnq5wqhh8vXlWzIxEvTW8vuIapjSvDzhnJga85bIEmoauyMd13gR/vhqXQ3xUdN5LeyXAPn24b5e2GNSrhDOaAs30tXe+Z31njSeKPM=
 
