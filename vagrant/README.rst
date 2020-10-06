@@ -31,16 +31,15 @@ Then you can run brozzler-new-site:
 
 ::
 
-    (brozzler-ve3)vagrant@brzl:~$ brozzler-new-site --proxy=localhost:8000 http://example.com/
+    (brozzler-ve3)vagrant@brzl:~$ brozzler-new-site http://example.com/
 
 
-Or brozzler-new-job (make sure to set the proxy to localhost:8000):
+Or brozzler-new-job:
 
 ::
 
     (brozzler-ve3)vagrant@brzl:~$ cat >job1.yml <<EOF
     id: job1
-    proxy: localhost:8000 # point at warcprox for archiving
     seeds:
     - url: https://example.org/
     EOF
