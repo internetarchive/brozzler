@@ -1,7 +1,7 @@
 '''
 brozzler/chrome.py - manages the chrome/chromium browser for brozzler
 
-Copyright (C) 2014-2016 Internet Archive
+Copyright (C) 2014-2020 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -202,8 +202,7 @@ class Chrome:
 
         return self._websocket_url()
 
-    def _websocket_url(self):
-        timeout_sec = 600
+    def _websocket_url(self, timeout_sec = 60):
         json_url = 'http://localhost:%s/json' % self.port
         # make this a member variable so that kill -QUIT reports it
         self._start = time.time()
