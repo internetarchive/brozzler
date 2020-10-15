@@ -423,7 +423,8 @@ class Browser:
             username=None, password=None, hashtags=None,
             screenshot_full_page=False, skip_extract_outlinks=False,
             skip_visit_hashtags=False, skip_youtube_dl=False, simpler404=False,
-            page_timeout=300, behavior_timeout=900, download_throughput=-1):
+            page_timeout=300, behavior_timeout=900,
+            extract_outlinks_timeout=60, download_throughput=-1):
         '''
         Browses page in browser.
 
@@ -520,7 +521,9 @@ class Browser:
                 if not run_behaviors or skip_extract_outlinks:
                     outlinks = []
                 else:
-                    outlinks = self.extract_outlinks()
+                    outlinks = self.extract_outlinks(
+                        timeout=extract_outlinks_timeout
+                        )
                 if run_behaviors and not skip_visit_hashtags:
                     self.visit_hashtags(final_page_url, hashtags, outlinks)
                 return final_page_url, outlinks
