@@ -135,7 +135,7 @@ class Chrome:
         return cookie_db
 
     def start(self, proxy=None, cookie_db=None, disk_cache_dir=None,
-              disk_cache_size=None):
+              disk_cache_size=None, websocket_timeout=60):
         '''
         Starts chrome/chromium process.
 
@@ -149,6 +149,7 @@ class Chrome:
                 is inside `self._home_tmpdir` (default None).
             disk_cache_size: Forces the maximum disk space to be used by the disk
                 cache, in bytes. (default None)
+            websocket_timeout: websocket timeout, in seconds
         Returns:
             websocket url to chrome window with about:blank loaded
         '''
@@ -200,7 +201,7 @@ class Chrome:
         self._out_reader_thread.start()
         self.logger.info('chrome running, pid %s' % self.chrome_process.pid)
 
-        return self._websocket_url()
+        return self._websocket_url(timeout_sec=websocket_timeout)
 
     def _websocket_url(self, timeout_sec = 60):
         json_url = 'http://localhost:%s/json' % self.port
