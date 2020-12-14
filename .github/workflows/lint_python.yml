@@ -14,6 +14,7 @@ jobs:
       - run: isort --profile black . || true
       - run: pip install -r requirements.txt || true
       - run: pip install -e .
+      - run: pip install git+https://github.com/internetarchive/warcprox.git#egg=warcprox
       - run: pytest . || true
       - run: pytest --doctest-modules . || true
       - run: shopt -s globstar && pyupgrade --py36-plus **/*.py || true
