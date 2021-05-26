@@ -28,6 +28,7 @@ import brozzler
 from requests.structures import CaseInsensitiveDict
 import datetime
 import base64
+from ipaddress import AddressValueError
 from brozzler.chrome import Chrome
 import socket
 import urlcanon
@@ -619,8 +620,13 @@ class Browser:
         if ('result' in message and 'result' in message['result']
                 and 'value' in message['result']['result']):
             if message['result']['result']['value']:
-                return frozenset([str(urlcanon.whatwg(link)) for link in
-                                  message['result']['result']['value'].split('\n')])
+                out = []
+                for link in message['result']['result']['value'].split('\n'):
+                    try:
+                        out.append(str(urlcanon.whatwg(link)))
+                    except AddressValueError:
+                        self.logger.warning('skip invalid outlink: %s', link)
+                return frozenset(out)
             else:
                 # no links found
                 return frozenset()
