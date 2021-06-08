@@ -154,7 +154,7 @@ def _build_youtube_dl(worker, destdir, site):
             if ie_result.get('_type') == 'playlist':
                 self.logger.info(
                         'extractor %r found playlist in %s', ie.IE_NAME, url)
-                if ie.IE_NAME in {'youtube:playlist', 'soundcloud:user', 'instagram:user'}:
+                if ie.IE_NAME in {'youtube:playlist', 'youtube:tab', 'soundcloud:user', 'instagram:user'}:
                     # At this point ie_result['entries'] is an iterator that
                     # will fetch more metadata from youtube to list all the
                     # videos. We unroll that iterator here partly because
