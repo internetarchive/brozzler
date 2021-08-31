@@ -224,7 +224,7 @@ class BrozzlerWorker:
         else:
             if not self._already_fetched(page, ydl_fetches):
                 self.logger.info('needs fetch: %s', page)
-                self._fetch_url(site, page.url)
+                self._fetch_url(site, page=page)
             else:
                 self.logger.info('already fetched: %s', page)
 
@@ -287,7 +287,7 @@ class BrozzlerWorker:
                         .get('scriptURL')
                 if url and url not in sw_fetched:
                     self.logger.info('fetching service worker script %s', url)
-                    self._fetch_url(site, url)
+                    self._fetch_url(site, url=url)
                     sw_fetched.add(url)
 
         if not browser.is_running():
@@ -295,7 +295,7 @@ class BrozzlerWorker:
                     proxy=self._proxy_for(site),
                     cookie_db=site.get('cookie_db'))
         final_page_url, outlinks = browser.browse_page(
-                page.url, extra_headers=site.extra_headers(),
+                page.url, extra_headers=site.extra_headers(page),
                 behavior_parameters=site.get('behavior_parameters'),
                 username=site.get('username'), password=site.get('password'),
                 user_agent=site.get('user_agent'),
@@ -316,8 +316,10 @@ class BrozzlerWorker:
             page.note_redirect(final_page_url)
         return outlinks
 
-    def _fetch_url(self, site, url):
+    def _fetch_url(self, site, url=None, page=None):
         proxies = None
+        if page:
+            url=page.url
         if self._proxy_for(site):
             proxies = {
                 'http': 'http://%s' % self._proxy_for(site),
@@ -328,7 +330,7 @@ class BrozzlerWorker:
         try:
             # response is ignored
             requests.get(
-                    url, proxies=proxies, headers=site.extra_headers(),
+                    url, proxies=proxies, headers=site.extra_headers(page),
                     verify=False)
         except requests.exceptions.ProxyError as e:
             raise brozzler.ProxyError(

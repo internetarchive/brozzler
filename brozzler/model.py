@@ -121,7 +121,8 @@ def new_seed_page(frontier, site):
     page = brozzler.Page(frontier.rr, {
         "url": str(url), "site_id": site.get("id"),
         "job_id": site.get("job_id"), "hops_from_seed": 0,
-        "priority": 1000, "needs_robots_check": True})
+        "priority": 1000, "needs_robots_check": True,
+        "hop_path": None})
     if hashtag:
         page.hashtags = [hashtag,]
     return page
@@ -267,11 +268,18 @@ class Site(doublethink.Document, ElapsedMixIn):
         self._accept_ssurt_if_not_redundant(
                 canon_seed_redirect.ssurt().decode('ascii'))
 
-    def extra_headers(self):
+    def extra_headers(self, page=None):
         hdrs = {}
         if self.warcprox_meta:
-            hdrs["Warcprox-Meta"] = json.dumps(
-                    self.warcprox_meta, separators=(',', ':'))
+            if page and "hop_path" in self.warcprox_meta:
+                self.warcprox_meta["hop_path"] = page.hop_path
+                self.warcprox_meta["hop_path_parent"] = page.url
+                warcprox_meta_json = json.dumps(self.warcprox_meta, separators=(',', ':'))
+                self.warcprox_meta["hop_path"] = None
+                del self.warcprox_meta["hop_path_parent"]
+            else:
+                warcprox_meta_json= json.dumps(self.warcprox_meta, separators=(',', ':'))
+            hdrs["Warcprox-Meta"] = warcprox_meta_json
         return hdrs
 
     def accept_reject_or_neither(self, url, parent_page=None):
@@ -338,6 +346,8 @@ class Page(doublethink.Document):
     def populate_defaults(self):
         if not "hops_from_seed" in self:
             self.hops_from_seed = 0
+        if not "hop_path" in self:
+            self.hop_path = None
         if not "brozzle_count" in self:
             self.brozzle_count = 0
         if not "claimed" in self:
