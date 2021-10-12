@@ -75,7 +75,7 @@ def httpd(request):
         def do_POST(self):
             if self.path == '/login-action':
                 self.send_response(200)
-                payload = b'login successfull\n'
+                payload = b'login successful\n'
                 self.send_header('Content-Type', 'text/plain;charset=utf-8')
                 self.send_header('Content-Length', len(payload))
                 self.end_headers()
