@@ -14,7 +14,7 @@ or Chromium) to fetch pages and embedded URLs and to extract links. It employs
 capabilities and `rethinkdb <https://github.com/rethinkdb/rethinkdb>`_ to
 manage crawl state.
 
-Brozzler is designed to work in conjuction with warcprox for web archiving.
+Brozzler is designed to work in conjunction with warcprox for web archiving.
 
 Requirements
 ------------
