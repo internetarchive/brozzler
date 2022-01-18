@@ -168,7 +168,7 @@ class Chrome:
                 '--remote-debugging-port=%s' % self.port,
                 '--use-mock-keychain', # mac thing
                 '--user-data-dir=%s' % self._chrome_user_data_dir,
-                '--disable-background-networking',
+                '--disable-background-networking', '--disable-breakpad',
                 '--disable-renderer-backgrounding', '--disable-hang-monitor',
                 '--disable-background-timer-throttling', '--mute-audio',
                 '--disable-web-sockets',
@@ -176,7 +176,8 @@ class Chrome:
                 '--disable-first-run-ui', '--no-first-run',
                 '--homepage=about:blank', '--disable-direct-npapi-requests',
                 '--disable-web-security', '--disable-notifications',
-                '--disable-extensions', '--disable-save-password-bubble']
+                '--disable-extensions', '--disable-save-password-bubble',
+                '--disable-sync']
 
         extra_chrome_args = os.environ.get('BROZZLER_EXTRA_CHROME_ARGS')
         if extra_chrome_args:
