@@ -1,7 +1,7 @@
 '''
 brozzler/ydl.py - youtube-dl support for brozzler
 
-Copyright (C) 2020 Internet Archive
+Copyright (C) 2022 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ limitations under the License.
 '''
 
 import logging
-import youtube_dl
+import yt_dlp as youtube_dl
 import brozzler
 import urllib.request
 import tempfile
@@ -44,7 +44,7 @@ def _finish_frag_download(ffd_self, ctx):
     return result
 youtube_dl.downloader.fragment.FragmentFD._finish_frag_download = _finish_frag_download
 
-_orig_webpage_read_content = youtube_dl.extractor.generic.GenericIE._webpage_read_content
+_orig_webpage_read_content = youtube_dl.extractor.GenericIE._webpage_read_content
 def _webpage_read_content(self, *args, **kwargs):
     content = _orig_webpage_read_content(self, *args, **kwargs)
     if len(content) > 20000000:
@@ -53,7 +53,7 @@ def _webpage_read_content(self, *args, **kwargs):
                 'too large (%s characters)', len(content))
         return ''
     return content
-youtube_dl.extractor.generic.GenericIE._webpage_read_content = _webpage_read_content
+youtube_dl.extractor.GenericIE._webpage_read_content = _webpage_read_content
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
