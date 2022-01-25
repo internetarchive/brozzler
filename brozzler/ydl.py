@@ -257,10 +257,15 @@ def _build_youtube_dl(worker, destdir, site):
         "no_color": True,
         "progress_hooks": [maybe_heartbeat_site_last_claimed],
 
-         # https://github.com/rg3/youtube-dl/blob/master/README.md#format-selection
-         # "best: Select the best quality format represented by a single
-         # file with video and audio."
-        "format": "best/bestvideo+bestaudio",
+        # https://github.com/yt-dlp/yt-dlp#format-selection
+        # "By default, yt-dlp tries to download the best available quality..."
+        # https://github.com/yt-dlp/yt-dlp#sorting-formats
+        # "You can change the criteria for being considered the best by using -S (--format-sort)...."
+        # "vext: Video Extension (mp4 > webm > flv > other). If --prefer-free-formats is used, webm is preferred."
+        # "aext: Audio Extension (m4a > aac > mp3 > ogg > opus > webm > other)."
+        # "If --prefer-free-formats is used, the order changes to opus > ogg > webm > m4a > mp3 > aac."
+        # "ext: Equivalent to vext,aext"
+        "format_sort": ["ext"],
 
         # --cache-dir local or...
         "cache_dir": False,
