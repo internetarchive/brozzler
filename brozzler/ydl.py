@@ -272,8 +272,8 @@ def _build_youtube_dl(worker, destdir, site):
 
         ### we do our own logging
         # "logger": logging.getLogger("youtube_dl"),
-        "verbose": False,
-        "quiet": True,
+        "verbose": True,
+        "quiet": False,
     }
     if worker._proxy_for(site):
         ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
