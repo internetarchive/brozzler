@@ -65,7 +65,7 @@ var umbraBehavior = {
 						if (where == 0) {
 							console.log("clicking on " + clickRadioButtonTargets[k]);
 							// do mouse over event on click target
-							// since some urls are requsted only on
+							// since some urls are requested only on
 							// this event - see
 							// https://webarchive.jira.com/browse/AITFIVE-451
 							var mouseOverEvent = document.createEvent('Events');
