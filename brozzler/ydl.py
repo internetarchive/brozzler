@@ -177,7 +177,8 @@ def _build_youtube_dl(worker, destdir, site):
                 self.logger.info(
                         'extractor %r found a download in %s', ie.IE_NAME, url)
 
-        def _push_stitched_up_vid_to_warcprox(self, site, info_dict, ctx):
+        def _push_stitched_up_vid_to_warcprox(self, site, info_dict):
+            # 220211 update: does yt-dl supply content-type?
             # XXX Don't know how to get the right content-type. Youtube-dl
             # doesn't supply it. Sometimes (with --hls-prefer-native)
             # youtube-dl produces a stitched-up video that /usr/bin/file fails
@@ -188,7 +189,7 @@ def _build_youtube_dl(worker, destdir, site):
             else:
                 try:
                     import magic
-                    mimetype = magic.from_file(ctx['filename'], mime=True)
+                    mimetype = magic.from_file(info_dict['filepath'], mime=True)
                 except ImportError as e:
                     mimetype = 'video/%s' % info_dict['ext']
                     self.logger.warning(
@@ -197,12 +198,12 @@ def _build_youtube_dl(worker, destdir, site):
             url = 'youtube-dl:%05d:%s' % (
                     info_dict.get('playlist_index') or 1,
                     info_dict['webpage_url'])
-            size = os.path.getsize(ctx['filename'])
+            size = os.path.getsize(info_dict['filepath'])
             self.logger.info(
                     'pushing %r video stitched-up as %s (%s bytes) to '
                     'warcprox at %s with url %s', info_dict['format'],
                     mimetype, size, worker._proxy_for(site), url)
-            with open(ctx['filename'], 'rb') as f:
+            with open(info_dict['filepath'], 'rb') as f:
                 # include content-length header to avoid chunked
                 # transfer, which warcprox currently rejects
                 extra_headers = dict(site.extra_headers())
@@ -247,6 +248,12 @@ def _build_youtube_dl(worker, destdir, site):
                     'problem heartbeating site.last_claimed site id=%r',
                     site.id, exc_info=True)
 
+    def ydl_postprocess_hook(d):
+        if d['status'] == 'finished':
+            print('[ydl_postprocess_hook] Done postprocessing')
+            if worker._using_warcprox(site):
+                _YoutubeDL._push_stitched_up_vid_to_warcprox(_YoutubeDL, site, d['info_dict'])
+
     ydl_opts = {
         "outtmpl": "{}/ydl%(autonumber)s.out".format(destdir),
         "retries": 1,
@@ -256,6 +263,7 @@ def _build_youtube_dl(worker, destdir, site):
         "nopart": True,
         "no_color": True,
         "progress_hooks": [maybe_heartbeat_site_last_claimed],
+        "postprocessor_hooks": [ydl_postprocess_hook],
 
         # https://github.com/yt-dlp/yt-dlp#format-selection
         # "By default, yt-dlp tries to download the best available quality..."
