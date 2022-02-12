@@ -213,7 +213,7 @@ def _build_youtube_dl(worker, destdir, site):
                         warc_type='resource', content_type=mimetype, payload=f,
                         extra_headers=extra_headers)
                 # consulted by _remember_videos()
-                self.stitch_ups.append({
+                ydl.stitch_ups.append({
                     'url': url,
                     'response_code': response.code,
                     'content-type': mimetype,
