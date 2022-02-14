@@ -1,5 +1,5 @@
 '''
-brozzler/ydl.py - youtube-dl support for brozzler
+brozzler/ydl.py - youtube-dl / yt-dlp support for brozzler
 
 Copyright (C) 2022 Internet Archive
 
@@ -29,27 +29,13 @@ import datetime
 import threading
 
 thread_local = threading.local()
-_orig__finish_frag_download = youtube_dl.downloader.fragment.FragmentFD._finish_frag_download
-def _finish_frag_download(ffd_self, ctx):
-    '''
-    We monkey-patch this youtube-dl internal method `_finish_frag_download()`
-    because it gets called after downloading the last segment of a segmented
-    video, which is a good time to upload the stitched-up video that youtube-dl
-    creates for us to warcprox. We have it call a thread-local callback
-    since different threads may be youtube-dl'ing at the same time.
-    '''
-    result = _orig__finish_frag_download(ffd_self, ctx)
-    if hasattr(thread_local, 'finish_frag_download_callback'):
-        thread_local.finish_frag_download_callback(ffd_self, ctx)
-    return result
-youtube_dl.downloader.fragment.FragmentFD._finish_frag_download = _finish_frag_download
 
 _orig_webpage_read_content = youtube_dl.extractor.GenericIE._webpage_read_content
 def _webpage_read_content(self, *args, **kwargs):
     content = _orig_webpage_read_content(self, *args, **kwargs)
     if len(content) > 20000000:
         logging.warning(
-                'bypassing youtube-dl extraction because content is '
+                'bypassing yt-dlp extraction because content is '
                 'too large (%s characters)', len(content))
         return ''
     return content
@@ -117,14 +103,14 @@ def final_bounces(fetches, url):
 
 def _build_youtube_dl(worker, destdir, site):
     '''
-    Builds a `youtube_dl.YoutubeDL` for brozzling `site` with `worker`.
+    Builds a yt-dlp `youtube_dl.YoutubeDL` for brozzling `site` with `worker`.
 
     The `YoutubeDL` instance does a few special brozzler-specific things:
 
     - keeps track of urls fetched using a `YoutubeDLSpy`
     - periodically updates `site.last_claimed` in rethinkdb
     - if brozzling through warcprox and downloading segmented videos (e.g.
-      HLS), pushes the stitched-up video created by youtube-dl to warcprox
+      HLS), pushes the stitched-up video created by yt-dlp/ffmpeg to warcprox
       using a WARCPROX_WRITE_RECORD request
     - some logging
 
@@ -134,7 +120,7 @@ def _build_youtube_dl(worker, destdir, site):
         site (brozzler.Site): the site we are brozzling
 
     Returns:
-        a `youtube_dl.YoutubeDL` instance
+        a yt-dlp `youtube_dl.YoutubeDL` instance
     '''
 
     class _YoutubeDL(youtube_dl.YoutubeDL):
@@ -178,7 +164,7 @@ def _build_youtube_dl(worker, destdir, site):
                         'extractor %r found a download in %s', ie.IE_NAME, url)
 
         def _push_stitched_up_vid_to_warcprox(self, site, info_dict):
-            # 220211 update: does yt-dl supply content-type?
+            # 220211 update: does yt-dlp supply content-type?
             # XXX Don't know how to get the right content-type. Youtube-dl
             # doesn't supply it. Sometimes (with --hls-prefer-native)
             # youtube-dl produces a stitched-up video that /usr/bin/file fails
@@ -220,21 +206,8 @@ def _build_youtube_dl(worker, destdir, site):
                     'content-length': size,
                 })
 
-        def process_info(self, info_dict):
-            '''
-            See comment above on `_finish_frag_download()`
-            '''
-            def ffd_callback(ffd_self, ctx):
-                if worker._using_warcprox(site):
-                    self._push_stitched_up_vid_to_warcprox(site, info_dict, ctx)
-            try:
-                thread_local.finish_frag_download_callback = ffd_callback
-                return super().process_info(info_dict)
-            finally:
-                delattr(thread_local, 'finish_frag_download_callback')
-
     def maybe_heartbeat_site_last_claimed(*args, **kwargs):
-        # in case youtube-dl takes a long time, heartbeat site.last_claimed
+        # in case yt-dlp takes a long time, heartbeat site.last_claimed
         # to prevent another brozzler-worker from claiming the site
         try:
             if site.rr and doublethink.utcnow() - site.last_claimed > datetime.timedelta(minutes=worker.SITE_SESSION_MINUTES):
@@ -295,7 +268,7 @@ def _build_youtube_dl(worker, destdir, site):
 
 def _remember_videos(page, fetches, stitch_ups=None):
     '''
-    Saves info about videos captured by youtube-dl in `page.videos`.
+    Saves info about videos captured by yt-dlp in `page.videos`.
     '''
     if not 'videos' in page:
         page.videos = []
@@ -335,7 +308,7 @@ def _remember_videos(page, fetches, stitch_ups=None):
 
 def _try_youtube_dl(worker, ydl, site, page):
     try:
-        logging.info("trying youtube-dl on %s", page)
+        logging.info("trying yt-dlp on %s", page)
 
         with brozzler.thread_accept_exceptions():
             # we do whatwg canonicalization here to avoid "<urlopen error
@@ -348,7 +321,7 @@ def _try_youtube_dl(worker, ydl, site, page):
             info_json = json.dumps(ie_result, sort_keys=True, indent=4)
             logging.info(
                     "sending WARCPROX_WRITE_RECORD request to warcprox "
-                    "with youtube-dl json for %s", page)
+                    "with yt-dlp json for %s", page)
             worker._warcprox_write_record(
                     warcprox_address=worker._proxy_for(site),
                     url="youtube-dl:%s" % str(urlcanon.semantic(page.url)),
@@ -372,14 +345,14 @@ def _try_youtube_dl(worker, ydl, site, page):
                 and worker._proxy_for(site)):
             # connection problem when using a proxy == proxy error (XXX?)
             raise brozzler.ProxyError(
-                    'youtube-dl hit apparent proxy error from '
+                    'yt-dlp hit apparent proxy error from '
                     '%s' % page.url) from e
         else:
             raise
 
 def do_youtube_dl(worker, site, page):
     '''
-    Runs youtube-dl configured for `worker` and `site` to download videos from
+    Runs yt-dlp configured for `worker` and `site` to download videos from
     `page`.
 
     Args:
