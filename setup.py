@@ -65,7 +65,7 @@ setuptools.setup(
         },
         install_requires=[
             'PyYAML>=5.1',
-            'youtube-dl>=2018.7.21',
+            'yt_dlp',
             'reppy==0.3.4',
             'requests>=2.21',
             'websocket-client>=0.39.0,<=0.48.0',
