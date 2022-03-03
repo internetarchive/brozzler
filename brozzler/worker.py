@@ -244,13 +244,13 @@ class BrozzlerWorker:
                         url="screenshot:%s" % str(urlcanon.semantic(page.url)),
                         warc_type="resource", content_type="image/jpeg",
                         payload=screenshot_jpeg,
-                        extra_headers=site.extra_headers())
+                        extra_headers=site.extra_headers(page))
                 self._warcprox_write_record(
                         warcprox_address=self._proxy_for(site),
                         url="thumbnail:%s" % str(urlcanon.semantic(page.url)),
                         warc_type="resource", content_type="image/jpeg",
                         payload=thumbnail_jpeg,
-                        extra_headers=site.extra_headers())
+                        extra_headers=site.extra_headers(page))
 
         def _on_response(chrome_msg):
             if ('params' in chrome_msg

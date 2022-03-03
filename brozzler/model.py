@@ -271,12 +271,12 @@ class Site(doublethink.Document, ElapsedMixIn):
     def extra_headers(self, page=None):
         hdrs = {}
         if self.warcprox_meta:
-            if page and "hop_path" in self.warcprox_meta:
-                self.warcprox_meta["hop_path"] = page.hop_path
-                self.warcprox_meta["hop_path_parent"] = page.url
+            if page is not None:
+                self.warcprox_meta["metadata"]["hop_path"] = page.hop_path
+                self.warcprox_meta["metadata"]["hop_path_referer"] = page.url
                 warcprox_meta_json = json.dumps(self.warcprox_meta, separators=(',', ':'))
-                self.warcprox_meta["hop_path"] = None
-                del self.warcprox_meta["hop_path_parent"]
+                del self.warcprox_meta["metadata"]["hop_path"]
+                del self.warcprox_meta["metadata"]["hop_path_referer"]
             else:
                 warcprox_meta_json= json.dumps(self.warcprox_meta, separators=(',', ':'))
             hdrs["Warcprox-Meta"] = warcprox_meta_json
