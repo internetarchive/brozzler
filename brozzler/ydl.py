@@ -223,9 +223,9 @@ def _build_youtube_dl(worker, destdir, site):
 
     def ydl_postprocess_hook(d):
         if d['status'] == 'finished':
-            print('[ydl_postprocess_hook] Done postprocessing')
-            print('[ydl_postprocess_hook] {}'.format(d['postprocessor']))
-            if d['postprocessor'] == 'ffmpeg' and worker._using_warcprox(site):
+            worker.logger.info('[ydl_postprocess_hook] Finished postprocessing')
+            worker.logger.info('[ydl_postprocess_hook] postprocessor: {}'.format(d['postprocessor']))
+            if d['postprocessor'] == 'FixupM3u8' and worker._using_warcprox(site):
                 _YoutubeDL._push_stitched_up_vid_to_warcprox(_YoutubeDL, site, d['info_dict'])
 
     ydl_opts = {
@@ -260,6 +260,9 @@ def _build_youtube_dl(worker, destdir, site):
     }
     if worker._proxy_for(site):
         ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
+    if 'vimeo.com' in site.seed:
+        ydl_opts["format"] = "bv*+ba/b"
+        worker.logger.info("setting yt-dlp format to 'bv*+ba/b' for vimeo.com")
     ydl = _YoutubeDL(ydl_opts)
     if site.extra_headers():
         ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers()))
