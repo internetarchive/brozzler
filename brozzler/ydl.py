@@ -260,9 +260,6 @@ def _build_youtube_dl(worker, destdir, site):
     }
     if worker._proxy_for(site):
         ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
-    if 'vimeo.com' in site.seed:
-        ydl_opts["format"] = "bv*+ba/b"
-        worker.logger.info("setting yt-dlp format to 'bv*+ba/b' for vimeo.com")
     ydl = _YoutubeDL(ydl_opts)
     if site.extra_headers():
         ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers()))
