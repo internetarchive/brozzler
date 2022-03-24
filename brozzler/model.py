@@ -273,10 +273,12 @@ class Site(doublethink.Document, ElapsedMixIn):
         if self.warcprox_meta:
             if page is not None:
                 self.warcprox_meta["metadata"]["hop_path"] = page.hop_path
-                self.warcprox_meta["metadata"]["hop_path_referer"] = page.url
+                self.warcprox_meta["metadata"]["brozzled_url"] = page.url
+                self.warcprox_meta["metadata"]["hop_via_url"] = page.via_page_url
                 warcprox_meta_json = json.dumps(self.warcprox_meta, separators=(',', ':'))
                 del self.warcprox_meta["metadata"]["hop_path"]
-                del self.warcprox_meta["metadata"]["hop_path_referer"]
+                del self.warcprox_meta["metadata"]["brozzled_url"]
+                del self.warcprox_meta["metadata"]["hop_via_url"]
             else:
                 warcprox_meta_json= json.dumps(self.warcprox_meta, separators=(',', ':'))
             hdrs["Warcprox-Meta"] = warcprox_meta_json
@@ -348,6 +350,8 @@ class Page(doublethink.Document):
             self.hops_from_seed = 0
         if not "hop_path" in self:
             self.hop_path = None
+        if not "via_page_url" in self:
+            self.via_page_url = None
         if not "brozzle_count" in self:
             self.brozzle_count = 0
         if not "claimed" in self:
