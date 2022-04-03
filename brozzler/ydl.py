@@ -223,8 +223,9 @@ def _build_youtube_dl(worker, destdir, site):
 
     def ydl_postprocess_hook(d):
         if d['status'] == 'finished':
-            print('[ydl_postprocess_hook] Done postprocessing')
-            if worker._using_warcprox(site):
+            worker.logger.info('[ydl_postprocess_hook] Finished postprocessing')
+            worker.logger.info('[ydl_postprocess_hook] postprocessor: {}'.format(d['postprocessor']))
+            if d['postprocessor'] == 'FixupM3u8' and worker._using_warcprox(site):
                 _YoutubeDL._push_stitched_up_vid_to_warcprox(_YoutubeDL, site, d['info_dict'])
 
     ydl_opts = {
@@ -247,6 +248,7 @@ def _build_youtube_dl(worker, destdir, site):
         # "If --prefer-free-formats is used, the order changes to opus > ogg > webm > m4a > mp3 > aac."
         # "ext: Equivalent to vext,aext"
         "format_sort": ["ext"],
+        "format": "b/bv+ba",
 
         # --cache-dir local or...
         "cache_dir": False,
