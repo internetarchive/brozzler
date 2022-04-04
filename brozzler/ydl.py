@@ -18,6 +18,7 @@ limitations under the License.
 
 import logging
 import yt_dlp as youtube_dl
+from yt_dlp.utils import match_filter_func
 import brozzler
 import urllib.request
 import tempfile
@@ -249,6 +250,8 @@ def _build_youtube_dl(worker, destdir, site):
         # "ext: Equivalent to vext,aext"
         "format_sort": ["ext"],
         "format": "b/bv+ba",
+        # skip live streams
+        "match_filter": match_filter_func("!is_live"),
 
         # --cache-dir local or...
         "cache_dir": False,
