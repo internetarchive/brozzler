@@ -31,6 +31,7 @@ import urlcanon
 import urllib
 import uuid
 import yaml
+from typing import Optional
 
 def load_schema():
     schema_file = os.path.join(os.path.dirname(__file__), 'job_schema.yaml')
@@ -119,9 +120,12 @@ def new_seed_page(frontier, site):
     hashtag = (url.hash_sign + url.fragment).decode("utf-8")
     urlcanon.canon.remove_fragment(url)
     page = brozzler.Page(frontier.rr, {
-        "url": str(url), "site_id": site.get("id"),
-        "job_id": site.get("job_id"), "hops_from_seed": 0,
-        "priority": 1000, "needs_robots_check": True,
+        "url": str(url),
+        "site_id": site.get("id"),
+        "job_id": site.get("job_id"),
+        "hops_from_seed": 0,
+        "priority": 1000,
+        "needs_robots_check": True,
         "hop_path": None})
     if hashtag:
         page.hashtags = [hashtag,]
@@ -268,7 +272,7 @@ class Site(doublethink.Document, ElapsedMixIn):
         self._accept_ssurt_if_not_redundant(
                 canon_seed_redirect.ssurt().decode('ascii'))
 
-    def extra_headers(self, page=None):
+    def extra_headers(self, page: Optional["Page"] = None):
         hdrs = {}
         if self.warcprox_meta:
             if page is not None:
