@@ -101,7 +101,7 @@ def final_bounces(fetches, url):
 
     return final_bounces
 
-def _build_youtube_dl(worker, destdir, site):
+def _build_youtube_dl(worker, destdir, site, page):
     '''
     Builds a yt-dlp `youtube_dl.YoutubeDL` for brozzling `site` with `worker`.
 
@@ -262,7 +262,7 @@ def _build_youtube_dl(worker, destdir, site):
         ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
     ydl = _YoutubeDL(ydl_opts)
     if site.extra_headers():
-        ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers()))
+        ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers(page)))
     ydl.fetch_spy = YoutubeDLSpy()
     ydl.stitch_ups = []
     ydl._opener.add_handler(ydl.fetch_spy)
@@ -330,7 +330,7 @@ def _try_youtube_dl(worker, ydl, site, page):
                     warc_type="metadata",
                     content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                     payload=info_json.encode("utf-8"),
-                    extra_headers=site.extra_headers())
+                    extra_headers=site.extra_headers(page))
         return ie_result
     except brozzler.ShutdownRequested as e:
         raise
@@ -374,7 +374,7 @@ def do_youtube_dl(worker, site, page):
             `list` of `str`: outlink urls
     '''
     with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
-        ydl = _build_youtube_dl(worker, tempdir, site)
+        ydl = _build_youtube_dl(worker, tempdir, site, page)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
         outlinks = set()
         if ie_result and ie_result.get('extractor') == 'youtube:playlist':
