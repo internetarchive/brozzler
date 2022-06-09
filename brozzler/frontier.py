@@ -302,7 +302,9 @@ class RethinkDbFrontier:
             'site_id': site.id,
             'job_id': site.job_id,
             'hops_from_seed': parent_page.hops_from_seed + 1,
+            'hop_path': str(parent_page.hop_path if parent_page.hop_path else "") + "L",
             'via_page_id': parent_page.id,
+            'via_page_url': parent_page.url,
             'hops_off_surt': hops_off,
             'hashtags': [hashtag] if hashtag else []})
         return page

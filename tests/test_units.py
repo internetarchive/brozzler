@@ -234,7 +234,7 @@ def test_proxy_down():
 
         # raw fetch
         with pytest.raises(brozzler.ProxyError):
-            worker._fetch_url(site, page.url)
+            worker._fetch_url(site, page=page)
 
         # WARCPROX_WRITE_RECORD
         with pytest.raises(brozzler.ProxyError):

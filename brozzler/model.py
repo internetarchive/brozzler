@@ -31,6 +31,7 @@ import urlcanon
 import urllib
 import uuid
 import yaml
+from typing import Optional
 
 def load_schema():
     schema_file = os.path.join(os.path.dirname(__file__), 'job_schema.yaml')
@@ -119,9 +120,13 @@ def new_seed_page(frontier, site):
     hashtag = (url.hash_sign + url.fragment).decode("utf-8")
     urlcanon.canon.remove_fragment(url)
     page = brozzler.Page(frontier.rr, {
-        "url": str(url), "site_id": site.get("id"),
-        "job_id": site.get("job_id"), "hops_from_seed": 0,
-        "priority": 1000, "needs_robots_check": True})
+        "url": str(url),
+        "site_id": site.get("id"),
+        "job_id": site.get("job_id"),
+        "hops_from_seed": 0,
+        "priority": 1000,
+        "needs_robots_check": True,
+        "hop_path": None})
     if hashtag:
         page.hashtags = [hashtag,]
     return page
@@ -267,11 +272,20 @@ class Site(doublethink.Document, ElapsedMixIn):
         self._accept_ssurt_if_not_redundant(
                 canon_seed_redirect.ssurt().decode('ascii'))
 
-    def extra_headers(self):
+    def extra_headers(self, page: Optional["Page"] = None):
         hdrs = {}
         if self.warcprox_meta:
-            hdrs["Warcprox-Meta"] = json.dumps(
-                    self.warcprox_meta, separators=(',', ':'))
+            if page is not None:
+                self.warcprox_meta["metadata"]["hop_path"] = page.hop_path
+                self.warcprox_meta["metadata"]["brozzled_url"] = page.url
+                self.warcprox_meta["metadata"]["hop_via_url"] = page.via_page_url
+                warcprox_meta_json = json.dumps(self.warcprox_meta, separators=(',', ':'))
+                del self.warcprox_meta["metadata"]["hop_path"]
+                del self.warcprox_meta["metadata"]["brozzled_url"]
+                del self.warcprox_meta["metadata"]["hop_via_url"]
+            else:
+                warcprox_meta_json= json.dumps(self.warcprox_meta, separators=(',', ':'))
+            hdrs["Warcprox-Meta"] = warcprox_meta_json
         return hdrs
 
     def accept_reject_or_neither(self, url, parent_page=None):
@@ -338,6 +352,10 @@ class Page(doublethink.Document):
     def populate_defaults(self):
         if not "hops_from_seed" in self:
             self.hops_from_seed = 0
+        if not "hop_path" in self:
+            self.hop_path = None
+        if not "via_page_url" in self:
+            self.via_page_url = None
         if not "brozzle_count" in self:
             self.brozzle_count = 0
         if not "claimed" in self:
