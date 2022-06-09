@@ -256,8 +256,7 @@ def _build_youtube_dl(worker, destdir, site, page):
         # --cache-dir local or...
         "cache_dir": False,
 
-        ### we do our own logging
-        # "logger": logging.getLogger("youtube_dl"),
+        "logger": logging.getLogger("youtube_dl"),
         "verbose": True,
         "quiet": False,
     }
