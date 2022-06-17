@@ -53,7 +53,7 @@ class BrozzlerWorker:
             skip_extract_outlinks=False, skip_visit_hashtags=False,
             skip_youtube_dl=False, simpler404=False, screenshot_full_page=False,
             page_timeout=300, behavior_timeout=900, extract_outlinks_timeout=60,
-            download_throughput=-1):
+            download_throughput=-1, stealth=False):
         self._frontier = frontier
         self._service_registry = service_registry
         self._max_browsers = max_browsers
@@ -71,6 +71,7 @@ class BrozzlerWorker:
         self._behavior_timeout = behavior_timeout
         self._extract_outlinks_timeout = extract_outlinks_timeout
         self._download_throughput = download_throughput
+        self._stealth = stealth
 
         self._browser_pool = brozzler.browser.BrowserPool(
                 max_browsers, chrome_exe=chrome_exe, ignore_cert_errors=True)
@@ -311,7 +312,8 @@ class BrozzlerWorker:
                 page_timeout=self._page_timeout,
                 behavior_timeout=self._behavior_timeout,
                 extract_outlinks_timeout=self._extract_outlinks_timeout,
-                download_throughput=self._download_throughput)
+                download_throughput=self._download_throughput,
+                stealth=self._stealth)
         if final_page_url != page.url:
             page.note_redirect(final_page_url)
         return outlinks

@@ -157,6 +157,9 @@ def brozzle_page(argv=None):
             '--browser_throughput', type=int, dest='download_throughput', default=-1,
             help='Chrome DevTools downloadThroughput for Network.emulateNetworkConditions')
     arg_parser.add_argument(
+            '--stealth', dest='stealth', action='store_true',
+            help='Try to avoid web bot detection')
+    arg_parser.add_argument(
             '--screenshot-full-page', dest='screenshot_full_page',
             action='store_true')
     arg_parser.add_argument(
@@ -189,7 +192,8 @@ def brozzle_page(argv=None):
             skip_youtube_dl=args.skip_youtube_dl,
             simpler404=args.simpler404,
             screenshot_full_page=args.screenshot_full_page,
-            download_throughput=args.download_throughput)
+            download_throughput=args.download_throughput,
+            stealth=args.stealth)
 
     def on_screenshot(screenshot_jpeg):
         OK_CHARS = string.ascii_letters + string.digits

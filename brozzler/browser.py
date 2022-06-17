@@ -425,7 +425,7 @@ class Browser:
             screenshot_full_page=False, skip_extract_outlinks=False,
             skip_visit_hashtags=False, skip_youtube_dl=False, simpler404=False,
             page_timeout=300, behavior_timeout=900,
-            extract_outlinks_timeout=60, download_throughput=-1):
+            extract_outlinks_timeout=60, download_throughput=-1, stealth=False):
         '''
         Browses page in browser.
 
@@ -491,7 +491,8 @@ class Browser:
                 self.configure_browser(
                         extra_headers=extra_headers,
                         user_agent=user_agent,
-                        download_throughput=download_throughput)
+                        download_throughput=download_throughput,
+                        stealth=stealth)
                 self.navigate_to_page(page_url, timeout=page_timeout)
                 if password:
                     self.try_login(username, password, timeout=page_timeout)
@@ -577,7 +578,8 @@ class Browser:
             # run behavior again with short timeout?
             # retrieve outlinks again and append to list?
 
-    def configure_browser(self, extra_headers=None, user_agent=None, download_throughput=-1):
+    def configure_browser(self, extra_headers=None, user_agent=None,
+                          download_throughput=-1, stealth=False):
         headers = extra_headers or {}
         headers['Accept-Encoding'] = 'gzip'  # avoid encodings br, sdch
         self.websock_thread.expect_result(self._command_id.peek())
@@ -596,6 +598,16 @@ class Browser:
             # parameter value as bytes/second, or -1 to disable (default)
             msg_id = self.send_to_chrome(method='Network.emulateNetworkConditions',
                 params={'downloadThroughput': download_throughput})
+        if stealth:
+            self.websock_thread.expect_result(self._command_id.peek())
+            js = brozzler.jinja2_environment().get_template('stealth.js').render()
+            msg_id = self.send_to_chrome(
+                method='Page.addScriptToEvaluateOnNewDocument',
+                params={'source': js})
+            self._wait_for(
+                lambda: self.websock_thread.received_result(msg_id),
+                timeout=10)
+
 
     def navigate_to_page(self, page_url, timeout=300):
         self.logger.info('navigating to page %s', page_url)
