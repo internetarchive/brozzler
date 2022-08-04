@@ -284,8 +284,8 @@ class Site(doublethink.Document, ElapsedMixIn):
                 del temp_warcprox_meta['blocks']
                 # str-ify blocks
                 blocks_str = json.dumps(self.warcprox_meta['blocks'], separators=(',', ':'))
-                # encode(), compress, b64encode
-                temp_warcprox_meta['compressed_blocks'] = base64.b64encode(zlib.compress(blocks_str.encode()))
+                # encode(), compress, b64encode, decode()
+                temp_warcprox_meta['compressed_blocks'] = base64.b64encode(zlib.compress(blocks_str.encode())).decode()
             if page is not None:
                 temp_warcprox_meta["metadata"]["hop_path"] = page.hop_path
                 temp_warcprox_meta["metadata"]["brozzled_url"] = page.url
