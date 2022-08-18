@@ -340,6 +340,9 @@ def brozzler_worker(argv=None):
     arg_parser.add_argument(
             '--skip-youtube-dl', dest='skip_youtube_dl',
             action='store_true', help=argparse.SUPPRESS)
+    arg_parser.add_argument(
+            '--stealth', dest='stealth', action='store_true',
+            help='Try to avoid web bot detection')
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -376,7 +379,8 @@ def brozzler_worker(argv=None):
             warcprox_auto=args.warcprox_auto,
             skip_extract_outlinks=args.skip_extract_outlinks,
             skip_visit_hashtags=args.skip_visit_hashtags,
-            skip_youtube_dl=args.skip_youtube_dl)
+            skip_youtube_dl=args.skip_youtube_dl,
+            stealth=args.stealth)
 
     signal.signal(signal.SIGQUIT, dump_state)
     signal.signal(signal.SIGTERM, lambda s,f: worker.stop())

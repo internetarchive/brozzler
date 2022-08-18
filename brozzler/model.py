@@ -2,7 +2,7 @@
 brozzler/models.py - model classes representing jobs, sites, and pages, with
 related logic
 
-Copyright (C) 2014-2019 Internet Archive
+Copyright (C) 2014-2022 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@ limitations under the License.
 '''
 
 import brozzler
+import base64
 import cerberus
+import copy
 import datetime
 import doublethink
 import hashlib
@@ -31,6 +33,7 @@ import urlcanon
 import urllib
 import uuid
 import yaml
+import zlib
 from typing import Optional
 
 def load_schema():
@@ -275,17 +278,19 @@ class Site(doublethink.Document, ElapsedMixIn):
     def extra_headers(self, page: Optional["Page"] = None):
         hdrs = {}
         if self.warcprox_meta:
+            temp_warcprox_meta = copy.deepcopy(self.warcprox_meta)
+            if "blocks" in self.warcprox_meta:
+                # delete temp_warcprox_meta's 'blocks' (they may be big!)
+                del temp_warcprox_meta['blocks']
+                # str-ify blocks
+                blocks_str = json.dumps(self.warcprox_meta['blocks'], separators=(',', ':'))
+                # encode(), compress, b64encode, decode()
+                temp_warcprox_meta['compressed_blocks'] = base64.b64encode(zlib.compress(blocks_str.encode())).decode()
             if page is not None:
-                self.warcprox_meta["metadata"]["hop_path"] = page.hop_path
-                self.warcprox_meta["metadata"]["brozzled_url"] = page.url
-                self.warcprox_meta["metadata"]["hop_via_url"] = page.via_page_url
-                warcprox_meta_json = json.dumps(self.warcprox_meta, separators=(',', ':'))
-                del self.warcprox_meta["metadata"]["hop_path"]
-                del self.warcprox_meta["metadata"]["brozzled_url"]
-                del self.warcprox_meta["metadata"]["hop_via_url"]
-            else:
-                warcprox_meta_json= json.dumps(self.warcprox_meta, separators=(',', ':'))
-            hdrs["Warcprox-Meta"] = warcprox_meta_json
+                temp_warcprox_meta["metadata"]["hop_path"] = page.hop_path
+                temp_warcprox_meta["metadata"]["brozzled_url"] = page.url
+                temp_warcprox_meta["metadata"]["hop_via_url"] = page.via_page_url
+            hdrs["Warcprox-Meta"] = json.dumps(temp_warcprox_meta, separators=(',', ':'))
         return hdrs
 
     def accept_reject_or_neither(self, url, parent_page=None):
