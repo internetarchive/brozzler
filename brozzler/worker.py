@@ -3,7 +3,7 @@ brozzler/worker.py - BrozzlerWorker brozzles pages from the frontier, meaning
 it runs youtube-dl on them, browses them and runs behaviors if appropriate,
 scopes and adds outlinks to the frontier
 
-Copyright (C) 2014-2018 Internet Archive
+Copyright (C) 2014-2022 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -193,6 +193,22 @@ class BrozzlerWorker:
         self.logger.info("brozzling {}".format(page))
         ydl_fetches = None
         outlinks = set()
+
+        if self._needs_browsing(page, ydl_fetches):
+            self.logger.info('needs browsing: %s', page)
+            try:
+                browser_outlinks = self._browse_page(
+                    browser, site, page, on_screenshot, on_request)
+                outlinks.update(browser_outlinks)
+            except brozzler.PageInterstitialShown:
+                self.logger.info('page interstitial shown (http auth): %s', page)
+        else:
+            if not self._already_fetched(page, ydl_fetches):
+                self.logger.info('needs fetch: %s', page)
+                self._fetch_url(site, page=page)
+            else:
+                self.logger.info('already fetched: %s', page)
+
         if enable_youtube_dl:
             try:
                 ydl_fetches, outlinks = ydl.do_youtube_dl(self, site, page)
@@ -213,21 +229,6 @@ class BrozzlerWorker:
                     self.logger.error(
                             'youtube_dl raised exception on %s', page,
                             exc_info=True)
-
-        if self._needs_browsing(page, ydl_fetches):
-            self.logger.info('needs browsing: %s', page)
-            try:
-                browser_outlinks = self._browse_page(
-                    browser, site, page, on_screenshot, on_request)
-                outlinks.update(browser_outlinks)
-            except brozzler.PageInterstitialShown:
-                self.logger.info('page interstitial shown (http auth): %s', page)
-        else:
-            if not self._already_fetched(page, ydl_fetches):
-                self.logger.info('needs fetch: %s', page)
-                self._fetch_url(site, page=page)
-            else:
-                self.logger.info('already fetched: %s', page)
 
         return outlinks
 
