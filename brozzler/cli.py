@@ -341,13 +341,20 @@ def brozzler_worker(argv=None):
             '--skip-youtube-dl', dest='skip_youtube_dl',
             action='store_true', help=argparse.SUPPRESS)
     arg_parser.add_argument(
+            '--skip-browserless', dest='skip_browserless',
+            action='store_true', help=argparse.SUPPRESS)
+    arg_parser.add_argument(
             '--stealth', dest='stealth', action='store_true',
             help='Try to avoid web bot detection')
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
-    brozzler.chrome.check_version(args.chrome_exe)
+
+    if skip_browserless:
+        brozzler.chrome.check_version(args.chrome_exe)
+    else:
+        chrome_exe = 'browserless'
 
     def dump_state(signum, frame):
         signal.signal(signal.SIGQUIT, signal.SIG_IGN)
