@@ -74,11 +74,16 @@ class Chrome:
             ignore_cert_errors: configure chrome to accept all certs (default
                 False)
         '''
-        self.port = port
-        self.chrome_exe = chrome_exe
-        self.ignore_cert_errors = ignore_cert_errors
-        self._shutdown = threading.Event()
-        self.chrome_process = None
+        if chrome_exe == 'browserless':
+            # init browserless here maybe
+            pass
+        else:
+            # use a local browser
+            self.port = port
+            self.chrome_exe = chrome_exe
+            self.ignore_cert_errors = ignore_cert_errors
+            self._shutdown = threading.Event()
+            self.chrome_process = None
 
     def __enter__(self):
         '''
