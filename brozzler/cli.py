@@ -171,12 +171,18 @@ def brozzle_page(argv=None):
     arg_parser.add_argument(
             '--skip-youtube-dl', dest='skip_youtube_dl', action='store_true')
     arg_parser.add_argument(
+            '--skip-browserless', dest='skip_browserless', action='store_true')
+    arg_parser.add_argument(
             '--simpler404', dest='simpler404', action='store_true')
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
-    brozzler.chrome.check_version(args.chrome_exe)
+
+    if skip_browserless:
+        brozzler.chrome.check_version(args.chrome_exe)
+    else:
+        chrome_exe = 'browserless'
 
     behavior_parameters = {}
     if args.behavior_parameters:
