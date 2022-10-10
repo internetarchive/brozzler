@@ -179,7 +179,7 @@ def brozzle_page(argv=None):
     args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
 
-    if skip_browserless:
+    if args.skip_browserless:
         brozzler.chrome.check_version(args.chrome_exe)
     else:
         chrome_exe = 'browserless'
@@ -357,7 +357,7 @@ def brozzler_worker(argv=None):
     args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
 
-    if skip_browserless:
+    if args.skip_browserless:
         brozzler.chrome.check_version(args.chrome_exe)
     else:
         chrome_exe = 'browserless'
