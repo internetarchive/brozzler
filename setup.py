@@ -84,7 +84,7 @@ setuptools.setup(
                 'gunicorn>=19.8.1'
             ],
             'easy': [
-                'warcprox>=2.4b2.dev173',
+                'warcprox>=2.4.31',
                 'pywb>=0.33.2,<2',
                 'flask>=1.0',
                 'gunicorn>=19.8.1'
