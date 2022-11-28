@@ -288,20 +288,23 @@ class Browser:
     '''
     logger = logging.getLogger(__module__ + '.' + __qualname__)
 
-    def __init__(self, **kwargs):
+    def __init__(self, chrome_exe, browserless_port, **kwargs):
         '''
         Initializes the Browser.
 
         Args:
             **kwargs: arguments for Chrome(...)
         '''
-        self.chrome = Chrome(**kwargs)
         self.websock_url = None
         self.websock = None
         self.websock_thread = None
         self.is_browsing = False
-        self._command_id = Counter()
         self._wait_interval = 0.5
+        self.browse_port = browserless_port
+        self.is_browserless = chrome_exe == 'browserless'
+        self.chrome = Chrome(chrome_exe=chrome_exe, browserless_port=browserless_port, 
+                             is_browserless=self.is_browserless, **kwargs)
+        self._command_id = Counter()
 
     def __enter__(self):
         self.start()
@@ -343,6 +346,14 @@ class Browser:
             **kwargs: arguments for self.chrome.start(...)
         '''
         if not self.is_running():
+
+            if self.is_browserless:
+                # Open a ws to create a browser on demand
+                args = self.chrome._browserless_args()
+                self.browserless_ws = websocket.create_connection(
+                    "ws://localhost:" + str(self.browse_port) + "?" + args
+                )
+
             self.websock_url = self.chrome.start(**kwargs)
             self.websock = websocket.WebSocketApp(self.websock_url)
             self.websock_thread = WebsockReceiverThread(

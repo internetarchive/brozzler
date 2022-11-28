@@ -30,6 +30,7 @@ import sqlite3
 import json
 import tempfile
 import sys
+import functools
 
 def check_version(chrome_exe):
     '''
@@ -62,7 +63,8 @@ def check_version(chrome_exe):
 class Chrome:
     logger = logging.getLogger(__module__ + '.' + __qualname__)
 
-    def __init__(self, chrome_exe, port=9222, ignore_cert_errors=False):
+    def __init__(self, chrome_exe, browserless_port, is_browserless,
+                 port=9222, ignore_cert_errors=False):
         '''
         Initializes instance of this class.
 
@@ -74,17 +76,27 @@ class Chrome:
             ignore_cert_errors: configure chrome to accept all certs (default
                 False)
         '''
-        if chrome_exe == 'browserless':
-            # init browserless here maybe
-            pass
+
+        self.is_browserless = is_browserless
+        self.browserless_port = browserless_port
+
+        if self.is_browserless:
+            # browserless isn't attached to a PID
+            self.chrome_exe = None
+            self.port = None
+
         else:
             # use a local browser
             self.port = port
             self.chrome_exe = chrome_exe
-            self.ignore_cert_errors = ignore_cert_errors
-            self._shutdown = threading.Event()
-            self.chrome_process = None
-
+        
+        self.ignore_cert_errors = ignore_cert_errors
+        self._shutdown = threading.Event()
+        self._home_tmpdir = tempfile.TemporaryDirectory()
+        self._chrome_user_data_dir = os.path.join(
+        self._home_tmpdir.name, 'chrome-user-data')
+        self.chrome_process = None
+        
     def __enter__(self):
         '''
         Returns websocket url to chrome window with about:blank loaded.
@@ -139,8 +151,41 @@ class Chrome:
                     cookie_location, exc_info=True)
         return cookie_db
 
-    def start(self, proxy=None, cookie_db=None, disk_cache_dir=None,
-              disk_cache_size=None, websocket_timeout=60):
+    def _chrome_args(self, disk_cache_dir=None, disk_cache_size=None,
+                     proxy=None):
+        chrome_args = [
+        self.chrome_exe,
+        '--remote-debugging-port=%s' % self.port or self.browserless_port,
+        '--use-mock-keychain', # mac thing
+        '--user-data-dir=%s' % self._chrome_user_data_dir,
+        '--disable-background-networking', '--disable-breakpad',
+        '--disable-renderer-backgrounding', '--disable-hang-monitor',
+        '--disable-background-timer-throttling', '--mute-audio',
+        '--disable-web-sockets',
+        '--window-size=1100,900', '--no-default-browser-check',
+        '--disable-first-run-ui', '--no-first-run',
+        '--homepage=about:blank', '--disable-direct-npapi-requests',
+        '--disable-web-security', '--disable-notifications',
+        '--disable-extensions', '--disable-save-password-bubble',
+        '--disable-sync']
+
+        extra_chrome_args = os.environ.get('BROZZLER_EXTRA_CHROME_ARGS')
+        if extra_chrome_args:
+            chrome_args.extend(extra_chrome_args.split())
+        if disk_cache_dir:
+            chrome_args.append('--disk-cache-dir=%s' % disk_cache_dir)
+        if disk_cache_size:
+            chrome_args.append('--disk-cache-size=%s' % disk_cache_size)
+        if self.ignore_cert_errors:
+            chrome_args.append('--ignore-certificate-errors')
+        if proxy:
+            chrome_args.append('--proxy-server=%s' % proxy)
+        chrome_args.append('about:blank')
+
+        return chrome_args
+
+    def start(self, proxy=None, cookie_db=None,
+              disk_cache_dir=None, disk_cache_size=None, websocket_timeout=60):
         '''
         Starts chrome/chromium process.
 
@@ -158,44 +203,20 @@ class Chrome:
         Returns:
             websocket url to chrome window with about:blank loaded
         '''
+
         # these can raise exceptions
-        self._home_tmpdir = tempfile.TemporaryDirectory()
-        self._chrome_user_data_dir = os.path.join(
-            self._home_tmpdir.name, 'chrome-user-data')
         if cookie_db:
             self._init_cookie_db(cookie_db)
         self._shutdown.clear()
 
         new_env = os.environ.copy()
         new_env['HOME'] = self._home_tmpdir.name
-        chrome_args = [
-                self.chrome_exe,
-                '--remote-debugging-port=%s' % self.port,
-                '--use-mock-keychain', # mac thing
-                '--user-data-dir=%s' % self._chrome_user_data_dir,
-                '--disable-background-networking', '--disable-breakpad',
-                '--disable-renderer-backgrounding', '--disable-hang-monitor',
-                '--disable-background-timer-throttling', '--mute-audio',
-                '--disable-web-sockets',
-                '--window-size=1100,900', '--no-default-browser-check',
-                '--disable-first-run-ui', '--no-first-run',
-                '--homepage=about:blank', '--disable-direct-npapi-requests',
-                '--disable-web-security', '--disable-notifications',
-                '--disable-extensions', '--disable-save-password-bubble',
-                '--disable-sync']
+        chrome_args = self._chrome_args(disk_cache_dir=disk_cache_dir, disk_cache_size=disk_cache_size,
+                                        proxy=proxy)
 
-        extra_chrome_args = os.environ.get('BROZZLER_EXTRA_CHROME_ARGS')
-        if extra_chrome_args:
-            chrome_args.extend(extra_chrome_args.split())
-        if disk_cache_dir:
-            chrome_args.append('--disk-cache-dir=%s' % disk_cache_dir)
-        if disk_cache_size:
-            chrome_args.append('--disk-cache-size=%s' % disk_cache_size)
-        if self.ignore_cert_errors:
-            chrome_args.append('--ignore-certificate-errors')
-        if proxy:
-            chrome_args.append('--proxy-server=%s' % proxy)
-        chrome_args.append('about:blank')
+        if self.is_browserless:
+            return  self.start_browserless()
+
         self.logger.info('running: %r', subprocess.list2cmdline(chrome_args))
         # start_new_session - new process group so we can kill the whole group
         self.chrome_process = subprocess.Popen(
@@ -209,7 +230,25 @@ class Chrome:
 
         return self._websocket_url(timeout_sec=websocket_timeout)
 
-    def _websocket_url(self, timeout_sec = 60):
+    def _browserless_args(self):
+        chrome_args = self._chrome_args()
+        chrome_args.pop(0)
+        chrome_args.pop(0)
+        return functools.reduce(lambda a, b: a + "&" + b, chrome_args)
+
+    def start_browserless(self):
+        json_url = "http://localhost:" + str(self.browserless_port) + "/sessions"
+
+        brwlss_json_raw = urllib.request.urlopen(json_url, timeout=30).read()
+        brwlss_json = json.loads(brwlss_json_raw)
+        wsURL = brwlss_json[0]['webSocketDebuggerUrl']
+        
+        self.logger.info('got chrome websocket debug url %s from Browserless at %s', wsURL, json_url)
+        self.port = brwlss_json[0]['port']
+        
+        return wsURL
+
+    def _websocket_url(self, timeout_sec=60):
         json_url = 'http://localhost:%s/json' % self.port
         # make this a member variable so that kill -QUIT reports it
         self._start = time.time()
@@ -261,7 +300,7 @@ class Chrome:
             buf = b''
             try:
                 while not self._shutdown.is_set() and (
-                    len(buf) == 0 or buf[-1] != 0xa) and select.select(
+                        len(buf) == 0 or buf[-1] != 0xa) and select.select(
                             [f],[],[],0.5)[0]:
                     buf += f.read(1)
             except (ValueError, OSError):
@@ -282,8 +321,8 @@ class Chrome:
                 buf = readline_nonblock(self.chrome_process.stderr)
                 if buf:
                     self.logger.trace(
-                            'chrome pid %s STDERR %s',
-                            self.chrome_process.pid, buf)
+                        'chrome pid %s STDERR %s',
+                        self.chrome_process.pid, buf)
         except:
             self.logger.error('unexpected exception', exc_info=True)
 
