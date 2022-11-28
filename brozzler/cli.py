@@ -174,6 +174,9 @@ def brozzle_page(argv=None):
             '--skip-browserless', dest='skip_browserless', action='store_true')
     arg_parser.add_argument(
             '--simpler404', dest='simpler404', action='store_true')
+    arg_parser.add_argument(
+        '--browserless-port', dest='browserless_port', default='3000',
+        help='port on which the browserless instance is')
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -210,7 +213,8 @@ def brozzle_page(argv=None):
             f.write(screenshot_jpeg)
         logging.info('wrote screenshot to %s', filename)
 
-    browser = brozzler.Browser(chrome_exe=args.chrome_exe)
+    browser = brozzler.Browser(chrome_exe=args.chrome_exe,
+                               browserless_port=args.browserless_port)
     try:
         browser.start(proxy=args.proxy)
         outlinks = worker.brozzle_page(
