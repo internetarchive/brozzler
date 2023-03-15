@@ -229,6 +229,7 @@ def _build_youtube_dl(worker, destdir, site, page):
             if d['postprocessor'] == 'FixupM3u8' and worker._using_warcprox(site):
                 _YoutubeDL._push_stitched_up_vid_to_warcprox(_YoutubeDL, site, d['info_dict'])
 
+    # default socket_timeout is 20 -- we hit it often when cluster is busy
     ydl_opts = {
         "outtmpl": "{}/ydl%(autonumber)s.out".format(destdir),
         "retries": 1,
@@ -237,6 +238,7 @@ def _build_youtube_dl(worker, destdir, site, page):
         "noprogress": True,
         "nopart": True,
         "no_color": True,
+        "socket_timeout": 40,
         "progress_hooks": [maybe_heartbeat_site_last_claimed],
         "postprocessor_hooks": [ydl_postprocess_hook],
 
