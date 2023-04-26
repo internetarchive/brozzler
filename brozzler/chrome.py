@@ -172,7 +172,7 @@ class Chrome:
                 '--disable-renderer-backgrounding', '--disable-hang-monitor',
                 '--disable-background-timer-throttling', '--mute-audio',
                 '--disable-web-sockets',
-                '--window-size=1100,900', '--no-default-browser-check',
+                '--window-size=1400,900', '--no-default-browser-check',
                 '--disable-first-run-ui', '--no-first-run',
                 '--homepage=about:blank', '--disable-direct-npapi-requests',
                 '--disable-web-security', '--disable-notifications',
