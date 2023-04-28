@@ -95,6 +95,7 @@ def configure_logging(args):
 def suggest_default_chrome_exe():
     # mac os x application executable paths
     for path in [
+            '/Applications/Thorium.app/Contents/MacOS/Thorium',
             '/Applications/Chromium.app/Contents/MacOS/Chromium',
             '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome']:
         if os.path.exists(path):
