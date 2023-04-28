@@ -1,7 +1,7 @@
 '''
 brozzler/chrome.py - manages the chrome/chromium browser for brozzler
 
-Copyright (C) 2014-2020 Internet Archive
+Copyright (C) 2014-2023 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -135,7 +135,8 @@ class Chrome:
         return cookie_db
 
     def start(self, proxy=None, cookie_db=None, disk_cache_dir=None,
-              disk_cache_size=None, websocket_timeout=60):
+              disk_cache_size=None, websocket_timeout=60,
+              window_height=900, window_width=1400):
         '''
         Starts chrome/chromium process.
 
@@ -150,6 +151,7 @@ class Chrome:
             disk_cache_size: Forces the maximum disk space to be used by the disk
                 cache, in bytes. (default None)
             websocket_timeout: websocket timeout, in seconds
+            window_height, window_width: window height and width, in pixels
         Returns:
             websocket url to chrome window with about:blank loaded
         '''
@@ -172,7 +174,8 @@ class Chrome:
                 '--disable-renderer-backgrounding', '--disable-hang-monitor',
                 '--disable-background-timer-throttling', '--mute-audio',
                 '--disable-web-sockets',
-                '--window-size=1400,900', '--no-default-browser-check',
+                f'--window-size={window_width},{window_height}',
+                '--no-default-browser-check',
                 '--disable-first-run-ui', '--no-first-run',
                 '--homepage=about:blank', '--disable-direct-npapi-requests',
                 '--disable-web-security', '--disable-notifications',
