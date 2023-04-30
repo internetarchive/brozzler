@@ -3,7 +3,7 @@ brozzler/worker.py - BrozzlerWorker brozzles pages from the frontier, meaning
 it runs youtube-dl on them, browses them and runs behaviors if appropriate,
 scopes and adds outlinks to the frontier
 
-Copyright (C) 2014-2018 Internet Archive
+Copyright (C) 2014-2023 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -53,7 +53,8 @@ class BrozzlerWorker:
             skip_extract_outlinks=False, skip_visit_hashtags=False,
             skip_youtube_dl=False, simpler404=False, screenshot_full_page=False,
             page_timeout=300, behavior_timeout=900, extract_outlinks_timeout=60,
-            download_throughput=-1, stealth=False):
+            download_throughput=-1, stealth=False,
+            window_height=900, window_width=1400):
         self._frontier = frontier
         self._service_registry = service_registry
         self._max_browsers = max_browsers
@@ -71,6 +72,8 @@ class BrozzlerWorker:
         self._behavior_timeout = behavior_timeout
         self._extract_outlinks_timeout = extract_outlinks_timeout
         self._download_throughput = download_throughput
+        self._window_height = window_height
+        self._window_width = window_width
         self._stealth = stealth
 
         self._browser_pool = brozzler.browser.BrowserPool(
@@ -294,7 +297,9 @@ class BrozzlerWorker:
         if not browser.is_running():
             browser.start(
                     proxy=self._proxy_for(site),
-                    cookie_db=site.get('cookie_db'))
+                    cookie_db=site.get('cookie_db'),
+                    window_height=self._window_height,
+                    window_width=self._window_width)
         final_page_url, outlinks = browser.browse_page(
                 page.url, extra_headers=site.extra_headers(page),
                 behavior_parameters=site.get('behavior_parameters'),

@@ -2,7 +2,7 @@
 '''
 brozzler/cli.py - brozzler command line executables
 
-Copyright (C) 2014-2019 Internet Archive
+Copyright (C) 2014-2023 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -157,6 +157,12 @@ def brozzle_page(argv=None):
             '--browser_throughput', type=int, dest='download_throughput', default=-1,
             help='Chrome DevTools downloadThroughput for Network.emulateNetworkConditions')
     arg_parser.add_argument(
+            '--browser_window_height', type=int, dest='window_height', default=900,
+            help='browser window height in pixels')
+    arg_parser.add_argument(
+            '--browser_window_width', type=int, dest='window_width', default=1400,
+            help='browser window width in pixels')
+    arg_parser.add_argument(
             '--stealth', dest='stealth', action='store_true',
             help='Try to avoid web bot detection')
     arg_parser.add_argument(
@@ -193,6 +199,8 @@ def brozzle_page(argv=None):
             simpler404=args.simpler404,
             screenshot_full_page=args.screenshot_full_page,
             download_throughput=args.download_throughput,
+            window_height=args.window_height,
+            window_width=args.window_width,
             stealth=args.stealth)
 
     def on_screenshot(screenshot_jpeg):
@@ -206,7 +214,7 @@ def brozzle_page(argv=None):
 
     browser = brozzler.Browser(chrome_exe=args.chrome_exe)
     try:
-        browser.start(proxy=args.proxy)
+        browser.start(proxy=args.proxy, window_height=args.window_height, window_width=args.window_width)
         outlinks = worker.brozzle_page(
                 browser, site, page, on_screenshot=on_screenshot,
                 enable_youtube_dl=not args.skip_youtube_dl)
@@ -326,6 +334,12 @@ def brozzler_worker(argv=None):
     arg_parser.add_argument(
             '--browser_throughput', type=int, dest='download_throughput', default=-1,
             help='Chrome DevTools downloadThroughput for Network.emulateNetworkConditions')
+    arg_parser.add_argument(
+            '--browser_window_height', type=int, dest='window_height', default=900,
+            help='browser window height in pixels')
+    arg_parser.add_argument(
+            '--browser_window_width', type=int, dest='window_width', default=1400,
+            help='browser window width in pixels')
     arg_parser.add_argument(
             '--warcprox-auto', dest='warcprox_auto', action='store_true',
             help=(
