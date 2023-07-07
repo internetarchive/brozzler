@@ -518,7 +518,8 @@ class Browser:
                             behaviors_dir=behaviors_dir)
                     self.run_behavior(behavior_script, timeout=behavior_timeout)
                 final_page_url = self.url()
-                if on_screenshot:
+                if on_screenshot and self.websock_thread.page_status and \
+                        self.websock_thread.page_status < 400:
                     self._try_screenshot(on_screenshot, screenshot_full_page)
                 if not run_behaviors or skip_extract_outlinks:
                     outlinks = []
