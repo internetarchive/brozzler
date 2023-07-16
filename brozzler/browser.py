@@ -503,9 +503,8 @@ class Browser:
                             page_url)
                         self.navigate_to_page(page_url, timeout=page_timeout)
                 # If the target page HTTP status is 4xx/5xx, there is no point
-                # in running behaviors, outlink and hashtag extraction as we
-                # didn't get a valid page. Screenshot should run because i
-                # may be useful to have a picture of the error page.
+                # in running behaviors, screenshot, outlink and hashtag
+                # extraction as we didn't get a valid page.
                 # This is only enabled with option `simpler404`.
                 run_behaviors = True
                 if simpler404 and (self.websock_thread.page_status is None or
@@ -518,9 +517,14 @@ class Browser:
                             behaviors_dir=behaviors_dir)
                     self.run_behavior(behavior_script, timeout=behavior_timeout)
                 final_page_url = self.url()
-                if on_screenshot and self.websock_thread.page_status and \
-                        self.websock_thread.page_status < 400:
-                    self._try_screenshot(on_screenshot, screenshot_full_page)
+                if on_screenshot:
+                    if simpler404:
+                        if self.websock_thread.page_status and \
+                                self.websock_thread.page_status < 400:
+                            self._try_screenshot(on_screenshot, screenshot_full_page)
+                    else:
+                        self._try_screenshot(on_screenshot, screenshot_full_page)
+
                 if not run_behaviors or skip_extract_outlinks:
                     outlinks = []
                 else:
