@@ -250,7 +250,9 @@ def _build_youtube_dl(worker, destdir, site, page):
         # "aext: Audio Extension (m4a > aac > mp3 > ogg > opus > webm > other)."
         # "If --prefer-free-formats is used, the order changes to opus > ogg > webm > m4a > mp3 > aac."
         # "ext: Equivalent to vext,aext"
-        "format_sort": ["ext"],
+        # pre-v.2023.07.06: "format_sort": ["ext"],
+        # v.2023.07.06 https://www.reddit.com/r/youtubedl/wiki/h264/?rdt=63577
+        "format_sort": ["vcodec:h264","res","acodec:m4a"],
         "format": "b/bv+ba",
         # skip live streams
         "match_filter": match_filter_func("!is_live"),
