@@ -31,17 +31,6 @@ import threading
 
 thread_local = threading.local()
 
-_orig_webpage_read_content = youtube_dl.extractor.GenericIE._webpage_read_content
-def _webpage_read_content(self, *args, **kwargs):
-    content = _orig_webpage_read_content(self, *args, **kwargs)
-    if len(content) > 20000000:
-        logging.warning(
-                'bypassing yt-dlp extraction because content is '
-                'too large (%s characters)', len(content))
-        return ''
-    return content
-youtube_dl.extractor.GenericIE._webpage_read_content = _webpage_read_content
-
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
         self.extra_headers = extra_headers
@@ -226,7 +215,8 @@ def _build_youtube_dl(worker, destdir, site, page):
         if d['status'] == 'finished':
             worker.logger.info('[ydl_postprocess_hook] Finished postprocessing')
             worker.logger.info('[ydl_postprocess_hook] postprocessor: {}'.format(d['postprocessor']))
-            if d['postprocessor'] == 'FixupM3u8' and worker._using_warcprox(site):
+            # if d['postprocessor'] == 'FixupM3u8' and worker._using_warcprox(site):
+            if worker._using_warcprox(site):
                 _YoutubeDL._push_stitched_up_vid_to_warcprox(_YoutubeDL, site, d['info_dict'])
 
     # default socket_timeout is 20 -- we hit it often when cluster is busy
@@ -251,21 +241,24 @@ def _build_youtube_dl(worker, destdir, site, page):
         # "If --prefer-free-formats is used, the order changes to opus > ogg > webm > m4a > mp3 > aac."
         # "ext: Equivalent to vext,aext"
         # pre-v.2023.07.06: "format_sort": ["ext"],
+        # pre-v.2023.07.06: "format": "b/bv+ba"
         # v.2023.07.06 https://www.reddit.com/r/youtubedl/wiki/h264/?rdt=63577
-        "format_sort": ["vcodec:h264","res","acodec:m4a"],
-        "format": "b/bv+ba",
+        "format_sort": ["codec:h264"],
         # skip live streams
         "match_filter": match_filter_func("!is_live"),
 
-        # --cache-dir local or...
-        "cache_dir": False,
+        "extractor_args": {'youtube': {'skip': ['dash', 'hls']}},
+
+        # --cache-dir local or..
+        # this looked like a problem with nsf-mounted homedir, shouldn't be a problem for brozzler on focal?
+        "cache_dir": "/home/archiveit",
 
         "logger": logging.getLogger("youtube_dl"),
         "verbose": True,
         "quiet": False,
     }
-    if worker._proxy_for(site):
-        ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
+    #if worker._proxy_for(site):
+    #    ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
     ydl = _YoutubeDL(ydl_opts)
     if site.extra_headers():
         ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers(page)))
