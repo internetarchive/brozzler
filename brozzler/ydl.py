@@ -153,8 +153,8 @@ def _build_youtube_dl(worker, destdir, site, page):
                 self.logger.info(
                         'extractor %r found a download in %s', ie.IE_NAME, url)
 
-        def _push_stitched_up_vid_to_warcprox(self, site, info_dict):
-            # 220211 update: does yt-dlp supply content-type?
+        def _push_stitched_up_vid_to_warcprox(self, site, info_dict, postprocessor):
+            # 220211 update: does yt-dlp supply content-type? no, not as such
             # XXX Don't know how to get the right content-type. Youtube-dl
             # doesn't supply it. Sometimes (with --hls-prefer-native)
             # youtube-dl produces a stitched-up video that /usr/bin/file fails
@@ -171,9 +171,14 @@ def _build_youtube_dl(worker, destdir, site, page):
                     self.logger.warning(
                             'guessing mimetype %s because %r', mimetype, e)
 
-            url = 'youtube-dl:%05d:%s' % (
-                    info_dict.get('playlist_index') or 1,
-                    info_dict['webpage_url'])
+            # watch page postprocessor is MoveFiles
+            if postprocessor == 'FixupM3u8':
+                url = 'youtube-dl:%05d:%s' % (
+                       info_dict.get('playlist_index') or 1,
+                       info_dict['webpage_url'])
+            else:
+                url = info_dict.get('url')
+
             size = os.path.getsize(info_dict['filepath'])
             self.logger.info(
                     'pushing %r video stitched-up as %s (%s bytes) to '
@@ -215,9 +220,10 @@ def _build_youtube_dl(worker, destdir, site, page):
         if d['status'] == 'finished':
             worker.logger.info('[ydl_postprocess_hook] Finished postprocessing')
             worker.logger.info('[ydl_postprocess_hook] postprocessor: {}'.format(d['postprocessor']))
+            #worker.logger.info('[ydl_postprocess_hook] passed params: {}'.format(d))
             # if d['postprocessor'] == 'FixupM3u8' and worker._using_warcprox(site):
             if worker._using_warcprox(site):
-                _YoutubeDL._push_stitched_up_vid_to_warcprox(_YoutubeDL, site, d['info_dict'])
+                _YoutubeDL._push_stitched_up_vid_to_warcprox(_YoutubeDL, site, d['info_dict'], d['postprocessor'])
 
     # default socket_timeout is 20 -- we hit it often when cluster is busy
     ydl_opts = {
