@@ -1,7 +1,7 @@
 '''
 brozzler/ydl.py - youtube-dl / yt-dlp support for brozzler
 
-Copyright (C) 2022 Internet Archive
+Copyright (C) 2023 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,17 +30,6 @@ import datetime
 import threading
 
 thread_local = threading.local()
-
-_orig_webpage_read_content = youtube_dl.extractor.GenericIE._webpage_read_content
-def _webpage_read_content(self, *args, **kwargs):
-    content = _orig_webpage_read_content(self, *args, **kwargs)
-    if len(content) > 20000000:
-        logging.warning(
-                'bypassing yt-dlp extraction because content is '
-                'too large (%s characters)', len(content))
-        return ''
-    return content
-youtube_dl.extractor.GenericIE._webpage_read_content = _webpage_read_content
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
@@ -164,8 +153,8 @@ def _build_youtube_dl(worker, destdir, site, page):
                 self.logger.info(
                         'extractor %r found a download in %s', ie.IE_NAME, url)
 
-        def _push_stitched_up_vid_to_warcprox(self, site, info_dict):
-            # 220211 update: does yt-dlp supply content-type?
+        def _push_stitched_up_vid_to_warcprox(self, site, info_dict, postprocessor):
+            # 220211 update: does yt-dlp supply content-type? no, not as such
             # XXX Don't know how to get the right content-type. Youtube-dl
             # doesn't supply it. Sometimes (with --hls-prefer-native)
             # youtube-dl produces a stitched-up video that /usr/bin/file fails
@@ -182,9 +171,14 @@ def _build_youtube_dl(worker, destdir, site, page):
                     self.logger.warning(
                             'guessing mimetype %s because %r', mimetype, e)
 
-            url = 'youtube-dl:%05d:%s' % (
-                    info_dict.get('playlist_index') or 1,
-                    info_dict['webpage_url'])
+            # youtube watch page postprocessor is MoveFiles
+            if postprocessor == 'FixupM3u8':
+                url = 'youtube-dl:%05d:%s' % (
+                       info_dict.get('playlist_index') or 1,
+                       info_dict['webpage_url'])
+            else:
+                url = info_dict.get('url')
+
             size = os.path.getsize(info_dict['filepath'])
             self.logger.info(
                     'pushing %r video stitched-up as %s (%s bytes) to '
@@ -226,8 +220,8 @@ def _build_youtube_dl(worker, destdir, site, page):
         if d['status'] == 'finished':
             worker.logger.info('[ydl_postprocess_hook] Finished postprocessing')
             worker.logger.info('[ydl_postprocess_hook] postprocessor: {}'.format(d['postprocessor']))
-            if d['postprocessor'] == 'FixupM3u8' and worker._using_warcprox(site):
-                _YoutubeDL._push_stitched_up_vid_to_warcprox(_YoutubeDL, site, d['info_dict'])
+            if worker._using_warcprox(site):
+                _YoutubeDL._push_stitched_up_vid_to_warcprox(_YoutubeDL, site, d['info_dict'], d['postprocessor'])
 
     # default socket_timeout is 20 -- we hit it often when cluster is busy
     ydl_opts = {
@@ -250,20 +244,28 @@ def _build_youtube_dl(worker, destdir, site, page):
         # "aext: Audio Extension (m4a > aac > mp3 > ogg > opus > webm > other)."
         # "If --prefer-free-formats is used, the order changes to opus > ogg > webm > m4a > mp3 > aac."
         # "ext: Equivalent to vext,aext"
-        "format_sort": ["ext"],
-        "format": "b/bv+ba",
+        # pre-v.2023.07.06: "format_sort": ["ext"],
+        # pre-v.2023.07.06: "format": "b/bv+ba"
+        # v.2023.07.06 https://www.reddit.com/r/youtubedl/wiki/h264/?rdt=63577
+        "format_sort": ["codec:h264"],
         # skip live streams
         "match_filter": match_filter_func("!is_live"),
 
-        # --cache-dir local or...
-        "cache_dir": False,
+        "extractor_args": {'youtube': {'skip': ['dash', 'hls']}},
+
+        # --cache-dir local or..
+        # this looked like a problem with nsf-mounted homedir, shouldn't be a problem for brozzler on focal?
+        "cache_dir": "/home/archiveit",
 
         "logger": logging.getLogger("youtube_dl"),
         "verbose": True,
         "quiet": False,
     }
-    if worker._proxy_for(site):
-        ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
+
+    # skip proxying yt-dlp v.2023.07.06
+    # if worker._proxy_for(site):
+    #    ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
+
     ydl = _YoutubeDL(ydl_opts)
     if site.extra_headers():
         ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers(page)))
@@ -296,6 +298,9 @@ def _remember_videos(page, fetches, stitch_ups=None):
                 video['content-length'] = int(
                         fetch['response_headers']['content-length'])
             if 'content-range' in fetch['response_headers']:
+                # skip chunked youtube video
+                if 'googlevideo.com/videoplayback' in fetch['url']:
+                    continue
                 video['content-range'] = fetch[
                         'response_headers']['content-range']
             logging.debug('embedded video %s', video)
