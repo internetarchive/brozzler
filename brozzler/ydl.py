@@ -1,7 +1,7 @@
 '''
 brozzler/ydl.py - youtube-dl / yt-dlp support for brozzler
 
-Copyright (C) 2022 Internet Archive
+Copyright (C) 2023 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -171,7 +171,7 @@ def _build_youtube_dl(worker, destdir, site, page):
                     self.logger.warning(
                             'guessing mimetype %s because %r', mimetype, e)
 
-            # watch page postprocessor is MoveFiles
+            # youtube watch page postprocessor is MoveFiles
             if postprocessor == 'FixupM3u8':
                 url = 'youtube-dl:%05d:%s' % (
                        info_dict.get('playlist_index') or 1,
@@ -220,8 +220,6 @@ def _build_youtube_dl(worker, destdir, site, page):
         if d['status'] == 'finished':
             worker.logger.info('[ydl_postprocess_hook] Finished postprocessing')
             worker.logger.info('[ydl_postprocess_hook] postprocessor: {}'.format(d['postprocessor']))
-            #worker.logger.info('[ydl_postprocess_hook] passed params: {}'.format(d))
-            # if d['postprocessor'] == 'FixupM3u8' and worker._using_warcprox(site):
             if worker._using_warcprox(site):
                 _YoutubeDL._push_stitched_up_vid_to_warcprox(_YoutubeDL, site, d['info_dict'], d['postprocessor'])
 
@@ -263,8 +261,11 @@ def _build_youtube_dl(worker, destdir, site, page):
         "verbose": True,
         "quiet": False,
     }
-    #if worker._proxy_for(site):
+
+    # skip proxying yt-dlp v.2023.07.06
+    # if worker._proxy_for(site):
     #    ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
+
     ydl = _YoutubeDL(ydl_opts)
     if site.extra_headers():
         ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers(page)))
