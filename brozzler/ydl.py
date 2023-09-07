@@ -297,6 +297,9 @@ def _remember_videos(page, fetches, stitch_ups=None):
                 video['content-length'] = int(
                         fetch['response_headers']['content-length'])
             if 'content-range' in fetch['response_headers']:
+                # skip chunked youtube video
+                if 'googlevideo.com/videoplayback' in fetch['url']:
+                    continue
                 video['content-range'] = fetch[
                         'response_headers']['content-range']
             logging.debug('embedded video %s', video)
