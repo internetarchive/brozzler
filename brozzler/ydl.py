@@ -172,12 +172,16 @@ def _build_youtube_dl(worker, destdir, site, page):
                             'guessing mimetype %s because %r', mimetype, e)
 
             # youtube watch page postprocessor is MoveFiles
+            # but current yt-dlp duplicates capture if we handle FixupM3u8!!!
+            # we'll ignore postprocessor for now...
+            '''
             if postprocessor == 'FixupM3u8':
                 url = 'youtube-dl:%05d:%s' % (
                        info_dict.get('playlist_index') or 1,
                        info_dict['webpage_url'])
             else:
-                url = info_dict.get('url')
+            '''
+            url = info_dict.get('url')
 
             size = os.path.getsize(info_dict['filepath'])
             self.logger.info(
