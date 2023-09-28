@@ -99,9 +99,7 @@ def _build_youtube_dl(worker, destdir, site, page):
 
     - keeps track of urls fetched using a `YoutubeDLSpy`
     - periodically updates `site.last_claimed` in rethinkdb
-    - if brozzling through warcprox and downloading segmented videos (e.g.
-      HLS), pushes the stitched-up video created by yt-dlp/ffmpeg to warcprox
-      using a WARCPROX_WRITE_RECORD request
+    - pushes captured video to warcprox using a WARCPROX_WRITE_RECORD request
     - some logging
 
     Args:
@@ -153,7 +151,7 @@ def _build_youtube_dl(worker, destdir, site, page):
                 self.logger.info(
                         'extractor %r found a download in %s', ie.IE_NAME, url)
 
-        def _push_stitched_up_vid_to_warcprox(self, site, info_dict, postprocessor):
+        def _push_video_to_warcprox(self, site, info_dict, postprocessor):
             # 220211 update: does yt-dlp supply content-type? no, not as such
             # XXX Don't know how to get the right content-type. Youtube-dl
             # doesn't supply it. Sometimes (with --hls-prefer-native)
@@ -172,6 +170,7 @@ def _build_youtube_dl(worker, destdir, site, page):
                             'guessing mimetype %s because %r', mimetype, e)
 
             # youtube watch page postprocessor is MoveFiles
+
             if postprocessor == 'FixupM3u8':
                 url = 'youtube-dl:%05d:%s' % (
                        info_dict.get('playlist_index') or 1,
@@ -179,9 +178,13 @@ def _build_youtube_dl(worker, destdir, site, page):
             else:
                 url = info_dict.get('url')
 
+            # skip urls ending .m3u8, to avoid duplicates handled by FixupM3u*
+            if url.endswith('.m3u8'):
+                return
+
             size = os.path.getsize(info_dict['filepath'])
             self.logger.info(
-                    'pushing %r video stitched-up as %s (%s bytes) to '
+                    'pushing %r video as %s (%s bytes) to '
                     'warcprox at %s with url %s', info_dict['format'],
                     mimetype, size, worker._proxy_for(site), url)
             with open(info_dict['filepath'], 'rb') as f:
@@ -194,7 +197,7 @@ def _build_youtube_dl(worker, destdir, site, page):
                         warc_type='resource', content_type=mimetype, payload=f,
                         extra_headers=extra_headers)
                 # consulted by _remember_videos()
-                ydl.stitch_ups.append({
+                ydl.pushed_videos.append({
                     'url': url,
                     'response_code': response.code,
                     'content-type': mimetype,
@@ -221,7 +224,7 @@ def _build_youtube_dl(worker, destdir, site, page):
             worker.logger.info('[ydl_postprocess_hook] Finished postprocessing')
             worker.logger.info('[ydl_postprocess_hook] postprocessor: {}'.format(d['postprocessor']))
             if worker._using_warcprox(site):
-                _YoutubeDL._push_stitched_up_vid_to_warcprox(_YoutubeDL, site, d['info_dict'], d['postprocessor'])
+                _YoutubeDL._push_video_to_warcprox(_YoutubeDL, site, d['info_dict'], d['postprocessor'])
 
     # default socket_timeout is 20 -- we hit it often when cluster is busy
     ydl_opts = {
@@ -270,11 +273,11 @@ def _build_youtube_dl(worker, destdir, site, page):
     if site.extra_headers():
         ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers(page)))
     ydl.fetch_spy = YoutubeDLSpy()
-    ydl.stitch_ups = []
+    ydl.pushed_videos = []
     ydl._opener.add_handler(ydl.fetch_spy)
     return ydl
 
-def _remember_videos(page, fetches, stitch_ups=None):
+def _remember_videos(page, fetches, pushed_videos=None):
     '''
     Saves info about videos captured by yt-dlp in `page.videos`.
     '''
@@ -305,14 +308,14 @@ def _remember_videos(page, fetches, stitch_ups=None):
                         'response_headers']['content-range']
             logging.debug('embedded video %s', video)
             page.videos.append(video)
-    for stitch_up in stitch_ups or []:
-        if stitch_up['content-type'].startswith('video/'):
+    for pushed_video in pushed_videos or []:
+        if pushed_video['content-type'].startswith('video/'):
             video = {
                 'blame': 'youtube-dl',
-                'url': stitch_up['url'],
-                'response_code': stitch_up['response_code'],
-                'content-type': stitch_up['content-type'],
-                'content-length': stitch_up['content-length'],
+                'url': pushed_video['url'],
+                'response_code': pushed_video['response_code'],
+                'content-type': pushed_video['content-type'],
+                'content-length': pushed_video['content-length'],
             }
             logging.debug('embedded video %s', video)
             page.videos.append(video)
@@ -327,7 +330,7 @@ def _try_youtube_dl(worker, ydl, site, page):
             # needs automated test
             # and yt-dlp needs sanitize_info for extract_info
             ie_result = ydl.sanitize_info(ydl.extract_info(str(urlcanon.whatwg(page.url))))
-        _remember_videos(page, ydl.fetch_spy.fetches, ydl.stitch_ups)
+        _remember_videos(page, ydl.fetch_spy.fetches, ydl.pushed_videos)
         if worker._using_warcprox(site):
             info_json = json.dumps(ie_result, sort_keys=True, indent=4)
             logging.info(
