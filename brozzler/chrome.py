@@ -167,6 +167,8 @@ class Chrome:
         new_env['HOME'] = self._home_tmpdir.name
         chrome_args = [
                 self.chrome_exe,
+                '-v',
+                '--headless',
                 '--remote-debugging-port=%s' % self.port,
                 '--use-mock-keychain', # mac thing
                 '--user-data-dir=%s' % self._chrome_user_data_dir,
