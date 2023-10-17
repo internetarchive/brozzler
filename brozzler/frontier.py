@@ -21,9 +21,11 @@ import brozzler
 import random
 import time
 import datetime
-import rethinkdb as r
+import rethinkdb as rdb
 import doublethink
 import urlcanon
+
+r = rdb.RethinkDB()
 
 class UnexpectedDbResult(Exception):
     pass

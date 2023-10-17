@@ -37,7 +37,9 @@ import warnings
 import yaml
 import shutil
 import base64
-import rethinkdb as r
+import rethinkdb as rdb
+
+r = rdb.RethinkDB()
 
 def add_common_options(arg_parser, argv=None):
     argv = argv or sys.argv

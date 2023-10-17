@@ -34,8 +34,10 @@ import doublethink
 import tempfile
 import urlcanon
 from requests.structures import CaseInsensitiveDict
-import rethinkdb as r
+import rethinkdb as rdb
 from . import ydl
+
+r = rdb.RethinkDB()
 
 class BrozzlerWorker:
     logger = logging.getLogger(__module__ + "." + __qualname__)
