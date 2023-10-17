@@ -72,7 +72,7 @@ setuptools.setup(
             'pillow>=5.2.0',
             'urlcanon>=0.1.dev23',
             'doublethink>=0.2.0',
-            'rethinkdb>=2.3,<2.4',
+            'rethinkdb>=2.4.9,<2.5',
             'cerberus>=1.0.1',
             'jinja2>=2.10',
             'cryptography>=2.3',
