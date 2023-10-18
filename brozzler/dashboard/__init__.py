@@ -31,9 +31,11 @@ import doublethink
 import json
 import os
 import importlib
-import rethinkdb as r
+import rethinkdb as rdb
 import yaml
 import base64
+
+r = rdb.RethinkDB()
 
 app = flask.Flask(__name__)
 

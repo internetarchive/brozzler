@@ -35,11 +35,13 @@ except ImportError as e:
             type(e).__name__, e)
     sys.exit(1)
 import doublethink
-import rethinkdb as r
+import rethinkdb as rdb
 import urlcanon
 import json
 import brozzler
 import argparse
+
+r = rdb.RethinkDB()
 
 class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
     def __init__(self, servers, db, table):
