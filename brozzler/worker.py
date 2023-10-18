@@ -1,6 +1,6 @@
 '''
 brozzler/worker.py - BrozzlerWorker brozzles pages from the frontier, meaning
-it runs youtube-dl on them, browses them and runs behaviors if appropriate,
+it runs yt-dlp on them, browses them and runs behaviors if appropriate,
 scopes and adds outlinks to the frontier
 
 Copyright (C) 2014-2023 Internet Archive
