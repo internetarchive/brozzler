@@ -171,15 +171,15 @@ def _build_youtube_dl(worker, destdir, site, page):
 
             # youtube watch page postprocessor is MoveFiles
 
-            if postprocessor == 'FixupM3u8':
+            if postprocessor == 'FixupM3u8' or postprocessor == 'Merger':
                 url = 'youtube-dl:%05d:%s' % (
                        info_dict.get('playlist_index') or 1,
                        info_dict['webpage_url'])
             else:
-                url = info_dict.get('url')
+                url = info_dict.get('url', '')
 
-            # skip urls ending .m3u8, to avoid duplicates handled by FixupM3u*
-            if url.endswith('.m3u8'):
+            # skip urls ending .m3u8, to avoid duplicates handled by FixupM3u8
+            if url.endswith('.m3u8') or url == '':
                 return
 
             size = os.path.getsize(info_dict['filepath'])
