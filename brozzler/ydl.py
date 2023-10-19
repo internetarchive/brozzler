@@ -347,7 +347,7 @@ def _try_youtube_dl(worker, ydl, site, page):
     except brozzler.ShutdownRequested as e:
         raise
     except Exception as e:
-        if hasattr(e, "exc_info") and e.exc_info[0] == youtube_dl.utils.UnsupportedError:
+        if hasattr(e, "exc_info") and e.exc_info[0] == yt_dlp.utils.UnsupportedError:
             return None
         elif (hasattr(e, "exc_info")
                 and e.exc_info[0] == urllib.error.HTTPError
