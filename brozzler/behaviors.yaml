@@ -1,7 +1,7 @@
 #
 # brozzler/behaviors.yaml - behavior configuration
 #
-# Copyright (C) 2014-2020 Internet Archive
+# Copyright (C) 2014-2023 Internet Archive
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,10 +62,6 @@
 -
   url_regex: '^https?://(?:www\.)?marquette\.edu/.*$'
   behavior_js_template: marquette_edu.js
-  request_idle_timeout_sec: 10
--
-  url_regex: '^https?://(?:www\.)?vimeo\.com/.*$'
-  behavior_js_template: vimeo.js
   request_idle_timeout_sec: 10
 -
   url_regex: '^https?://(?:www\.)?psu24.psu.edu/.*$'
