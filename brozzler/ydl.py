@@ -233,16 +233,10 @@ def _build_youtube_dl(worker, destdir, site, page):
 
         # https://github.com/yt-dlp/yt-dlp#format-selection
         # "By default, yt-dlp tries to download the best available quality..."
-        # https://github.com/yt-dlp/yt-dlp#sorting-formats
-        # "You can change the criteria for being considered the best by using -S (--format-sort)...."
-        # "vext: Video Extension (mp4 > webm > flv > other). If --prefer-free-formats is used, webm is preferred."
-        # "aext: Audio Extension (m4a > aac > mp3 > ogg > opus > webm > other)."
-        # "If --prefer-free-formats is used, the order changes to opus > ogg > webm > m4a > mp3 > aac."
-        # "ext: Equivalent to vext,aext"
         # pre-v.2023.07.06: "format_sort": ["ext"],
-        # pre-v.2023.07.06: "format": "b/bv+ba"
         # v.2023.07.06 https://www.reddit.com/r/youtubedl/wiki/h264/?rdt=63577
-        "format_sort": ["codec:h264"],
+        "format": "b/bv+ba",
+        "format_sort": ["res:720,vcodec:h264,acodec:aac"],
         # skip live streams
         "match_filter": match_filter_func("!is_live"),
 
