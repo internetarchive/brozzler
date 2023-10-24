@@ -17,7 +17,7 @@ limitations under the License.
 '''
 
 import logging
-import yt_dlp as youtube_dl
+import yt_dlp
 from yt_dlp.utils import match_filter_func
 import brozzler
 import urllib.request
@@ -93,7 +93,7 @@ def final_bounces(fetches, url):
 
 def _build_youtube_dl(worker, destdir, site, page):
     '''
-    Builds a yt-dlp `youtube_dl.YoutubeDL` for brozzling `site` with `worker`.
+    Builds a yt-dlp `yt_dlp.YoutubeDL` for brozzling `site` with `worker`.
 
     The `YoutubeDL` instance does a few special brozzler-specific things:
 
@@ -108,19 +108,11 @@ def _build_youtube_dl(worker, destdir, site, page):
         site (brozzler.Site): the site we are brozzling
 
     Returns:
-        a yt-dlp `youtube_dl.YoutubeDL` instance
+        a yt-dlp `yt_dlp.YoutubeDL` instance
     '''
 
-    class _YoutubeDL(youtube_dl.YoutubeDL):
+    class _YoutubeDL(yt_dlp.YoutubeDL):
         logger = logging.getLogger(__module__ + "." + __qualname__)
-
-        def urlopen(self, req):
-            try:
-                url = req.full_url
-            except AttributeError:
-                url = req
-            self.logger.debug('fetching %r', url)
-            return super().urlopen(req)
 
         def add_default_extra_info(self, ie_result, ie, url):
             # hook in some logging
@@ -241,16 +233,10 @@ def _build_youtube_dl(worker, destdir, site, page):
 
         # https://github.com/yt-dlp/yt-dlp#format-selection
         # "By default, yt-dlp tries to download the best available quality..."
-        # https://github.com/yt-dlp/yt-dlp#sorting-formats
-        # "You can change the criteria for being considered the best by using -S (--format-sort)...."
-        # "vext: Video Extension (mp4 > webm > flv > other). If --prefer-free-formats is used, webm is preferred."
-        # "aext: Audio Extension (m4a > aac > mp3 > ogg > opus > webm > other)."
-        # "If --prefer-free-formats is used, the order changes to opus > ogg > webm > m4a > mp3 > aac."
-        # "ext: Equivalent to vext,aext"
         # pre-v.2023.07.06: "format_sort": ["ext"],
-        # pre-v.2023.07.06: "format": "b/bv+ba"
         # v.2023.07.06 https://www.reddit.com/r/youtubedl/wiki/h264/?rdt=63577
-        "format_sort": ["codec:h264"],
+        "format": "b/bv+ba",
+        "format_sort": ["res:720,vcodec:h264,acodec:aac"],
         # skip live streams
         "match_filter": match_filter_func("!is_live"),
 
@@ -260,8 +246,8 @@ def _build_youtube_dl(worker, destdir, site, page):
         # this looked like a problem with nsf-mounted homedir, shouldn't be a problem for brozzler on focal?
         "cache_dir": "/home/archiveit",
 
-        "logger": logging.getLogger("youtube_dl"),
-        "verbose": True,
+        "logger": logging.getLogger("yt_dlp"),
+        "verbose": False,
         "quiet": False,
     }
 
