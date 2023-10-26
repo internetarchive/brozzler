@@ -235,8 +235,10 @@ def _build_youtube_dl(worker, destdir, site, page):
         # "By default, yt-dlp tries to download the best available quality..."
         # pre-v.2023.07.06: "format_sort": ["ext"],
         # v.2023.07.06 https://www.reddit.com/r/youtubedl/wiki/h264/?rdt=63577
+        # recommended: convert working cli to api call with
+        # https://github.com/yt-dlp/yt-dlp/blob/master/devscripts/cli_to_api.py
         "format": "b/bv+ba",
-        "format_sort": ["res:720,vcodec:h264,acodec:aac"],
+        "format_sort": ["res:720","vcodec:h264","acodec:aac"],
         # skip live streams
         "match_filter": match_filter_func("!is_live"),
 
