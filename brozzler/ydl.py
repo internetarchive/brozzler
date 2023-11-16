@@ -375,7 +375,8 @@ def do_youtube_dl(worker, site, page):
         ydl = _build_youtube_dl(worker, tempdir, site, page)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
         outlinks = set()
-        if ie_result and ie_result.get('extractor') == 'youtube:playlist':
+        if ie_result and (ie_result.get('extractor') == 'youtube:playlist' or
+                          ie_result.get('extractor') == 'youtube:tab'):
             # youtube watch pages as outlinks
             outlinks = {'https://www.youtube.com/watch?v=%s' % e['id']
                         for e in ie_result.get('entries_no_dl', [])}
