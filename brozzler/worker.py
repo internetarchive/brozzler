@@ -198,7 +198,7 @@ class BrozzlerWorker:
         self.logger.info("brozzling {}".format(page))
         ydl_fetches = None
         outlinks = set()
-        if enable_youtube_dl:
+        if enable_youtube_dl and not page.url.lower().endswith(".pdf"):
             try:
                 ydl_fetches, outlinks = ydl.do_youtube_dl(self, site, page)
             except brozzler.ReachedLimit as e:
