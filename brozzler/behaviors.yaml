@@ -158,7 +158,8 @@
   behavior_js_template: umbraBehavior.js.j2
   default_parameters:
     actions:
-      - selector: button[data-more-results-bottom-button]
+      - selector: 'div.link\/focus'
+      - selector: 'button.link\/focus'
 - # https://webarchive.jira.com/browse/ARI-4692
   url_regex: '^https?://(?:www\.)?fec.gov/data/.*$'
   behavior_js_template: fec_gov.js
