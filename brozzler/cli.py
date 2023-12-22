@@ -348,6 +348,10 @@ def brozzler_worker(argv=None):
                 'when needed, choose an available instance of warcprox from '
                 'the rethinkdb service registry'))
     arg_parser.add_argument(
+                '--claimed-limit', metavar='int', type=int, default=60, choices=range(15, 61), dest='claimed_limit',
+                help=('Minutes after worker crash, a site can be reclaimed'
+                'an integer in the range 15..60 (default: 60)'))
+    arg_parser.add_argument(
             '--skip-extract-outlinks', dest='skip_extract_outlinks',
             action='store_true', help=argparse.SUPPRESS)
     arg_parser.add_argument(
@@ -393,6 +397,7 @@ def brozzler_worker(argv=None):
             frontier, service_registry, max_browsers=int(args.max_browsers),
             chrome_exe=args.chrome_exe, proxy=args.proxy,
             warcprox_auto=args.warcprox_auto,
+            claimed_limit=args.claimed_limit,
             skip_extract_outlinks=args.skip_extract_outlinks,
             skip_visit_hashtags=args.skip_visit_hashtags,
             skip_youtube_dl=args.skip_youtube_dl,

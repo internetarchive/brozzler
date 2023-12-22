@@ -95,7 +95,7 @@ class RethinkDbFrontier:
                     raise UnexpectedDbResult("expected %r to be %r in %r" % (
                         k, expected, result))
 
-    def claim_sites(self, n=1):
+    def claim_sites(self, n=1, claimed_limit=60):
         self.logger.trace('claiming up to %s sites to brozzle', n)
         result = (
             self.rr.table('sites').get_all(r.args(
@@ -116,7 +116,7 @@ class RethinkDbFrontier:
                         r.and_(
                             r.or_(
                                 site['claimed'].not_(),
-                                site['last_claimed'].lt(r.now().sub(60*60))),
+                                site['last_claimed'].lt(r.now().sub(claimed_limit*60))),
                             r.or_(
                                 site.has_fields('max_claimed_sites').not_(),
                                 new_acc[site['job_id'].coerce_to('string')].le(site['max_claimed_sites']))),
@@ -129,7 +129,7 @@ class RethinkDbFrontier:
                 r.branch(
                     r.or_(
                       r.row['claimed'].not_(),
-                      r.row['last_claimed'].lt(r.now().sub(60*60))),
+                      r.row['last_claimed'].lt(r.now().sub(claimed_limit*60))),
                     {'claimed': True, 'last_claimed': r.now()},
                     {}),
                 return_changes=True)).run()

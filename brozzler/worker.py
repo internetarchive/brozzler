@@ -51,7 +51,7 @@ class BrozzlerWorker:
 
     def __init__(
             self, frontier, service_registry=None, max_browsers=1,
-            chrome_exe="chromium-browser", warcprox_auto=False, proxy=None,
+            chrome_exe="chromium-browser", warcprox_auto=False, proxy=None, claimed_limit=60,
             skip_extract_outlinks=False, skip_visit_hashtags=False,
             skip_youtube_dl=False, simpler404=False, screenshot_full_page=False,
             page_timeout=300, behavior_timeout=900, extract_outlinks_timeout=60,
@@ -65,6 +65,7 @@ class BrozzlerWorker:
         self._proxy = proxy
         assert not (warcprox_auto and proxy)
         self._proxy_is_warcprox = None
+        self._claimed_limit = claimed_limit
         self._skip_extract_outlinks = skip_extract_outlinks
         self._skip_visit_hashtags = skip_visit_hashtags
         self._skip_youtube_dl = skip_youtube_dl
@@ -499,7 +500,7 @@ class BrozzlerWorker:
         browsers = self._browser_pool.acquire_multi(
                 (self._browser_pool.num_available() + 1) // 2)
         try:
-            sites = self._frontier.claim_sites(len(browsers))
+            sites = self._frontier.claim_sites(len(browsers), self._claimed_limit)
         except:
             self._browser_pool.release_all(browsers)
             raise
