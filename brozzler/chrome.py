@@ -47,7 +47,7 @@ def check_version(chrome_exe):
     # Chromium 61.0.3163.100 Built on Ubuntu , running on Ubuntu 16.04
     cmd = [chrome_exe, '--version']
     out = subprocess.check_output(cmd, timeout=60)
-    m = re.search(br'(Chromium|Google Chrome) ([\d.]+)', out)
+    m = re.search(br'(Chromium|Google Chrome|Thorium) ([\d.]+)', out)
     if not m:
         sys.exit(
                 'unable to parse browser version from output of '
