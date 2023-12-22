@@ -33,16 +33,17 @@ def main(argv=[]):
             'job_conf_file', metavar='JOB_CONF_FILE',
             help='brozzler job configuration file in yaml')
     args = arg_parser.parse_args(args=argv[1:])
+    args.job_conf_file = os.path.realpath(args.job_conf_file)
 
     # cd to path with Vagrantfile so "vagrant ssh" knows what to do
-    os.chdir(os.path.dirname(__file__))
+    os.chdir(os.path.realpath(os.path.dirname(__file__)))
 
     with open(args.job_conf_file, 'rb') as f:
         subprocess.call([
             'vagrant', 'ssh', '--',
             'f=`mktemp` && cat > $f && '
-            '/home/vagrant/brozzler-ve3/bin/python '
-            '/home/vagrant/brozzler-ve3/bin/brozzler-new-job $f'],
+            '/opt/brozzler-ve3/bin/python '
+            '/opt/brozzler-ve3/bin/brozzler-new-job $f'],
             stdin=f)
 
 if __name__ == '__main__':

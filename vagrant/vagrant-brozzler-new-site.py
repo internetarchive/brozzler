@@ -71,7 +71,7 @@ def main(argv=[]):
         options.append('--verbose')
 
     # cd to path with Vagrantfile so "vagrant ssh" knows what to do
-    os.chdir(os.path.dirname(__file__))
+    os.chdir(os.path.realpath(os.path.dirname(__file__)))
 
     cmd = (
         '/opt/brozzler-ve3/bin/python /opt/brozzler-ve3/bin/brozzler-new-site '
