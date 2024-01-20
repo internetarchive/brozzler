@@ -160,9 +160,9 @@
     interval: 300
     actions:
       - selector: 'div.link\/focus'
-          limit: 1
+        limit: 1
       - selector: 'button.link\/focus'
-          repeatSameElement: true
+        repeatSameElement: true
 - # https://webarchive.jira.com/browse/ARI-4692
   url_regex: '^https?://(?:www\.)?fec.gov/data/.*$'
   behavior_js_template: fec_gov.js
