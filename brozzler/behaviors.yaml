@@ -205,4 +205,4 @@
   behavior_js_template: umbraBehavior.js.j2
   default_parameters:
     actions:
-      - selector: button.sc-button-play, .playButton, div.soundItem, .jwlist>a, audio, video
+      - selector: button#didomi-notice-agree-button, button.sc-button-play, .playButton, div.soundItem, .jwlist>a, audio, video
