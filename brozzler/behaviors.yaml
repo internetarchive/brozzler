@@ -207,6 +207,8 @@
 - # default fallback behavior
   url_regex: '^.*$'
   behavior_js_template: umbraBehavior.js.j2
+  request_idle_timeout_sec: 10
   default_parameters:
+    interval: 10
     actions:
       - selector: button#didomi-notice-agree-button, button.sc-button-play, .playButton, div.soundItem, .jwlist>a, audio, video
