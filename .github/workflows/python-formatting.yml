@@ -1,0 +1,31 @@
+name: Python Formatting Check
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+    - name: Create virtual environment
+      run: python -m venv venv
+
+    - name: Install black
+      run: |
+        ./venv/bin/pip install --upgrade pip
+        ./venv/bin/pip install black
+
+    - name: Run formatting check
+      run: make ck-format
