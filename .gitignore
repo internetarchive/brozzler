@@ -2,3 +2,5 @@
 *.diff
 .*.sw*
 /brozzler.egg-info/
+venv
+.idea

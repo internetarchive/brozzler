@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''
+"""
 vagrant-brozzler-new-job.py - runs brozzler-new-job inside the vagrant vm to
 queue a job for your vagrant brozzler deployment.
 
@@ -20,30 +20,39 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-'''
+"""
 
 import sys
 import os
 import argparse
 import subprocess
 
+
 def main(argv=[]):
     arg_parser = argparse.ArgumentParser(prog=os.path.basename(argv[0]))
     arg_parser.add_argument(
-            'job_conf_file', metavar='JOB_CONF_FILE',
-            help='brozzler job configuration file in yaml')
+        "job_conf_file",
+        metavar="JOB_CONF_FILE",
+        help="brozzler job configuration file in yaml",
+    )
     args = arg_parser.parse_args(args=argv[1:])
 
     # cd to path with Vagrantfile so "vagrant ssh" knows what to do
     os.chdir(os.path.dirname(__file__))
 
-    with open(args.job_conf_file, 'rb') as f:
-        subprocess.call([
-            'vagrant', 'ssh', '--',
-            'f=`mktemp` && cat > $f && '
-            '/home/vagrant/brozzler-ve3/bin/python '
-            '/home/vagrant/brozzler-ve3/bin/brozzler-new-job $f'],
-            stdin=f)
+    with open(args.job_conf_file, "rb") as f:
+        subprocess.call(
+            [
+                "vagrant",
+                "ssh",
+                "--",
+                "f=`mktemp` && cat > $f && "
+                "/home/vagrant/brozzler-ve3/bin/python "
+                "/home/vagrant/brozzler-ve3/bin/brozzler-new-job $f",
+            ],
+            stdin=f,
+        )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main(sys.argv)
