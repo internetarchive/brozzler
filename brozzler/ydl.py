@@ -1,4 +1,4 @@
-'''
+"""
 brozzler/ydl.py - youtube-dl / yt-dlp support for brozzler
 
 Copyright (C) 2023 Internet Archive
@@ -14,7 +14,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-'''
+"""
 
 import logging
 import yt_dlp
@@ -31,6 +31,7 @@ import threading
 
 thread_local = threading.local()
 
+
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
         self.extra_headers = extra_headers
@@ -43,6 +44,7 @@ class ExtraHeaderAdder(urllib.request.BaseHandler):
                 req.add_header(h, v)
         return req
 
+
 class YoutubeDLSpy(urllib.request.BaseHandler):
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
@@ -51,10 +53,10 @@ class YoutubeDLSpy(urllib.request.BaseHandler):
 
     def _http_response(self, request, response):
         fetch = {
-            'url': request.full_url,
-            'method': request.get_method(),
-            'response_code': response.code,
-            'response_headers': response.headers,
+            "url": request.full_url,
+            "method": request.get_method(),
+            "response_code": response.code,
+            "response_headers": response.headers,
         }
         self.fetches.append(fetch)
         return response
@@ -63,6 +65,7 @@ class YoutubeDLSpy(urllib.request.BaseHandler):
 
     def reset(self):
         self.fetches = []
+
 
 def final_bounces(fetches, url):
     """
@@ -73,26 +76,28 @@ def final_bounces(fetches, url):
     """
     redirects = {}
     for fetch in fetches:
-         # XXX check http status 301,302,303,307? check for "uri" header
-         # as well as "location"? see urllib.request.HTTPRedirectHandler
-         if 'location' in fetch['response_headers']:
-             redirects[fetch['url']] = fetch
+        # XXX check http status 301,302,303,307? check for "uri" header
+        # as well as "location"? see urllib.request.HTTPRedirectHandler
+        if "location" in fetch["response_headers"]:
+            redirects[fetch["url"]] = fetch
 
     final_url = url
     while final_url in redirects:
         fetch = redirects.pop(final_url)
         final_url = urllib.parse.urljoin(
-                fetch['url'], fetch['response_headers']['location'])
+            fetch["url"], fetch["response_headers"]["location"]
+        )
 
     final_bounces = []
     for fetch in fetches:
-        if fetch['url'] == final_url:
+        if fetch["url"] == final_url:
             final_bounces.append(fetch)
 
     return final_bounces
 
+
 def _build_youtube_dl(worker, destdir, site, page):
-    '''
+    """
     Builds a yt-dlp `yt_dlp.YoutubeDL` for brozzling `site` with `worker`.
 
     The `YoutubeDL` instance does a few special brozzler-specific things:
@@ -109,7 +114,7 @@ def _build_youtube_dl(worker, destdir, site, page):
 
     Returns:
         a yt-dlp `yt_dlp.YoutubeDL` instance
-    '''
+    """
 
     class _YoutubeDL(yt_dlp.YoutubeDL):
         logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -117,31 +122,38 @@ def _build_youtube_dl(worker, destdir, site, page):
         def add_default_extra_info(self, ie_result, ie, url):
             # hook in some logging
             super().add_default_extra_info(ie_result, ie, url)
-            if ie_result.get('_type') == 'playlist':
-                self.logger.info(
-                        'extractor %r found playlist in %s', ie.IE_NAME, url)
-                if ie.IE_NAME in {'youtube:playlist', 'youtube:tab', 'soundcloud:user', 'instagram:user'}:
+            if ie_result.get("_type") == "playlist":
+                self.logger.info("extractor %r found playlist in %s", ie.IE_NAME, url)
+                if ie.IE_NAME in {
+                    "youtube:playlist",
+                    "youtube:tab",
+                    "soundcloud:user",
+                    "instagram:user",
+                }:
                     # At this point ie_result['entries'] is an iterator that
                     # will fetch more metadata from youtube to list all the
                     # videos. We unroll that iterator here partly because
                     # otherwise `process_ie_result()` will clobber it, and we
                     # use it later to extract the watch pages as outlinks.
                     try:
-                        ie_result['entries_no_dl'] = list(ie_result['entries'])
+                        ie_result["entries_no_dl"] = list(ie_result["entries"])
                     except Exception as e:
                         self.logger.warning(
-                                "failed to unroll ie_result['entries']? for %s, %s; exception %s",
-                                ie.IE_NAME, url, e)
-                        ie_result['entries_no_dl'] =[]
-                    ie_result['entries'] = []
+                            "failed to unroll ie_result['entries']? for %s, %s; exception %s",
+                            ie.IE_NAME,
+                            url,
+                            e,
+                        )
+                        ie_result["entries_no_dl"] = []
+                    ie_result["entries"] = []
                     self.logger.info(
-                            'not downloading %s media files from this '
-                            'playlist because we expect to capture them from '
-                            'individual watch/track/detail pages',
-                            len(ie_result['entries_no_dl']))
+                        "not downloading %s media files from this "
+                        "playlist because we expect to capture them from "
+                        "individual watch/track/detail pages",
+                        len(ie_result["entries_no_dl"]),
+                    )
             else:
-                self.logger.info(
-                        'extractor %r found a download in %s', ie.IE_NAME, url)
+                self.logger.info("extractor %r found a download in %s", ie.IE_NAME, url)
 
         def _push_video_to_warcprox(self, site, info_dict, postprocessor):
             # 220211 update: does yt-dlp supply content-type? no, not as such
@@ -150,73 +162,96 @@ def _build_youtube_dl(worker, destdir, site, page):
             # youtube-dl produces a stitched-up video that /usr/bin/file fails
             # to identify (says "application/octet-stream"). `ffprobe` doesn't
             # give us a mimetype.
-            if info_dict.get('ext') == 'mp4':
-                mimetype = 'video/mp4'
+            if info_dict.get("ext") == "mp4":
+                mimetype = "video/mp4"
             else:
                 try:
                     import magic
-                    mimetype = magic.from_file(info_dict['filepath'], mime=True)
+
+                    mimetype = magic.from_file(info_dict["filepath"], mime=True)
                 except ImportError as e:
-                    mimetype = 'video/%s' % info_dict['ext']
-                    self.logger.warning(
-                            'guessing mimetype %s because %r', mimetype, e)
+                    mimetype = "video/%s" % info_dict["ext"]
+                    self.logger.warning("guessing mimetype %s because %r", mimetype, e)
 
             # youtube watch page postprocessor is MoveFiles
 
-            if postprocessor == 'FixupM3u8' or postprocessor == 'Merger':
-                url = 'youtube-dl:%05d:%s' % (
-                       info_dict.get('playlist_index') or 1,
-                       info_dict['webpage_url'])
+            if postprocessor == "FixupM3u8" or postprocessor == "Merger":
+                url = "youtube-dl:%05d:%s" % (
+                    info_dict.get("playlist_index") or 1,
+                    info_dict["webpage_url"],
+                )
             else:
-                url = info_dict.get('url', '')
+                url = info_dict.get("url", "")
 
             # skip urls ending .m3u8, to avoid duplicates handled by FixupM3u8
-            if url.endswith('.m3u8') or url == '':
+            if url.endswith(".m3u8") or url == "":
                 return
 
-            size = os.path.getsize(info_dict['filepath'])
+            size = os.path.getsize(info_dict["filepath"])
             self.logger.info(
-                    'pushing %r video as %s (%s bytes) to '
-                    'warcprox at %s with url %s', info_dict['format'],
-                    mimetype, size, worker._proxy_for(site), url)
-            with open(info_dict['filepath'], 'rb') as f:
+                "pushing %r video as %s (%s bytes) to " "warcprox at %s with url %s",
+                info_dict["format"],
+                mimetype,
+                size,
+                worker._proxy_for(site),
+                url,
+            )
+            with open(info_dict["filepath"], "rb") as f:
                 # include content-length header to avoid chunked
                 # transfer, which warcprox currently rejects
                 extra_headers = dict(site.extra_headers())
-                extra_headers['content-length'] = size
+                extra_headers["content-length"] = size
                 request, response = worker._warcprox_write_record(
-                        warcprox_address=worker._proxy_for(site), url=url,
-                        warc_type='resource', content_type=mimetype, payload=f,
-                        extra_headers=extra_headers)
+                    warcprox_address=worker._proxy_for(site),
+                    url=url,
+                    warc_type="resource",
+                    content_type=mimetype,
+                    payload=f,
+                    extra_headers=extra_headers,
+                )
                 # consulted by _remember_videos()
-                ydl.pushed_videos.append({
-                    'url': url,
-                    'response_code': response.code,
-                    'content-type': mimetype,
-                    'content-length': size,
-                })
+                ydl.pushed_videos.append(
+                    {
+                        "url": url,
+                        "response_code": response.code,
+                        "content-type": mimetype,
+                        "content-length": size,
+                    }
+                )
 
     def maybe_heartbeat_site_last_claimed(*args, **kwargs):
         # in case yt-dlp takes a long time, heartbeat site.last_claimed
         # to prevent another brozzler-worker from claiming the site
         try:
-            if site.rr and doublethink.utcnow() - site.last_claimed > datetime.timedelta(minutes=worker.SITE_SESSION_MINUTES):
+            if (
+                site.rr
+                and doublethink.utcnow() - site.last_claimed
+                > datetime.timedelta(minutes=worker.SITE_SESSION_MINUTES)
+            ):
                 worker.logger.debug(
-                        'heartbeating site.last_claimed to prevent another '
-                        'brozzler-worker claiming this site id=%r', site.id)
+                    "heartbeating site.last_claimed to prevent another "
+                    "brozzler-worker claiming this site id=%r",
+                    site.id,
+                )
                 site.last_claimed = doublethink.utcnow()
                 site.save()
         except:
             worker.logger.debug(
-                    'problem heartbeating site.last_claimed site id=%r',
-                    site.id, exc_info=True)
+                "problem heartbeating site.last_claimed site id=%r",
+                site.id,
+                exc_info=True,
+            )
 
     def ydl_postprocess_hook(d):
-        if d['status'] == 'finished':
-            worker.logger.info('[ydl_postprocess_hook] Finished postprocessing')
-            worker.logger.info('[ydl_postprocess_hook] postprocessor: {}'.format(d['postprocessor']))
+        if d["status"] == "finished":
+            worker.logger.info("[ydl_postprocess_hook] Finished postprocessing")
+            worker.logger.info(
+                "[ydl_postprocess_hook] postprocessor: {}".format(d["postprocessor"])
+            )
             if worker._using_warcprox(site):
-                _YoutubeDL._push_video_to_warcprox(_YoutubeDL, site, d['info_dict'], d['postprocessor'])
+                _YoutubeDL._push_video_to_warcprox(
+                    _YoutubeDL, site, d["info_dict"], d["postprocessor"]
+                )
 
     # default socket_timeout is 20 -- we hit it often when cluster is busy
     ydl_opts = {
@@ -230,7 +265,6 @@ def _build_youtube_dl(worker, destdir, site, page):
         "socket_timeout": 40,
         "progress_hooks": [maybe_heartbeat_site_last_claimed],
         "postprocessor_hooks": [ydl_postprocess_hook],
-
         # https://github.com/yt-dlp/yt-dlp#format-selection
         # "By default, yt-dlp tries to download the best available quality..."
         # pre-v.2023.07.06: "format_sort": ["ext"],
@@ -238,16 +272,13 @@ def _build_youtube_dl(worker, destdir, site, page):
         # recommended: convert working cli to api call with
         # https://github.com/yt-dlp/yt-dlp/blob/master/devscripts/cli_to_api.py
         "format": "b/bv+ba",
-        "format_sort": ["res:720","vcodec:h264","acodec:aac"],
+        "format_sort": ["res:720", "vcodec:h264", "acodec:aac"],
         # skip live streams
         "match_filter": match_filter_func("!is_live"),
-
-        "extractor_args": {'youtube': {'skip': ['dash', 'hls']}},
-
+        "extractor_args": {"youtube": {"skip": ["dash", "hls"]}},
         # --cache-dir local or..
         # this looked like a problem with nsf-mounted homedir, shouldn't be a problem for brozzler on focal?
         "cache_dir": "/home/archiveit",
-
         "logger": logging.getLogger("yt_dlp"),
         "verbose": False,
         "quiet": False,
@@ -265,48 +296,52 @@ def _build_youtube_dl(worker, destdir, site, page):
     ydl._opener.add_handler(ydl.fetch_spy)
     return ydl
 
+
 def _remember_videos(page, fetches, pushed_videos=None):
-    '''
+    """
     Saves info about videos captured by yt-dlp in `page.videos`.
-    '''
-    if not 'videos' in page:
+    """
+    if not "videos" in page:
         page.videos = []
     for fetch in fetches or []:
-        content_type = fetch['response_headers'].get_content_type()
-        if (content_type.startswith('video/')
-                # skip manifests of DASH segmented video -
-                # see https://github.com/internetarchive/brozzler/pull/70
-                and content_type != 'video/vnd.mpeg.dash.mpd'
-                and fetch['method'] == 'GET'
-                and fetch['response_code'] in (200, 206)):
+        content_type = fetch["response_headers"].get_content_type()
+        if (
+            content_type.startswith("video/")
+            # skip manifests of DASH segmented video -
+            # see https://github.com/internetarchive/brozzler/pull/70
+            and content_type != "video/vnd.mpeg.dash.mpd"
+            and fetch["method"] == "GET"
+            and fetch["response_code"] in (200, 206)
+        ):
             video = {
-                'blame': 'youtube-dl',
-                'url': fetch['url'],
-                'response_code': fetch['response_code'],
-                'content-type': content_type,
+                "blame": "youtube-dl",
+                "url": fetch["url"],
+                "response_code": fetch["response_code"],
+                "content-type": content_type,
             }
-            if 'content-length' in fetch['response_headers']:
-                video['content-length'] = int(
-                        fetch['response_headers']['content-length'])
-            if 'content-range' in fetch['response_headers']:
+            if "content-length" in fetch["response_headers"]:
+                video["content-length"] = int(
+                    fetch["response_headers"]["content-length"]
+                )
+            if "content-range" in fetch["response_headers"]:
                 # skip chunked youtube video
-                if 'googlevideo.com/videoplayback' in fetch['url']:
+                if "googlevideo.com/videoplayback" in fetch["url"]:
                     continue
-                video['content-range'] = fetch[
-                        'response_headers']['content-range']
-            logging.debug('embedded video %s', video)
+                video["content-range"] = fetch["response_headers"]["content-range"]
+            logging.debug("embedded video %s", video)
             page.videos.append(video)
     for pushed_video in pushed_videos or []:
-        if pushed_video['content-type'].startswith('video/'):
+        if pushed_video["content-type"].startswith("video/"):
             video = {
-                'blame': 'youtube-dl',
-                'url': pushed_video['url'],
-                'response_code': pushed_video['response_code'],
-                'content-type': pushed_video['content-type'],
-                'content-length': pushed_video['content-length'],
+                "blame": "youtube-dl",
+                "url": pushed_video["url"],
+                "response_code": pushed_video["response_code"],
+                "content-type": pushed_video["content-type"],
+                "content-length": pushed_video["content-length"],
             }
-            logging.debug('embedded video %s', video)
+            logging.debug("embedded video %s", video)
             page.videos.append(video)
+
 
 def _try_youtube_dl(worker, ydl, site, page):
     try:
@@ -317,43 +352,53 @@ def _try_youtube_dl(worker, ydl, site, page):
             # no host given>" resulting in ProxyError
             # needs automated test
             # and yt-dlp needs sanitize_info for extract_info
-            ie_result = ydl.sanitize_info(ydl.extract_info(str(urlcanon.whatwg(page.url))))
+            ie_result = ydl.sanitize_info(
+                ydl.extract_info(str(urlcanon.whatwg(page.url)))
+            )
         _remember_videos(page, ydl.fetch_spy.fetches, ydl.pushed_videos)
         if worker._using_warcprox(site):
             info_json = json.dumps(ie_result, sort_keys=True, indent=4)
             logging.info(
-                    "sending WARCPROX_WRITE_RECORD request to warcprox "
-                    "with yt-dlp json for %s", page)
+                "sending WARCPROX_WRITE_RECORD request to warcprox "
+                "with yt-dlp json for %s",
+                page,
+            )
             worker._warcprox_write_record(
-                    warcprox_address=worker._proxy_for(site),
-                    url="youtube-dl:%s" % str(urlcanon.semantic(page.url)),
-                    warc_type="metadata",
-                    content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
-                    payload=info_json.encode("utf-8"),
-                    extra_headers=site.extra_headers(page))
+                warcprox_address=worker._proxy_for(site),
+                url="youtube-dl:%s" % str(urlcanon.semantic(page.url)),
+                warc_type="metadata",
+                content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
+                payload=info_json.encode("utf-8"),
+                extra_headers=site.extra_headers(page),
+            )
         return ie_result
     except brozzler.ShutdownRequested as e:
         raise
     except Exception as e:
         if hasattr(e, "exc_info") and e.exc_info[0] == yt_dlp.utils.UnsupportedError:
             return None
-        elif (hasattr(e, "exc_info")
-                and e.exc_info[0] == urllib.error.HTTPError
-                and hasattr(e.exc_info[1], "code")
-                and e.exc_info[1].code == 420):
+        elif (
+            hasattr(e, "exc_info")
+            and e.exc_info[0] == urllib.error.HTTPError
+            and hasattr(e.exc_info[1], "code")
+            and e.exc_info[1].code == 420
+        ):
             raise brozzler.ReachedLimit(e.exc_info[1])
-        elif (hasattr(e, 'exc_info')
-                and e.exc_info[0] == urllib.error.URLError
-                and worker._proxy_for(site)):
+        elif (
+            hasattr(e, "exc_info")
+            and e.exc_info[0] == urllib.error.URLError
+            and worker._proxy_for(site)
+        ):
             # connection problem when using a proxy == proxy error (XXX?)
             raise brozzler.ProxyError(
-                    'yt-dlp hit apparent proxy error from '
-                    '%s' % page.url) from e
+                "yt-dlp hit apparent proxy error from " "%s" % page.url
+            ) from e
         else:
             raise
 
+
 def do_youtube_dl(worker, site, page):
-    '''
+    """
     Runs yt-dlp configured for `worker` and `site` to download videos from
     `page`.
 
@@ -372,15 +417,19 @@ def do_youtube_dl(worker, site, page):
                     'response_headers': ...,
                 }, ...]
             `list` of `str`: outlink urls
-    '''
-    with tempfile.TemporaryDirectory(prefix='brzl-ydl-') as tempdir:
+    """
+    with tempfile.TemporaryDirectory(prefix="brzl-ydl-") as tempdir:
         ydl = _build_youtube_dl(worker, tempdir, site, page)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
         outlinks = set()
-        if ie_result and (ie_result.get('extractor') == 'youtube:playlist' or
-                          ie_result.get('extractor') == 'youtube:tab'):
+        if ie_result and (
+            ie_result.get("extractor") == "youtube:playlist"
+            or ie_result.get("extractor") == "youtube:tab"
+        ):
             # youtube watch pages as outlinks
-            outlinks = {'https://www.youtube.com/watch?v=%s' % e['id']
-                        for e in ie_result.get('entries_no_dl', [])}
+            outlinks = {
+                "https://www.youtube.com/watch?v=%s" % e["id"]
+                for e in ie_result.get("entries_no_dl", [])
+            }
         # any outlinks for other cases?
         return ydl.fetch_spy.fetches, outlinks
