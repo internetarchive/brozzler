@@ -34,7 +34,7 @@ def find_package_data(package):
 
 setuptools.setup(
     name="brozzler",
-    version="1.5.45a1",
+    version="1.5.46a1",
     description="Distributed web crawling with browsers",
     url="https://github.com/internetarchive/brozzler",
     author="Noah Levitt",
@@ -73,7 +73,7 @@ setuptools.setup(
         "pillow>=5.2.0",
         "urlcanon>=0.1.dev23",
         "doublethink @ git+https://github.com/internetarchive/doublethink.git@Py311",
-        "rethinkdb<2.4.10",
+        "rethinkdb==2.4.9",
         "cerberus>=1.0.1",
         "jinja2>=2.10",
         "cryptography>=2.3",
