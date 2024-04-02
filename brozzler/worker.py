@@ -3,7 +3,7 @@ brozzler/worker.py - BrozzlerWorker brozzles pages from the frontier, meaning
 it runs yt-dlp on them, browses them and runs behaviors if appropriate,
 scopes and adds outlinks to the frontier
 
-Copyright (C) 2014-2023 Internet Archive
+Copyright (C) 2014-2024 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -242,11 +242,19 @@ class BrozzlerWorker:
         enable_youtube_dl=True,
     ):
         self.logger.info("brozzling {}".format(page))
-        ydl_fetches = None
         outlinks = set()
-        if enable_youtube_dl and not page.url.lower().endswith(".pdf"):
+
+        try:
+            browser_outlinks = self._browse_page(
+                browser, site, page, on_screenshot, on_request
+            )
+            outlinks.update(browser_outlinks)
+        except brozzler.PageInterstitialShown:
+            self.logger.info("page interstitial shown (http auth): %s", page)
+
+        if enable_youtube_dl and ydl.should_ytdlp(page):
             try:
-                ydl_fetches, outlinks = ydl.do_youtube_dl(self, site, page)
+                ydl_outlinks = ydl.do_youtube_dl(self, site, page)
             except brozzler.ReachedLimit as e:
                 raise
             except brozzler.ShutdownRequested:
@@ -271,22 +279,7 @@ class BrozzlerWorker:
                         "youtube_dl raised exception on %s", page, exc_info=True
                     )
 
-        if self._needs_browsing(page, ydl_fetches):
-            self.logger.info("needs browsing: %s", page)
-            try:
-                browser_outlinks = self._browse_page(
-                    browser, site, page, on_screenshot, on_request
-                )
-                outlinks.update(browser_outlinks)
-            except brozzler.PageInterstitialShown:
-                self.logger.info("page interstitial shown (http auth): %s", page)
-        else:
-            if not self._already_fetched(page, ydl_fetches):
-                self.logger.info("needs fetch: %s", page)
-                self._fetch_url(site, page=page)
-            else:
-                self.logger.info("already fetched: %s", page)
-
+        outlinks.update(ydl_outlinks)
         return outlinks
 
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
@@ -414,28 +407,6 @@ class BrozzlerWorker:
             )
         except requests.exceptions.ProxyError as e:
             raise brozzler.ProxyError("proxy error fetching %s" % url) from e
-
-    def _needs_browsing(self, page, ydl_fetches):
-        if ydl_fetches:
-            final_bounces = ydl.final_bounces(ydl_fetches, page.url)
-            if not final_bounces:
-                return True
-            for txn in final_bounces:
-                if txn["response_headers"].get_content_type() in [
-                    "text/html",
-                    "application/xhtml+xml",
-                ]:
-                    return True
-            return False
-        else:
-            return True
-
-    def _already_fetched(self, page, ydl_fetches):
-        if ydl_fetches:
-            for fetch in ydl.final_bounces(ydl_fetches, page.url):
-                if fetch["method"] == "GET" and fetch["response_code"] == 200:
-                    return True
-        return False
 
     def brozzle_site(self, browser, site):
         try:
