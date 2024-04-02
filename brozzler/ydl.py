@@ -1,7 +1,7 @@
 """
 brozzler/ydl.py - youtube-dl / yt-dlp support for brozzler
 
-Copyright (C) 2023 Internet Archive
+Copyright (C) 2024 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,6 +30,20 @@ import datetime
 import threading
 
 thread_local = threading.local()
+
+def should_ytdlp(page):
+    skip_url_types = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'mpeg']
+    if page.redirect_url:
+        ytdlp_url = page.redirect_url
+    else:
+        ytdlp_url = page.url
+
+    for t in skip_url_types:
+        if t in ytdlp_url:
+            logging.warning("skipping yt-dlp for %s due to unsupported guessed content type", ytdlp_url)
+            return False
+
+    return True
 
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
@@ -65,35 +79,6 @@ class YoutubeDLSpy(urllib.request.BaseHandler):
 
     def reset(self):
         self.fetches = []
-
-
-def final_bounces(fetches, url):
-    """
-    Resolves redirect chains in `fetches` and returns a list of fetches
-    representing the final redirect destinations of the given url. There could
-    be more than one if for example youtube-dl hit the same url with HEAD and
-    then GET requests.
-    """
-    redirects = {}
-    for fetch in fetches:
-        # XXX check http status 301,302,303,307? check for "uri" header
-        # as well as "location"? see urllib.request.HTTPRedirectHandler
-        if "location" in fetch["response_headers"]:
-            redirects[fetch["url"]] = fetch
-
-    final_url = url
-    while final_url in redirects:
-        fetch = redirects.pop(final_url)
-        final_url = urllib.parse.urljoin(
-            fetch["url"], fetch["response_headers"]["location"]
-        )
-
-    final_bounces = []
-    for fetch in fetches:
-        if fetch["url"] == final_url:
-            final_bounces.append(fetch)
-
-    return final_bounces
 
 
 def _build_youtube_dl(worker, destdir, site, page):
@@ -183,8 +168,8 @@ def _build_youtube_dl(worker, destdir, site, page):
             else:
                 url = info_dict.get("url", "")
 
-            # skip urls ending .m3u8, to avoid duplicates handled by FixupM3u8
-            if url.endswith(".m3u8") or url == "":
+            # skip urls containing .m3u8, to avoid duplicates handled by FixupM3u8
+            if url == "" or ".m3u8" in url:
                 return
 
             size = os.path.getsize(info_dict["filepath"])
@@ -408,15 +393,7 @@ def do_youtube_dl(worker, site, page):
         page (brozzler.Page): the page we are brozzling
 
     Returns:
-        tuple with two entries:
-            `list` of `dict`: with info about urls fetched:
-                [{
-                    'url': ...,
-                    'method': ...,
-                    'response_code': ...,
-                    'response_headers': ...,
-                }, ...]
-            `list` of `str`: outlink urls
+         `list` of `str`: outlink urls
     """
     with tempfile.TemporaryDirectory(prefix="brzl-ydl-") as tempdir:
         ydl = _build_youtube_dl(worker, tempdir, site, page)
@@ -431,5 +408,5 @@ def do_youtube_dl(worker, site, page):
                 "https://www.youtube.com/watch?v=%s" % e["id"]
                 for e in ie_result.get("entries_no_dl", [])
             }
-        # any outlinks for other cases?
-        return ydl.fetch_spy.fetches, outlinks
+        # any outlinks for other cases? soundcloud, maybe?
+        return outlinks
