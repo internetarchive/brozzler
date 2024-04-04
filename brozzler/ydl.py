@@ -47,16 +47,6 @@ def is_html_maybe(url):
     return True
 
 
-def should_ytdlp(page):
-    ytdlp_url = page.redirect_url if page.redirect_url else page.url
-
-    if not is_html_maybe(ytdlp_url):
-        logging.warning("skipping yt-dlp for %s due to unsupported extension", ytdlp_url)
-        return False
-
-    return True
-
-
 def _timestamp4datetime(timestamp):
     """split `timestamp` into a tuple of 6 integers.
 
