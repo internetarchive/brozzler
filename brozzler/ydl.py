@@ -1,7 +1,7 @@
 """
 brozzler/ydl.py - youtube-dl / yt-dlp support for brozzler
 
-Copyright (C) 2023 Internet Archive
+Copyright (C) 2024 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,8 +38,7 @@ thread_local = threading.local()
 def _timestamp4datetime(timestamp):
     """split `timestamp` into a tuple of 6 integers.
 
-    :param timestamp: full-length timestamp.
-    :type timestamp: bytes
+    :param timestamp: full-length timestamp
     """
     timestamp = timestamp[:14]
     return (
@@ -53,12 +52,8 @@ def _timestamp4datetime(timestamp):
 
 def should_ytdlp(page, site):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
-    logging.debug("ytdlp_url: %s", ytdlp_url)
     ytdlp_seed = site.get("warcprox-meta", {}).get("metadata", {}).get("ait_seed_id", "")
-    logging.debug("ytdlp_seed: %s", ytdlp_seed)
-
-    if ".pdf" in ytdlp_url.lower():
-        return False
+    logging.info("ytdlp_seed: %s", ytdlp_seed)
 
     if ytdlp_seed and "youtube.com/watch?v" in ytdlp_url:
         # connect to bmiller-dev cluster, keyspace video; we can modify default timeout in cassandra.yaml
@@ -66,19 +61,19 @@ def should_ytdlp(page, site):
         session = cluster.connect("video")
         containing_page_query = "SELECT * from videos where scope=%s and containing_page_url=%s LIMIT 1"
         future = session.execute_async(containing_page_query, [f"s:{ytdlp_seed}", ytdlp_url])
-        logging.debug(f"s:{ytdlp_seed}, {ytdlp_url}")
+        record = None
         try:
             record = future.result()
-            logging.debug("record: %s", record)
+            logging.info("record: %s", record)
         except ReadTimeout:
             log.exception("Query timed out:")
         if record and record.video_timestamp:
-            logging.debug(f"video_timestamp: {record.video_timestamp}")
+            logging.info(f"video_timestamp: {record.video_timestamp}")
             ytdlp_timestamp = datetime(*_timestamp4datetime(record.video_timestamp))
-            logging.debug("ytdlp_timestamp: %s", ytdlp_timestamp)
+            logging.info("ytdlp_timestamp: %s", ytdlp_timestamp)
             time_diff = datetime.now() - ytdlp_timestamp
-            # TODO: make veriable for timedelta
-            if time_diff > timedelta(days = 90):
+            # TODO: make variable for timedelta
+            if time_diff < timedelta(days = 90):
                 return False
 
     return True
