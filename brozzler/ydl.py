@@ -28,6 +28,9 @@ import os
 import json
 import doublethink
 import datetime
+from cassandra import ReadTimeout
+from cassandra.cluster import Cluster
+
 import threading
 
 thread_local = threading.local()
@@ -53,6 +56,49 @@ def should_ytdlp(page):
 
     return True
 
+
+def _timestamp4datetime(timestamp):
+    """split `timestamp` into a tuple of 6 integers.
+
+    :param timestamp: full-length timestamp
+    """
+    timestamp = timestamp[:14]
+    return (
+        int(timestamp[:-10]),
+        int(timestamp[-10:-8]),
+        int(timestamp[-8:-6]),
+        int(timestamp[-6:-4]),
+        int(timestamp[-4:-2]),
+        int(timestamp[-2:])
+        )
+
+def should_ytdlp(page, site):
+    ytdlp_url = page.redirect_url if page.redirect_url else page.url
+    ytdlp_seed = site.get("warcprox-meta", {}).get("metadata", {}).get("ait_seed_id", "")
+    logging.info("ytdlp_seed: %s", ytdlp_seed)
+
+    if ytdlp_seed and "youtube.com/watch?v" in ytdlp_url:
+        # connect to bmiller-dev cluster, keyspace video; we can modify default timeout in cassandra.yaml
+        cluster = Cluster(["207.241.235.189"], protocol_version=5)
+        session = cluster.connect("video")
+        containing_page_query = "SELECT * from videos where scope=%s and containing_page_url=%s LIMIT 1"
+        future = session.execute_async(containing_page_query, [f"s:{ytdlp_seed}", ytdlp_url])
+        record = None
+        try:
+            record = future.result()
+            logging.info("record: %s", record)
+        except ReadTimeout:
+            log.exception("Query timed out:")
+        if record and record.video_timestamp:
+            logging.info(f"video_timestamp: {record.video_timestamp}")
+            ytdlp_timestamp = datetime(*_timestamp4datetime(record.video_timestamp))
+            logging.info("ytdlp_timestamp: %s", ytdlp_timestamp)
+            time_diff = datetime.now() - ytdlp_timestamp
+            # TODO: make variable for timedelta
+            if time_diff < timedelta(days = 90):
+                return False
+
+    return True
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
