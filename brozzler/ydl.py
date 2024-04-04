@@ -21,6 +21,7 @@ import yt_dlp
 from yt_dlp.utils import match_filter_func
 import brozzler
 import urllib.request
+from urllib.parse import urlparse
 import tempfile
 import urlcanon
 import os
@@ -31,17 +32,24 @@ import threading
 
 thread_local = threading.local()
 
-def should_ytdlp(page):
-    skip_url_types = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'mpeg']
-    if page.redirect_url:
-        ytdlp_url = page.redirect_url
-    else:
-        ytdlp_url = page.url
+def is_html_maybe(url):
+    skip_url_exts = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'mpeg']
 
-    for t in skip_url_types:
-        if t in ytdlp_url:
-            logging.warning("skipping yt-dlp for %s due to unsupported guessed content type", ytdlp_url)
+    parsed_url = urlparse(url)
+    base_url, ext = os.path.splitext(parsed_url.path)
+    ext = ext[1:]
+    for skip in skip_url_exts:
+        if ext.startswith(skip):
             return False
+    return True
+
+
+def should_ytdlp(page):
+    ytdlp_url = page.redirect_url if page.redirect_url else page.url
+
+    if not is_html_maybe(ytdlp_url):
+        logging.warning("skipping yt-dlp for %s due to unsupported extension", ytdlp_url)
+        return False
 
     return True
 
