@@ -111,6 +111,7 @@ def new_job(frontier, job_conf):
         merged_conf["seed"] = merged_conf.pop("url")
         site = brozzler.Site(frontier.rr, merged_conf)
         site.id = str(uuid.uuid4())
+        site.seed_id = seed_conf['metadata']['ait_seed_id']
         sites.append(site)
         pages.append(new_seed_page(frontier, site))
 
