@@ -64,11 +64,11 @@ def _timestamp4datetime(timestamp):
 
 def should_ytdlp(worker, page, site):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
-    ytdlp_seed = site.seed_id if site.seed_id else None
-    # ytdlp_seed = site.get(site.id).pluck("metadata", "ait_seed_id").default(None) if site.rr else None ???
-    logging.info("ytdlp_seed: %s", ytdlp_seed)
+    ytdlp_seed = site["metadata"]["ait_seed_id"]
+    logging.info("checking containing page %r, site %r", ytdlp_url, ytdlp_seed)
 
     if ytdlp_seed and "youtube.com/watch?v" in ytdlp_url:
+        logging.info("found youtube watch page %r", ytdlp_url)
         # connect to bmiller-dev cluster, keyspace video; we can modify default timeout in cassandra.yaml
         cluster = Cluster(["207.241.235.189"], protocol_version=5)
         session = cluster.connect("video")
