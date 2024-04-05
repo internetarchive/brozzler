@@ -34,7 +34,7 @@ def find_package_data(package):
 
 setuptools.setup(
     name="brozzler",
-    version="1.5.46",
+    version="1.5.47",
     description="Distributed web crawling with browsers",
     url="https://github.com/internetarchive/brozzler",
     author="Noah Levitt",
@@ -67,6 +67,7 @@ setuptools.setup(
     install_requires=[
         "PyYAML>=5.1",
         "yt_dlp<2023.11.16",
+        "cassandra-driver==3.29.1"
         "reppy==0.3.4",
         "requests>=2.21",
         "websocket-client>=0.39.0,<=0.48.0",
