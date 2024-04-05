@@ -50,9 +50,10 @@ def _timestamp4datetime(timestamp):
         int(timestamp[-2:])
         )
 
-def should_ytdlp(page, site):
+def should_ytdlp(worker, page, site):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
-    ytdlp_seed = site.get("warcprox-meta", {}).get("metadata", {}).get("ait_seed_id", "")
+    ytdlp_seed = site.seed_id if site.seed_id else None
+    # ytdlp_seed = site.get(site.id).pluck("metadata", "ait_seed_id").default(None) if site.rr else None ???
     logging.info("ytdlp_seed: %s", ytdlp_seed)
 
     if ytdlp_seed and "youtube.com/watch?v" in ytdlp_url:

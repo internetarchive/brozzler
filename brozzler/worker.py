@@ -244,7 +244,7 @@ class BrozzlerWorker:
         self.logger.info("brozzling {}".format(page))
         ydl_fetches = None
         outlinks = set()
-        if enable_youtube_dl and ydl.should_ytdlp(page, site):
+        if enable_youtube_dl and ydl.should_ytdlp(self, page, site):
             try:
                 ydl_fetches, outlinks = ydl.do_youtube_dl(self, site, page)
             except brozzler.ReachedLimit as e:
