@@ -252,7 +252,7 @@ class BrozzlerWorker:
         except brozzler.PageInterstitialShown:
             self.logger.info("page interstitial shown (http auth): %s", page)
 
-        if enable_youtube_dl and ydl.should_ytdlp(self, page, site):
+        if enable_youtube_dl and ydl.should_ytdlp(page, site):
             try:
                 ydl_outlinks = ydl.do_youtube_dl(self, site, page)
             except brozzler.ReachedLimit as e:

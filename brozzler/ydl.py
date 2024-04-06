@@ -62,10 +62,10 @@ def _timestamp4datetime(timestamp):
         int(timestamp[-2:])
         )
 
-def should_ytdlp(worker, page, site):
+def should_ytdlp(page, site):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     ytdlp_seed = site["metadata"]["ait_seed_id"]
-    logging.info("checking containing page %r, site %r", ytdlp_url, ytdlp_seed)
+    logging.info("checking containing page %s for seed %s", ytdlp_url, ytdlp_seed)
 
     if ytdlp_seed and "youtube.com/watch?v" in ytdlp_url:
         logging.info("found youtube watch page %r", ytdlp_url)
@@ -74,19 +74,23 @@ def should_ytdlp(worker, page, site):
         session = cluster.connect("video")
         containing_page_query = "SELECT * from videos where scope=%s and containing_page_url=%s LIMIT 1"
         future = session.execute_async(containing_page_query, [f"s:{ytdlp_seed}", ytdlp_url])
-        record = None
         try:
-            record = future.result()
-            logging.info("record: %s", record)
+            rows = future.result()
         except ReadTimeout:
-            log.exception("Query timed out:")
-        if record and record.video_timestamp:
-            logging.info(f"video_timestamp: {record.video_timestamp}")
-            ytdlp_timestamp = datetime(*_timestamp4datetime(record.video_timestamp))
+            logging.exception("Query timed out:")
+
+        if len(rows.current_rows) == 0:
+            logging.info("no results returned from videos query")
+            return True
+
+        for row in rows:
+            logging.info("video query found %r", row)
+            ytdlp_timestamp = datetime.datetime(*_timestamp4datetime(row.video_timestamp))
             logging.info("ytdlp_timestamp: %s", ytdlp_timestamp)
-            time_diff = datetime.now() - ytdlp_timestamp
+            time_diff = datetime.datetime.now() - ytdlp_timestamp
             # TODO: make variable for timedelta
-            if time_diff < timedelta(days = 90):
+            if time_diff < datetime.timedelta(days = 90):
+                logging.info("skipping ytdlp for %s since there's a recent capture", row.containing_page_url)
                 return False
 
     return True
