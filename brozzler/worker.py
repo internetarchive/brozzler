@@ -255,6 +255,7 @@ class BrozzlerWorker:
         if enable_youtube_dl and ydl.should_ytdlp(page, site):
             try:
                 ydl_outlinks = ydl.do_youtube_dl(self, site, page)
+                outlinks.update(ydl_outlinks)
             except brozzler.ReachedLimit as e:
                 raise
             except brozzler.ShutdownRequested:
@@ -278,8 +279,6 @@ class BrozzlerWorker:
                     self.logger.error(
                         "youtube_dl raised exception on %s", page, exc_info=True
                     )
-
-        outlinks.update(ydl_outlinks)
         return outlinks
 
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
