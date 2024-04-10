@@ -337,8 +337,9 @@ def _remember_videos(page, fetches, pushed_videos=None):
 
 
 def _try_youtube_dl(worker, ydl, site, page):
+    ytdlp_url = page.redirect_url if page.redirect_url else page.url
     try:
-        logging.info("trying yt-dlp on %s", page)
+        logging.info("trying yt-dlp on %s", ytdlp_url)
 
         with brozzler.thread_accept_exceptions():
             # we do whatwg canonicalization here to avoid "<urlopen error
@@ -346,7 +347,7 @@ def _try_youtube_dl(worker, ydl, site, page):
             # needs automated test
             # and yt-dlp needs sanitize_info for extract_info
             ie_result = ydl.sanitize_info(
-                ydl.extract_info(str(urlcanon.whatwg(page.url)))
+                ydl.extract_info(str(urlcanon.whatwg(ytdlp_url)))
             )
         _remember_videos(page, ydl.fetch_spy.fetches, ydl.pushed_videos)
         if worker._using_warcprox(site):
@@ -354,11 +355,11 @@ def _try_youtube_dl(worker, ydl, site, page):
             logging.info(
                 "sending WARCPROX_WRITE_RECORD request to warcprox "
                 "with yt-dlp json for %s",
-                page,
+                ytdlp_url,
             )
             worker._warcprox_write_record(
                 warcprox_address=worker._proxy_for(site),
-                url="youtube-dl:%s" % str(urlcanon.semantic(page.url)),
+                url="youtube-dl:%s" % str(urlcanon.semantic(ytdlp_url)),
                 warc_type="metadata",
                 content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
                 payload=info_json.encode("utf-8"),
@@ -384,7 +385,7 @@ def _try_youtube_dl(worker, ydl, site, page):
         ):
             # connection problem when using a proxy == proxy error (XXX?)
             raise brozzler.ProxyError(
-                "yt-dlp hit apparent proxy error from " "%s" % page.url
+                "yt-dlp hit apparent proxy error from " "%s" % ytdlp_url
             ) from e
         else:
             raise
