@@ -73,7 +73,7 @@ def should_ytdlp(page, site):
         cluster = Cluster(["207.241.235.189"], protocol_version=5)
         session = cluster.connect("video")
         containing_page_query = "SELECT * from videos where scope=%s and containing_page_url=%s LIMIT 1"
-        future = session.execute_async(containing_page_query, [f"s:{ytdlp_seed}", ytdlp_url])
+        future = session.execute_async(containing_page_query, [f"s:{ytdlp_seed}", str(urlcanon.aggressive(ytdlp_url))])
         try:
             rows = future.result()
         except ReadTimeout:
