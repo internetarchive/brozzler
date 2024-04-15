@@ -207,11 +207,11 @@ class Chrome:
         ]
         major_version = check_version(self.chrome_exe)
         if major_version >= 109:
-            chrome_args.append('--headless=new')
+            chrome_args.append("--headless=new")
         elif 96 <= major_version <= 108:
-            chrome_args.append('--headless=chrome')
+            chrome_args.append("--headless=chrome")
         else:
-            chrome_args.append('--headless')
+            chrome_args.append("--headless")
 
         extra_chrome_args = os.environ.get("BROZZLER_EXTRA_CHROME_ARGS")
         if extra_chrome_args:
