@@ -61,6 +61,7 @@ def check_version(chrome_exe):
             "brozzler requires chrome/chromium version 64 or "
             "later but %s reports version %s" % (chrome_exe, version_str)
         )
+    return major_version
 
 
 class Chrome:
@@ -182,7 +183,6 @@ class Chrome:
         chrome_args = [
             self.chrome_exe,
             "-v",
-            "--headless",
             "--remote-debugging-port=%s" % self.port,
             "--use-mock-keychain",  # mac thing
             "--user-data-dir=%s" % self._chrome_user_data_dir,
@@ -205,6 +205,13 @@ class Chrome:
             "--disable-save-password-bubble",
             "--disable-sync",
         ]
+        major_version = check_version(self.chrome_exe)
+        if major_version >= 109:
+            chrome_args.append('--headless=new')
+        elif 96 <= major_version <= 108:
+            chrome_args.append('--headless=chrome')
+        else:
+            chrome_args.append('--headless')
 
         extra_chrome_args = os.environ.get("BROZZLER_EXTRA_CHROME_ARGS")
         if extra_chrome_args:
