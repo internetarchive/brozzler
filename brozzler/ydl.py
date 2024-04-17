@@ -32,8 +32,9 @@ import threading
 
 thread_local = threading.local()
 
+
 def is_html_maybe(url):
-    skip_url_exts = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'mpeg']
+    skip_url_exts = ["pdf", "jpg", "jpeg", "png", "gif", "mp4", "mpeg"]
 
     parsed_url = urlparse(url)
     base_url, ext = os.path.splitext(parsed_url.path)
@@ -48,7 +49,9 @@ def should_ytdlp(page):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
 
     if not is_html_maybe(ytdlp_url):
-        logging.warning("skipping yt-dlp for %s due to unsupported extension", ytdlp_url)
+        logging.warning(
+            "skipping yt-dlp for %s due to unsupported extension", ytdlp_url
+        )
         return False
 
     return True
