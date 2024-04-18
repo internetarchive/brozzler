@@ -21,7 +21,6 @@ import yt_dlp
 from yt_dlp.utils import match_filter_func
 import brozzler
 import urllib.request
-from urllib.parse import urlparse
 import tempfile
 import urlcanon
 import os
@@ -34,17 +33,6 @@ from cassandra.cluster import Cluster
 import threading
 
 thread_local = threading.local()
-
-def is_html_maybe(url):
-    skip_url_exts = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'mpeg']
-
-    parsed_url = urlparse(url)
-    base_url, ext = os.path.splitext(parsed_url.path)
-    ext = ext[1:]
-    for skip in skip_url_exts:
-        if ext.startswith(skip):
-            return False
-    return True
 
 
 def _timestamp4datetime(timestamp):
@@ -63,7 +51,14 @@ def _timestamp4datetime(timestamp):
         )
 
 def should_ytdlp(page, site):
+    if page.status_code != 200:
+        return False
+    
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
+
+    if "chrome-error:" in ytdlp_url:
+        return False
+
     ytdlp_seed = site["metadata"]["ait_seed_id"]
     logging.info("checking containing page %s for seed %s", ytdlp_url, ytdlp_seed)
 

@@ -244,42 +244,95 @@ class BrozzlerWorker:
         self.logger.info("brozzling {}".format(page))
         outlinks = set()
 
-        try:
-            browser_outlinks = self._browse_page(
-                browser, site, page, on_screenshot, on_request
-            )
-            outlinks.update(browser_outlinks)
-        except brozzler.PageInterstitialShown:
-            self.logger.info("page interstitial shown (http auth): %s", page)
+        self._get_page_headers(page)
 
-        if enable_youtube_dl and ydl.should_ytdlp(page, site):
+        if self._needs_browsing(page):
+            self.logger.info("needs browsing: %s", page)
             try:
-                ydl_outlinks = ydl.do_youtube_dl(self, site, page)
-                outlinks.update(ydl_outlinks)
-            except brozzler.ReachedLimit as e:
-                raise
-            except brozzler.ShutdownRequested:
-                raise
-            except brozzler.ProxyError:
-                raise
-            except Exception as e:
-                if (
-                    hasattr(e, "exc_info")
-                    and len(e.exc_info) >= 2
-                    and hasattr(e.exc_info[1], "code")
-                    and e.exc_info[1].code == 430
-                ):
-                    self.logger.info(
-                        "youtube-dl got %s %s processing %s",
-                        e.exc_info[1].code,
-                        e.exc_info[1].msg,
-                        page.url,
-                    )
-                else:
-                    self.logger.error(
-                        "youtube_dl raised exception on %s", page, exc_info=True
-                    )
+                browser_outlinks = self._browse_page(
+                    browser, site, page, on_screenshot, on_request
+                )
+                outlinks.update(browser_outlinks)
+                page.status_code = browser.websock_thread.page_status
+                self.logger.info("url %s status code %s", page.url, page.status_code)
+            except brozzler.PageInterstitialShown:
+                self.logger.info("page interstitial shown (http auth): %s", page)
+
+            if enable_youtube_dl and ydl.should_ytdlp(page):
+                try:
+                    ydl_outlinks = ydl.do_youtube_dl(self, site, page)
+                    outlinks.update(ydl_outlinks)
+                except brozzler.ReachedLimit as e:
+                    raise
+                except brozzler.ShutdownRequested:
+                    raise
+                except brozzler.ProxyError:
+                    raise
+                except Exception as e:
+                    if (
+                        hasattr(e, "exc_info")
+                        and len(e.exc_info) >= 2
+                        and hasattr(e.exc_info[1], "code")
+                        and e.exc_info[1].code == 430
+                    ):
+                        self.logger.info(
+                            "youtube-dl got %s %s processing %s",
+                            e.exc_info[1].code,
+                            e.exc_info[1].msg,
+                            page.url,
+                        )
+                    else:
+                        self.logger.error(
+                            "youtube_dl raised exception on %s", page, exc_info=True
+                        )
+        else:
+            self.logger.info("needs fetch: %s", page)
+            self._fetch_url(site, page=page)
         return outlinks
+
+    def _get_page_headers(self, page):
+        with requests.get(page.url, stream=True) as r:
+            content_type_header = content_length_header = last_modified_header = None
+            if "Content-Type" in r.headers:
+                content_type_header = "Content-Type"
+            elif "content-length" in r.headers:
+                content_type_header = "content-length"
+            elif "CONTENT-LENGTH" in r.headers:
+                content_type_header = "CONTENT-LENGTH"
+            if content_type_header:
+                page.content_type = r.headers[content_type_header]
+                self.logger.info(
+                    "url %s content_type is %s", page.url, page.content_type
+                )
+
+            if "Content-Length" in r.headers:
+                content_length_header = "Content-Length"
+            elif "content-length" in r.headers:
+                content_length_header = "content-length"
+            elif "CONTENT-LENGTH" in r.headers:
+                content_length_header = "CONTENT-LENGTH"
+            if content_length_header:
+                page.content_length = int(r.headers[content_length_header])
+                self.logger.info(
+                    "url %s content_length is %s", page.url, page.content_length
+                )
+
+            if "Last-Modified" in r.headers:
+                last_modified_header = "Last-Modified"
+            elif "Last-Modified" in r.headers:
+                last_modified_header = "Last-Modified"
+            elif "LAST-MODIFIED" in r.headers:
+                last_modified_header = "LAST-MODIFIED"
+            if last_modified_header:
+                page.last_modified = r.headers[last_modified_header]
+                self.logger.info(
+                    "url %s last_modified is %s", page.url, page.last_modified
+                )
+
+    def _needs_browsing(self, page):
+        if page.content_type and "html" not in page.content_type:
+            return False
+        return True
 
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
         def _on_screenshot(screenshot_jpeg):
