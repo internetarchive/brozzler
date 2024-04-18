@@ -31,6 +31,7 @@ import threading
 
 thread_local = threading.local()
 
+
 def should_ytdlp(page):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
 

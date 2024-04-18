@@ -299,7 +299,9 @@ class BrozzlerWorker:
                 content_type_header = "CONTENT-LENGTH"
             if content_type_header:
                 page.content_type = r.headers[content_type_header]
-                self.logger.info("url %s content_type is %s", page.url, page.content_type)
+                self.logger.info(
+                    "url %s content_type is %s", page.url, page.content_type
+                )
 
             if "Content-Length" in r.headers:
                 content_length_header = "Content-Length"
@@ -309,7 +311,9 @@ class BrozzlerWorker:
                 content_length_header = "CONTENT-LENGTH"
             if content_length_header:
                 page.content_length = int(r.headers[content_length_header])
-                self.logger.info("url %s content_length is %s", page.url, page.content_length)
+                self.logger.info(
+                    "url %s content_length is %s", page.url, page.content_length
+                )
 
             if "Last-Modified" in r.headers:
                 last_modified_header = "Last-Modified"
@@ -319,13 +323,14 @@ class BrozzlerWorker:
                 last_modified_header = "LAST-MODIFIED"
             if last_modified_header:
                 page.last_modified = r.headers[last_modified_header]
-                self.logger.info("url %s last_modified is %s", page.url, page.last_modified)
+                self.logger.info(
+                    "url %s last_modified is %s", page.url, page.last_modified
+                )
 
     def _needs_browsing(self, page):
         if page.content_type and "html" not in page.content_type:
             return False
         return True
-
 
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
         def _on_screenshot(screenshot_jpeg):
