@@ -33,6 +33,9 @@ thread_local = threading.local()
 
 
 def should_ytdlp(page):
+    if page.status_code != 200:
+        return False
+
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
 
     if "chrome-error:" in ytdlp_url:

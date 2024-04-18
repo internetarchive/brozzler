@@ -253,6 +253,8 @@ class BrozzlerWorker:
                     browser, site, page, on_screenshot, on_request
                 )
                 outlinks.update(browser_outlinks)
+                page.status_code = browser.websock_thread.page_status
+                self.logger.info("url %s status code %s", page.url, page.status_code)
             except brozzler.PageInterstitialShown:
                 self.logger.info("page interstitial shown (http auth): %s", page)
 
