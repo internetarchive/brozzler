@@ -34,7 +34,10 @@ thread_local = threading.local()
 
 
 def is_html_maybe(url):
-    skip_url_exts = ["pdf", "jpg", "jpeg", "png", "gif", "mp4", "mpeg"]
+    if "chrome-error:" in url:
+        return False
+
+    skip_url_exts = ["pdf", "jpg", "jpeg", "png", "gif", "mp3", "mp4", "mpeg", "css", "js"]
 
     parsed_url = urlparse(url)
     base_url, ext = os.path.splitext(parsed_url.path)
