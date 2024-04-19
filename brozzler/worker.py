@@ -258,7 +258,7 @@ class BrozzlerWorker:
             except brozzler.PageInterstitialShown:
                 self.logger.info("page interstitial shown (http auth): %s", page)
 
-            if enable_youtube_dl and ydl.should_ytdlp(page):
+            if enable_youtube_dl and ydl.should_ytdlp(page, site):
                 try:
                     ydl_outlinks = ydl.do_youtube_dl(self, site, page)
                     outlinks.update(ydl_outlinks)
@@ -291,42 +291,24 @@ class BrozzlerWorker:
         return outlinks
 
     def _get_page_headers(self, page):
+        page.content_type = page.content_length = page.last_modified = None
         with requests.get(page.url, stream=True) as r:
-            content_type_header = content_length_header = last_modified_header = None
-            if "Content-Type" in r.headers:
-                content_type_header = "Content-Type"
-            elif "content-length" in r.headers:
-                content_type_header = "content-length"
-            elif "CONTENT-LENGTH" in r.headers:
-                content_type_header = "CONTENT-LENGTH"
-            if content_type_header:
-                page.content_type = r.headers[content_type_header]
+            if "content-type" in r.headers:
+                page.content_type = r.headers["content-type"]
                 self.logger.info(
-                    "url %s content_type is %s", page.url, page.content_type
+                    "content_type: %s for url %s", page.content_type, page.url
                 )
 
-            if "Content-Length" in r.headers:
-                content_length_header = "Content-Length"
-            elif "content-length" in r.headers:
-                content_length_header = "content-length"
-            elif "CONTENT-LENGTH" in r.headers:
-                content_length_header = "CONTENT-LENGTH"
-            if content_length_header:
-                page.content_length = int(r.headers[content_length_header])
+            if "content-length" in r.headers:
+                page.content_length = int(r.headers["content-length"])
                 self.logger.info(
-                    "url %s content_length is %s", page.url, page.content_length
+                    "content_length: %s for url %s", page.content_length, page.url
                 )
 
-            if "Last-Modified" in r.headers:
-                last_modified_header = "Last-Modified"
-            elif "Last-Modified" in r.headers:
-                last_modified_header = "Last-Modified"
-            elif "LAST-MODIFIED" in r.headers:
-                last_modified_header = "LAST-MODIFIED"
-            if last_modified_header:
-                page.last_modified = r.headers[last_modified_header]
+            if "last-modified" in r.headers:
+                page.last_modified = r.headers["last-modified"]
                 self.logger.info(
-                    "url %s last_modified is %s", page.url, page.last_modified
+                    "last_modified: %s for url %s", page.last_modified, page.url
                 )
 
     def _needs_browsing(self, page):
