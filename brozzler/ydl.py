@@ -32,7 +32,7 @@ import threading
 thread_local = threading.local()
 
 
-def should_ytdlp(page):
+def should_ytdlp(page, site):
     if page.status_code != 200:
         return False
 
@@ -57,35 +57,12 @@ class ExtraHeaderAdder(urllib.request.BaseHandler):
         return req
 
 
-class YoutubeDLSpy(urllib.request.BaseHandler):
-    logger = logging.getLogger(__module__ + "." + __qualname__)
-
-    def __init__(self):
-        self.reset()
-
-    def _http_response(self, request, response):
-        fetch = {
-            "url": request.full_url,
-            "method": request.get_method(),
-            "response_code": response.code,
-            "response_headers": response.headers,
-        }
-        self.fetches.append(fetch)
-        return response
-
-    http_response = https_response = _http_response
-
-    def reset(self):
-        self.fetches = []
-
-
 def _build_youtube_dl(worker, destdir, site, page):
     """
     Builds a yt-dlp `yt_dlp.YoutubeDL` for brozzling `site` with `worker`.
 
     The `YoutubeDL` instance does a few special brozzler-specific things:
 
-    - keeps track of urls fetched using a `YoutubeDLSpy`
     - periodically updates `site.last_claimed` in rethinkdb
     - pushes captured video to warcprox using a WARCPROX_WRITE_RECORD request
     - some logging
@@ -94,6 +71,7 @@ def _build_youtube_dl(worker, destdir, site, page):
         worker (brozzler.BrozzlerWorker): the calling brozzler worker
         destdir (str): where to save downloaded videos
         site (brozzler.Site): the site we are brozzling
+        page (brozzler.Page): the page we are brozzling
 
     Returns:
         a yt-dlp `yt_dlp.YoutubeDL` instance
@@ -260,7 +238,7 @@ def _build_youtube_dl(worker, destdir, site, page):
         "match_filter": match_filter_func("!is_live"),
         "extractor_args": {"youtube": {"skip": ["dash", "hls"]}},
         # --cache-dir local or..
-        # this looked like a problem with nsf-mounted homedir, shouldn't be a problem for brozzler on focal?
+        # this looked like a problem with nsf-mounted homedir, maybe not a problem for brozzler on focal?
         "cache_dir": "/home/archiveit",
         "logger": logging.getLogger("yt_dlp"),
         "verbose": False,
@@ -274,56 +252,25 @@ def _build_youtube_dl(worker, destdir, site, page):
     ydl = _YoutubeDL(ydl_opts)
     if site.extra_headers():
         ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers(page)))
-    ydl.fetch_spy = YoutubeDLSpy()
     ydl.pushed_videos = []
-    ydl._opener.add_handler(ydl.fetch_spy)
     return ydl
 
-
-def _remember_videos(page, fetches, pushed_videos=None):
+def _remember_videos(page, pushed_videos=None):
     """
     Saves info about videos captured by yt-dlp in `page.videos`.
     """
     if not "videos" in page:
         page.videos = []
-    for fetch in fetches or []:
-        content_type = fetch["response_headers"].get_content_type()
-        if (
-            content_type.startswith("video/")
-            # skip manifests of DASH segmented video -
-            # see https://github.com/internetarchive/brozzler/pull/70
-            and content_type != "video/vnd.mpeg.dash.mpd"
-            and fetch["method"] == "GET"
-            and fetch["response_code"] in (200, 206)
-        ):
-            video = {
-                "blame": "youtube-dl",
-                "url": fetch["url"],
-                "response_code": fetch["response_code"],
-                "content-type": content_type,
-            }
-            if "content-length" in fetch["response_headers"]:
-                video["content-length"] = int(
-                    fetch["response_headers"]["content-length"]
-                )
-            if "content-range" in fetch["response_headers"]:
-                # skip chunked youtube video
-                if "googlevideo.com/videoplayback" in fetch["url"]:
-                    continue
-                video["content-range"] = fetch["response_headers"]["content-range"]
-            logging.debug("embedded video %s", video)
-            page.videos.append(video)
     for pushed_video in pushed_videos or []:
-        if pushed_video["content-type"].startswith("video/"):
-            video = {
-                "blame": "youtube-dl",
-                "url": pushed_video["url"],
-                "response_code": pushed_video["response_code"],
-                "content-type": pushed_video["content-type"],
-                "content-length": pushed_video["content-length"],
-            }
-            logging.debug("embedded video %s", video)
-            page.videos.append(video)
+        video = {
+            "blame": "youtube-dl",
+            "url": pushed_video["url"],
+            "response_code": pushed_video["response_code"],
+            "content-type": pushed_video["content-type"],
+            "content-length": pushed_video["content-length"],
+        }
+        logging.debug("pushed video %s", video)
+        page.videos.append(video)
 
 
 def _try_youtube_dl(worker, ydl, site, page):
@@ -339,7 +286,7 @@ def _try_youtube_dl(worker, ydl, site, page):
             ie_result = ydl.sanitize_info(
                 ydl.extract_info(str(urlcanon.whatwg(ytdlp_url)))
             )
-        _remember_videos(page, ydl.fetch_spy.fetches, ydl.pushed_videos)
+        _remember_videos(page, ydl.pushed_videos)
         if worker._using_warcprox(site):
             info_json = json.dumps(ie_result, sort_keys=True, indent=4)
             logging.info(
