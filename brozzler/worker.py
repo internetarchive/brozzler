@@ -246,7 +246,10 @@ class BrozzlerWorker:
 
         self._get_page_headers(page)
 
-        if self._needs_browsing(page):
+        if not self._needs_browsing(page):
+            self.logger.info("needs fetch: %s", page)
+            self._fetch_url(site, page=page)
+        else:
             self.logger.info("needs browsing: %s", page)
             try:
                 browser_outlinks = self._browse_page(
@@ -285,13 +288,12 @@ class BrozzlerWorker:
                         self.logger.error(
                             "youtube_dl raised exception on %s", page, exc_info=True
                         )
-        else:
-            self.logger.info("needs fetch: %s", page)
-            self._fetch_url(site, page=page)
         return outlinks
 
     def _get_page_headers(self, page):
         page.content_type = page.content_length = page.last_modified = None
+        # bypassing warcprox, requests' stream=True defers downloading the body of the response
+        # see https://docs.python-requests.org/en/latest/user/advanced/#body-content-workflow
         with requests.get(page.url, stream=True) as r:
             if "content-type" in r.headers:
                 page.content_type = r.headers["content-type"]
