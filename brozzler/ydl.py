@@ -33,6 +33,7 @@ thread_local = threading.local()
 
 
 def should_ytdlp(page, site):
+    # called only after we've passed needs_browsing() check
     if page.status_code != 200:
         return False
 
