@@ -305,6 +305,7 @@ def _build_youtube_dl(worker, destdir, site, page):
     ydl.pushed_videos = []
     return ydl
 
+
 def _remember_videos(page, pushed_videos=None):
     """
     Saves info about videos captured by yt-dlp in `page.videos`.
