@@ -52,6 +52,7 @@
 -
   url_regex: '^https?://www.opengov\.nsw\.gov\.au/publications.*$'
   behavior_js_template: umbraBehavior.js.j2
+  request_idle_timeout_sec: 10
   default_parameters:
     interval: 1000
     actions:
