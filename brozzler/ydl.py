@@ -41,7 +41,11 @@ def should_ytdlp(worker, site, page):
         logging.info("skipping ytdlp: site marked skip_ytdlp")
         return False
 
-    ytdlp_seed = site["metadata"]["ait_seed_id"] if "metadata" in site and "ait_seed_id" in site["metadata"] else None
+    ytdlp_seed = (
+        site["metadata"]["ait_seed_id"]
+        if "metadata" in site and "ait_seed_id" in site["metadata"]
+        else None
+    )
 
     if ytdlp_seed and not site.skip_ytdlp:
         if ytdlp_seed in worker.skip_av_seeds:
