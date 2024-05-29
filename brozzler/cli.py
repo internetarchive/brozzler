@@ -2,7 +2,7 @@
 """
 brozzler/cli.py - brozzler command line executables
 
-Copyright (C) 2014-2023 Internet Archive
+Copyright (C) 2014-2024 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -544,12 +544,25 @@ def brozzler_worker(argv=None):
         finally:
             signal.signal(signal.SIGQUIT, dump_state)
 
+    def get_skip_av_seeds():
+        skip_av_seeds_file = "/opt/local/brozzler/skip_av_seeds.txt"
+        try:
+            with open(skip_av_seeds_file) as skips:
+                skip_av_seeds = {x for x in skips.readlines()}
+                logging.info("running with skip_av_seeds file %s" % skip_av_seeds_file)
+        except Exception as e:
+            skip_av_seeds = set()
+            logging.info("running with empty skip_av_seeds")
+        return skip_av_seeds
+
     rr = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(rr)
     service_registry = doublethink.ServiceRegistry(rr)
+    skip_av_seeds = get_skip_av_seeds()
     worker = brozzler.worker.BrozzlerWorker(
         frontier,
         service_registry,
+        skip_av_seeds,
         max_browsers=int(args.max_browsers),
         chrome_exe=args.chrome_exe,
         proxy=args.proxy,
