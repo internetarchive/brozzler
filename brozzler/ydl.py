@@ -51,13 +51,18 @@ def _timestamp4datetime(timestamp):
         int(timestamp[-2:])
         )
 
-def should_ytdlp(page, site):
+def should_ytdlp(worker, site, page):
     # called only after we've passed needs_browsing() check
     if page.status_code != 200:
         logging.info("skipping ytdlp: non-200 page status")
         return False
     if site.skip_ytdlp:
         logging.info("skipping ytdlp: site marked skip_ytdlp")
+        return False
+
+    ytdlp_url = page.redirect_url if page.redirect_url else page.url
+
+    if "chrome-error:" in ytdlp_url:
         return False
 
     ytdlp_seed = (
@@ -71,12 +76,6 @@ def should_ytdlp(page, site):
         site.skip_ytdlp = True
         return False
     
-    ytdlp_url = page.redirect_url if page.redirect_url else page.url
-
-    if "chrome-error:" in ytdlp_url:
-        return False
-
-    ytdlp_seed = site["metadata"]["ait_seed_id"]
     logging.info("checking containing page %s for seed %s", ytdlp_url, ytdlp_seed)
 
     if ytdlp_seed and "youtube.com/watch?v" in ytdlp_url:
