@@ -264,7 +264,7 @@ class BrozzlerWorker:
             except brozzler.PageInterstitialShown:
                 self.logger.info("page interstitial shown (http auth): %s", page)
 
-            if enable_youtube_dl and ydl.should_ytdlp(site, page, self.skip_av_seeds):
+            if enable_youtube_dl and ydl.should_ytdlp(site, page, self._skip_av_seeds):
                 try:
                     ydl_outlinks = ydl.do_youtube_dl(self, site, page)
                     outlinks.update(ydl_outlinks)
