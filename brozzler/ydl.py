@@ -57,7 +57,7 @@ def should_ytdlp(site, page, skip_av_seeds):
     if page.status_code != 200:
         logging.info("skipping ytdlp: non-200 page status")
         return False
-    if site.skip_ytdlp == "SKIP":
+    if site.skip_ytdlp == YTDLPStatus.SKIP:
         logging.info("skipping ytdlp: site marked skip_ytdlp")
         return False
 
@@ -74,7 +74,7 @@ def should_ytdlp(site, page, skip_av_seeds):
 
     # TODO: develop UI and refactor
     if ytdlp_seed:
-        if site.skip_ytdlp == "UNKNOWN" and ytdlp_seed in skip_av_seeds:
+        if site.skip_ytdlp == YTDLPStatus.UNKNOWN and ytdlp_seed in skip_av_seeds:
             logging.info("skipping ytdlp: site in skip_av_seeds")
             site.skip_ytdlp = YTDLPStatus.SKIP
             return False
