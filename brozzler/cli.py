@@ -545,10 +545,12 @@ def brozzler_worker(argv=None):
             signal.signal(signal.SIGQUIT, dump_state)
 
     def get_skip_av_seeds():
+        # TODO: develop UI and refactor
         SKIP_AV_SEEDS_FILE = "/opt/local/brozzler/skip_av_seeds.txt"
         try:
-            with open(skip_av_seeds_file) as skips:
-                skip_av_seeds = set(skips.readlines())
+            # make set from seed IDs in SKIP_AV_SEEDS_FILE
+            with open(SKIP_AV_SEEDS_FILE) as skips:
+                skip_av_seeds = {int(l) for l in skips.readlines()}
                 logging.info("running with skip_av_seeds file %s" % SKIP_AV_SEEDS_FILE)
         except Exception as e:
             skip_av_seeds = set()
@@ -562,7 +564,7 @@ def brozzler_worker(argv=None):
     worker = brozzler.worker.BrozzlerWorker(
         frontier,
         service_registry,
-        skip_av_seeds,
+        skip_av_seeds=skip_av_seeds,
         max_browsers=int(args.max_browsers),
         chrome_exe=args.chrome_exe,
         proxy=args.proxy,
