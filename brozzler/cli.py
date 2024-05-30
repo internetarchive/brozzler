@@ -545,11 +545,11 @@ def brozzler_worker(argv=None):
             signal.signal(signal.SIGQUIT, dump_state)
 
     def get_skip_av_seeds():
-        skip_av_seeds_file = "/opt/local/brozzler/skip_av_seeds.txt"
+        SKIP_AV_SEEDS_FILE = "/opt/local/brozzler/skip_av_seeds.txt"
         try:
             with open(skip_av_seeds_file) as skips:
-                skip_av_seeds = {x for x in skips.readlines()}
-                logging.info("running with skip_av_seeds file %s" % skip_av_seeds_file)
+                skip_av_seeds = set(skips.readlines())
+                logging.info("running with skip_av_seeds file %s" % SKIP_AV_SEEDS_FILE)
         except Exception as e:
             skip_av_seeds = set()
             logging.info("running with empty skip_av_seeds")
