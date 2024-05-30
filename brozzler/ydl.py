@@ -53,10 +53,11 @@ def _timestamp4datetime(timestamp):
 
 def should_ytdlp(site, page, skip_av_seeds):
     # called only after we've passed needs_browsing() check
+    from .model import YTDLPStatus
     if page.status_code != 200:
         logging.info("skipping ytdlp: non-200 page status")
         return False
-    if site.skip_ytdlp:
+    if site.skip_ytdlp == "SKIP":
         logging.info("skipping ytdlp: site marked skip_ytdlp")
         return False
 
@@ -72,11 +73,14 @@ def should_ytdlp(site, page, skip_av_seeds):
     )
 
     # TODO: develop UI and refactor
-    if ytdlp_seed and ytdlp_seed in skip_av_seeds:
-        logging.info("skipping ytdlp: site in skip_av_seeds")
-        site.skip_ytdlp = True
-        return False
-    
+    if ytdlp_seed
+        if site.skip_ytdlp == "UNKNOWN" and ytdlp_seed in skip_av_seeds:
+            logging.info("skipping ytdlp: site in skip_av_seeds")
+            site.skip_ytdlp = YTDLPStatus.SKIP
+            return False
+        else:
+            site.skip_ytdlp = YTDLPStatus.CAPTURE
+
     logging.info("checking containing page %s for seed %s", ytdlp_url, ytdlp_seed)
 
     if ytdlp_seed and "youtube.com/watch?v" in ytdlp_url:
