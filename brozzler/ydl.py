@@ -51,7 +51,7 @@ def _timestamp4datetime(timestamp):
         int(timestamp[-2:])
         )
 
-def should_ytdlp(worker, site, page):
+def should_ytdlp(site, page, skip_av_seeds):
     # called only after we've passed needs_browsing() check
     if page.status_code != 200:
         logging.info("skipping ytdlp: non-200 page status")
@@ -71,7 +71,8 @@ def should_ytdlp(worker, site, page):
         else None
     )
 
-    if ytdlp_seed and ytdlp_seed in worker.skip_av_seeds:
+    # TODO: develop UI and refactor
+    if ytdlp_seed and ytdlp_seed in skip_av_seeds:
         logging.info("skipping ytdlp: site in skip_av_seeds")
         site.skip_ytdlp = True
         return False
