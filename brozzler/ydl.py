@@ -47,13 +47,10 @@ def should_ytdlp(worker, site, page):
         else None
     )
 
-    if ytdlp_seed and not site.skip_ytdlp:
-        if ytdlp_seed in worker.skip_av_seeds:
-            logging.info("skipping ytdlp: site in skip_av_seeds")
-            site.skip_ytdlp = True
-            return False
-        else:
-            site.skip_ytdlp = False
+    if ytdlp_seed and ytdlp_seed in worker.skip_av_seeds:
+        logging.info("skipping ytdlp: site in skip_av_seeds")
+        site.skip_ytdlp = True
+        return False
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
 
