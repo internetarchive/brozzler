@@ -74,6 +74,7 @@ class BrozzlerWorker:
     ):
         self._frontier = frontier
         self._service_registry = service_registry
+        self._skip_av_seeds = skip_av_seeds
         self._max_browsers = max_browsers
 
         self._warcprox_auto = warcprox_auto

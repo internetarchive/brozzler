@@ -560,11 +560,11 @@ def brozzler_worker(argv=None):
     rr = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(rr)
     service_registry = doublethink.ServiceRegistry(rr)
-    skip_av_seeds = get_skip_av_seeds()
+    skip_av_seeds_from_file = get_skip_av_seeds()
     worker = brozzler.worker.BrozzlerWorker(
         frontier,
         service_registry,
-        skip_av_seeds=skip_av_seeds,
+        skip_av_seeds=skip_av_seeds_from_file,
         max_browsers=int(args.max_browsers),
         chrome_exe=args.chrome_exe,
         proxy=args.proxy,
