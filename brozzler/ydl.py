@@ -73,7 +73,7 @@ def should_ytdlp(site, page, skip_av_seeds):
     )
 
     # TODO: develop UI and refactor
-    if ytdlp_seed
+    if ytdlp_seed:
         if site.skip_ytdlp == "UNKNOWN" and ytdlp_seed in skip_av_seeds:
             logging.info("skipping ytdlp: site in skip_av_seeds")
             site.skip_ytdlp = YTDLPStatus.SKIP
