@@ -35,116 +35,6 @@ import doublethink
 
 thread_local = threading.local()
 
-skip_ytdlp_seeds = {
-    166569,
-    166570,
-    166571,
-    166572,
-    166573,
-    171054,
-    577504,
-    577505,
-    577506,
-    577507,
-    577508,
-    579556,
-    588597,
-    588599,
-    588604,
-    657452,
-    680067,
-    931642,
-    1020763,
-    1020845,
-    1102795,
-    1126155,
-    1355999,
-    1356000,
-    1356001,
-    1356002,
-    1356003,
-    1356004,
-    1381601,
-    1400183,
-    1407124,
-    1430611,
-    1561452,
-    2181615,
-    2277187,
-    2287692,
-    2293805,
-    2315198,
-    2320887,
-    2320889,
-    2320890,
-    2320891,
-    2320892,
-    2451964,
-    2451965,
-    2517850,
-    2517851,
-    2517852,
-    2518225,
-    2518226,
-    2518227,
-    2518228,
-    2528222,
-    2528223,
-    2528224,
-    2528225,
-    2528227,
-    2528800,
-    2528801,
-    2528802,
-    2528803,
-    2528847,
-    2528848,
-    2528849,
-    2528850,
-    2528851,
-    2528852,
-    2528853,
-    2528854,
-    2530393,
-    2530394,
-    2530395,
-    2530396,
-    2530397,
-    2530398,
-    2530399,
-    2530400,
-    2530401,
-    2530402,
-    2530403,
-    2530404,
-    2530408,
-    2530409,
-    2530410,
-    2530411,
-    2530412,
-    2530413,
-    2530414,
-    2530415,
-    2530416,
-    2530417,
-    2530418,
-    2530419,
-    2553200,
-    2553201,
-    2553202,
-    2553203,
-    2553204,
-    2634329,
-    2826641,
-    2894571,
-    2895333,
-    3062930,
-    3084847,
-    3085989,
-    3223637,
-    3223656,
-}
-
 
 def _timestamp4datetime(timestamp):
     """split `timestamp` into a tuple of 6 integers.
@@ -167,13 +57,17 @@ def should_ytdlp(page, site):
         logging.info("skipping ytdlp: non-200 page status")
         return False
     if site.skip_ytdlp:
-        logging.info("skipping ytdlp: site marked skip_ytdp")
+        logging.info("skipping ytdlp: site marked skip_ytdlp")
         return False
 
-    ytdlp_seed = site["metadata"]["ait_seed_id"]
+    ytdlp_seed = (
+        site["metadata"]["ait_seed_id"]
+        if "metadata" in site and "ait_seed_id" in site["metadata"]
+        else None
+    )
 
-    if ytdlp_seed in skip_ytdlp_seeds:
-        logging.info("skipping ytdlp: site in skip_ytdlp_seeds")
+    if ytdlp_seed and ytdlp_seed in worker.skip_av_seeds:
+        logging.info("skipping ytdlp: site in skip_av_seeds")
         site.skip_ytdlp = True
         return False
     

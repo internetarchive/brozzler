@@ -2,7 +2,7 @@
 brozzler/models.py - model classes representing jobs, sites, and pages, with
 related logic
 
-Copyright (C) 2014-2022 Internet Archive
+Copyright (C) 2014-2024 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -235,6 +235,8 @@ class Site(doublethink.Document, ElapsedMixIn):
             self.last_claimed = brozzler.EPOCH_UTC
         if not "scope" in self:
             self.scope = {}
+        if not "skip_ytdlp" in self:
+            self.skip_ytdlp = False
 
         # backward compatibility
         if "surt" in self.scope:

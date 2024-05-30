@@ -54,6 +54,7 @@ class BrozzlerWorker:
         self,
         frontier,
         service_registry=None,
+        skip_av_seeds=None,
         max_browsers=1,
         chrome_exe="chromium-browser",
         warcprox_auto=False,
@@ -262,7 +263,7 @@ class BrozzlerWorker:
             except brozzler.PageInterstitialShown:
                 self.logger.info("page interstitial shown (http auth): %s", page)
 
-            if enable_youtube_dl and ydl.should_ytdlp(page, site):
+            if enable_youtube_dl and ydl.should_ytdlp(self, site, page):
                 try:
                     ydl_outlinks = ydl.do_youtube_dl(self, site, page)
                     outlinks.update(ydl_outlinks)
