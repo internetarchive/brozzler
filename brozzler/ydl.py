@@ -35,6 +35,7 @@ thread_local = threading.local()
 def should_ytdlp(site, page, skip_av_seeds):
     # called only after we've passed needs_browsing() check
     from .model import YTDLPStatus
+
     if page.status_code != 200:
         logging.info("skipping ytdlp: non-200 page status")
         return False
