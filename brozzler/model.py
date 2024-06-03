@@ -34,7 +34,6 @@ import urllib
 import uuid
 import yaml
 import zlib
-from enum import Enum
 from typing import Optional
 
 
@@ -192,12 +191,6 @@ class ElapsedMixIn(object):
         return dt
 
 
-class YTDLPStatus(Enum):
-    UNKNOWN = 0
-    SKIP = 1
-    CAPTURE = 2
-
-
 class Job(doublethink.Document, ElapsedMixIn):
     logger = logging.getLogger(__module__ + "." + __qualname__)
     table = "jobs"
@@ -243,7 +236,7 @@ class Site(doublethink.Document, ElapsedMixIn):
         if not "scope" in self:
             self.scope = {}
         if not "skip_ytdlp" in self:
-            self.skip_ytdlp = YTDLPStatus.UNKNOWN
+            self.skip_ytdlp = None
 
         # backward compatibility
         if "surt" in self.scope:
