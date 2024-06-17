@@ -70,7 +70,7 @@
   changed_when: false
 
 - name: ensure service user {{user}} exists
-  user: name={{user}} system=yes createhome=no home=/nonexistent
+  user: name={{user}} system=yes createhome=yes home=/home/{{user}}
         shell=/usr/sbin/nologin
   become: true
-  when: id_user|failed
+  when: id_user.rc != 0
