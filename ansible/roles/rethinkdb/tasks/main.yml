@@ -4,7 +4,7 @@
   become: true
 - name: ensure rethinkdb repo is in apt sources.list
   apt_repository:
-    repo: 'deb https://download.rethinkdb.com/repository/ubuntu-{{ansible_lsb.codename|lower}} {{ansible_lsb.codename|lower}} main'
+    repo: 'deb https://download.rethinkdb.com/repository/{{ansible_distribution|lower}}-{{ansible_lsb.codename|lower}} {{ansible_lsb.codename|lower}} main'
     state: present
   become: true
 - apt: update_cache=yes
