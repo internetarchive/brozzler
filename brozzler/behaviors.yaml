@@ -27,14 +27,21 @@
       - selector: a[data-testid="snapshot_footer_link"]
         childSelector: i[class="_271o img sp_KBE8sh--02o sx_5d0205"]
         closeSelector: 'div._7lq1 > button'
--
+- # https://webarchive.jira.com/browse/WT-55
   url_regex: '^https?://(?:www\.)?facebook\.com/.*$'
   behavior_js_template: umbraBehavior.js.j2
   request_idle_timeout_sec: 30
   default_parameters:
+    interval: 10000
     actions:
       - selector: a[rel="theater"], a[id="expanding_cta_close_button"]
         closeSelector: 'a._xlt'
+- # https://webarchive.jira.com/browse/WT-55
+  url_regex: '^^https?://([^.]*\.)*fbcdn\.net/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  request_idle_timeout_sec: 30
+  default_parameters:
+    interval: 10000
 -
   url_regex: '^https?://(?:www\.)?instagram\.com/.*$'
   behavior_js_template: umbraBehavior.js.j2
