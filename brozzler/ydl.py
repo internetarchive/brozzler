@@ -32,21 +32,6 @@ import threading
 thread_local = threading.local()
 
 
-def _timestamp4datetime(timestamp):
-    """split `timestamp` into a tuple of 6 integers.
-
-    :param timestamp: full-length timestamp
-    """
-    timestamp = timestamp[:14]
-    return (
-        int(timestamp[:-10]),
-        int(timestamp[-10:-8]),
-        int(timestamp[-8:-6]),
-        int(timestamp[-6:-4]),
-        int(timestamp[-4:-2]),
-        int(timestamp[-2:])
-        )
-
 def should_ytdlp(site, page, page_status, skip_av_seeds):
     # called only after we've passed needs_browsing() check
 
