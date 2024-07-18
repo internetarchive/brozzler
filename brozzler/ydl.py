@@ -51,11 +51,11 @@ def _timestamp4datetime(timestamp):
         int(timestamp[-2:])
         )
 
-def should_ytdlp(site, page, skip_av_seeds):
+def should_ytdlp(site, page, page_status, skip_av_seeds):
     # called only after we've passed needs_browsing() check
 
-    if page.status_code != 200:
-        logging.info("skipping ytdlp: non-200 page status")
+    if page_status != 200:
+        logging.info("skipping ytdlp: non-200 page status %s", page_status)
         return False
     if site.skip_ytdlp:
         logging.info("skipping ytdlp: site marked skip_ytdlp")

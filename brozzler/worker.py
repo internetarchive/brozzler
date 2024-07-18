@@ -247,9 +247,9 @@ class BrozzlerWorker:
         self.logger.info("brozzling {}".format(page))
         outlinks = set()
 
-        self._get_page_headers(page)
+        page_headers = self._get_page_headers(page)
 
-        if not self._needs_browsing(page):
+        if not self._needs_browsing(page_headers):
             self.logger.info("needs fetch: %s", page)
             self._fetch_url(site, page=page)
         else:
@@ -259,12 +259,12 @@ class BrozzlerWorker:
                     browser, site, page, on_screenshot, on_request
                 )
                 outlinks.update(browser_outlinks)
-                page.status_code = browser.websock_thread.page_status
-                self.logger.info("url %s status code %s", page.url, page.status_code)
             except brozzler.PageInterstitialShown:
                 self.logger.info("page interstitial shown (http auth): %s", page)
 
-            if enable_youtube_dl and ydl.should_ytdlp(site, page, self._skip_av_seeds):
+            if enable_youtube_dl and ydl.should_ytdlp(
+                site, page, browser.websock_thread.page_status, self._skip_av_seeds
+            ):
                 try:
                     ydl_outlinks = ydl.do_youtube_dl(self, site, page)
                     outlinks.update(ydl_outlinks)
@@ -294,30 +294,17 @@ class BrozzlerWorker:
         return outlinks
 
     def _get_page_headers(self, page):
-        page.content_type = page.content_length = page.last_modified = None
         # bypassing warcprox, requests' stream=True defers downloading the body of the response
         # see https://docs.python-requests.org/en/latest/user/advanced/#body-content-workflow
         with requests.get(page.url, stream=True) as r:
-            if "content-type" in r.headers:
-                page.content_type = r.headers["content-type"]
-                self.logger.info(
-                    "content_type: %s for url %s", page.content_type, page.url
-                )
+            page_headers = r.headers
+        return page_headers
 
-            if "content-length" in r.headers:
-                page.content_length = int(r.headers["content-length"])
-                self.logger.info(
-                    "content_length: %s for url %s", page.content_length, page.url
-                )
-
-            if "last-modified" in r.headers:
-                page.last_modified = r.headers["last-modified"]
-                self.logger.info(
-                    "last_modified: %s for url %s", page.last_modified, page.url
-                )
-
-    def _needs_browsing(self, page):
-        if page.content_type and "html" not in page.content_type:
+    def _needs_browsing(self, page_headers):
+        if (
+            "content-type" in page_headers
+            and "html" not in page_headers["content-type"]
+        ):
             return False
         return True
 
