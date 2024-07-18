@@ -261,7 +261,9 @@ class BrozzlerWorker:
             except brozzler.PageInterstitialShown:
                 self.logger.info("page interstitial shown (http auth): %s", page)
 
-            if enable_youtube_dl and ydl.should_ytdlp(site, page, browser.websock_thread.page_status, self._skip_av_seeds):
+            if enable_youtube_dl and ydl.should_ytdlp(
+                site, page, browser.websock_thread.page_status, self._skip_av_seeds
+            ):
                 try:
                     ydl_outlinks = ydl.do_youtube_dl(self, site, page)
                     outlinks.update(ydl_outlinks)
@@ -297,9 +299,11 @@ class BrozzlerWorker:
             page_headers = r.headers
         return page_headers
 
-
     def _needs_browsing(self, page_headers):
-        if "content-type" in page_headers and "html" not in page_headers["content-type"]:
+        if (
+            "content-type" in page_headers
+            and "html" not in page_headers["content-type"]
+        ):
             return False
         return True
 
