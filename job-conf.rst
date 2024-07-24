@@ -3,7 +3,7 @@ Brozzler Job Configuration
 
 Jobs are used to brozzle multiple seeds and/or apply settings and scope rules,
 as defined byusing YAML files. At least one seed URL must be specified.
-All other configurartions are optional.
+All other configurations are optional.
 
 .. contents::
 
@@ -44,7 +44,7 @@ How inheritance works
 Most of the settings that apply to seeds can also be specified at the top
 level, in which case all seeds inherit those settings. If an option is
 specified both at the top level and at the seed level, the results are merged.
-In cases of coflict, the seed-level value takes precedence.
+In cases of conflict, the seed-level value takes precedence.
 
 In the example yaml above, ``warcprox_meta`` is specified at the top level and
 at the seed level for the seed http://one.example.org/. At the top level we
