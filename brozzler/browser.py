@@ -1,7 +1,7 @@
 """
 brozzler/browser.py - manages the browsers for brozzler
 
-Copyright (C) 2014-2023 Internet Archive
+Copyright (C) 2014-2024 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ from brozzler.chrome import Chrome
 import socket
 import urlcanon
 
+websocket.enableTrace(True)
 
 class BrowsingException(Exception):
     pass
@@ -173,7 +174,7 @@ class WebsockReceiverThread(threading.Thread):
     def pop_result(self, msg_id):
         return self._result_messages.pop(msg_id)
 
-    def _on_close(self, websock):
+    def _on_close(self, websock, close_status_code, close_msg):
         pass
         # self.logger.info('GOODBYE GOODBYE WEBSOCKET')
 
