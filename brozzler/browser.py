@@ -33,7 +33,6 @@ from brozzler.chrome import Chrome
 import socket
 import urlcanon
 
-websocket.enableTrace(True)
 
 class BrowsingException(Exception):
     pass
@@ -138,6 +137,9 @@ class BrowserPool:
     def num_in_use(self):
         return len(self._in_use)
 
+
+# uncomment the next line for LOTS of debugging logging
+# websocket.enableTrace(True)
 
 class WebsockReceiverThread(threading.Thread):
     logger = logging.getLogger(__module__ + "." + __qualname__)
