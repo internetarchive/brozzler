@@ -141,6 +141,7 @@ class BrowserPool:
 # uncomment the next line for LOTS of debugging logging
 # websocket.enableTrace(True)
 
+
 class WebsockReceiverThread(threading.Thread):
     logger = logging.getLogger(__module__ + "." + __qualname__)
 
