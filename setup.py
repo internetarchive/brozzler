@@ -66,7 +66,6 @@ setuptools.setup(
     },
     install_requires=[
         "PyYAML>=5.1",
-        "yt_dlp==2024.7.16",
         "reppy==0.3.4",
         "requests>=2.21",
         "websocket-client==1.8.0",
@@ -80,6 +79,7 @@ setuptools.setup(
         "python-magic>=0.4.15",
     ],
     extras_require={
+        "yt-dlp": ["yt-dlp==2024.7.25"],
         "dashboard": ["flask>=1.0", "gunicorn>=19.8.1"],
         "easy": [
             "warcprox>=2.4.31",
