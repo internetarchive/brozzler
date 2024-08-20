@@ -213,6 +213,13 @@
   default_parameters:
     actions:
       - selector: img#navForward1
+- # https://webarchive.jira.com/browse/WT-1193
+  url_regex: '^https?://(?:www\.)?maricopa.gov/.*$'
+  behavior_js_template: umbraBehavior.js.j2
+  default_parameters:
+    actions:
+      - selector: navMainItem
+        do: mouseover
 - # default fallback behavior
   url_regex: '^.*$'
   behavior_js_template: umbraBehavior.js.j2
