@@ -138,7 +138,13 @@ class RethinkDbFrontier:
                         emit=lambda acc, site, new_acc: r.branch(
                             r.and_(
                                 r.or_(
-                                    site["claimed"].not_(),
+                                    r.and_(
+                                        site["claimed"].not_(),
+                                        r.or_(
+                                            site.has_fields("last_disclaimed").not_(),
+                                            site["last_disclaimed"].lt(r.now().sub(20)),
+                                        ),
+                                    ),
                                     site["last_claimed"].lt(r.now().sub(60 * 60)),
                                 ),
                                 r.or_(
@@ -218,6 +224,7 @@ class RethinkDbFrontier:
                 index="priority_by_site",
             )
             .order_by(index=r.desc("priority_by_site"))
+            .filter(lambda page: r.or_(page.has_fields("retry_after").not_(), r.now() > page["retry_after"]))
             .limit(1)
             .update(
                 {"claimed": True, "last_claimed_by": worker_id}, return_changes="always"

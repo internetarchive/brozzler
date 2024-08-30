@@ -43,6 +43,10 @@ class ProxyError(Exception):
     pass
 
 
+class PageConnectionError(Exception):
+    pass
+
+
 class ReachedTimeLimit(Exception):
     pass
 
