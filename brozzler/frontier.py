@@ -224,7 +224,11 @@ class RethinkDbFrontier:
                 index="priority_by_site",
             )
             .order_by(index=r.desc("priority_by_site"))
-            .filter(lambda page: r.or_(page.has_fields("retry_after").not_(), r.now() > page["retry_after"]))
+            .filter(
+                lambda page: r.or_(
+                    page.has_fields("retry_after").not_(), r.now() > page["retry_after"]
+                )
+            )
             .limit(1)
             .update(
                 {"claimed": True, "last_claimed_by": worker_id}, return_changes="always"

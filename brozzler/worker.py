@@ -505,15 +505,20 @@ class BrozzlerWorker:
         except (brozzler.PageConnectionError, Exception) as e:
             if isinstance(e, brozzler.PageConnectionError):
                 self.logger.error(
-                    "Page status code possibly indicates connection failure between host and warcprox: site=%r page=%r", site, page, exc_info=True
+                    "Page status code possibly indicates connection failure between host and warcprox: site=%r page=%r",
+                    site,
+                    page,
+                    exc_info=True,
                 )
             else:
                 self.logger.error(
                     "unexpected exception site=%r page=%r", site, page, exc_info=True
                 )
             if page:
-                retry_delay = min(60, 60 * (1.5 ** page.failed_attempts))
-                page.retry_after = doublethink.utcnow() + datetime.timedelta(seconds=retry_delay)
+                retry_delay = min(60, 60 * (1.5**page.failed_attempts))
+                page.retry_after = doublethink.utcnow() + datetime.timedelta(
+                    seconds=retry_delay
+                )
                 page.failed_attempts = (page.failed_attempts or 0) + 1
                 if page.failed_attempts >= brozzler.MAX_PAGE_FAILURES:
                     self.logger.info(
