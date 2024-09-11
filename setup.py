@@ -77,6 +77,8 @@ setuptools.setup(
         "jinja2>=2.10",
         "cryptography>=2.3",
         "python-magic>=0.4.15",
+        "prometheus-client>=0.20.0",
+        "prometheus-async>=22.2.0",
     ],
     extras_require={
         "yt-dlp": ["yt-dlp==2024.7.25"],
