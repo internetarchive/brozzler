@@ -20,6 +20,7 @@ import logging
 import yt_dlp
 from yt_dlp.utils import match_filter_func
 import brozzler
+from brozzler.model import VideoCaptureOptions
 import urllib.request
 import tempfile
 import urlcanon
@@ -32,35 +33,23 @@ import threading
 thread_local = threading.local()
 
 
-def should_ytdlp(site, page, page_status, skip_av_seeds):
+def should_ytdlp(site, page, page_status):
     # called only after we've passed needs_browsing() check
 
     if page_status != 200:
         logging.info("skipping ytdlp: non-200 page status %s", page_status)
         return False
-    if site.skip_ytdlp:
-        logging.info("skipping ytdlp: site marked skip_ytdlp")
+    if site.video_capture in [
+        VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value,
+        VideoCaptureOptions.DISABLE_YTDLP_CAPTURE.value,
+    ]:
+        logging.info("skipping ytdlp: site has video capture disabled")
         return False
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
 
     if "chrome-error:" in ytdlp_url:
         return False
-
-    ytdlp_seed = (
-        site["metadata"]["ait_seed_id"]
-        if "metadata" in site and "ait_seed_id" in site["metadata"]
-        else None
-    )
-
-    # TODO: develop UI and refactor
-    if ytdlp_seed:
-        if site.skip_ytdlp is None and ytdlp_seed in skip_av_seeds:
-            logging.info("skipping ytdlp: site in skip_av_seeds")
-            site.skip_ytdlp = True
-            return False
-        else:
-            site.skip_ytdlp = False
 
     return True
 
