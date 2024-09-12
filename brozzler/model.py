@@ -235,8 +235,8 @@ class Site(doublethink.Document, ElapsedMixIn):
             self.last_claimed = brozzler.EPOCH_UTC
         if not "scope" in self:
             self.scope = {}
-        if not "skip_ytdlp" in self:
-            self.skip_ytdlp = None
+        if "video_capture" not in self:
+            self.video_capture = "ENABLE_VIDEO_CAPTURE"
 
         # backward compatibility
         if "surt" in self.scope:

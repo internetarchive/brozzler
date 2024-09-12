@@ -38,8 +38,8 @@ def should_ytdlp(site, page, page_status):
     if page_status != 200:
         logging.info("skipping ytdlp: non-200 page status %s", page_status)
         return False
-    if site.skip_ytdlp:
-        logging.info("skipping ytdlp: site marked skip_ytdlp")
+    if site.video_capture != "ENABLE_VIDEO_CAPTURE":
+        logging.info("skipping ytdlp: site has video capture disabled")
         return False
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
