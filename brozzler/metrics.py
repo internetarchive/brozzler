@@ -11,6 +11,24 @@ try:
     from http_sd_registry.config import ClientConfig
 except ImportError:
     http_sd_registry = None
+    Client = None
+
+    import enum  # type: ignore
+
+    class Env(str, enum.Enum):
+        """Values of the Prometheus ``env`` label applied to a
+        :py:class:`.Registration` indicating the deployment environment in which
+        the the service being advertised is operating.
+        """
+
+        qa = "qa"
+        prod = "prod"
+        dev = "dev"
+
+    Registration = None
+    Scheme = None
+    format_self_target = None
+    ClientConfig = None
 
 from prometheus_client import Counter, Gauge, Histogram, start_http_server
 
@@ -29,22 +47,22 @@ brozzler_ydl_download_attempts = Counter("brozzler_ydl_download_attempts", "coun
 brozzler_ydl_download_successes = Counter("brozzler_ydl_download_successes", "count of downloads completed by brozzler yt-dlp", labelnames=["host"])
 # fmt: on
 
-if http_sd_registry:
-    def register_prom_metrics(
-        registry_url: Optional[str] = None, metrics_port: int = 8888, env: Env = Env.qa
-    ):
-        # Start metrics endpoint for scraping
-        start_http_server(metrics_port)
 
-        if registry_url is None:
-            return
+def register_prom_metrics(
+    registry_url: Optional[str] = None, metrics_port: int = 8888, env: Env = Env.qa
+):
+    # Start metrics endpoint for scraping
+    start_http_server(metrics_port)
 
-        config = ClientConfig(server_url_base=registry_url)
-        client = Client(config)
-        target = format_self_target(scrape_port=metrics_port)
-        registration = Registration(
-            target=target,
-            env=env,
-            scheme=Scheme.http,
-        )
-        client.keep_registered_threaded(registration)
+    if registry_url is None:
+        return
+
+    config = ClientConfig(server_url_base=registry_url)
+    client = Client(config)
+    target = format_self_target(scrape_port=metrics_port)
+    registration = Registration(
+        target=target,
+        env=env,
+        scheme=Scheme.http,
+    )
+    client.keep_registered_threaded(registration)

@@ -28,6 +28,7 @@ import json
 import PIL.Image
 import io
 import socket
+import platform
 import random
 import requests
 import doublethink
@@ -39,6 +40,18 @@ from . import metrics
 from . import ydl
 
 r = rdb.RethinkDB()
+
+
+# Setup metrics
+registry_url = None
+metrics_port = 8090
+env = metrics.Env.dev
+hostname = platform.node()
+if hostname.endswith("archive.org"):
+    registry_url = "http://wbgrp-svc283.us.archive.org:8888"
+    metrics_port = settings.metrics_port
+    env = metrics.Env.qa
+metrics.register_prom_metrics(registry_url, metrics_port, env)
 
 
 class BrozzlerWorker:
