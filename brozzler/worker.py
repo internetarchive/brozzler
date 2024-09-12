@@ -35,6 +35,7 @@ import tempfile
 import urlcanon
 from requests.structures import CaseInsensitiveDict
 import rethinkdb as rdb
+from . import metrics
 from . import ydl
 
 r = rdb.RethinkDB()
@@ -312,6 +313,12 @@ class BrozzlerWorker:
         return True
 
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
+        def update_page_metrics(page, outlinks):
+            """Update page-level Prometheus metrics."""
+            metrics.brozzler_last_page_crawled_time.set_to_current_time()
+            metrics.brozzler_pages_crawled.inc(1)
+            metrics.brozzler_outlinks_found.inc(len(outlinks))
+
         def _on_screenshot(screenshot_jpeg):
             if on_screenshot:
                 on_screenshot(screenshot_jpeg)
@@ -416,6 +423,7 @@ class BrozzlerWorker:
         )
         if final_page_url != page.url:
             page.note_redirect(final_page_url)
+        update_page_metrics(page, outlinks)
         return outlinks
 
     def _fetch_url(self, site, url=None, page=None):
