@@ -225,28 +225,28 @@ class Site(doublethink.Document, ElapsedMixIn):
     table = "sites"
 
     def populate_defaults(self):
-        if not "status" in self:
+        if "status" not in self:
             self.status = "ACTIVE"
-        if not "claimed" in self:
+        if "claimed" not in self:
             self.claimed = False
-        if not "last_disclaimed" in self:
+        if "last_disclaimed" not in self:
             self.last_disclaimed = brozzler.EPOCH_UTC
-        if not "last_claimed" in self:
+        if "last_claimed" not in self:
             self.last_claimed = brozzler.EPOCH_UTC
-        if not "scope" in self:
+        if "scope" not in self:
             self.scope = {}
         if "video_capture" not in self:
             self.video_capture = "ENABLE_VIDEO_CAPTURE"
 
         # backward compatibility
         if "surt" in self.scope:
-            if not "accepts" in self.scope:
+            if "accepts" not in self.scope:
                 self.scope["accepts"] = []
             self.scope["accepts"].append({"surt": self.scope["surt"]})
             del self.scope["surt"]
 
         # backward compatibility
-        if "max_hops_off_surt" in self.scope and not "max_hops_off" in self.scope:
+        if "max_hops_off_surt" in self.scope and "max_hops_off" not in self.scope:
             self.scope["max_hops_off"] = self.scope["max_hops_off_surt"]
         if "max_hops_off_surt" in self.scope:
             del self.scope["max_hops_off_surt"]
@@ -256,7 +256,7 @@ class Site(doublethink.Document, ElapsedMixIn):
                 brozzler.site_surt_canon(self.seed).ssurt().decode("ascii")
             )
 
-        if not "starts_and_stops" in self:
+        if "starts_and_stops" not in self:
             if self.get("start_time"):  # backward compatibility
                 self.starts_and_stops = [
                     {"start": self.get("start_time"), "stop": None}
@@ -271,7 +271,7 @@ class Site(doublethink.Document, ElapsedMixIn):
         return 'Site({"id":"%s","seed":"%s",...})' % (self.id, self.seed)
 
     def _accept_ssurt_if_not_redundant(self, ssurt):
-        if not "accepts" in self.scope:
+        if "accepts" not in self.scope:
             self.scope["accepts"] = []
         simple_rule_ssurts = (
             rule["ssurt"]
