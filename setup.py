@@ -78,10 +78,9 @@ setuptools.setup(
         "cryptography>=2.3",
         "python-magic>=0.4.15",
         "prometheus-client>=0.20.0",
-        "prometheus-async>=22.2.0",
     ],
     extras_require={
-        "yt-dlp": ["yt-dlp==2024.7.25"],
+        "yt-dlp": ["yt-dlp>=2024.7.25"],
         "dashboard": ["flask>=1.0", "gunicorn>=19.8.1"],
         "easy": [
             "warcprox>=2.4.31",
