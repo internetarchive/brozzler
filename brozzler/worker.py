@@ -267,6 +267,7 @@ class BrozzlerWorker:
             ):
                 try:
                     ydl_outlinks = ydl.do_youtube_dl(self, site, page)
+                    metrics.brozzler_ydl_urls_checked.inc(1)
                     outlinks.update(ydl_outlinks)
                 except brozzler.ReachedLimit as e:
                     raise
@@ -312,6 +313,7 @@ class BrozzlerWorker:
             return False
         return True
 
+    @metrics.brozzler_page_processing_duration_seconds.time()
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
         def update_page_metrics(page, outlinks):
             """Update page-level Prometheus metrics."""
