@@ -54,7 +54,6 @@ class BrozzlerWorker:
         self,
         frontier,
         service_registry=None,
-        skip_av_seeds=None,
         max_browsers=1,
         chrome_exe="chromium-browser",
         warcprox_auto=False,
@@ -74,7 +73,6 @@ class BrozzlerWorker:
     ):
         self._frontier = frontier
         self._service_registry = service_registry
-        self._skip_av_seeds = skip_av_seeds
         self._max_browsers = max_browsers
 
         self._warcprox_auto = warcprox_auto
@@ -262,7 +260,7 @@ class BrozzlerWorker:
                 self.logger.info("page interstitial shown (http auth): %s", page)
 
             if enable_youtube_dl and ydl.should_ytdlp(
-                site, page, browser.websock_thread.page_status, self._skip_av_seeds
+                site, page, browser.websock_thread.page_status
             ):
                 try:
                     ydl_outlinks = ydl.do_youtube_dl(self, site, page)
