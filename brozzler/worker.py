@@ -323,7 +323,7 @@ class BrozzlerWorker:
         return True
 
     @metrics.brozzler_page_processing_duration_seconds.time()
-    @metrics.brozzler_in_progress_pages.track_in_progress()
+    @metrics.brozzler_in_progress_pages.track_inprogress()
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
         def update_page_metrics(page, outlinks):
             """Update page-level Prometheus metrics."""
