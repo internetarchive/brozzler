@@ -165,6 +165,20 @@ class BetterArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter
             return super()._get_help_string(action)
 
 
+import enum
+
+
+class Env(str, enum.Enum):
+    """Values of the Prometheus ``env`` label applied to a
+    :py:class:`.Registration` indicating the deployment environment in which
+    the service being advertised is operating.
+    """
+
+    qa = "qa"
+    prod = "prod"
+    dev = "dev"
+
+
 def brozzle_page(argv=None):
     """
     Command line utility entry point for brozzling a single page. Opens url in
@@ -235,6 +249,24 @@ def brozzle_page(argv=None):
         help="Try to avoid web bot detection",
     )
     arg_parser.add_argument(
+        "--registry_url",
+        dest="registry_url",
+        default=None,
+        help="Prometheus registry url",
+    )
+    arg_parser.add_argument(
+        "--metrics_port",
+        dest=metrics_port,
+        default=8889,
+        help="Prometheus metrics port",
+    )
+    arg_parser.add_argument(
+        "--env",
+        dest=env,
+        default=Env.dev,
+        help="Prometheus env value",
+    )
+    arg_parser.add_argument(
         "--screenshot-full-page", dest="screenshot_full_page", action="store_true"
     )
     arg_parser.add_argument(
@@ -279,6 +311,9 @@ def brozzle_page(argv=None):
         window_height=args.window_height,
         window_width=args.window_width,
         stealth=args.stealth,
+        registry_url=args.registry_url,
+        metrics_port=args.metrics_port,
+        env=args.env,
     )
 
     def on_screenshot(screenshot_jpeg):
@@ -517,6 +552,24 @@ def brozzler_worker(argv=None):
         action="store_true",
         help="Try to avoid web bot detection",
     )
+    arg_parser.add_argument(
+        "--registry_url",
+        dest="registry_url",
+        default=None,
+        help="Prometheus registry url",
+    )
+    arg_parser.add_argument(
+        "--metrics_port",
+        dest=metrics_port,
+        default=8888,
+        help="Prometheus metrics port",
+    )
+    arg_parser.add_argument(
+        "--env",
+        dest=env,
+        default=Env.qa,
+        help="Prometheus env value",
+    )
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -573,6 +626,9 @@ def brozzler_worker(argv=None):
         skip_visit_hashtags=args.skip_visit_hashtags,
         skip_youtube_dl=args.skip_youtube_dl,
         stealth=args.stealth,
+        registry_url=args.registry_url,
+        metrics_port=args.metrics_port,
+        env=args.env,
     )
 
     signal.signal(signal.SIGQUIT, dump_state)

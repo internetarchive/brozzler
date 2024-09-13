@@ -28,7 +28,6 @@ import json
 import PIL.Image
 import io
 import socket
-import platform
 import random
 import requests
 import doublethink
@@ -40,18 +39,6 @@ from . import metrics
 from . import ydl
 
 r = rdb.RethinkDB()
-
-
-# Setup metrics
-registry_url = None
-metrics_port = 8090
-env = metrics.Env.dev
-hostname = platform.node()
-if hostname.endswith("archive.org"):
-    registry_url = "http://wbgrp-svc283.us.archive.org:8888"
-    metrics_port = settings.metrics_port
-    env = metrics.Env.qa
-metrics.register_prom_metrics(registry_url, metrics_port, env)
 
 
 class BrozzlerWorker:
@@ -85,6 +72,9 @@ class BrozzlerWorker:
         stealth=False,
         window_height=900,
         window_width=1400,
+        registry_url=None,
+        metrics_port=None,
+        env=None,
     ):
         self._frontier = frontier
         self._service_registry = service_registry
@@ -107,6 +97,9 @@ class BrozzlerWorker:
         self._window_height = window_height
         self._window_width = window_width
         self._stealth = stealth
+        self._registry_url = registry_url
+        self._metrics_port = metrics_port
+        self._env = env
 
         self._browser_pool = brozzler.browser.BrowserPool(
             max_browsers, chrome_exe=chrome_exe, ignore_cert_errors=True
@@ -117,6 +110,12 @@ class BrozzlerWorker:
         self._thread = None
         self._start_stop_lock = threading.Lock()
         self._shutdown = threading.Event()
+
+        # Setup metrics
+        registry_url = self._registry_url
+        metrics_port = self._metrics_port
+        env = self._env
+        metrics.register_prom_metrics(registry_url, metrics_port, env)
 
     def _choose_warcprox(self):
         warcproxes = self._service_registry.available_services("warcprox")

@@ -297,7 +297,7 @@ def _remember_videos(page, pushed_videos=None):
 
 def _try_youtube_dl(worker, ydl, site, page):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
-    ytdlp_host = ytdlp_url.split("//")[-1].split("/")[0].split('?')[0]
+    ytdlp_host = ytdlp_url.split("//")[-1].split("/")[0].split("?")[0]
     try:
         logging.info("trying yt-dlp on %s", ytdlp_url)
         metrics.brozzler_ydl_download_attempts.labels(ytdlp_host).inc(1)

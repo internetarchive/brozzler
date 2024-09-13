@@ -18,7 +18,7 @@ except ImportError:
     class Env(str, enum.Enum):
         """Values of the Prometheus ``env`` label applied to a
         :py:class:`.Registration` indicating the deployment environment in which
-        the the service being advertised is operating.
+        the service being advertised is operating.
         """
 
         qa = "qa"
