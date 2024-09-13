@@ -244,7 +244,7 @@ def brozzle_page(argv=None):
         "--registry_url",
         dest="registry_url",
         default=None,
-        help="registry url",
+        help="Prometheus scrape target registry URL",
     )
     arg_parser.add_argument(
         "--screenshot-full-page", dest="screenshot_full_page", action="store_true"
@@ -541,7 +541,7 @@ def brozzler_worker(argv=None):
         "--registry_url",
         dest="registry_url",
         default=None,
-        help="registry url",
+        help="Prometheus scrape target registry URL",
     )
     add_common_options(arg_parser, argv)
 
