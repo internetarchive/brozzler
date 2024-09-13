@@ -21,6 +21,7 @@ limitations under the License.
 import logging
 import brozzler
 import brozzler.browser
+from brozzler.model import VideoCaptureOptions
 import threading
 import time
 import urllib.request
@@ -250,7 +251,7 @@ class BrozzlerWorker:
             self.logger.info("needs fetch: %s", page)
             if (
                 self._is_video_type(page_headers)
-                and site.video_capture != "ENABLE_VIDEO_CAPTURE"
+                and site.video_capture != VideoCaptureOptions.ENABLE_VIDEO_CAPTURE.value
             ):
                 self.logger.info(
                     "skipping video content: video capture disabled for site"

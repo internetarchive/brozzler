@@ -20,6 +20,7 @@ import logging
 import yt_dlp
 from yt_dlp.utils import match_filter_func
 import brozzler
+from brozzler.model import VideoCaptureOptions
 import urllib.request
 import tempfile
 import urlcanon
@@ -38,7 +39,7 @@ def should_ytdlp(site, page, page_status):
     if page_status != 200:
         logging.info("skipping ytdlp: non-200 page status %s", page_status)
         return False
-    if site.video_capture != "ENABLE_VIDEO_CAPTURE":
+    if site.video_capture != VideoCaptureOptions.ENABLE_VIDEO_CAPTURE.value:
         logging.info("skipping ytdlp: site has video capture disabled")
         return False
 

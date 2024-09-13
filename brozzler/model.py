@@ -34,6 +34,7 @@ import urllib
 import uuid
 import yaml
 import zlib
+from enum import Enum
 from typing import Optional
 
 
@@ -219,6 +220,10 @@ class Job(doublethink.Document, ElapsedMixIn):
         self.status = "FINISHED"
         self.starts_and_stops[-1]["stop"] = doublethink.utcnow()
 
+class VideoCaptureOptions(Enum):
+    ENABLE_VIDEO_CAPTURE = "ENABLE_VIDEO_CAPTURE"
+    LIMIT_VIDEO_CAPTURE = "LIMIT_VIDEO_CAPTURE"
+    DISABLE_YTDLP_CAPTURE = "DISABLE_YTDLP_CAPTURE"
 
 class Site(doublethink.Document, ElapsedMixIn):
     logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -236,7 +241,7 @@ class Site(doublethink.Document, ElapsedMixIn):
         if "scope" not in self:
             self.scope = {}
         if "video_capture" not in self:
-            self.video_capture = "ENABLE_VIDEO_CAPTURE"
+            self.video_capture = VideoCaptureOptions.ENABLE_VIDEO_CAPTURE.value
 
         # backward compatibility
         if "surt" in self.scope:
