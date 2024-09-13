@@ -248,8 +248,13 @@ class BrozzlerWorker:
 
         if not self._needs_browsing(page_headers):
             self.logger.info("needs fetch: %s", page)
-            if self._is_video_type(page_headers) and site.video_capture != "ENABLE_VIDEO_CAPTURE":
-                self.logger.info("skipping video content: video capture disabled for site")
+            if (
+                self._is_video_type(page_headers)
+                and site.video_capture != "ENABLE_VIDEO_CAPTURE"
+            ):
+                self.logger.info(
+                    "skipping video content: video capture disabled for site"
+                )
             else:
                 self._fetch_url(site, page=page)
         else:
@@ -305,10 +310,15 @@ class BrozzlerWorker:
             return {}
 
     def _needs_browsing(self, page_headers) -> bool:
-        return not bool("content-type" in page_headers and "html" not in page_headers["content-type"])
+        return not bool(
+            "content-type" in page_headers
+            and "html" not in page_headers["content-type"]
+        )
 
     def _is_video_type(self, page_headers) -> bool:
-        return ("content-type" in page_headers and "video" in page_headers["content-type"])
+        return (
+            "content-type" in page_headers and "video" in page_headers["content-type"]
+        )
 
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
         def _on_screenshot(screenshot_jpeg):
