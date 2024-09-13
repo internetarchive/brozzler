@@ -11,24 +11,7 @@ try:
     from http_sd_registry.config import ClientConfig
 except ImportError:
     http_sd_registry = None
-    Client = None
 
-    import enum  # type: ignore
-
-    class Env(str, enum.Enum):
-        """Values of the Prometheus ``env`` label applied to a
-        :py:class:`.Registration` indicating the deployment environment in which
-        the service being advertised is operating.
-        """
-
-        qa = "qa"
-        prod = "prod"
-        dev = "dev"
-
-    Registration = None
-    Scheme = None
-    format_self_target = None
-    ClientConfig = None
 
 from prometheus_client import Counter, Gauge, Histogram, start_http_server
 
@@ -49,7 +32,9 @@ brozzler_ydl_download_successes = Counter("brozzler_ydl_download_successes", "co
 
 
 def register_prom_metrics(
-    registry_url: Optional[str] = None, metrics_port: int = 8888, env: Env = Env.qa
+    metrics_port: int = 8888,
+    registry_url: Optional[str] = None,
+    env: Optional[str] = None,
 ):
     # Start metrics endpoint for scraping
     start_http_server(metrics_port)

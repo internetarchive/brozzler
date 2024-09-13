@@ -112,10 +112,7 @@ class BrozzlerWorker:
         self._shutdown = threading.Event()
 
         # Setup metrics
-        registry_url = self._registry_url
-        metrics_port = self._metrics_port
-        env = self._env
-        metrics.register_prom_metrics(registry_url, metrics_port, env)
+        metrics.register_prom_metrics(self._metrics_port, self._registry_url)
 
     def _choose_warcprox(self):
         warcproxes = self._service_registry.available_services("warcprox")
