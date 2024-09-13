@@ -247,6 +247,12 @@ def brozzle_page(argv=None):
         help="Prometheus scrape target registry URL",
     )
     arg_parser.add_argument(
+        "--env",
+        dest="env",
+        default=None,
+        help="env for Prometheus target registry",
+    )
+    arg_parser.add_argument(
         "--screenshot-full-page", dest="screenshot_full_page", action="store_true"
     )
     arg_parser.add_argument(
@@ -293,6 +299,7 @@ def brozzle_page(argv=None):
         stealth=args.stealth,
         metrics_port=args.metrics_port,
         registry_url=args.registry_url,
+        env=args.env,
     )
 
     def on_screenshot(screenshot_jpeg):
@@ -543,6 +550,12 @@ def brozzler_worker(argv=None):
         default=None,
         help="Prometheus scrape target registry URL",
     )
+    arg_parser.add_argument(
+        "--env",
+        dest="env",
+        default=None,
+        help="env for Prometheus target registry",
+    )
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -601,6 +614,7 @@ def brozzler_worker(argv=None):
         stealth=args.stealth,
         metrics_port=args.metrics_port,
         registry_url=args.registry_url,
+        env=args.env,
     )
 
     signal.signal(signal.SIGQUIT, dump_state)
