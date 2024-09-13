@@ -72,8 +72,8 @@ class BrozzlerWorker:
         stealth=False,
         window_height=900,
         window_width=1400,
-        registry_url=None,
         metrics_port=None,
+        registry_url=None,
         env=None,
     ):
         self._frontier = frontier
@@ -97,8 +97,8 @@ class BrozzlerWorker:
         self._window_height = window_height
         self._window_width = window_width
         self._stealth = stealth
-        self._registry_url = registry_url
         self._metrics_port = metrics_port
+        self._registry_url = registry_url
         self._env = env
 
         self._browser_pool = brozzler.browser.BrowserPool(
