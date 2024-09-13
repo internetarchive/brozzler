@@ -35,6 +35,7 @@ import tempfile
 import urlcanon
 from requests.structures import CaseInsensitiveDict
 import rethinkdb as rdb
+from . import metrics
 from . import ydl
 
 r = rdb.RethinkDB()
@@ -71,6 +72,9 @@ class BrozzlerWorker:
         stealth=False,
         window_height=900,
         window_width=1400,
+        metrics_port=None,
+        registry_url=None,
+        env=None,
     ):
         self._frontier = frontier
         self._service_registry = service_registry
@@ -93,6 +97,9 @@ class BrozzlerWorker:
         self._window_height = window_height
         self._window_width = window_width
         self._stealth = stealth
+        self._metrics_port = metrics_port
+        self._registry_url = registry_url
+        self._env = env
 
         self._browser_pool = brozzler.browser.BrowserPool(
             max_browsers, chrome_exe=chrome_exe, ignore_cert_errors=True
@@ -103,6 +110,9 @@ class BrozzlerWorker:
         self._thread = None
         self._start_stop_lock = threading.Lock()
         self._shutdown = threading.Event()
+
+        # Setup metrics
+        metrics.register_prom_metrics(self._metrics_port, self._registry_url, self._env)
 
     def _choose_warcprox(self):
         warcproxes = self._service_registry.available_services("warcprox")
@@ -267,6 +277,7 @@ class BrozzlerWorker:
             ):
                 try:
                     ydl_outlinks = ydl.do_youtube_dl(self, site, page)
+                    metrics.brozzler_ydl_urls_checked.inc(1)
                     outlinks.update(ydl_outlinks)
                 except brozzler.ReachedLimit as e:
                     raise
@@ -312,7 +323,15 @@ class BrozzlerWorker:
             return False
         return True
 
+    @metrics.brozzler_page_processing_duration_seconds.time()
+    @metrics.brozzler_in_progress_pages.track_inprogress()
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
+        def update_page_metrics(page, outlinks):
+            """Update page-level Prometheus metrics."""
+            metrics.brozzler_last_page_crawled_time.set_to_current_time()
+            metrics.brozzler_pages_crawled.inc(1)
+            metrics.brozzler_outlinks_found.inc(len(outlinks))
+
         def _on_screenshot(screenshot_jpeg):
             if on_screenshot:
                 on_screenshot(screenshot_jpeg)
@@ -417,6 +436,7 @@ class BrozzlerWorker:
         )
         if final_page_url != page.url:
             page.note_redirect(final_page_url)
+        update_page_metrics(page, outlinks)
         return outlinks
 
     def _fetch_url(self, site, url=None, page=None):

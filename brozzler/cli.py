@@ -235,6 +235,24 @@ def brozzle_page(argv=None):
         help="Try to avoid web bot detection",
     )
     arg_parser.add_argument(
+        "--metrics_port",
+        dest="metrics_port",
+        default=8888,
+        help="Prometheus metrics port",
+    )
+    arg_parser.add_argument(
+        "--registry_url",
+        dest="registry_url",
+        default=None,
+        help="Prometheus scrape target registry URL",
+    )
+    arg_parser.add_argument(
+        "--env",
+        dest="env",
+        default=None,
+        help="env for Prometheus target registry",
+    )
+    arg_parser.add_argument(
         "--screenshot-full-page", dest="screenshot_full_page", action="store_true"
     )
     arg_parser.add_argument(
@@ -279,6 +297,9 @@ def brozzle_page(argv=None):
         window_height=args.window_height,
         window_width=args.window_width,
         stealth=args.stealth,
+        metrics_port=args.metrics_port,
+        registry_url=args.registry_url,
+        env=args.env,
     )
 
     def on_screenshot(screenshot_jpeg):
@@ -517,6 +538,24 @@ def brozzler_worker(argv=None):
         action="store_true",
         help="Try to avoid web bot detection",
     )
+    arg_parser.add_argument(
+        "--metrics_port",
+        dest=metrics_port,
+        default=8888,
+        help="Prometheus metrics port",
+    )
+    arg_parser.add_argument(
+        "--registry_url",
+        dest="registry_url",
+        default=None,
+        help="Prometheus scrape target registry URL",
+    )
+    arg_parser.add_argument(
+        "--env",
+        dest="env",
+        default=None,
+        help="env for Prometheus target registry",
+    )
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
@@ -573,6 +612,9 @@ def brozzler_worker(argv=None):
         skip_visit_hashtags=args.skip_visit_hashtags,
         skip_youtube_dl=args.skip_youtube_dl,
         stealth=args.stealth,
+        metrics_port=args.metrics_port,
+        registry_url=args.registry_url,
+        env=args.env,
     )
 
     signal.signal(signal.SIGQUIT, dump_state)

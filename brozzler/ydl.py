@@ -29,6 +29,8 @@ import datetime
 from cassandra import ReadTimeout
 from cassandra.cluster import Cluster
 
+from . import metrics
+
 import threading
 import traceback
 import doublethink
@@ -350,11 +352,12 @@ def _remember_videos(page, pushed_videos=None):
 
 def _try_youtube_dl(worker, ydl, site, page):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
+    ytdlp_host = ytdlp_url.split("//")[-1].split("/")[0].split("?")[0]
     attempt = 0
     while attempt < MAX_YTDLP_ATTEMPTS:
         try:
             logging.info("trying yt-dlp on %s", ytdlp_url)
-
+            metrics.brozzler_ydl_download_attempts.labels(ytdlp_host).inc(1)
             with brozzler.thread_accept_exceptions():
                 # we do whatwg canonicalization here to avoid "<urlopen error
                 # no host given>" resulting in ProxyError
@@ -402,7 +405,7 @@ def _try_youtube_dl(worker, ydl, site, page):
             "Proxyrack proxy attempt(s) failed for unknown reason(s)"
         )
     logging.info("ytdlp completed successfully")
-
+    metrics.brozzler_ydl_download_successes.labels(ytdlp_host).inc(1)
     _remember_videos(page, ydl.pushed_videos)
     if worker._using_warcprox(site):
         info_json = json.dumps(ie_result, sort_keys=True, indent=4)
