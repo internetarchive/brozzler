@@ -220,10 +220,12 @@ class Job(doublethink.Document, ElapsedMixIn):
         self.status = "FINISHED"
         self.starts_and_stops[-1]["stop"] = doublethink.utcnow()
 
+
 class VideoCaptureOptions(Enum):
     ENABLE_VIDEO_CAPTURE = "ENABLE_VIDEO_CAPTURE"
     LIMIT_VIDEO_CAPTURE = "LIMIT_VIDEO_CAPTURE"
     DISABLE_YTDLP_CAPTURE = "DISABLE_YTDLP_CAPTURE"
+
 
 class Site(doublethink.Document, ElapsedMixIn):
     logger = logging.getLogger(__module__ + "." + __qualname__)
