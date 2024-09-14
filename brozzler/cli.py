@@ -297,7 +297,7 @@ def brozzle_page(argv=None):
         window_height=args.window_height,
         window_width=args.window_width,
         stealth=args.stealth,
-        metrics_port=args.metrics_port,
+        metrics_port=int(args.metrics_port),
         registry_url=args.registry_url,
         env=args.env,
     )
@@ -540,7 +540,7 @@ def brozzler_worker(argv=None):
     )
     arg_parser.add_argument(
         "--metrics_port",
-        dest=metrics_port,
+        dest="metrics_port",
         default=8888,
         help="Prometheus metrics port",
     )
@@ -612,7 +612,7 @@ def brozzler_worker(argv=None):
         skip_visit_hashtags=args.skip_visit_hashtags,
         skip_youtube_dl=args.skip_youtube_dl,
         stealth=args.stealth,
-        metrics_port=args.metrics_port,
+        metrics_port=int(args.metrics_port),
         registry_url=args.registry_url,
         env=args.env,
     )

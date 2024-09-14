@@ -42,12 +42,18 @@ def register_prom_metrics(
     if registry_url is None:
         return
 
+    env_for_prom = None
+    if env == "qa":
+        env_for_prom = Env.qa
+    elif env == "prod":
+        env_for_prom = Env.prod
+
     config = ClientConfig(server_url_base=registry_url)
     client = Client(config)
     target = format_self_target(scrape_port=metrics_port)
     registration = Registration(
         target=target,
-        env=env,
+        env=env_for_prom,
         scheme=Scheme.http,
     )
     client.keep_registered_threaded(registration)
