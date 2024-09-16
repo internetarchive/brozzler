@@ -29,8 +29,13 @@ import doublethink
 import datetime
 from . import metrics
 import threading
+import time
 
 thread_local = threading.local()
+
+PROXYRACK_PROXY = "@@@"
+MAX_YTDLP_ATTEMPTS = 4
+YTDLP_WAIT = 10
 
 
 def should_ytdlp(site, page, page_status, skip_av_seeds):
@@ -263,6 +268,7 @@ def _build_youtube_dl(worker, destdir, site, page):
         "logger": logging.getLogger("yt_dlp"),
         "verbose": False,
         "quiet": False,
+        "proxy": PROXYRACK_PROXY,
     }
 
     # skip proxying yt-dlp v.2023.07.06
@@ -298,58 +304,111 @@ def _remember_videos(page, pushed_videos=None):
 def _try_youtube_dl(worker, ydl, site, page):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     ytdlp_host = ytdlp_url.split("//")[-1].split("/")[0].split("?")[0]
-    try:
-        logging.info("trying yt-dlp on %s", ytdlp_url)
-        metrics.brozzler_ydl_download_attempts.labels(ytdlp_host).inc(1)
-        with brozzler.thread_accept_exceptions():
-            # we do whatwg canonicalization here to avoid "<urlopen error
-            # no host given>" resulting in ProxyError
-            # needs automated test
-            # and yt-dlp needs sanitize_info for extract_info
-            ie_result = ydl.sanitize_info(
-                ydl.extract_info(str(urlcanon.whatwg(ytdlp_url)))
-            )
-        metrics.brozzler_ydl_download_successes.labels(ytdlp_host).inc(1)
-        _remember_videos(page, ydl.pushed_videos)
-        if worker._using_warcprox(site):
-            info_json = json.dumps(ie_result, sort_keys=True, indent=4)
-            logging.info(
-                "sending WARCPROX_WRITE_RECORD request to warcprox "
-                "with yt-dlp json for %s",
-                ytdlp_url,
-            )
-            worker._warcprox_write_record(
-                warcprox_address=worker._proxy_for(site),
-                url="youtube-dl:%s" % str(urlcanon.semantic(ytdlp_url)),
-                warc_type="metadata",
-                content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
-                payload=info_json.encode("utf-8"),
-                extra_headers=site.extra_headers(page),
-            )
-        return ie_result
-    except brozzler.ShutdownRequested as e:
-        raise
-    except Exception as e:
-        if hasattr(e, "exc_info") and e.exc_info[0] == yt_dlp.utils.UnsupportedError:
-            return None
-        elif (
-            hasattr(e, "exc_info")
-            and e.exc_info[0] == urllib.error.HTTPError
-            and hasattr(e.exc_info[1], "code")
-            and e.exc_info[1].code == 420
-        ):
-            raise brozzler.ReachedLimit(e.exc_info[1])
-        elif (
-            hasattr(e, "exc_info")
-            and e.exc_info[0] == urllib.error.URLError
-            and worker._proxy_for(site)
-        ):
-            # connection problem when using a proxy == proxy error (XXX?)
-            raise brozzler.ProxyError(
-                "yt-dlp hit apparent proxy error from " "%s" % ytdlp_url
-            ) from e
-        else:
+    attempt = 0
+    while attempt < MAX_YTDLP_ATTEMPTS:
+        try:
+            logging.info("trying yt-dlp on %s", ytdlp_url)
+            metrics.brozzler_ydl_download_attempts.labels(ytdlp_host).inc(1)
+            with brozzler.thread_accept_exceptions():
+                # we do whatwg canonicalization here to avoid "<urlopen error
+                # no host given>" resulting in ProxyError
+                # needs automated test
+                # and yt-dlp needs sanitize_info for extract_info
+                ie_result = ydl.sanitize_info(
+                    ydl.extract_info(str(urlcanon.whatwg(ytdlp_url)))
+                )
+            metrics.brozzler_ydl_download_successes.labels(ytdlp_host).inc(1)
+            break
+        except brozzler.ShutdownRequested as e:
             raise
+        except Exception as e:
+            if (
+                hasattr(e, "exc_info")
+                and e.exc_info[0] == yt_dlp.utils.UnsupportedError
+            ):
+                return None
+            elif (
+                hasattr(e, "exc_info")
+                and e.exc_info[0] == urllib.error.HTTPError
+                and hasattr(e.exc_info[1], "code")
+                and e.exc_info[1].code == 420
+            ):
+                raise brozzler.ReachedLimit(e.exc_info[1])
+            else:
+                # OSError('Tunnel connection failed: 464 Host Not Allowed') (caused by ProxyError...)
+                # and others...
+                attempt += 1
+                if attempt == MAX_YTDLP_ATTEMPTS:
+                    logging.warning(
+                        "Failed after %s attempts. Error: %s", MAX_YTDLP_ATTEMPTS, e
+                    )
+                    raise brozzler.ProxyError(
+                        "yt-dlp hit proxyrack proxy error from %s" % ytdlp_url
+                    )
+                else:
+                    logging.info(
+                        "Attempt %s failed. Retrying in %s seconds...",
+                        attempt,
+                        YTDLP_WAIT,
+                    )
+                    time.sleep(YTDLP_WAIT)
+    else:
+        raise brozzler.ProxyError(
+            "Proxyrack proxy attempt(s) failed for unknown reason(s)"
+        )
+    logging.info("ytdlp completed successfully")
+
+    _remember_videos(page, ydl.pushed_videos)
+    if worker._using_warcprox(site):
+        info_json = json.dumps(ie_result, sort_keys=True, indent=4)
+        logging.info(
+            "sending WARCPROX_WRITE_RECORD request to warcprox "
+            "with yt-dlp json for %s",
+            ytdlp_url,
+        )
+
+        attempt = 0
+        while attempt < MAX_YTDLP_ATTEMPTS:
+            try:
+                worker._warcprox_write_record(
+                    warcprox_address=worker._proxy_for(site),
+                    url="youtube-dl:%s" % str(urlcanon.semantic(ytdlp_url)),
+                    warc_type="metadata",
+                    content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
+                    payload=info_json.encode("utf-8"),
+                    extra_headers=site.extra_headers(page),
+                )
+                break
+            except Exception as e:
+                # connection problem when using a proxy == proxy error
+                if (
+                    hasattr(e, "exc_info")
+                    and e.exc_info[0] == urllib.error.URLError
+                    and worker._proxy_for(site)
+                ):
+                    attempt += 1
+                    if attempt == MAX_YTDLP_ATTEMPTS:
+                        logging.warning(
+                            "Failed after %s attempts. Error: %s", MAX_YTDLP_ATTEMPTS, e
+                        )
+                        raise brozzler.ProxyError(
+                            "yt-dlp hit proxy error storing media from %s with "
+                            % ytdlp_url
+                        )
+                    else:
+                        logging.info(
+                            "Attempt %s failed. Retrying in %s seconds...",
+                            attempt,
+                            YTDLP_WAIT,
+                        )
+                        time.sleep(YTDLP_WAIT)
+                else:
+                    raise
+        else:
+            raise brozzler.ProxyError(
+                "Proxy attempt(s) storing media failed for unknown reason(s)"
+            )
+    return ie_result
 
 
 def do_youtube_dl(worker, site, page):
