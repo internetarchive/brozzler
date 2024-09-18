@@ -27,8 +27,8 @@ brozzler_resources_fetched = Counter("brozzler_resources_fetched", "number of re
 brozzler_resources_size_total = Counter("brozzler_resources_size_total", "total size of resources fetched", labelnames=["resource_type"])
 brozzler_resources_fetch_time = Counter("brozzler_resources_fetch_time", "time spent fetching resources", labelnames=["resource_type"])
 brozzler_ydl_urls_checked = Counter("brozzler_ydl_urls_checked", "count of urls checked by brozzler yt-dlp")
-brozzler_ydl_extract_attempts = Counter("brozzler_ydl_download_attempts", "count of download attempted by brozzler yt-dlp", labelnames=["youtube_host"])
-brozzler_ydl_extract_successes = Counter("brozzler_ydl_download_successes", "count of downloads completed by brozzler yt-dlp", labelnames=["youtube_host"])
+brozzler_ydl_extract_attempts = Counter("brozzler_ydl_extract_attempts", "count of extracts attempted by brozzler yt-dlp", labelnames=["youtube_host"])
+brozzler_ydl_extract_successes = Counter("brozzler_ydl_extract_successes", "count of extracts completed by brozzler yt-dlp", labelnames=["youtube_host"])
 # fmt: on
 
 
