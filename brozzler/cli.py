@@ -236,15 +236,16 @@ def brozzle_page(argv=None):
     )
     arg_parser.add_argument(
         "--metrics_port",
+        type=int,
         dest="metrics_port",
         default=8888,
-        help="Prometheus metrics port",
+        help="Port for brozzler's Prometheus scrape endpoint",
     )
     arg_parser.add_argument(
         "--registry_url",
         dest="registry_url",
         default=None,
-        help="Prometheus scrape target registry URL",
+        help="http-sd-registry url, for Prometheus metrics discovery",
     )
     arg_parser.add_argument(
         "--env",
@@ -540,15 +541,16 @@ def brozzler_worker(argv=None):
     )
     arg_parser.add_argument(
         "--metrics_port",
+        type=int,
         dest="metrics_port",
         default=8888,
-        help="Prometheus metrics port",
+        help="Port for brozzler's Prometheus scrape endpoint",
     )
     arg_parser.add_argument(
         "--registry_url",
         dest="registry_url",
         default=None,
-        help="Prometheus scrape target registry URL",
+        help="http-sd-registry url, for Prometheus metrics discovery",
     )
     arg_parser.add_argument(
         "--env",
