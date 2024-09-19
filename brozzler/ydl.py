@@ -33,7 +33,7 @@ import time
 
 thread_local = threading.local()
 
-PROXYRACK_PROXY = "@@@"
+PROXYRACK_PROXY = ""
 MAX_YTDLP_ATTEMPTS = 4
 YTDLP_WAIT = 10
 
@@ -271,13 +271,19 @@ def _build_youtube_dl(worker, destdir, site, page):
         "logger": logging.getLogger("yt_dlp"),
         "verbose": False,
         "quiet": False,
-        # does this make sense when we're generally downloading one at a time?
+        # recommended to avoid bot detection
         "sleep_interval": 25,
         "max_sleep_interval": 90,
-        "proxy": PROXYRACK_PROXY,
     }
 
-    # skip proxying yt-dlp v.2023.07.06
+    ytdlp_url = page.redirect_url if page.redirect_url else page.url
+    youtube_host = (
+        "youtube.com" in ytdlp_url.split("//")[-1].split("/")[0].split("?")[0]
+    )
+    if youtube_host:
+        ydl_opts["proxy"] = PROXYRACK_PROXY
+
+    # skip warcprox proxying yt-dlp v.2023.07.06
     # if worker._proxy_for(site):
     #    ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
 
@@ -285,6 +291,8 @@ def _build_youtube_dl(worker, destdir, site, page):
     if site.extra_headers():
         ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers(page)))
     ydl.pushed_videos = []
+    ydl.url = ytdlp_url
+    ydl.youtube_host = youtube_host
 
     return ydl
 
@@ -308,29 +316,25 @@ def _remember_videos(page, pushed_videos=None):
 
 
 def _try_youtube_dl(worker, ydl, site, page):
-    ytdlp_url = page.redirect_url if page.redirect_url else page.url
-    youtube_host = (
-        "youtube.com" in ytdlp_url.split("//")[-1].split("/")[0].split("?")[0]
-    )
     attempt = 0
     while attempt < MAX_YTDLP_ATTEMPTS:
         try:
-            logging.info("trying yt-dlp on %s", ytdlp_url)
-            # should_download_vid = not youtube_host
+            logging.info("trying yt-dlp on %s", ydl.url)
+            # should_download_vid = not ydl.youtube_host
             # then
-            # ydl.extract_info(str(urlcanon.whatwg(ytdlp_url)), download=should_download_vid)
-            # if youtube_host and ie_result:
+            # ydl.extract_info(str(urlcanon.whatwg(ydl.url)), download=should_download_vid)
+            # if ydl.youtube_host and ie_result:
             #     download_url = ie_result.get("url")
-            metrics.brozzler_ydl_extract_attempts.labels(youtube_host).inc(1)
+            metrics.brozzler_ydl_extract_attempts.labels(ydl.youtube_host).inc(1)
             with brozzler.thread_accept_exceptions():
                 # we do whatwg canonicalization here to avoid "<urlopen error
                 # no host given>" resulting in ProxyError
                 # needs automated test
                 # and yt-dlp needs sanitize_info for extract_info
                 ie_result = ydl.sanitize_info(
-                    ydl.extract_info(str(urlcanon.whatwg(ytdlp_url)))
+                    ydl.extract_info(str(urlcanon.whatwg(ydl.url)))
                 )
-            metrics.brozzler_ydl_extract_successes.labels(youtube_host).inc(1)
+            metrics.brozzler_ydl_extract_successes.labels(ydl.youtube_host).inc(1)
             break
         except brozzler.ShutdownRequested as e:
             raise
@@ -348,6 +352,7 @@ def _try_youtube_dl(worker, ydl, site, page):
             ):
                 raise brozzler.ReachedLimit(e.exc_info[1])
             else:
+                # todo: other errors to handle separately?
                 # OSError('Tunnel connection failed: 464 Host Not Allowed') (caused by ProxyError...)
                 # and others...
                 attempt += 1
@@ -356,7 +361,7 @@ def _try_youtube_dl(worker, ydl, site, page):
                         "Failed after %s attempts. Error: %s", MAX_YTDLP_ATTEMPTS, e
                     )
                     raise brozzler.ProxyError(
-                        "yt-dlp hit proxyrack proxy error from %s" % ytdlp_url
+                        "yt-dlp hit possible proxyrack proxy error from %s" % ydl.url
                     )
                 else:
                     logging.info(
@@ -377,11 +382,11 @@ def _try_youtube_dl(worker, ydl, site, page):
         logging.info(
             "sending WARCPROX_WRITE_RECORD request to warcprox "
             "with yt-dlp json for %s",
-            ytdlp_url,
+            ydl.url,
         )
         worker._warcprox_write_record(
             warcprox_address=worker._proxy_for(site),
-            url="youtube-dl:%s" % str(urlcanon.semantic(ytdlp_url)),
+            url="youtube-dl:%s" % str(urlcanon.semantic(ydl.url)),
             warc_type="metadata",
             content_type="application/vnd.youtube-dl_formats+json;charset=utf-8",
             payload=info_json.encode("utf-8"),
