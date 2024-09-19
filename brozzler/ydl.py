@@ -422,7 +422,7 @@ def _try_youtube_dl(worker, ydl, site, page):
             "Proxyrack proxy attempt(s) failed for unknown reason(s)"
         )
     logging.info("ytdlp completed successfully")
-    metrics.brozzler_ydl_download_successes.labels(ytdlp_host).inc(1)
+
     _remember_videos(page, ydl.pushed_videos)
     if worker._using_warcprox(site):
         info_json = json.dumps(ie_result, sort_keys=True, indent=4)
