@@ -101,6 +101,8 @@ def new_job(frontier, job_conf):
         job.id = job_conf["id"]
     if "max_claimed_sites" in job_conf:
         job.max_claimed_sites = job_conf["max_claimed_sites"]
+    if "pdfs_only" in job_conf:
+        job.pdfs_only = job_conf["pdfs_only"]
     job.save()
 
     sites = []
@@ -199,6 +201,8 @@ class Job(doublethink.Document, ElapsedMixIn):
     def populate_defaults(self):
         if not "status" in self:
             self.status = "ACTIVE"
+        if "pdfs_only" not in self:
+            self.pdfs_only = False
         if not "starts_and_stops" in self:
             if self.get("started"):  # backward compatibility
                 self.starts_and_stops = [
@@ -224,16 +228,17 @@ class Job(doublethink.Document, ElapsedMixIn):
 class VideoCaptureOptions(Enum):
     """
     Enumeration of possible values for the `video_capture` config key.
-        - ENABLE_VIDEO_CAPTURE: All video is captured.
-        - DISABLE_VIDEO_CAPTURE: No video is captured.
+        - ENABLE_VIDEO_CAPTURE (default): All video is captured.
+        - DISABLE_VIDEO_CAPTURE: No video is captured. This is effectively a
+          combination of the next two values.
         - BLOCK_VIDEO_MIME_TYPES: Any response with a Content-Type header
           containing the word "video" is not captured.
         - DISABLE_YTDLP_CAPTURE: Video capture via yt-dlp is disabled.
 
-    Note: Ensuring full video MIME type blocking requires an entry in the
-          Warcprox-Meta header `mime-type-filters` key to fully block videos by
-          MIME type.
+    Note: Ensuring full video MIME type blocking requires an additional entry in the
+          Warcprox-Meta header `mime-type-filters` key.
     """
+
     ENABLE_VIDEO_CAPTURE = "ENABLE_VIDEO_CAPTURE"
     DISABLE_VIDEO_CAPTURE = "DISABLE_VIDEO_CAPTURE"
     BLOCK_VIDEO_MIME_TYPES = "BLOCK_VIDEO_MIME_TYPES"

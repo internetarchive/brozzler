@@ -107,6 +107,18 @@ Puts a cap on the number of sites belonging to a given job that can be brozzled
 simultaneously across the cluster. Addresses the problem of a job with many
 seeds starving out other jobs.
 
+``pdfs_only``
+~~~~~~~~~~~~~~~~~~~~~
++---------+----------+-----------+
+| type    | required | default   |
++=========+==========+===========+
+| boolean | no       | ``false`` |
++---------+----------+-----------+
+Limits capture to PDFs based on MIME type. This value will only impact
+processing of outlinks within Brozzler. Fully limiting a crawl to only PDFs
+requires an additional entry in the Warcprox-Meta header ``mime-type-filters``
+key to fully block videos by MIME type.
+
 ``seeds``
 ~~~~~~~~~
 +------------------------+----------+---------+
@@ -157,6 +169,24 @@ and has ``method="POST"`` is considered to be a login form. When forms have
 other fields like checkboxes and/or hidden fields, brozzler will leave
 the default values in place. Brozzler submits login forms after page load.
 Then brozzling proceeds as usual.
+
+``video_capture``
+~~~~~~~~~~~~~~~~~
++--------+----------+--------------------------+
+| type   | required | default                  |
++========+==========+==========================+
+| string | yes      | ``ENABLE_VIDEO_CAPTURE`` |
++--------+----------+--------------------------+
+Determines the level of video capture for the seed. This is an enumeration with four possible values:
+* ENABLE_VIDEO_CAPTURE (default): All video is captured.
+* DISABLE_VIDEO_CAPTURE: No video is captured. This is effectively a
+  combination of the next two values.
+* BLOCK_VIDEO_MIME_TYPES: Any response with a Content-Type header containing
+  the word "video" is not captured.
+* DISABLE_YTDLP_CAPTURE: Video capture via yt-dlp is disabled.
+
+*Note: Ensuring full video MIME type blocking requires an additional entry in
+the Warcprox-Meta header `mime-type-filters` key.*
 
 Seed-level / top-level settings
 -------------------------------

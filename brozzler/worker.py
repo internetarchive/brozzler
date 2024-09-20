@@ -257,9 +257,7 @@ class BrozzlerWorker:
                     "skipping video content: video MIME type capture disabled for site"
                 )
             elif site.pdfs_only and not self._is_pdf(page_headers):
-                self.logger.info(
-                    "skipping non-PDF content: PDFs only option enabled"
-                )
+                self.logger.info("skipping non-PDF content: PDFs only option enabled")
             else:
                 self._fetch_url(site, page=page)
         else:
@@ -334,7 +332,8 @@ class BrozzlerWorker:
         Determinse if the page's Content-Type header specifies that it is a PDF.
         """
         return (
-            "content-type" in page_headers and "application/pdf" in page_headers["content-type"]
+            "content-type" in page_headers
+            and "application/pdf" in page_headers["content-type"]
         )
 
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
