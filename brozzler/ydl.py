@@ -39,7 +39,10 @@ def should_ytdlp(site, page, page_status):
     if page_status != 200:
         logging.info("skipping ytdlp: non-200 page status %s", page_status)
         return False
-    if site.video_capture != VideoCaptureOptions.ENABLE_VIDEO_CAPTURE.value:
+    if site.video_capture in [
+        VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value,
+        VideoCaptureOptions.DISABLE_YTDLP_CAPTURE.value,
+    ]:
         logging.info("skipping ytdlp: site has video capture disabled")
         return False
 

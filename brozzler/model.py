@@ -222,8 +222,21 @@ class Job(doublethink.Document, ElapsedMixIn):
 
 
 class VideoCaptureOptions(Enum):
+    """
+    Enumeration of possible values for the `video_capture` config key.
+        - ENABLE_VIDEO_CAPTURE: All video is captured.
+        - DISABLE_VIDEO_CAPTURE: No video is captured.
+        - BLOCK_VIDEO_MIME_TYPES: Any response with a Content-Type header
+          containing the word "video" is not captured.
+        - DISABLE_YTDLP_CAPTURE: Video capture via yt-dlp is disabled.
+
+    Note: Ensuring full video MIME type blocking requires an entry in the
+          Warcprox-Meta header `mime-type-filters` key to fully block videos by
+          MIME type.
+    """
     ENABLE_VIDEO_CAPTURE = "ENABLE_VIDEO_CAPTURE"
-    LIMIT_VIDEO_CAPTURE = "LIMIT_VIDEO_CAPTURE"
+    DISABLE_VIDEO_CAPTURE = "DISABLE_VIDEO_CAPTURE"
+    BLOCK_VIDEO_MIME_TYPES = "BLOCK_VIDEO_MIME_TYPES"
     DISABLE_YTDLP_CAPTURE = "DISABLE_YTDLP_CAPTURE"
 
 
