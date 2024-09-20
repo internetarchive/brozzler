@@ -288,11 +288,14 @@ def _build_youtube_dl(worker, destdir, site, page):
     youtube_host = (
         "youtube.com" in ytdlp_url.split("//")[-1].split("/")[0].split("?")[0]
     )
-    if youtube_host:
+    if youtube_host and YTDLP_PROXY:
         ydl_opts["proxy"] = YTDLP_PROXY
-        logging.info("using yt-dlp proxy %s", YTDLP_PROXY)
+        ytdlp_proxy_for_print = (
+            YTDLP_PROXY.split("@")[1] if "@" in YTDLP_PROXY else "@@@"
+        )
+        logging.info("using yt-dlp proxy ... %s", ytdlp_proxy_for_print)
 
-    # skip warcprox proxying yt-dlp v.2023.07.06
+    # skip warcprox proxying yt-dlp v.2023.07.06: youtube extractor using ranges
     # if worker._proxy_for(site):
     #    ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
 
