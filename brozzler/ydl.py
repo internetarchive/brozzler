@@ -38,7 +38,7 @@ import time
 
 thread_local = threading.local()
 
-PROXYRACK_PROXY = ""
+YTDLP_PROXY = ""
 MAX_YTDLP_ATTEMPTS = 4
 YTDLP_WAIT = 10
 
@@ -286,6 +286,14 @@ def _build_youtube_dl(worker, destdir, site, page):
             worker.logger.info(
                 "[ydl_postprocess_hook] postprocessor: {}".format(d["postprocessor"])
             )
+            youtube_host = (
+                "youtube.com"
+                in d["info_dict"]["webpage_url"]
+                .split("//")[-1]
+                .split("/")[0]
+                .split("?")[0]
+            )
+            metrics.brozzler_ydl_download_successes.labels(youtube_host).inc(1)
             if worker._using_warcprox(site):
                 _YoutubeDL._push_video_to_warcprox(
                     _YoutubeDL, site, d["info_dict"], d["postprocessor"]
@@ -328,7 +336,8 @@ def _build_youtube_dl(worker, destdir, site, page):
         "youtube.com" in ytdlp_url.split("//")[-1].split("/")[0].split("?")[0]
     )
     if youtube_host:
-        ydl_opts["proxy"] = PROXYRACK_PROXY
+        ydl_opts["proxy"] = YTDLP_PROXY
+        logging.info("using yt-dlp proxy %s", YTDLP_PROXY)
 
     # skip warcprox proxying yt-dlp v.2023.07.06
     # if worker._proxy_for(site):
@@ -408,7 +417,7 @@ def _try_youtube_dl(worker, ydl, site, page):
                         "Failed after %s attempts. Error: %s", MAX_YTDLP_ATTEMPTS, e
                     )
                     raise brozzler.ProxyError(
-                        "yt-dlp hit possible proxyrack proxy error from %s" % ydl.url
+                        "yt-dlp hit possible external proxy error from %s" % ydl.url
                     )
                 else:
                     logging.info(
@@ -418,9 +427,7 @@ def _try_youtube_dl(worker, ydl, site, page):
                     )
                     time.sleep(YTDLP_WAIT)
     else:
-        raise brozzler.ProxyError(
-            "Proxyrack proxy attempt(s) failed for unknown reason(s)"
-        )
+        raise brozzler.ProxyError("Proxy attempt(s) failed for unknown reason(s)")
     logging.info("ytdlp completed successfully")
 
     _remember_videos(page, ydl.pushed_videos)
