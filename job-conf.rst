@@ -178,6 +178,7 @@ Then brozzling proceeds as usual.
 | string | yes      | ``ENABLE_VIDEO_CAPTURE`` |
 +--------+----------+--------------------------+
 Determines the level of video capture for the seed. This is an enumeration with four possible values:
+
 * ENABLE_VIDEO_CAPTURE (default): All video is captured.
 * DISABLE_VIDEO_CAPTURE: No video is captured. This is effectively a
   combination of the next two values.
