@@ -117,7 +117,7 @@ seeds starving out other jobs.
 Limits capture to PDFs based on MIME type. This value will only impact
 processing of outlinks within Brozzler. Fully limiting a crawl to only PDFs
 requires an additional entry in the Warcprox-Meta header ``mime-type-filters``
-key to fully block videos by MIME type.
+key.
 
 ``seeds``
 ~~~~~~~~~

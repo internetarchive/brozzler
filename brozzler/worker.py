@@ -329,7 +329,7 @@ class BrozzlerWorker:
 
     def _is_pdf(self, page_headers) -> bool:
         """
-        Determinse if the page's Content-Type header specifies that it is a PDF.
+        Determines if the page's Content-Type header specifies that it is a PDF.
         """
         return (
             "content-type" in page_headers
