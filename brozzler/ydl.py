@@ -184,31 +184,29 @@ def _build_youtube_dl(worker, destdir, site, page):
                 worker._proxy_for(site),
                 url,
             )
-            try:
-                with open(info_dict["filepath"], "rb") as f:
-                    # include content-length header to avoid chunked
-                    # transfer, which warcprox currently rejects
-                    extra_headers = dict(site.extra_headers())
-                    extra_headers["content-length"] = size
-                    request, response = worker._warcprox_write_record(
-                        warcprox_address=worker._proxy_for(site),
-                        url=url,
-                        warc_type="resource",
-                        content_type=mimetype,
-                        payload=f,
-                        extra_headers=extra_headers,
-                    )
-                # consulted by _remember_videos()
-                ydl.pushed_videos.append(
-                    {
-                        "url": url,
-                        "response_code": response.code,
-                        "content-type": mimetype,
-                        "content-length": size,
-                    }
+            with open(info_dict["filepath"], "rb") as f:
+                # include content-length header to avoid chunked
+                # transfer, which warcprox currently rejects
+                extra_headers = dict(site.extra_headers())
+                extra_headers["content-length"] = size
+                request, response = worker._warcprox_write_record(
+                    warcprox_address=worker._proxy_for(site),
+                    url=url,
+                    warc_type="resource",
+                    content_type=mimetype,
+                    payload=f,
+                    extra_headers=extra_headers,
                 )
-            except:
-                traceback.print_exc()
+
+            # consulted by _remember_videos()
+            ydl.pushed_videos.append(
+                {
+                    "url": url,
+                    "response_code": response.code,
+                    "content-type": mimetype,
+                    "content-length": size,
+                }
+            )
 
     def maybe_heartbeat_site_last_claimed(*args, **kwargs):
         # in case yt-dlp takes a long time, heartbeat site.last_claimed
