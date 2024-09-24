@@ -440,7 +440,7 @@ def brozzler_new_site(argv=None):
 def brozzler_new_page(argv=None):
     """
     Command line utility entry point for queuing a new brozzler page.
-    Takes a url and site_id and adds a page object in rethinkdb, which
+    Takes a url, site_id, and parent_page_id, and adds a page object in rethinkdb, which
     brozzler-workers will look at and start crawling.
     """
     argv = argv or sys.argv
