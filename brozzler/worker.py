@@ -72,7 +72,7 @@ class BrozzlerWorker:
         stealth=False,
         window_height=900,
         window_width=1400,
-        metrics_port=None,
+        metrics_port=0,
         registry_url=None,
         env=None,
     ):
@@ -111,8 +111,15 @@ class BrozzlerWorker:
         self._start_stop_lock = threading.Lock()
         self._shutdown = threading.Event()
 
-        # Setup metrics
-        metrics.register_prom_metrics(self._metrics_port, self._registry_url, self._env)
+        # set up metrics
+        if self._metrics_port > 0:
+            metrics.register_prom_metrics(
+                self._metrics_port, self._registry_url, self._env
+            )
+        else:
+            logging.warning(
+                "not starting prometheus scrape endpoint: metrics_port is undefined"
+            )
 
     def _choose_warcprox(self):
         warcproxes = self._service_registry.available_services("warcprox")
@@ -285,6 +292,11 @@ class BrozzlerWorker:
                     raise
                 except brozzler.ProxyError:
                     raise
+                except brozzler.VideoExtractorError as e:
+                    logging.error(
+                        "error extracting video info: %s",
+                        e,
+                    )
                 except Exception as e:
                     if (
                         hasattr(e, "exc_info")
