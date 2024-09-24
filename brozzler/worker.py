@@ -113,9 +113,13 @@ class BrozzlerWorker:
 
         # set up metrics
         if self._metrics_port > 0:
-            metrics.register_prom_metrics(self._metrics_port, self._registry_url, self._env)
+            metrics.register_prom_metrics(
+                self._metrics_port, self._registry_url, self._env
+            )
         else:
-            logging.warning("not starting prometheus scrape endpoint: metrics_port is undefined")
+            logging.warning(
+                "not starting prometheus scrape endpoint: metrics_port is undefined"
+            )
 
     def _choose_warcprox(self):
         warcproxes = self._service_registry.available_services("warcprox")

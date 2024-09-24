@@ -373,7 +373,7 @@ def _try_youtube_dl(worker, ydl, site, page):
                         "yt-dlp hit error extracting info for %s" % ydl.url
                     )
                 else:
-                    retry_wait = min(60, YTDLP_WAIT * (1.5**(attempt - 1)))
+                    retry_wait = min(60, YTDLP_WAIT * (1.5 ** (attempt - 1)))
                     logging.info(
                         "Attempt %s failed. Retrying in %s seconds...",
                         attempt,
@@ -381,7 +381,9 @@ def _try_youtube_dl(worker, ydl, site, page):
                     )
                     time.sleep(retry_wait)
     else:
-        raise brozzler.VideoExtractorError("yt-dlp hit unknown error extracting info for %s" % ydl.url)
+        raise brozzler.VideoExtractorError(
+            "yt-dlp hit unknown error extracting info for %s" % ydl.url
+        )
 
     logging.info("ytdlp completed successfully")
 
