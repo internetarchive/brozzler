@@ -71,6 +71,11 @@ def should_ytdlp(site, page, page_status, skip_av_seeds):
     return True
 
 
+def isyoutubehost(url):
+    # split 1 splits scheme from url, split 2 splits path from hostname, split 3 splits query string on hostname
+    return "youtube.com" in url.split("//")[-1].split("/")[0].split("?")[0]
+
+
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
         self.extra_headers = extra_headers
@@ -237,14 +242,9 @@ def _build_youtube_dl(worker, destdir, site, page):
             worker.logger.info(
                 "[ydl_postprocess_hook] postprocessor: {}".format(d["postprocessor"])
             )
-            youtube_host = (
-                "youtube.com"
-                in d["info_dict"]["webpage_url"]
-                .split("//")[-1]
-                .split("/")[0]
-                .split("?")[0]
-            )
-            metrics.brozzler_ydl_download_successes.labels(youtube_host).inc(1)
+            is_youtube_host = isyoutubehost(d["info_dict"]["webpage_url"])
+
+            metrics.brozzler_ydl_download_successes.labels(is_youtube_host).inc(1)
             if worker._using_warcprox(site):
                 _YoutubeDL._push_video_to_warcprox(
                     _YoutubeDL, site, d["info_dict"], d["postprocessor"]
@@ -283,15 +283,14 @@ def _build_youtube_dl(worker, destdir, site, page):
     }
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
-    youtube_host = (
-        "youtube.com" in ytdlp_url.split("//")[-1].split("/")[0].split("?")[0]
-    )
-    if youtube_host and YTDLP_PROXY:
+    is_youtube_host = isyoutubehost(ytdlp_url)
+    if is_youtube_host and YTDLP_PROXY:
         ydl_opts["proxy"] = YTDLP_PROXY
-        ytdlp_proxy_for_print = (
+        # don't log proxy value secrets
+        ytdlp_proxy_for_logs = (
             YTDLP_PROXY.split("@")[1] if "@" in YTDLP_PROXY else "@@@"
         )
-        logging.info("using yt-dlp proxy ... %s", ytdlp_proxy_for_print)
+        logging.info("using yt-dlp proxy ... %s", ytdlp_proxy_for_logs)
 
     # skip warcprox proxying yt-dlp v.2023.07.06: youtube extractor using ranges
     # if worker._proxy_for(site):
@@ -302,7 +301,7 @@ def _build_youtube_dl(worker, destdir, site, page):
         ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers(page)))
     ydl.pushed_videos = []
     ydl.url = ytdlp_url
-    ydl.youtube_host = youtube_host
+    ydl.is_youtube_host = is_youtube_host
 
     return ydl
 
@@ -330,12 +329,12 @@ def _try_youtube_dl(worker, ydl, site, page):
     while attempt < MAX_YTDLP_ATTEMPTS:
         try:
             logging.info("trying yt-dlp on %s", ydl.url)
-            # should_download_vid = not ydl.youtube_host
+            # should_download_vid = not ydl.is_youtube_host
             # then
             # ydl.extract_info(str(urlcanon.whatwg(ydl.url)), download=should_download_vid)
-            # if ydl.youtube_host and ie_result:
+            # if ydl.is_youtube_host and ie_result:
             #     download_url = ie_result.get("url")
-            metrics.brozzler_ydl_extract_attempts.labels(ydl.youtube_host).inc(1)
+            metrics.brozzler_ydl_extract_attempts.labels(ydl.is_youtube_host).inc(1)
             with brozzler.thread_accept_exceptions():
                 # we do whatwg canonicalization here to avoid "<urlopen error
                 # no host given>" resulting in ProxyError
@@ -344,7 +343,7 @@ def _try_youtube_dl(worker, ydl, site, page):
                 ie_result = ydl.sanitize_info(
                     ydl.extract_info(str(urlcanon.whatwg(ydl.url)))
                 )
-            metrics.brozzler_ydl_extract_successes.labels(ydl.youtube_host).inc(1)
+            metrics.brozzler_ydl_extract_successes.labels(ydl.is_youtube_host).inc(1)
             break
         except brozzler.ShutdownRequested as e:
             raise
@@ -370,18 +369,20 @@ def _try_youtube_dl(worker, ydl, site, page):
                     logging.warning(
                         "Failed after %s attempts. Error: %s", MAX_YTDLP_ATTEMPTS, e
                     )
-                    raise brozzler.ProxyError(
-                        "yt-dlp hit possible external proxy error from %s" % ydl.url
+                    raise brozzler.VideoExtractorError(
+                        "yt-dlp hit error extracting info for %s" % ydl.url
                     )
                 else:
+                    retry_wait = min(60, YTDLP_WAIT * (1.5**(attempt - 1)))
                     logging.info(
                         "Attempt %s failed. Retrying in %s seconds...",
                         attempt,
-                        YTDLP_WAIT,
+                        retry_wait,
                     )
-                    time.sleep(YTDLP_WAIT)
+                    time.sleep(retry_wait)
     else:
-        raise brozzler.ProxyError("Proxy attempt(s) failed for unknown reason(s)")
+        raise brozzler.VideoExtractorError("yt-dlp hit unknown error extracting info for %s" % ydl.url)
+
     logging.info("ytdlp completed successfully")
 
     _remember_videos(page, ydl.pushed_videos)

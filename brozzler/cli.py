@@ -238,7 +238,7 @@ def brozzle_page(argv=None):
         "--metrics_port",
         type=int,
         dest="metrics_port",
-        default=8888,
+        default=0,
         help="Port for brozzler's Prometheus scrape endpoint",
     )
     arg_parser.add_argument(
@@ -251,7 +251,7 @@ def brozzle_page(argv=None):
         "--env",
         dest="env",
         default=None,
-        help="env for Prometheus target registry",
+        help="deployment environment for this brozzler instance, e.g., prod or qa",
     )
     arg_parser.add_argument(
         "--screenshot-full-page", dest="screenshot_full_page", action="store_true"
@@ -298,7 +298,7 @@ def brozzle_page(argv=None):
         window_height=args.window_height,
         window_width=args.window_width,
         stealth=args.stealth,
-        metrics_port=int(args.metrics_port),
+        metrics_port=args.metrics_port,
         registry_url=args.registry_url,
         env=args.env,
     )
@@ -543,7 +543,7 @@ def brozzler_worker(argv=None):
         "--metrics_port",
         type=int,
         dest="metrics_port",
-        default=8888,
+        default=0,
         help="Port for brozzler's Prometheus scrape endpoint",
     )
     arg_parser.add_argument(
@@ -556,7 +556,7 @@ def brozzler_worker(argv=None):
         "--env",
         dest="env",
         default=None,
-        help="env for Prometheus target registry",
+        help="deployment environment for this brozzler instance, e.g., prod or qa",
     )
     add_common_options(arg_parser, argv)
 
@@ -614,7 +614,7 @@ def brozzler_worker(argv=None):
         skip_visit_hashtags=args.skip_visit_hashtags,
         skip_youtube_dl=args.skip_youtube_dl,
         stealth=args.stealth,
-        metrics_port=int(args.metrics_port),
+        metrics_port=args.metrics_port,
         registry_url=args.registry_url,
         env=args.env,
     )
