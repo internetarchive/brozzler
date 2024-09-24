@@ -437,6 +437,44 @@ def brozzler_new_site(argv=None):
     brozzler.new_site(frontier, site)
 
 
+def brozzler_new_page(argv=None):
+    """
+    Command line utility entry point for queuing a new brozzler page.
+    Takes a url and site_id and adds a page object in rethinkdb, which
+    brozzler-workers will look at and start crawling.
+    """
+    argv = argv or sys.argv
+    arg_parser = argparse.ArgumentParser(
+        prog=os.path.basename(argv[0]),
+        description="brozzler-new-page - queue url to brozzler site",
+        formatter_class=BetterArgumentDefaultsHelpFormatter,
+    )
+    arg_parser.add_argument("url", metavar="URL", help="URL to add to site")
+    arg_parser.add_argument("site_id", metavar="SITE_ID",
+                            help="UUID of site object to add the page to")
+    arg_parser.add_argument("parent_page_id", metavar="PARENT_PAGE_ID",
+                            help="ID of Page object to add the page as an outlink to")
+    add_rethinkdb_options(arg_parser)
+    add_common_options(arg_parser, argv)
+    args = arg_parser.parse_args(args=argv[1:])
+    configure_logging(args)
+
+    rr = rethinker(args)
+
+    site_result = rr.table("sites").get(args.site_id).run()
+    if not site_result:
+        raise Exception()
+    site = brozzler.Site(rr, site_result)
+
+    parent_page_result = rr.table("pages").get(args.parent_page_id).run()
+    if not parent_page_result:
+        raise Exception()
+    parent_page = brozzler.Page(rr, parent_page_result)
+
+    frontier = brozzler.RethinkDbFrontier(rr)
+    frontier.scope_and_schedule_outlinks(site=site, parent_page=parent_page, outlinks=[args.url])
+
+
 def brozzler_worker(argv=None):
     """
     Main entry point for brozzler, gets sites and pages to brozzle from
@@ -1065,7 +1103,7 @@ def brozzler_list_captures(argv=None):
         reql = reql.order_by(index="abbr_canon_surt_timestamp")
         reql = reql.filter(
             lambda capture: (capture["canon_surt"] >= key)
-            & (capture["canon_surt"] <= end_key)
+                            & (capture["canon_surt"] <= end_key)
         )
         logging.debug("querying rethinkdb: %s", reql)
         results = reql.run()
