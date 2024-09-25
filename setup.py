@@ -34,7 +34,7 @@ def find_package_data(package):
 
 setuptools.setup(
     name="brozzler",
-    version="1.5.54",
+    version="1.5.55",
     description="Distributed web crawling with browsers",
     url="https://github.com/internetarchive/brozzler",
     author="Noah Levitt",
@@ -77,9 +77,10 @@ setuptools.setup(
         "jinja2>=2.10",
         "cryptography>=2.3",
         "python-magic>=0.4.15",
+        "prometheus-client>=0.20.0",
     ],
     extras_require={
-        "yt-dlp": ["yt-dlp==2024.7.25"],
+        "yt-dlp": ["yt-dlp>=2024.7.25"],
         "dashboard": ["flask>=1.0", "gunicorn>=19.8.1"],
         "easy": [
             "warcprox>=2.4.31",
