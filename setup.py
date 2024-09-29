@@ -51,6 +51,7 @@ setuptools.setup(
             "brozzle-page=brozzler.cli:brozzle_page",
             "brozzler-new-job=brozzler.cli:brozzler_new_job",
             "brozzler-new-site=brozzler.cli:brozzler_new_site",
+            "brozzler-new-page=brozzler.cli:brozzler_new_page",
             "brozzler-worker=brozzler.cli:brozzler_worker",
             "brozzler-ensure-tables=brozzler.cli:brozzler_ensure_tables",
             "brozzler-list-captures=brozzler.cli:brozzler_list_captures",
