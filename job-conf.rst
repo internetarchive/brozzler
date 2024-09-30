@@ -114,10 +114,12 @@ seeds starving out other jobs.
 +=========+==========+===========+
 | boolean | no       | ``false`` |
 +---------+----------+-----------+
-Limits capture to PDFs based on MIME type. This value will only impact
-processing of outlinks within Brozzler. Fully limiting a crawl to only PDFs
-requires an additional entry in the Warcprox-Meta header ``mime-type-filters``
-key.
+Limits capture to PDFs based on the MIME type set in the HTTP response's
+Content-Type header. This value only impacts processing of outlinks within
+Brozzler.
+
+*Note: Ensuring comprehensive limiting to only PDFs requires an additional
+entry in the Warcprox-Meta header `mime-type-filters` key.*
 
 ``seeds``
 ~~~~~~~~~
