@@ -20,6 +20,7 @@ import logging
 import yt_dlp
 from yt_dlp.utils import match_filter_func
 import brozzler
+from brozzler.model import VideoCaptureOptions
 import urllib.request
 import tempfile
 import urlcanon
@@ -58,63 +59,23 @@ def _timestamp4datetime(timestamp):
         int(timestamp[-2:])
         )
 
-def should_ytdlp(site, page, page_status, skip_av_seeds):
+def should_ytdlp(site, page, page_status):
     # called only after we've passed needs_browsing() check
 
     if page_status != 200:
         logging.info("skipping ytdlp: non-200 page status %s", page_status)
         return False
-    if site.skip_ytdlp:
-        logging.info("skipping ytdlp: site marked skip_ytdlp")
+    if site.video_capture in [
+        VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value,
+        VideoCaptureOptions.DISABLE_YTDLP_CAPTURE.value,
+    ]:
+        logging.info("skipping ytdlp: site has video capture disabled")
         return False
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
 
     if "chrome-error:" in ytdlp_url:
         return False
-
-    ytdlp_seed = (
-        site["metadata"]["ait_seed_id"]
-        if "metadata" in site and "ait_seed_id" in site["metadata"]
-        else None
-    )
-
-    # TODO: develop UI and refactor
-    if ytdlp_seed:
-        if site.skip_ytdlp is None and ytdlp_seed in skip_av_seeds:
-            logging.info("skipping ytdlp: site in skip_av_seeds")
-            site.skip_ytdlp = True
-            return False
-        else:
-            site.skip_ytdlp = False
-
-    logging.info("checking containing page %s for seed %s", ytdlp_url, ytdlp_seed)
-
-    if ytdlp_seed and "youtube.com/watch?v" in ytdlp_url:
-        logging.info("found youtube watch page %r", ytdlp_url)
-        # connect to bmiller-dev cluster, keyspace video; we can modify default timeout in cassandra.yaml
-        cluster = Cluster(["207.241.235.189"], protocol_version=5)
-        session = cluster.connect("video")
-        containing_page_query = "SELECT * from videos where scope=%s and containing_page_url=%s LIMIT 1"
-        future = session.execute_async(containing_page_query, [f"s:{ytdlp_seed}", str(urlcanon.aggressive(ytdlp_url))])
-        try:
-            rows = future.result()
-        except ReadTimeout:
-            logging.exception("Query timed out:")
-
-        if len(rows.current_rows) == 0:
-            logging.info("no results returned from videos query")
-            return True
-
-        for row in rows:
-            logging.info("video query found %r", row)
-            ytdlp_timestamp = datetime.datetime(*_timestamp4datetime(row.video_timestamp))
-            logging.info("ytdlp_timestamp: %s", ytdlp_timestamp)
-            time_diff = datetime.datetime.now() - ytdlp_timestamp
-            # TODO: make variable for timedelta
-            if time_diff < datetime.timedelta(days = 90):
-                logging.info("skipping ytdlp for %s since there's a recent capture", row.containing_page_url)
-                return False
 
     return True
 

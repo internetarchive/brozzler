@@ -34,6 +34,7 @@ import urllib
 import uuid
 import yaml
 import zlib
+from enum import Enum
 from typing import Optional
 
 
@@ -100,6 +101,8 @@ def new_job(frontier, job_conf):
         job.id = job_conf["id"]
     if "max_claimed_sites" in job_conf:
         job.max_claimed_sites = job_conf["max_claimed_sites"]
+    if "pdfs_only" in job_conf:
+        job.pdfs_only = job_conf["pdfs_only"]
     job.save()
 
     sites = []
@@ -198,6 +201,8 @@ class Job(doublethink.Document, ElapsedMixIn):
     def populate_defaults(self):
         if not "status" in self:
             self.status = "ACTIVE"
+        if "pdfs_only" not in self:
+            self.pdfs_only = False
         if not "starts_and_stops" in self:
             if self.get("started"):  # backward compatibility
                 self.starts_and_stops = [
@@ -220,33 +225,53 @@ class Job(doublethink.Document, ElapsedMixIn):
         self.starts_and_stops[-1]["stop"] = doublethink.utcnow()
 
 
+class VideoCaptureOptions(Enum):
+    """
+    Enumeration of possible values for the `video_capture` config key.
+        - ENABLE_VIDEO_CAPTURE (default): All video is captured.
+        - DISABLE_VIDEO_CAPTURE: No video is captured. This is effectively a
+          combination of the next two values.
+        - BLOCK_VIDEO_MIME_TYPES: Any response with a Content-Type header
+          containing the word "video" is not captured.
+        - DISABLE_YTDLP_CAPTURE: Video capture via yt-dlp is disabled.
+
+    Note: Ensuring full video MIME type blocking requires an additional entry in the
+          Warcprox-Meta header `mime-type-filters` key.
+    """
+
+    ENABLE_VIDEO_CAPTURE = "ENABLE_VIDEO_CAPTURE"
+    DISABLE_VIDEO_CAPTURE = "DISABLE_VIDEO_CAPTURE"
+    BLOCK_VIDEO_MIME_TYPES = "BLOCK_VIDEO_MIME_TYPES"
+    DISABLE_YTDLP_CAPTURE = "DISABLE_YTDLP_CAPTURE"
+
+
 class Site(doublethink.Document, ElapsedMixIn):
     logger = logging.getLogger(__module__ + "." + __qualname__)
     table = "sites"
 
     def populate_defaults(self):
-        if not "status" in self:
+        if "status" not in self:
             self.status = "ACTIVE"
-        if not "claimed" in self:
+        if "claimed" not in self:
             self.claimed = False
-        if not "last_disclaimed" in self:
+        if "last_disclaimed" not in self:
             self.last_disclaimed = brozzler.EPOCH_UTC
-        if not "last_claimed" in self:
+        if "last_claimed" not in self:
             self.last_claimed = brozzler.EPOCH_UTC
-        if not "scope" in self:
+        if "scope" not in self:
             self.scope = {}
-        if not "skip_ytdlp" in self:
-            self.skip_ytdlp = None
+        if "video_capture" not in self:
+            self.video_capture = VideoCaptureOptions.ENABLE_VIDEO_CAPTURE.value
 
         # backward compatibility
         if "surt" in self.scope:
-            if not "accepts" in self.scope:
+            if "accepts" not in self.scope:
                 self.scope["accepts"] = []
             self.scope["accepts"].append({"surt": self.scope["surt"]})
             del self.scope["surt"]
 
         # backward compatibility
-        if "max_hops_off_surt" in self.scope and not "max_hops_off" in self.scope:
+        if "max_hops_off_surt" in self.scope and "max_hops_off" not in self.scope:
             self.scope["max_hops_off"] = self.scope["max_hops_off_surt"]
         if "max_hops_off_surt" in self.scope:
             del self.scope["max_hops_off_surt"]
@@ -256,7 +281,7 @@ class Site(doublethink.Document, ElapsedMixIn):
                 brozzler.site_surt_canon(self.seed).ssurt().decode("ascii")
             )
 
-        if not "starts_and_stops" in self:
+        if "starts_and_stops" not in self:
             if self.get("start_time"):  # backward compatibility
                 self.starts_and_stops = [
                     {"start": self.get("start_time"), "stop": None}
@@ -271,7 +296,7 @@ class Site(doublethink.Document, ElapsedMixIn):
         return 'Site({"id":"%s","seed":"%s",...})' % (self.id, self.seed)
 
     def _accept_ssurt_if_not_redundant(self, ssurt):
-        if not "accepts" in self.scope:
+        if "accepts" not in self.scope:
             self.scope["accepts"] = []
         simple_rule_ssurts = (
             rule["ssurt"]
