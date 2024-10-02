@@ -100,3 +100,5 @@ seeds:
 max_claimed_sites:
   type: integer
 
+pdfs_only:
+  type: boolean
