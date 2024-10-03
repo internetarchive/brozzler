@@ -201,7 +201,9 @@ class WebsockReceiverThread(threading.Thread):
         # in addition to its documented purpose, and must have a value to avoid
         # hangs in certain situations
         self.websock.run_forever(
-            sockopt=((socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),), ping_timeout=0.5, skip_utf8_validation=True,
+            sockopt=((socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),),
+            ping_timeout=0.5,
+            skip_utf8_validation=True,
         )
 
     def _on_message(self, websock, message):
