@@ -317,8 +317,8 @@ class BrozzlerWorker:
                         )
         return outlinks
 
-    @metrics.brozzler_in_progress_headers.time()
-    @metrics.brozzler_header_processing_duration_seconds.track_inprogress()
+    @metrics.brozzler_header_processing_duration_seconds.time()
+    @metrics.brozzler_in_progress_headers.track_inprogress()
     def _get_page_headers(self, page):
         # bypassing warcprox, requests' stream=True defers downloading the body of the response
         # see https://docs.python-requests.org/en/latest/user/advanced/#body-content-workflow
@@ -338,8 +338,8 @@ class BrozzlerWorker:
             return False
         return True
 
-    @metrics.brozzler_in_progress_browses.time()
-    @metrics.brozzler_browsing_duration_seconds.track_inprogress()
+    @metrics.brozzler_browsing_duration_seconds.time()
+    @metrics.brozzler_in_progress_browses.track_inprogress()
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
         def update_page_metrics(page, outlinks):
             """Update page-level Prometheus metrics."""
