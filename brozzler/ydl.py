@@ -334,7 +334,6 @@ def _try_youtube_dl(worker, ydl, site, page):
             # ydl.extract_info(str(urlcanon.whatwg(ydl.url)), download=should_download_vid)
             # if ydl.is_youtube_host and ie_result:
             #     download_url = ie_result.get("url")
-            metrics.brozzler_ydl_extract_attempts.labels(ydl.is_youtube_host).inc(1)
             with brozzler.thread_accept_exceptions():
                 # we do whatwg canonicalization here to avoid "<urlopen error
                 # no host given>" resulting in ProxyError
@@ -406,6 +405,8 @@ def _try_youtube_dl(worker, ydl, site, page):
     return ie_result
 
 
+@metrics.brozzler_in_progress_ytdlps.time()
+@metrics.brozzler_ytdlp_duration_seconds.track_inprogress()
 def do_youtube_dl(worker, site, page):
     """
     Runs yt-dlp configured for `worker` and `site` to download videos from
