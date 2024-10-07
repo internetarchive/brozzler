@@ -17,13 +17,18 @@ except ImportError:
 from prometheus_client import Counter, Gauge, Histogram, start_http_server
 
 # fmt: off
-brozzler_pages_crawled = Counter("brozzler_pages_crawled", "number of pages visited by brozzler")
+brozzler_in_progress_pages = Gauge("brozzler_in_progress_pages", "number of pages currently processing with brozzler")
 brozzler_page_processing_duration_seconds = Histogram("brozzler_page_processing_duration_seconds", "time spent processing a page in brozzler")
+brozzler_in_progress_headers = Gauge("brozzler_in_progress_headers", "number of headers currently processing with brozzler")
+brozzler_header_processing_duration_seconds = Histogram("brozzler_header_processing_duration_seconds", "time spent processing one page's headers in brozzler")
+brozzler_in_progress_browses = Gauge("brozzler_in_progress_browses", "number of pages currently browsing with brozzler")
+brozzler_browsing_duration_seconds = Histogram("brozzler_browsing_duration_seconds", "time spent browsing a page in brozzler")
+brozzler_in_progress_ytdlps = Gauge("brozzler_in_progress_ytdlps", "number of ytdlp sessions currently in progress with brozzler")
+brozzler_ytdlp_duration_seconds = Histogram("brozzler_ytdlp_duration_seconds", "time spent running ytdlp for a page in brozzler")
+brozzler_pages_crawled = Counter("brozzler_pages_crawled", "number of pages visited by brozzler")
 brozzler_outlinks_found = Counter("brozzler_outlinks_found", "number of outlinks found by brozzler")
 brozzler_last_page_crawled_time = Gauge("brozzler_last_page_crawled_time", "time of last page visit, in seconds since UNIX epoch")
-brozzler_in_progress_pages = Gauge("brozzler_in_progress_pages", "number of pages currently processing with brozzler")
 brozzler_ydl_urls_checked = Counter("brozzler_ydl_urls_checked", "count of urls checked by brozzler yt-dlp")
-brozzler_ydl_extract_attempts = Counter("brozzler_ydl_extract_attempts", "count of extracts attempted by brozzler yt-dlp", labelnames=["youtube_host"])
 brozzler_ydl_extract_successes = Counter("brozzler_ydl_extract_successes", "count of extracts completed by brozzler yt-dlp", labelnames=["youtube_host"])
 brozzler_ydl_download_successes = Counter("brozzler_ydl_download_successes", "count of downloads completed by brozzler yt-dlp", labelnames=["youtube_host"])
 # fmt: on
