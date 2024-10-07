@@ -251,6 +251,8 @@ class BrozzlerWorker:
         img.save(out, "jpeg", quality=95)
         return out.getbuffer()
 
+    @metrics.brozzler_page_processing_duration_seconds.time()
+    @metrics.brozzler_in_progress_pages.track_inprogress()
     def brozzle_page(
         self,
         browser,
@@ -325,6 +327,8 @@ class BrozzlerWorker:
                         )
         return outlinks
 
+    @metrics.brozzler_in_progress_headers.time()
+    @metrics.brozzler_header_processing_duration_seconds.track_inprogress()
     def _get_page_headers(self, page):
         # bypassing warcprox, requests' stream=True defers downloading the body of the response
         # see https://docs.python-requests.org/en/latest/user/advanced/#body-content-workflow
@@ -360,8 +364,8 @@ class BrozzlerWorker:
             and "application/pdf" in page_headers["content-type"]
         )
 
-    @metrics.brozzler_page_processing_duration_seconds.time()
-    @metrics.brozzler_in_progress_pages.track_inprogress()
+    @metrics.brozzler_in_progress_browses.time()
+    @metrics.brozzler_browsing_duration_seconds.track_inprogress()
     def _browse_page(self, browser, site, page, on_screenshot=None, on_request=None):
         def update_page_metrics(page, outlinks):
             """Update page-level Prometheus metrics."""
