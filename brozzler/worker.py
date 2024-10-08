@@ -318,13 +318,13 @@ class BrozzlerWorker:
     def _get_page_headers(self, page):
         # bypassing warcprox, requests' stream=True defers downloading the body of the response
         # see https://docs.python-requests.org/en/latest/user/advanced/#body-content-workflow
+        page_headers = {}
         try:
             with requests.get(page.url, stream=True, verify=False) as r:
                 page_headers = r.headers
-            return page_headers
         except requests.exceptions.RequestException as e:
             self.logger.warning("Failed to get headers for %s: %s", page.url, e)
-            return {}
+        return page_headers
 
     def _needs_browsing(self, page_headers):
         if (
