@@ -80,7 +80,9 @@ setuptools.setup(
     ],
     extras_require={
         "yt-dlp": ["yt-dlp>=2024.7.25"],
-        "doublethink": ["doublethink @ git+https://github.com/internetarchive/doublethink.git@Py311"],
+        "doublethink": [
+            "doublethink @ git+https://github.com/internetarchive/doublethink.git@Py311"
+        ],
         "dashboard": ["flask>=1.0", "gunicorn>=19.8.1"],
         "easy": [
             "warcprox>=2.4.31",
