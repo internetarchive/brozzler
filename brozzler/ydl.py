@@ -412,6 +412,7 @@ def _try_youtube_dl(worker, ydl, site, page):
         )
     return ie_result
 
+
 @metrics.brozzler_ytdlp_duration_seconds.time()
 @metrics.brozzler_in_progress_ytdlps.track_inprogress()
 def do_youtube_dl(worker, site, page):
