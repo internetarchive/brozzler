@@ -10,7 +10,7 @@
 
 Brozzler is a distributed web crawler (爬虫) that uses a real browser (Chrome
 or Chromium) to fetch pages and embedded URLs and to extract links. It employs
-`youtube-dl <https://github.com/rg3/youtube-dl>`_ to enhance media capture
+`yt-dlp <https://github.com/yt-dlp/yt-dlp>`_ (formerly youtube-dl) to enhance media capture
 capabilities and `rethinkdb <https://github.com/rethinkdb/rethinkdb>`_ to
 manage crawl state.
 
