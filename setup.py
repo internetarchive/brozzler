@@ -72,6 +72,7 @@ setuptools.setup(
         "pillow>=5.2.0",
         "urlcanon>=0.1.dev23",
         "rethinkdb==2.4.9",
+        "doublethink==0.4.9",
         "cerberus>=1.0.1",
         "jinja2>=2.10",
         "cryptography>=2.3",
@@ -80,9 +81,6 @@ setuptools.setup(
     ],
     extras_require={
         "yt-dlp": ["yt-dlp>=2024.7.25"],
-        "doublethink": [
-            "doublethink @ git+https://github.com/internetarchive/doublethink.git@Py311"
-        ],
         "dashboard": ["flask>=1.0", "gunicorn>=19.8.1"],
         "easy": [
             "warcprox>=2.4.31",
