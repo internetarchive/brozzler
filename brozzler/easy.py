@@ -25,6 +25,7 @@ try:
     import warcprox
     import warcprox.main
     import pywb
+    import brozzler_ia as brozzler
     import brozzler.pywb
     import wsgiref.simple_server
     import wsgiref.handlers

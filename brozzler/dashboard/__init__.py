@@ -325,6 +325,7 @@ except ImportError:
 
 def main(argv=None):
     import argparse
+    import brozzler_ia as brozzler
     import brozzler.cli
 
     argv = argv or sys.argv

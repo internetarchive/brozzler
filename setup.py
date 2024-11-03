@@ -33,7 +33,7 @@ def find_package_data(package):
 
 
 setuptools.setup(
-    name="brozzler",
+    name="brozzler_ia",
     version="1.6.1",
     description="Distributed web crawling with browsers",
     url="https://github.com/internetarchive/brozzler",
@@ -41,9 +41,9 @@ setuptools.setup(
     author_email="nlevitt@archive.org",
     long_description=open("README.rst", mode="rb").read().decode("UTF-8"),
     license="Apache License 2.0",
-    packages=["brozzler", "brozzler.dashboard"],
+    packages=["brozzler_ia", "brozzler.dashboard"],
     package_data={
-        "brozzler": ["js-templates/*.js*", "behaviors.yaml", "job_schema.yaml"],
+        "brozzler_ia": ["js-templates/*.js*", "behaviors.yaml", "job_schema.yaml"],
         "brozzler.dashboard": find_package_data("brozzler.dashboard"),
     },
     entry_points={

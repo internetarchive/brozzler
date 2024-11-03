@@ -41,7 +41,7 @@ import doublethink
 import rethinkdb as rdb
 import urlcanon
 import json
-import brozzler
+import brozzler_ia as brozzler
 import argparse
 
 r = rdb.RethinkDB()

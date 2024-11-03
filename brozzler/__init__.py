@@ -2,7 +2,7 @@
 brozzler/__init__.py - __init__.py for brozzler package, contains some common
 code
 
-Copyright (C) 2014-2017 Internet Archive
+Copyright (C) 2014-2024 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ limitations under the License.
 import logging
 from pkg_resources import get_distribution as _get_distribution
 
-__version__ = _get_distribution("brozzler").version
+__version__ = _get_distribution("brozzler_ia").version
 
 
 class ShutdownRequested(Exception):
@@ -344,6 +344,7 @@ EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(tzinfo=doublethink.U
 # we could make this configurable if there's a good reason
 MAX_PAGE_FAILURES = 3
 
+import brozzler_ia as brozzler
 from brozzler.worker import BrozzlerWorker
 from brozzler.robots import is_permitted_by_robots
 from brozzler.frontier import RethinkDbFrontier

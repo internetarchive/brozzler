@@ -26,7 +26,7 @@ import os
 import socket
 import doublethink
 import time
-import brozzler
+import brozzler_ia as brozzler
 import datetime
 import requests
 import subprocess

@@ -18,7 +18,7 @@ limitations under the License.
 """
 
 import argparse
-import brozzler
+import brozzler_ia as brozzler
 import brozzler.worker
 import datetime
 import json

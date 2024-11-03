@@ -24,7 +24,7 @@ limitations under the License.
 
 import json
 import logging
-import brozzler
+import brozzler_ia as brozzler
 import reppy
 import reppy.cache
 import reppy.parser

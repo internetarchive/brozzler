@@ -26,7 +26,7 @@ import time
 import doublethink
 import pytest
 
-import brozzler
+import brozzler_ia as brozzler
 
 args = argparse.Namespace()
 args.log_level = logging.INFO

@@ -19,7 +19,7 @@ limitations under the License.
 import logging
 import yt_dlp
 from yt_dlp.utils import match_filter_func
-import brozzler
+import brozzler_ia as brozzler
 import urllib.request
 import tempfile
 import urlcanon

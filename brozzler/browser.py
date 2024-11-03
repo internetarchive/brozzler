@@ -18,13 +18,12 @@ limitations under the License.
 
 import logging
 import time
-import brozzler
+import brozzler_ia as brozzler
 import itertools
 import json
 import websocket
 import time
 import threading
-import brozzler
 from requests.structures import CaseInsensitiveDict
 import datetime
 import base64

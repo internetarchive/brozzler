@@ -17,7 +17,7 @@ limitations under the License.
 """
 
 import logging
-import brozzler
+import brozzler_ia as brozzler
 import random
 import time
 import datetime

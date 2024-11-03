@@ -22,7 +22,7 @@ import time
 import threading
 import subprocess
 import os
-import brozzler
+import brozzler_ia as brozzler
 import select
 import re
 import signal

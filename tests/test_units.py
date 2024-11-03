@@ -21,7 +21,7 @@ import pytest
 import http.server
 import threading
 import os
-import brozzler
+import brozzler_ia as brozzler
 import brozzler.chrome
 import brozzler.ydl
 import logging
