@@ -1,5 +1,5 @@
 [project]
-name = "brozzler_ia"
+name = "brozzler"
 authors = [
   { name="Noah Levitt", email="nlevitt@archive.org" },
 ]
