@@ -596,7 +596,7 @@ class Browser:
                     outlinks = self.extract_outlinks(timeout=extract_outlinks_timeout)
                 if run_behaviors and not skip_visit_hashtags:
                     self.visit_hashtags(final_page_url, hashtags, outlinks)
-                return final_page_url, outlinks, self.websock_thread.page_status
+                return final_page_url, outlinks
         except brozzler.ReachedLimit:
             # websock_thread has stashed the ReachedLimit exception with
             # more information, raise that one

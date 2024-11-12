@@ -255,17 +255,18 @@ class BrozzlerWorker:
         else:
             self.logger.info("needs browsing: %s", page)
             try:
-                browser_outlinks, status_code = self._browse_page(
+                browser_outlinks = self._browse_page(
                     browser, site, page, on_screenshot, on_request
                 )
                 outlinks.update(browser_outlinks)
+                status_code = browser.websock_thread.page_status
                 if status_code in [502, 504]:
                     raise brozzler.PageConnectionError()
             except brozzler.PageInterstitialShown:
                 self.logger.info("page interstitial shown (http auth): %s", page)
 
             if enable_youtube_dl and ydl.should_ytdlp(
-                site, page, browser.websock_thread.page_status, self._skip_av_seeds
+                site, page, status_code, self._skip_av_seeds
             ):
                 try:
                     ydl_outlinks = ydl.do_youtube_dl(self, site, page)
@@ -394,7 +395,7 @@ class BrozzlerWorker:
                 window_height=self._window_height,
                 window_width=self._window_width,
             )
-        final_page_url, outlinks, status_code = browser.browse_page(
+        final_page_url, outlinks = browser.browse_page(
             page.url,
             extra_headers=site.extra_headers(page),
             behavior_parameters=site.get("behavior_parameters"),
@@ -419,7 +420,7 @@ class BrozzlerWorker:
         )
         if final_page_url != page.url:
             page.note_redirect(final_page_url)
-        return outlinks, status_code
+        return outlinks
 
     def _fetch_url(self, site, url=None, page=None):
         proxies = None
