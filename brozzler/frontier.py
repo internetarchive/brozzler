@@ -138,6 +138,7 @@ class RethinkDbFrontier:
                         emit=lambda acc, site, new_acc: r.branch(
                             r.and_(
                                 r.or_(
+                                    # Avoid tight loop when unclaimed site was recently disclaimed
                                     r.and_(
                                         site["claimed"].not_(),
                                         r.or_(
