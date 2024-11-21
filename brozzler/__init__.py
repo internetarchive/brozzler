@@ -39,6 +39,10 @@ class PageInterstitialShown(Exception):
     pass
 
 
+class VideoExtractorError(Exception):
+    pass
+
+
 class ProxyError(Exception):
     pass
 

@@ -200,8 +200,13 @@ class WebsockReceiverThread(threading.Thread):
         # ping_timeout is used as the timeout for the call to select.select()
         # in addition to its documented purpose, and must have a value to avoid
         # hangs in certain situations
+        #
+        # skip_ut8_validation is a recommended performance improvement:
+        # https://websocket-client.readthedocs.io/en/latest/faq.html#why-is-this-library-slow
         self.websock.run_forever(
-            sockopt=((socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),), ping_timeout=0.5
+            sockopt=((socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),),
+            ping_timeout=0.5,
+            skip_utf8_validation=True,
         )
 
     def _on_message(self, websock, message):

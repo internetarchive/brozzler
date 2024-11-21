@@ -184,6 +184,7 @@ class Chrome:
             self.chrome_exe,
             "-v",
             "--remote-debugging-port=%s" % self.port,
+            "--remote-allow-origins=http://localhost:%s" % self.port,
             "--use-mock-keychain",  # mac thing
             "--user-data-dir=%s" % self._chrome_user_data_dir,
             "--disable-background-networking",
@@ -198,6 +199,7 @@ class Chrome:
             "--disable-first-run-ui",
             "--no-first-run",
             "--homepage=about:blank",
+            "--disable-features=HttpsUpgrades",
             "--disable-direct-npapi-requests",
             "--disable-web-security",
             "--disable-notifications",
