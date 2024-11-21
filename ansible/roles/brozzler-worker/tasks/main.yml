@@ -9,32 +9,33 @@
 
 - name: ensure required packages are installed
   become: true
-  apt: name={{item}} state=present
-  with_items:
-  - chromium-browser
-  - vnc4server
-  - libjpeg-turbo8-dev
-  - zlib1g-dev
-  - gcc
-  - python3-dev
-  - python3-dbg
-  - adobe-flashplugin
-  - xfonts-base
-  - fonts-arphic-bkai00mp
-  - fonts-arphic-bsmi00lp
-  - fonts-arphic-gbsn00lp
-  - fonts-arphic-gkai00mp
-  - fonts-arphic-ukai
-  - fonts-farsiweb
-  - fonts-nafees
-  - fonts-sil-abyssinica
-  - fonts-sil-ezra
-  - fonts-sil-padauk
-  - fonts-unfonts-extra
-  - fonts-unfonts-core
-  - fonts-indic
-  - fonts-thai-tlwg
-  - fonts-lklug-sinhala
+  apt:
+    state: present
+    name:
+    - chromium-browser
+    - vnc4server
+    - libjpeg-turbo8-dev
+    - zlib1g-dev
+    - gcc
+    - python3-dev
+    - python3-dbg
+    - adobe-flashplugin
+    - xfonts-base
+    - fonts-arphic-bkai00mp
+    - fonts-arphic-bsmi00lp
+    - fonts-arphic-gbsn00lp
+    - fonts-arphic-gkai00mp
+    - fonts-arphic-ukai
+    - fonts-farsiweb
+    - fonts-nafees
+    - fonts-sil-abyssinica
+    - fonts-sil-ezra
+    - fonts-sil-padauk
+    - fonts-unfonts-extra
+    - fonts-unfonts-core
+    - fonts-indic
+    - fonts-thai-tlwg
+    - fonts-lklug-sinhala
 
 - name: mkdir /etc/service/{Xvnc,vnc-websock,brozzler-worker}
   file:
