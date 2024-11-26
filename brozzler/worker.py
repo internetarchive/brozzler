@@ -593,6 +593,7 @@ class BrozzlerWorker:
                         page,
                     )
                     self._frontier.completed_page(site, page)
+                    page = None
                 else:
                     page.save()
         finally:
