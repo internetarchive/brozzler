@@ -552,6 +552,8 @@ class BrozzlerWorker:
                     "unexpected exception site=%r page=%r", site, page, exc_info=True
                 )
             if page:
+                # Calculate backoff in seconds based on number of failed attempts.
+                # Minimum of 60, max of 135 giving delays of 60, 90, 135, 135...
                 retry_delay = min(135, 60 * (1.5**page.failed_attempts))
                 page.retry_after = doublethink.utcnow() + datetime.timedelta(
                     seconds=retry_delay
