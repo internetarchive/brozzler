@@ -1,0 +1,27 @@
+[project]
+name = "brozzler"
+authors = [
+  { name="Noah Levitt", email="nlevitt@archive.org" },
+]
+maintainers = [
+  { name="Vangelis Banos", email="vangelis@archive.org" },
+  { name="Adam Miller", email="adam@archive.org" },
+  { name="Barbara Miller", email="barbara@archive.org" },
+  { name="Alex Dempsey", email="avdempsey@archive.org" },
+]
+description = "Distributed web crawling with browsers"
+readme = "README.rst"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dynamic = [ "version", "license", "scripts", "dependencies", "optional-dependencies" ]
+
+[project.urls]
+Homepage = "https://github.com/internetarchive/brozzler"
+Issues = "https://github.com/internetarchive/brozzler/issues"
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
