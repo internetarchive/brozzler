@@ -414,7 +414,7 @@ class BrozzlerWorker:
             self.logger.trace("%r", chrome_msg)
             if chrome_msg.get("params", {}).get("versions"):
                 url = chrome_msg.get("params", {}).get("versions")[0].get("scriptURL")
-                if url and url.startswith('http') and url not in sw_fetched:
+                if url and url.startswith("http") and url not in sw_fetched:
                     self.logger.info("fetching service worker script %s", url)
                     self._fetch_url(site, url=url)
                     sw_fetched.add(url)
