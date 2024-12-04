@@ -386,6 +386,10 @@ class Page(doublethink.Document):
         return hashlib.sha1(digest_this.encode("utf-8")).hexdigest()
 
     def populate_defaults(self):
+        if not "retry_after" in self:
+            self.retry_after = None
+        if not "failed_attempts" in self:
+            self.failed_attempts = 0
         if not "hops_from_seed" in self:
             self.hops_from_seed = 0
         if not "hop_path" in self:

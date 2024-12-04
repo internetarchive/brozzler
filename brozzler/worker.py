@@ -21,6 +21,7 @@ limitations under the License.
 import logging
 import brozzler
 import brozzler.browser
+import datetime
 import threading
 import time
 import urllib.request
@@ -277,11 +278,14 @@ class BrozzlerWorker:
                     browser, site, page, on_screenshot, on_request
                 )
                 outlinks.update(browser_outlinks)
+                status_code = browser.websock_thread.page_status
+                if status_code in [502, 504]:
+                    raise brozzler.PageConnectionError()
             except brozzler.PageInterstitialShown:
                 self.logger.info("page interstitial shown (http auth): %s", page)
 
             if enable_youtube_dl and ydl.should_ytdlp(
-                site, page, browser.websock_thread.page_status, self._skip_av_seeds
+                site, page, status_code, self._skip_av_seeds
             ):
                 try:
                     ydl_outlinks = ydl.do_youtube_dl(self, site, page)
@@ -535,11 +539,25 @@ class BrozzlerWorker:
                 # using brozzler-worker --proxy, nothing to do but try the
                 # same proxy again next time
                 logging.error("proxy error (self._proxy=%r)", self._proxy, exc_info=1)
-        except:
-            self.logger.error(
-                "unexpected exception site=%r page=%r", site, page, exc_info=True
-            )
+        except (brozzler.PageConnectionError, Exception) as e:
+            if isinstance(e, brozzler.PageConnectionError):
+                self.logger.error(
+                    "Page status code possibly indicates connection failure between host and warcprox: site=%r page=%r",
+                    site,
+                    page,
+                    exc_info=True,
+                )
+            else:
+                self.logger.error(
+                    "unexpected exception site=%r page=%r", site, page, exc_info=True
+                )
             if page:
+                # Calculate backoff in seconds based on number of failed attempts.
+                # Minimum of 60, max of 135 giving delays of 60, 90, 135, 135...
+                retry_delay = min(135, 60 * (1.5**page.failed_attempts))
+                page.retry_after = doublethink.utcnow() + datetime.timedelta(
+                    seconds=retry_delay
+                )
                 page.failed_attempts = (page.failed_attempts or 0) + 1
                 if page.failed_attempts >= brozzler.MAX_PAGE_FAILURES:
                     self.logger.info(
@@ -550,6 +568,8 @@ class BrozzlerWorker:
                     )
                     self._frontier.completed_page(site, page)
                     page = None
+                else:
+                    page.save()
         finally:
             if start:
                 site.active_brozzling_time = (
