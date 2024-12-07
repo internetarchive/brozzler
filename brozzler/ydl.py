@@ -40,7 +40,7 @@ import time
 thread_local = threading.local()
 
 YTDLP_PROXY = ""
-MAX_YTDLP_ATTEMPTS = 4
+MAX_YTDLP_ATTEMPTS = 1
 YTDLP_WAIT = 10
 
 
@@ -293,6 +293,7 @@ def _build_youtube_dl(worker, destdir, site, page):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     is_youtube_host = isyoutubehost(ytdlp_url)
     if is_youtube_host and YTDLP_PROXY:
+        MAX_YTDLP_ATTEMPTS = 4
         ydl_opts["proxy"] = YTDLP_PROXY
         # don't log proxy value secrets
         ytdlp_proxy_for_logs = (
