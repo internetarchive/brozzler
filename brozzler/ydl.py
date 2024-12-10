@@ -34,7 +34,6 @@ import time
 thread_local = threading.local()
 
 ytdlp_proxy = ""
-ytdlp_tmp = "/tmp"
 ytdlp_wait = 10
 max_ytdlp_attempts = 4
 
@@ -421,7 +420,8 @@ def do_youtube_dl(worker, site, page):
     Returns:
          `list` of `str`: outlink urls
     """
-    with tempfile.TemporaryDirectory(prefix="brzl-ydl-", dir=ytdlp_tmp) as tempdir:
+    with tempfile.TemporaryDirectory(prefix="brzl-ydl-", dir=worker._ytdlp_tmpdir) as tempdir:
+        logging.info("using temporary directory: %s", tempdir)
         ydl = _build_youtube_dl(worker, tempdir, site, page)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
         outlinks = set()
