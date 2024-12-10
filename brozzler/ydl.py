@@ -35,7 +35,7 @@ thread_local = threading.local()
 
 
 YTDLP_PROXY = ""
-YTDLP_TMP = "/tmp"
+PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
 
 
@@ -326,7 +326,7 @@ def _remember_videos(page, pushed_videos=None):
 
 
 def _try_youtube_dl(worker, ydl, site, page):
-    max_attempts = 4 if ydl.isyoutubehost else 1
+    max_attempts = PROXY_ATTEMPTS if ydl.isyoutubehost else 1
     attempt = 0
     while attempt < max_attempts:
         try:
