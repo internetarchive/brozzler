@@ -326,7 +326,7 @@ def _remember_videos(page, pushed_videos=None):
 
 
 def _try_youtube_dl(worker, ydl, site, page):
-    max_attempts = 4 if isyoutubehost(ydl.url) else 1
+    max_attempts = 4 if ydl.isyoutubehost else 1
     attempt = 0
     while attempt < max_attempts:
         try:
