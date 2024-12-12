@@ -39,8 +39,9 @@ import time
 
 thread_local = threading.local()
 
+
 YTDLP_PROXY = ""
-MAX_YTDLP_ATTEMPTS = 1
+PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
 
 
@@ -293,7 +294,6 @@ def _build_youtube_dl(worker, destdir, site, page):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     is_youtube_host = isyoutubehost(ytdlp_url)
     if is_youtube_host and YTDLP_PROXY:
-        MAX_YTDLP_ATTEMPTS = 4
         ydl_opts["proxy"] = YTDLP_PROXY
         # don't log proxy value secrets
         ytdlp_proxy_for_logs = (
@@ -334,8 +334,9 @@ def _remember_videos(page, pushed_videos=None):
 
 
 def _try_youtube_dl(worker, ydl, site, page):
+    max_attempts = PROXY_ATTEMPTS if ydl.is_youtube_host else 1
     attempt = 0
-    while attempt < MAX_YTDLP_ATTEMPTS:
+    while attempt < max_attempts:
         try:
             logging.info("trying yt-dlp on %s", ydl.url)
             # should_download_vid = not ydl.is_youtube_host
@@ -373,9 +374,9 @@ def _try_youtube_dl(worker, ydl, site, page):
                 # OSError('Tunnel connection failed: 464 Host Not Allowed') (caused by ProxyError...)
                 # and others...
                 attempt += 1
-                if attempt == MAX_YTDLP_ATTEMPTS:
+                if attempt == max_attempts:
                     logging.warning(
-                        "Failed after %s attempts. Error: %s", MAX_YTDLP_ATTEMPTS, e
+                        "Failed after %s attempt(s). Error: %s", max_attempts, e
                     )
                     raise brozzler.VideoExtractorError(
                         "yt-dlp hit error extracting info for %s" % ydl.url
