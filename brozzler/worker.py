@@ -572,9 +572,16 @@ class BrozzlerWorker:
                     page.save()
         finally:
             if start:
+                seconds_elapsed = time.time() - start
                 site.active_brozzling_time = (
-                    (site.active_brozzling_time or 0) + time.time() - start
-                )
+                    site.active_brozzling_time or 0
+                ) + seconds_elapsed
+                if seconds_elapsed > (30 * 60):
+                    self.logger.warning(
+                        "Page took %s seconds to complete: %s",
+                        seconds_elapsed,
+                        page.url,
+                    )
             self._frontier.disclaim_site(site, page)
 
     def _brozzle_site_thread_target(self, browser, site):
