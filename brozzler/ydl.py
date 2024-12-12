@@ -368,7 +368,7 @@ def _try_youtube_dl(worker, ydl, site, page):
                 attempt += 1
                 if attempt == max_attempts:
                     logging.warning(
-                        "Failed after %s attempts. Error: %s", max_attempts, e
+                        "Failed after %s attempt(s). Error: %s", max_attempts, e
                     )
                     raise brozzler.VideoExtractorError(
                         "yt-dlp hit error extracting info for %s" % ydl.url
@@ -422,7 +422,7 @@ def do_youtube_dl(worker, site, page):
     Returns:
          `list` of `str`: outlink urls
     """
-    with tempfile.TemporaryDirectory(prefix="brzl-ydl-", dir=YTDLP_TMP) as tempdir:
+    with tempfile.TemporaryDirectory(prefix="brzl-ydl-") as tempdir:
         ydl = _build_youtube_dl(worker, tempdir, site, page)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
         outlinks = set()
