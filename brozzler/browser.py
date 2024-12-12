@@ -483,6 +483,7 @@ class Browser:
         skip_extract_outlinks=False,
         skip_visit_hashtags=False,
         skip_youtube_dl=False,
+        ytdlp_tmpdir="/tmp",
         simpler404=False,
         page_timeout=300,
         behavior_timeout=900,
