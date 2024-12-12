@@ -33,9 +33,9 @@ import time
 
 thread_local = threading.local()
 
-ytdlp_proxy = ""
-ytdlp_wait = 10
-max_ytdlp_attempts = 4
+YTDLP_PROXY = ""
+MAX_YTDLP_ATTEMPTS = 4
+YTDLP_WAIT = 10
 
 
 def should_ytdlp(site, page, page_status, skip_av_seeds):
@@ -284,11 +284,11 @@ def _build_youtube_dl(worker, destdir, site, page):
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     is_youtube_host = isyoutubehost(ytdlp_url)
-    if is_youtube_host and ytdlp_proxy:
-        ydl_opts["proxy"] = ytdlp_proxy
+    if is_youtube_host and YTDLP_PROXY:
+        ydl_opts["proxy"] = YTDLP_PROXY
         # don't log proxy value secrets
         ytdlp_proxy_for_logs = (
-            ytdlp_proxy.split("@")[1] if "@" in ytdlp_proxy else "@@@"
+            YTDLP_PROXY.split("@")[1] if "@" in YTDLP_PROXY else "@@@"
         )
         logging.info("using yt-dlp proxy ... %s", ytdlp_proxy_for_logs)
 
@@ -326,7 +326,7 @@ def _remember_videos(page, pushed_videos=None):
 
 def _try_youtube_dl(worker, ydl, site, page):
     attempt = 0
-    while attempt < max_ytdlp_attempts:
+    while attempt < MAX_YTDLP_ATTEMPTS:
         try:
             logging.info("trying yt-dlp on %s", ydl.url)
             # should_download_vid = not ydl.is_youtube_host
@@ -364,15 +364,15 @@ def _try_youtube_dl(worker, ydl, site, page):
                 # OSError('Tunnel connection failed: 464 Host Not Allowed') (caused by ProxyError...)
                 # and others...
                 attempt += 1
-                if attempt == max_ytdlp_attempts:
+                if attempt == MAX_YTDLP_ATTEMPTS:
                     logging.warning(
-                        "Failed after %s attempts. Error: %s", max_ytdlp_attempts, e
+                        "Failed after %s attempts. Error: %s", MAX_YTDLP_ATTEMPTS, e
                     )
                     raise brozzler.VideoExtractorError(
                         "yt-dlp hit error extracting info for %s" % ydl.url
                     )
                 else:
-                    retry_wait = min(60, ytdlp_wait * (1.5 ** (attempt - 1)))
+                    retry_wait = min(60, YTDLP_WAIT * (1.5 ** (attempt - 1)))
                     logging.info(
                         "Attempt %s failed. Retrying in %s seconds...",
                         attempt,
@@ -421,7 +421,7 @@ def do_youtube_dl(worker, site, page):
          `list` of `str`: outlink urls
     """
     with tempfile.TemporaryDirectory(prefix="brzl-ydl-", dir=worker._ytdlp_tmpdir) as tempdir:
-        logging.info("using temporary directory: %s", tempdir)
+        logging.info("tempdir for yt-dlp: %s", tempdir)
         ydl = _build_youtube_dl(worker, tempdir, site, page)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
         outlinks = set()
