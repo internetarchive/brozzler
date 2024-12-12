@@ -265,6 +265,12 @@ def brozzle_page(argv=None):
     arg_parser.add_argument(
         "--skip-youtube-dl", dest="skip_youtube_dl", action="store_true"
     )
+    arg_parser.add_argument(
+        "--ytdlp_tmpdir",
+        dest="ytdlp_tmpdir",
+        default="/tmp",
+        help="specify a temp dir for ytdlp; defaults to /tmp",
+    )
     arg_parser.add_argument("--simpler404", dest="simpler404", action="store_true")
     add_common_options(arg_parser, argv)
 
@@ -292,6 +298,7 @@ def brozzle_page(argv=None):
         skip_extract_outlinks=args.skip_extract_outlinks,
         skip_visit_hashtags=args.skip_visit_hashtags,
         skip_youtube_dl=args.skip_youtube_dl,
+        ytdlp_tmpdir = args.ytdlp_tmpdir,
         simpler404=args.simpler404,
         screenshot_full_page=args.screenshot_full_page,
         download_throughput=args.download_throughput,
@@ -534,6 +541,12 @@ def brozzler_worker(argv=None):
         help=argparse.SUPPRESS,
     )
     arg_parser.add_argument(
+        "--ytdlp_tmpdir",
+        dest="ytdlp_tmpdir",
+        default="/tmp",
+        help="argparse.SUPPRESS",
+    )
+    arg_parser.add_argument(
         "--stealth",
         dest="stealth",
         action="store_true",
@@ -598,6 +611,7 @@ def brozzler_worker(argv=None):
         skip_extract_outlinks=args.skip_extract_outlinks,
         skip_visit_hashtags=args.skip_visit_hashtags,
         skip_youtube_dl=args.skip_youtube_dl,
+        ytdlp_tmpdir=args.ytdlp_tmpdir,
         stealth=args.stealth,
         metrics_port=args.metrics_port,
         registry_url=args.registry_url,

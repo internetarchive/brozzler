@@ -64,6 +64,7 @@ class BrozzlerWorker:
         skip_extract_outlinks=False,
         skip_visit_hashtags=False,
         skip_youtube_dl=False,
+        ytdlp_tmpdir='/tmp',
         simpler404=False,
         screenshot_full_page=False,
         page_timeout=300,
@@ -88,6 +89,7 @@ class BrozzlerWorker:
         self._skip_extract_outlinks = skip_extract_outlinks
         self._skip_visit_hashtags = skip_visit_hashtags
         self._skip_youtube_dl = skip_youtube_dl
+        self._ytdlp_tmpdir = ytdlp_tmpdir
         self._simpler404 = simpler404
         self._screenshot_full_page = screenshot_full_page
         self._page_timeout = page_timeout
@@ -471,6 +473,7 @@ class BrozzlerWorker:
             skip_extract_outlinks=self._skip_extract_outlinks,
             skip_visit_hashtags=self._skip_visit_hashtags,
             skip_youtube_dl=self._skip_youtube_dl,
+            ytdlp_tmpdir = self._ytdlp_tmpdir,
             simpler404=self._simpler404,
             screenshot_full_page=self._screenshot_full_page,
             page_timeout=self._page_timeout,
