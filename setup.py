@@ -66,7 +66,6 @@ setuptools.setup(
     },
     install_requires=[
         "PyYAML>=5.1",
-        "cassandra-driver==3.29.1",
         "reppy==0.3.4",
         "requests>=2.21",
         "websocket-client==1.8.0",

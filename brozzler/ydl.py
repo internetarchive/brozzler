@@ -27,8 +27,6 @@ import urlcanon
 import os
 import json
 import datetime
-from cassandra import ReadTimeout
-from cassandra.cluster import Cluster
 
 from . import metrics
 
