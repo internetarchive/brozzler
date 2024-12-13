@@ -21,6 +21,7 @@ limitations under the License.
 import logging
 import brozzler
 import brozzler.browser
+from brozzler.model import VideoCaptureOptions
 import datetime
 import threading
 import time
@@ -56,7 +57,6 @@ class BrozzlerWorker:
         self,
         frontier,
         service_registry=None,
-        skip_av_seeds=None,
         max_browsers=1,
         chrome_exe="chromium-browser",
         warcprox_auto=False,
@@ -80,7 +80,6 @@ class BrozzlerWorker:
     ):
         self._frontier = frontier
         self._service_registry = service_registry
-        self._skip_av_seeds = skip_av_seeds
         self._max_browsers = max_browsers
 
         self._warcprox_auto = warcprox_auto
@@ -272,7 +271,17 @@ class BrozzlerWorker:
 
         if not self._needs_browsing(page_headers):
             self.logger.info("needs fetch: %s", page)
-            self._fetch_url(site, page=page)
+            if site.pdfs_only and not self._is_pdf(page_headers):
+                self.logger.info("skipping non-PDF content: PDFs only option enabled")
+            elif site.video_capture in [
+                VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value,
+                VideoCaptureOptions.BLOCK_VIDEO_MIME_TYPES.value,
+            ] and self._is_video_type(page_headers):
+                self.logger.info(
+                    "skipping video content: video MIME type capture disabled for site"
+                )
+            else:
+                self._fetch_url(site, page=page)
         else:
             self.logger.info("needs browsing: %s", page)
             try:
@@ -286,9 +295,7 @@ class BrozzlerWorker:
             except brozzler.PageInterstitialShown:
                 self.logger.info("page interstitial shown (http auth): %s", page)
 
-            if enable_youtube_dl and ydl.should_ytdlp(
-                site, page, status_code, self._skip_av_seeds
-            ):
+            if enable_youtube_dl and ydl.should_ytdlp(site, page, status_code):
                 try:
                     ydl_outlinks = ydl.do_youtube_dl(self, site, page)
                     metrics.brozzler_ydl_urls_checked.inc(1)
@@ -336,13 +343,29 @@ class BrozzlerWorker:
             self.logger.warning("Failed to get headers for %s: %s", page.url, e)
             return {}
 
-    def _needs_browsing(self, page_headers):
-        if (
+    def _needs_browsing(self, page_headers) -> bool:
+        return not bool(
             "content-type" in page_headers
             and "html" not in page_headers["content-type"]
-        ):
-            return False
-        return True
+        )
+
+    def _is_video_type(self, page_headers) -> bool:
+        """
+        Determines if the page's Content-Type header specifies that it contains
+        a video.
+        """
+        return (
+            "content-type" in page_headers and "video" in page_headers["content-type"]
+        )
+
+    def _is_pdf(self, page_headers) -> bool:
+        """
+        Determines if the page's Content-Type header specifies that it is a PDF.
+        """
+        return (
+            "content-type" in page_headers
+            and "application/pdf" in page_headers["content-type"]
+        )
 
     @metrics.brozzler_browsing_duration_seconds.time()
     @metrics.brozzler_in_progress_browses.track_inprogress()
