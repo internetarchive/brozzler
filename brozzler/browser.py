@@ -483,6 +483,7 @@ class Browser:
         skip_extract_outlinks=False,
         skip_visit_hashtags=False,
         skip_youtube_dl=False,
+        ytdlp_tmpdir="/tmp",
         simpler404=False,
         page_timeout=300,
         behavior_timeout=900,
@@ -658,11 +659,9 @@ class Browser:
     ):
         headers = extra_headers or {}
         headers["Accept-Encoding"] = "gzip"  # avoid encodings br, sdch
-        self.websock_thread.expect_result(self._command_id.peek())
         msg_id = self.send_to_chrome(
             method="Network.setExtraHTTPHeaders", params={"headers": headers}
         )
-        self._wait_for(lambda: self.websock_thread.received_result(msg_id), timeout=10)
         if user_agent:
             msg_id = self.send_to_chrome(
                 method="Network.setUserAgentOverride", params={"userAgent": user_agent}
