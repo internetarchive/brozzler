@@ -1,0 +1,51 @@
+version: "3.5"
+
+services:
+  rethinkdb:
+    image: rethinkdb:latest
+    command: rethinkdb --bind all
+    ports:
+      - "8080:8080" # WebUI
+      - "28015:28015"
+    expose:
+      - "8080"
+      - "28015"
+    volumes:
+      - rethinkdb_volume:/data
+  warcprox:
+    image: warcprox
+    build:
+      context: .
+      dockerfile: Dockerfile-warcprox
+    environment:
+        - RETHINKDB_SERVICES_URL=rethinkdb://rethinkdb:28015/brozzler_dev/services
+        - RETHINKDB_STATS_URL=rethinkdb://rethinkdb:28015/brozzler_dev/stats
+    ports:
+      - "8888:8888"
+    expose:
+      - "8000"
+    volumes:
+      - warcprox_warcs:/warcs
+      - warcprox_logs:/logs
+    depends_on:
+      - rethinkdb
+  brozzler-worker:
+    image: brozzler-worker
+    platform: linux/amd64
+    build:
+      context: ../
+      dockerfile: ./dev/Dockerfile-brozzler-worker
+    tty: true
+    environment:
+      - RETHINKDB_SERVERS_URL=rethinkdb:28015
+    volumes:
+      - ../:/brozzler
+      - brozzler_venv:/opt/brozzler-worker-venv
+    depends_on:
+      - warcprox
+      - rethinkdb
+volumes:
+  rethinkdb_volume: {}
+  warcprox_warcs: {}
+  warcprox_logs: {}
+  brozzler_venv: {}

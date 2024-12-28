@@ -1,0 +1,26 @@
+FROM ubuntu:latest
+
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip python3-venv && \
+    python3 -m venv /opt/venv
+
+# Enable venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN pip install --upgrade pip && \
+    pip install setuptools && \
+    pip install warcprox>=2.4.31
+
+EXPOSE 8888
+
+VOLUME /warcs /logs
+WORKDIR /app
+copy . /app
+
+ENTRYPOINT warcprox --address 0.0.0.0 --port 8888 --dir /warcs --crawl-log-dir /logs \
+ --rethinkdb-services-url ${RETHINKDB_SERVICES_URL} \
+ --rethinkdb-stats-url=${RETHINKDB_STATS_URL} \
+ --prefix="brozzler" \
+ --rollover-idle-time=86400 \
+ --base32 --gzip --verbose
+
