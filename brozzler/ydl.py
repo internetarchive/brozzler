@@ -18,7 +18,7 @@ limitations under the License.
 
 import logging
 import yt_dlp
-from yt_dlp.utils import match_filter_func
+from yt_dlp.utils import match_filter_func, ExtractorError
 import brozzler
 import urllib.request
 import tempfile
@@ -109,6 +109,31 @@ def _build_youtube_dl(worker, destdir, site, page):
     Returns:
         a yt-dlp `yt_dlp.YoutubeDL` instance
     """
+
+    # Custom GenericIE to handle redirect loops with shared state
+    class CustomGenericIE(yt_dlp.extractor.generic.GenericIE):
+        """Custom Generic Information Extractor to detect redirect loops."""
+
+        logger = logging.getLogger(__module__ + "." + __qualname__)
+        shared_visited_urls = set()  # Shared state for all instances
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.logger.info("[CustomGenericIE] Initialized")
+
+        def _real_extract(self, url):
+            # Check for redirect loops in the shared state
+            if url in self.shared_visited_urls:
+                self.logger.error("Redirect loop detected for URL: {url}")
+                raise ExtractorError(
+                    f"Redirect loop detected for URL: {url}",
+                    expected=True,  # Marks the error as non-fatal
+                )
+            self.shared_visited_urls.add(url)
+            self.logger.info(f"[CustomGenericIE] Extracting URL: {url}")
+            return super()._real_extract(url)
+
+    yt_dlp.extractor.generic.GenericIE = CustomGenericIE
 
     class _YoutubeDL(yt_dlp.YoutubeDL):
         logger = logging.getLogger(__module__ + "." + __qualname__)
@@ -361,6 +386,11 @@ def _try_youtube_dl(worker, ydl, site, page):
                 and e.exc_info[1].code == 420
             ):
                 raise brozzler.ReachedLimit(e.exc_info[1])
+            elif (
+                isinstance(e, yt_dlp.utils.DownloadError)
+                and "Redirect loop detected" in e.msg
+            ):
+                raise brozzler.VideoExtractorError(e.msg)
             else:
                 # todo: other errors to handle separately?
                 # OSError('Tunnel connection failed: 464 Host Not Allowed') (caused by ProxyError...)
