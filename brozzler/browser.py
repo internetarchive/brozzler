@@ -807,6 +807,12 @@ class Browser:
                     lambda: self.websock_thread.received_result(msg_id), timeout=5
                 )
                 msg = self.websock_thread.pop_result(msg_id)
+
+                self.logger.info("Behavior status is %s", str(msg))
+                # Behavior response while still running
+                # {'id': 8, 'result': {'result': {'type': 'boolean', 'value': False}}}
+                # Behavior response when finished
+                # {'id': 9, 'result': {'result': {'type': 'boolean', 'value': True}}}
                 if (
                     msg
                     and "result" in msg
