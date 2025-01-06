@@ -37,6 +37,7 @@ thread_local = threading.local()
 YTDLP_PROXY = ""
 PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
+YTDLP_MAX_REDIRECTS = 5
 
 
 def should_ytdlp(site, page, page_status, skip_av_seeds):
@@ -115,23 +116,33 @@ def _build_youtube_dl(worker, destdir, site, page):
         """Custom Generic Information Extractor to detect redirect loops."""
 
         logger = logging.getLogger(__module__ + "." + __qualname__)
-        shared_visited_urls = set()  # Shared state for all instances
+        visited_redirect_urls = set()
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            self.logger.info("[CustomGenericIE] Initialized")
 
         def _real_extract(self, url):
-            # Check for redirect loops in the shared state
-            if url in self.shared_visited_urls:
-                self.logger.error("Redirect loop detected for URL: {url}")
-                raise ExtractorError(
-                    f"Redirect loop detected for URL: {url}",
-                    expected=True,  # Marks the error as non-fatal
-                )
-            self.shared_visited_urls.add(url)
+            # self.visited_redirect_urls.clear()
             self.logger.info(f"[CustomGenericIE] Extracting URL: {url}")
             return super()._real_extract(url)
+
+        def report_following_redirect(self, new_url):
+            self.logger.info(
+                f"[CustomGenericIE] Following redirect URL: {new_url} "
+                f"redirect_count: {len(self.visited_redirect_urls)}"
+            )
+            if new_url in self.visited_redirect_urls:
+                raise ExtractorError(
+                    f"Redirect loop detected for URL: {new_url}",
+                    expected=True,
+                )
+            if len(self.visited_redirect_urls) > YTDLP_MAX_REDIRECTS:
+                raise ExtractorError(
+                    f"Too many redirects for URL: {new_url}",
+                    expected=True,
+                )
+            self.visited_redirect_urls.add(new_url)
+            return super().report_following_redirect(new_url)
 
     yt_dlp.extractor.generic.GenericIE = CustomGenericIE
 
@@ -386,9 +397,8 @@ def _try_youtube_dl(worker, ydl, site, page):
                 and e.exc_info[1].code == 420
             ):
                 raise brozzler.ReachedLimit(e.exc_info[1])
-            elif (
-                isinstance(e, yt_dlp.utils.DownloadError)
-                and "Redirect loop detected" in e.msg
+            elif isinstance(e, yt_dlp.utils.DownloadError) and (
+                "Redirect loop detected" in e.msg or "Too many redirects" in e.msg
             ):
                 raise brozzler.VideoExtractorError(e.msg)
             else:
