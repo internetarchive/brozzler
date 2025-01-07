@@ -824,7 +824,10 @@ class Browser:
                     and type(msg["result"]["result"]["value"]) == bool
                     and msg["result"]["result"]["value"]
                 ):
-                    self.logger.info("behavior decided it has finished")
+                    self.logger.info(
+                        "behavior decided it has finished after %.1fs",
+                        time.time() - start,
+                    )
                     return
             except BrowsingTimeout:
                 pass
