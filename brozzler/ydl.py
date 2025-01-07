@@ -111,43 +111,23 @@ def _build_youtube_dl(worker, destdir, site, page):
         a yt-dlp `yt_dlp.YoutubeDL` instance
     """
 
-    # Custom GenericIE to handle redirect loops with shared state
-    class CustomGenericIE(yt_dlp.extractor.generic.GenericIE):
-        """Custom Generic Information Extractor to detect redirect loops."""
-
-        logger = logging.getLogger(__module__ + "." + __qualname__)
-        visited_redirect_urls = set()
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-
-        def _real_extract(self, url):
-            # self.visited_redirect_urls.clear()
-            self.logger.info(f"[CustomGenericIE] Extracting URL: {url}")
-            return super()._real_extract(url)
-
-        def report_following_redirect(self, new_url):
-            self.logger.info(
-                f"[CustomGenericIE] Following redirect URL: {new_url} "
-                f"redirect_count: {len(self.visited_redirect_urls)}"
-            )
-            if new_url in self.visited_redirect_urls:
-                raise ExtractorError(
-                    f"Redirect loop detected for URL: {new_url}",
-                    expected=True,
-                )
-            if len(self.visited_redirect_urls) > YTDLP_MAX_REDIRECTS:
-                raise ExtractorError(
-                    f"Too many redirects for URL: {new_url}",
-                    expected=True,
-                )
-            self.visited_redirect_urls.add(new_url)
-            return super().report_following_redirect(new_url)
-
-    yt_dlp.extractor.generic.GenericIE = CustomGenericIE
-
     class _YoutubeDL(yt_dlp.YoutubeDL):
         logger = logging.getLogger(__module__ + "." + __qualname__)
+
+        def process_ie_result(self, ie_result, download=True, extra_info=None):
+            if extra_info is None:
+                extra_info = {}
+            if 'redirect_count' in extra_info:
+                self.logger.info(f"Following redirect URL: {ie_result['url']} redirect_count: {extra_info['redirect_count']}")
+            extra_info['redirect_count'] = 1 + extra_info.get('redirect_count', 0)
+            if extra_info["redirect_count"] > YTDLP_MAX_REDIRECTS:
+                raise ExtractorError(
+                    f"Too many redirects for URL: {ie_result['url']}",
+                    expected=True,
+                )
+
+            super().process_ie_result(ie_result, download, extra_info)
+
 
         def add_default_extra_info(self, ie_result, ie, url):
             # hook in some logging
