@@ -123,24 +123,24 @@ def _build_youtube_dl(worker, destdir, site, page):
         def process_ie_result(self, ie_result, download=True, extra_info=None):
             if extra_info is None:
                 extra_info = {}
-            if (
-                "redirect_count" in extra_info
-                and "_type" in ie_result
-                and ie_result.get("_type") in ("url", "url_transparent")
-            ):
-                self.logger.info(
-                    f"Following redirect URL: {ie_result['url']} redirect_count: {extra_info['redirect_count']}"
-                )
-                extra_info["redirect_count"] = 1 + extra_info.get("redirect_count", 0)
-            else:
-                extra_info["redirect_count"] = 0
-            if extra_info["redirect_count"] > YTDLP_MAX_REDIRECTS:
-                raise ExtractorError(
-                    f"Too many redirects for URL: {ie_result['url']}",
-                    expected=True,
-                )
+            result_type = ie_result.get("_type", "video")
 
-            super().process_ie_result(ie_result, download, extra_info)
+            if result_type in ("url", "url_transparent"):
+                if "extraction_depth" in extra_info:
+                    self.logger.info(
+                        f"Following redirect URL: {ie_result['url']} extraction_depth: {extra_info['extraction_depth']}"
+                    )
+                    extra_info["extraction_depth"] = 1 + extra_info.get(
+                        "extraction_depth", 0
+                    )
+                else:
+                    extra_info["extraction_depth"] = 0
+                if extra_info["extraction_depth"] >= YTDLP_MAX_REDIRECTS:
+                    raise ExtractorError(
+                        f"Too many hops for URL: {ie_result['url']}",
+                        expected=True,
+                    )
+            return super().process_ie_result(ie_result, download, extra_info)
 
         def add_default_extra_info(self, ie_result, ie, url):
             # hook in some logging
