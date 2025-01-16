@@ -788,6 +788,8 @@ class Browser:
 
         check_interval = min(timeout, 7)
         start = time.time()
+        valid_behavior_checks = 0
+        invalid_behavior_checks = 0
         while True:
             elapsed = time.time() - start
             if elapsed > timeout:
@@ -815,6 +817,16 @@ class Browser:
                 # {'id': 9, 'result': {'result': {'type': 'boolean', 'value': True}}}
                 if (
                     msg
+                    and "result" in msg["result"]
+                    and type(msg["result"]["result"]["value"]) is bool
+                    and not msg["result"]["result"]["value"]
+                ):
+                    # valid behavior response while still running
+                    # {'id': 8, 'result': {'result': {'type': 'boolean', 'value': False}}}
+                    valid_behavior_checks += 1
+
+                if (
+                    msg
                     and "result" in msg
                     and not ("exceptionDetails" in msg["result"])
                     and not (
@@ -824,11 +836,20 @@ class Browser:
                     and type(msg["result"]["result"]["value"]) == bool
                     and msg["result"]["result"]["value"]
                 ):
+
+                    # valid behavior response when finished
+                    # {'id': 9, 'result': {'result': {'type': 'boolean', 'value': True}}}
+                    elapsed = time.time() - start
                     self.logger.info(
-                        "behavior decided it has finished after %.1fs",
-                        time.time() - start,
+                        "behavior decided it has finished after %.1fs and %s valid checks, "
+                        "and %s invalid checks",
+                        elapsed,
+                        valid_behavior_checks,
+                        invalid_behavior_checks,
                     )
                     return
+                invalid_behavior_checks += 1
+
             except BrowsingTimeout:
                 pass
 
