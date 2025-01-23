@@ -38,28 +38,11 @@ import time
 thread_local = threading.local()
 
 
-YTDLP_PROXY = ""
 PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
 YTDLP_MAX_REDIRECTS = 5
 
-
-def _timestamp4datetime(timestamp):
-    """split `timestamp` into a tuple of 6 integers.
-
-    :param timestamp: full-length timestamp
-    """
-    timestamp = timestamp[:14]
-    return (
-        int(timestamp[:-10]),
-        int(timestamp[-10:-8]),
-        int(timestamp[-8:-6]),
-        int(timestamp[-6:-4]),
-        int(timestamp[-4:-2]),
-        int(timestamp[-2:])
-        )
-
-def should_ytdlp(site, page, page_status):
+def should_ytdlp(site, page, page_status, proxy_endpoints):
     # called only after we've passed needs_browsing() check
 
     if page_status != 200:
@@ -314,11 +297,11 @@ def _build_youtube_dl(worker, destdir, site, page):
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     is_youtube_host = isyoutubehost(ytdlp_url)
-    if is_youtube_host and YTDLP_PROXY:
-        ydl_opts["proxy"] = YTDLP_PROXY
+    if is_youtube_host and proxy_endpoints:
+        ydl_opts["proxy"] = random.choice(proxy_endpoints)
         # don't log proxy value secrets
         ytdlp_proxy_for_logs = (
-            YTDLP_PROXY.split("@")[1] if "@" in YTDLP_PROXY else "@@@"
+            ydl_opts["proxy"].split("@")[1] if "@" in ydl_opts["proxy"] else "@@@"
         )
         logging.info("using yt-dlp proxy ... %s", ytdlp_proxy_for_logs)
 

@@ -2,7 +2,7 @@
 """
 brozzler/cli.py - brozzler command line executables
 
-Copyright (C) 2014-2024 Internet Archive
+Copyright (C) 2014-2025 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -598,12 +598,30 @@ def brozzler_worker(argv=None):
         finally:
             signal.signal(signal.SIGQUIT, dump_state)
 
+    def get_proxy_endpoints():
+        PROXY_ENDPOINTS_FILE = "/opt/local/brozzler/proxy_endpoints.txt"
+        try:
+            # make list from file
+            with open(PROXY_ENDPOINTS_FILE) as endpoints:
+                proxy_endpoints = [l for l in endpoints.readlines()]
+                if proxy_endpoints:
+                    logging.info(
+                        "running with proxy endpoints file %s" % PROXY_ENDPOINTS_FILE
+                    )
+        except Exception as e:
+            proxy_endpoints = []
+            logging.info("running with empty proxy endpoints file")
+        return proxy_endpoints
+
     rr = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(rr)
     service_registry = doublethink.ServiceRegistry(rr)
+    skip_av_seeds_from_file = get_skip_av_seeds()
+    proxy_endpoints_from_file = get_proxy_endpoints()
     worker = brozzler.worker.BrozzlerWorker(
         frontier,
         service_registry,
+        proxy_endpoints=proxy_endpoints_from_file,
         max_browsers=int(args.max_browsers),
         chrome_exe=args.chrome_exe,
         proxy=args.proxy,
