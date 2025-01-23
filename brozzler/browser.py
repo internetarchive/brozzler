@@ -486,7 +486,7 @@ class Browser:
         ytdlp_tmpdir="/tmp",
         simpler404=False,
         page_timeout=300,
-        behavior_timeout=900,
+        behavior_timeout=300,
         extract_outlinks_timeout=60,
         download_throughput=-1,
         stealth=False,

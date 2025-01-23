@@ -69,7 +69,7 @@ class BrozzlerWorker:
         simpler404=False,
         screenshot_full_page=False,
         page_timeout=300,
-        behavior_timeout=900,
+        behavior_timeout=300,
         extract_outlinks_timeout=60,
         download_throughput=-1,
         stealth=False,
