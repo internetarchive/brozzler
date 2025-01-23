@@ -34,12 +34,11 @@ import time
 thread_local = threading.local()
 
 
-YTDLP_PROXY = ""
 PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
 
 
-def should_ytdlp(site, page, page_status, skip_av_seeds):
+def should_ytdlp(site, page, page_status, skip_av_seeds, proxy_endpoints):
     # called only after we've passed needs_browsing() check
 
     if page_status != 200:
@@ -285,11 +284,11 @@ def _build_youtube_dl(worker, destdir, site, page):
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     is_youtube_host = isyoutubehost(ytdlp_url)
-    if is_youtube_host and YTDLP_PROXY:
-        ydl_opts["proxy"] = YTDLP_PROXY
+    if is_youtube_host and proxy_endpoints:
+        ydl_opts["proxy"] = random.choice(proxy_endpoints)
         # don't log proxy value secrets
         ytdlp_proxy_for_logs = (
-            YTDLP_PROXY.split("@")[1] if "@" in YTDLP_PROXY else "@@@"
+            ydl_opts["proxy"].split("@")[1] if "@" in ydl_opts["proxy"] else "@@@"
         )
         logging.info("using yt-dlp proxy ... %s", ytdlp_proxy_for_logs)
 
