@@ -18,7 +18,7 @@ limitations under the License.
 
 import logging
 import yt_dlp
-from yt_dlp.utils import match_filter_func
+from yt_dlp.utils import match_filter_func, ExtractorError
 import brozzler
 import urllib.request
 import tempfile
@@ -37,6 +37,7 @@ thread_local = threading.local()
 YTDLP_PROXY = ""
 PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
+YTDLP_MAX_REDIRECTS = 5
 
 
 def should_ytdlp(site, page, page_status, skip_av_seeds):
@@ -112,6 +113,28 @@ def _build_youtube_dl(worker, destdir, site, page):
 
     class _YoutubeDL(yt_dlp.YoutubeDL):
         logger = logging.getLogger(__module__ + "." + __qualname__)
+
+        def process_ie_result(self, ie_result, download=True, extra_info=None):
+            if extra_info is None:
+                extra_info = {}
+            result_type = ie_result.get("_type", "video")
+
+            if result_type in ("url", "url_transparent"):
+                if "extraction_depth" in extra_info:
+                    self.logger.info(
+                        f"Following redirect URL: {ie_result['url']} extraction_depth: {extra_info['extraction_depth']}"
+                    )
+                    extra_info["extraction_depth"] = 1 + extra_info.get(
+                        "extraction_depth", 0
+                    )
+                else:
+                    extra_info["extraction_depth"] = 0
+                if extra_info["extraction_depth"] >= YTDLP_MAX_REDIRECTS:
+                    raise ExtractorError(
+                        f"Too many hops for URL: {ie_result['url']}",
+                        expected=True,
+                    )
+            return super().process_ie_result(ie_result, download, extra_info)
 
         def add_default_extra_info(self, ie_result, ie, url):
             # hook in some logging
@@ -361,6 +384,10 @@ def _try_youtube_dl(worker, ydl, site, page):
                 and e.exc_info[1].code == 420
             ):
                 raise brozzler.ReachedLimit(e.exc_info[1])
+            elif isinstance(e, yt_dlp.utils.DownloadError) and (
+                "Redirect loop detected" in e.msg or "Too many redirects" in e.msg
+            ):
+                raise brozzler.VideoExtractorError(e.msg)
             else:
                 # todo: other errors to handle separately?
                 # OSError('Tunnel connection failed: 464 Host Not Allowed') (caused by ProxyError...)
