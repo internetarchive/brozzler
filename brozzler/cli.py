@@ -611,14 +611,16 @@ def brozzler_worker(argv=None):
             logging.info("running with empty skip_av_seeds")
         return skip_av_seeds
 
-   def get_proxy_endpoints():
+    def get_proxy_endpoints():
         PROXY_ENDPOINTS_FILE = "/opt/local/brozzler/proxy_endpoints.txt"
         try:
             # make list from file
             with open(PROXY_ENDPOINTS_FILE) as endpoints:
                 proxy_endpoints = [l for l in endpoints.readlines()]
                 if proxy_endpoints:
-                    logging.info("running with proxy endpoints file %s" % PROXY_ENDPOINTS_FILE)
+                    logging.info(
+                        "running with proxy endpoints file %s" % PROXY_ENDPOINTS_FILE
+                    )
         except Exception as e:
             proxy_endpoints = []
             logging.info("running with empty proxy endpoints file")
