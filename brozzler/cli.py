@@ -618,7 +618,6 @@ def brozzler_worker(argv=None):
     rr = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(rr)
     service_registry = doublethink.ServiceRegistry(rr)
-    skip_av_seeds_from_file = get_skip_av_seeds()
     ytdlp_proxy_endpoints_from_file = get_ytdlp_proxy_endpoints()
     worker = brozzler.worker.BrozzlerWorker(
         frontier,
