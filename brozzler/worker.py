@@ -3,7 +3,7 @@ brozzler/worker.py - BrozzlerWorker brozzles pages from the frontier, meaning
 it runs yt-dlp on them, browses them and runs behaviors if appropriate,
 scopes and adds outlinks to the frontier
 
-Copyright (C) 2014-2024 Internet Archive
+Copyright (C) 2014-2025 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ class BrozzlerWorker:
         self,
         frontier,
         service_registry=None,
-        proxy_endpoints=None,
+        ytdlp_proxy_endpoints=None,
         max_browsers=1,
         chrome_exe="chromium-browser",
         warcprox_auto=False,
@@ -81,7 +81,7 @@ class BrozzlerWorker:
     ):
         self._frontier = frontier
         self._service_registry = service_registry
-        self._proxy_endpoints = proxy_endpoints
+        self._ytdlp_proxy_endpoints = ytdlp_proxy_endpoints
         self._max_browsers = max_browsers
 
         self._warcprox_auto = warcprox_auto
@@ -298,11 +298,11 @@ class BrozzlerWorker:
             except brozzler.PageInterstitialShown:
                 self.logger.info("page interstitial shown (http auth): %s", page)
 
-            if enable_youtube_dl and ydl.should_ytdlp(
-                site, page, status_code, self._proxy_endpoints
-            ):
+            if enable_youtube_dl and ydl.should_ytdlp(site, page, status_code):
                 try:
-                    ydl_outlinks = ydl.do_youtube_dl(self, site, page)
+                    ydl_outlinks = ydl.do_youtube_dl(
+                        self, site, page, self._ytdlp_proxy_endpoints
+                    )
                     metrics.brozzler_ydl_urls_checked.inc(1)
                     outlinks.update(ydl_outlinks)
                 except brozzler.ReachedLimit as e:

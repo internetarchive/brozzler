@@ -129,9 +129,10 @@ def configure_logging(args):
 def suggest_default_chrome_exe():
     # mac os x application executable paths
     for path in [
-            '/Applications/Thorium.app/Contents/MacOS/Thorium',
-            '/Applications/Chromium.app/Contents/MacOS/Chromium',
-            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome']:
+        "/Applications/Thorium.app/Contents/MacOS/Thorium",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    ]:
         if os.path.exists(path):
             return path
 
@@ -598,30 +599,31 @@ def brozzler_worker(argv=None):
         finally:
             signal.signal(signal.SIGQUIT, dump_state)
 
-    def get_proxy_endpoints():
-        PROXY_ENDPOINTS_FILE = "/opt/local/brozzler/proxy_endpoints.txt"
+    def get_ytdlp_proxy_endpoints():
+        YTDLP_PROXY_ENDPOINTS_FILE = "/opt/local/brozzler/ytdlp_proxy_endpoints.txt"
         try:
             # make list from file
-            with open(PROXY_ENDPOINTS_FILE) as endpoints:
-                proxy_endpoints = [l for l in endpoints.readlines()]
-                if proxy_endpoints:
+            with open(YTDLP_PROXY_ENDPOINTS_FILE) as endpoints:
+                ytdlp_proxy_endpoints = [l for l in endpoints.readlines()]
+                if ytdlp_proxy_endpoints:
                     logging.info(
-                        "running with proxy endpoints file %s" % PROXY_ENDPOINTS_FILE
+                        "running with ytdlp proxy endpoints file %s"
+                        % YTDLP_PROXY_ENDPOINTS_FILE
                     )
         except Exception as e:
-            proxy_endpoints = []
+            ytdlp_proxy_endpoints = []
             logging.info("running with empty proxy endpoints file")
-        return proxy_endpoints
+        return ytdlp_proxy_endpoints
 
     rr = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(rr)
     service_registry = doublethink.ServiceRegistry(rr)
     skip_av_seeds_from_file = get_skip_av_seeds()
-    proxy_endpoints_from_file = get_proxy_endpoints()
+    ytdlp_proxy_endpoints_from_file = get_ytdlp_proxy_endpoints()
     worker = brozzler.worker.BrozzlerWorker(
         frontier,
         service_registry,
-        proxy_endpoints=proxy_endpoints_from_file,
+        ytdlp_proxy_endpoints=ytdlp_proxy_endpoints_from_file,
         max_browsers=int(args.max_browsers),
         chrome_exe=args.chrome_exe,
         proxy=args.proxy,
