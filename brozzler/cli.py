@@ -619,7 +619,8 @@ def brozzler_worker(argv=None):
                 ytdlp_proxy_endpoints = [l for l in endpoints.readlines()]
                 if ytdlp_proxy_endpoints:
                     logging.info(
-                        "running with ytdlp proxy endpoints file %s" % YTDLP_PROXY_ENDPOINTS_FILE
+                        "running with ytdlp proxy endpoints file %s"
+                        % YTDLP_PROXY_ENDPOINTS_FILE
                     )
         except Exception as e:
             ytdlp_proxy_endpoints = []

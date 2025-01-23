@@ -292,7 +292,9 @@ class BrozzlerWorker:
                 site, page, status_code, self._skip_av_seeds
             ):
                 try:
-                    ydl_outlinks = ydl.do_youtube_dl(self, site, page, self._ytdlp_proxy_endpoints)
+                    ydl_outlinks = ydl.do_youtube_dl(
+                        self, site, page, self._ytdlp_proxy_endpoints
+                    )
                     metrics.brozzler_ydl_urls_checked.inc(1)
                     outlinks.update(ydl_outlinks)
                 except brozzler.ReachedLimit as e:
