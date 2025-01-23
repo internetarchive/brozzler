@@ -793,7 +793,13 @@ class Browser:
         while True:
             elapsed = time.time() - start
             if elapsed > timeout:
-                logging.info("behavior reached hard timeout after %.1fs", elapsed)
+                logging.info(
+                    "behavior reached hard timeout after %.1fs and %s valid checks, "
+                    "and %s invalid checks",
+                    elapsed,
+                    valid_behavior_checks,
+                    invalid_behavior_checks,
+                )
                 return
 
             brozzler.sleep(check_interval)
@@ -824,6 +830,7 @@ class Browser:
                     # valid behavior response while still running
                     # {'id': 8, 'result': {'result': {'type': 'boolean', 'value': False}}}
                     valid_behavior_checks += 1
+                    continue
 
                 if (
                     msg
@@ -851,7 +858,7 @@ class Browser:
                 invalid_behavior_checks += 1
 
             except BrowsingTimeout:
-                pass
+                invalid_behavior_checks += 1
 
     def try_login(self, username, password, timeout=300):
         try_login_js = (
