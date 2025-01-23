@@ -2,7 +2,7 @@
 """
 brozzler/cli.py - brozzler command line executables
 
-Copyright (C) 2014-2024 Internet Archive
+Copyright (C) 2014-2025 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -547,6 +547,12 @@ def brozzler_worker(argv=None):
         help="argparse.SUPPRESS",
     )
     arg_parser.add_argument(
+        "--ytdlp_proxy_file",
+        dest="ytdlp_proxy_file",
+        default="/opt/local/brozzler/ytdlp_proxy_endpoints.txt",
+        help="argparse.SUPPRESS",
+    )
+    arg_parser.add_argument(
         "--stealth",
         dest="stealth",
         action="store_true",
@@ -611,14 +617,32 @@ def brozzler_worker(argv=None):
             logging.info("running with empty skip_av_seeds")
         return skip_av_seeds
 
+    def get_ytdlp_proxy_endpoints():
+        YTDLP_PROXY_ENDPOINTS_FILE = args.ytdlp_proxy_file
+        try:
+            # make list from file
+            with open(YTDLP_PROXY_ENDPOINTS_FILE) as endpoints:
+                ytdlp_proxy_endpoints = [l for l in endpoints.readlines()]
+                if ytdlp_proxy_endpoints:
+                    logging.info(
+                        "running with ytdlp proxy endpoints file %s"
+                        % YTDLP_PROXY_ENDPOINTS_FILE
+                    )
+        except Exception as e:
+            ytdlp_proxy_endpoints = []
+            logging.info("running with empty proxy endpoints file")
+        return ytdlp_proxy_endpoints
+
     rr = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(rr)
     service_registry = doublethink.ServiceRegistry(rr)
     skip_av_seeds_from_file = get_skip_av_seeds()
+    ytdlp_proxy_endpoints_from_file = get_ytdlp_proxy_endpoints()
     worker = brozzler.worker.BrozzlerWorker(
         frontier,
         service_registry,
         skip_av_seeds=skip_av_seeds_from_file,
+        ytdlp_proxy_endpoints=ytdlp_proxy_endpoints_from_file,
         max_browsers=int(args.max_browsers),
         chrome_exe=args.chrome_exe,
         proxy=args.proxy,

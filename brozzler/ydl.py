@@ -1,7 +1,7 @@
 """
 brozzler/ydl.py - youtube-dl / yt-dlp support for brozzler
 
-Copyright (C) 2024 Internet Archive
+Copyright (C) 2024-2025 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,13 +28,13 @@ import json
 import doublethink
 import datetime
 from . import metrics
+import random
 import threading
 import time
 
 thread_local = threading.local()
 
 
-YTDLP_PROXY = ""
 PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
 YTDLP_MAX_REDIRECTS = 5
@@ -91,7 +91,7 @@ class ExtraHeaderAdder(urllib.request.BaseHandler):
         return req
 
 
-def _build_youtube_dl(worker, destdir, site, page):
+def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
     """
     Builds a yt-dlp `yt_dlp.YoutubeDL` for brozzling `site` with `worker`.
 
@@ -308,11 +308,11 @@ def _build_youtube_dl(worker, destdir, site, page):
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     is_youtube_host = isyoutubehost(ytdlp_url)
-    if is_youtube_host and YTDLP_PROXY:
-        ydl_opts["proxy"] = YTDLP_PROXY
+    if is_youtube_host and ytdlp_proxy_endpoints:
+        ydl_opts["proxy"] = random.choice(ytdlp_proxy_endpoints)
         # don't log proxy value secrets
         ytdlp_proxy_for_logs = (
-            YTDLP_PROXY.split("@")[1] if "@" in YTDLP_PROXY else "@@@"
+            ydl_opts["proxy"].split("@")[1] if "@" in ydl_opts["proxy"] else "@@@"
         )
         logging.info("using yt-dlp proxy ... %s", ytdlp_proxy_for_logs)
 
@@ -436,7 +436,7 @@ def _try_youtube_dl(worker, ydl, site, page):
 
 @metrics.brozzler_ytdlp_duration_seconds.time()
 @metrics.brozzler_in_progress_ytdlps.track_inprogress()
-def do_youtube_dl(worker, site, page):
+def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
     """
     Runs yt-dlp configured for `worker` and `site` to download videos from
     `page`.
@@ -453,7 +453,7 @@ def do_youtube_dl(worker, site, page):
         prefix="brzl-ydl-", dir=worker._ytdlp_tmpdir
     ) as tempdir:
         logging.info("tempdir for yt-dlp: %s", tempdir)
-        ydl = _build_youtube_dl(worker, tempdir, site, page)
+        ydl = _build_youtube_dl(worker, tempdir, site, page, ytdlp_proxy_endpoints)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
         outlinks = set()
         if ie_result and (
