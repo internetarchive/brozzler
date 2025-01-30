@@ -548,6 +548,12 @@ def brozzler_worker(argv=None):
         help="argparse.SUPPRESS",
     )
     arg_parser.add_argument(
+        "--ytdlp_proxy_file",
+        dest="ytdlp_proxy_file",
+        default="/opt/local/brozzler/ytdlp_proxy_endpoints.txt",
+        help="argparse.SUPPRESS",
+    )
+    arg_parser.add_argument(
         "--stealth",
         dest="stealth",
         action="store_true",
@@ -600,7 +606,7 @@ def brozzler_worker(argv=None):
             signal.signal(signal.SIGQUIT, dump_state)
 
     def get_ytdlp_proxy_endpoints():
-        YTDLP_PROXY_ENDPOINTS_FILE = "/opt/local/brozzler/ytdlp_proxy_endpoints.txt"
+        YTDLP_PROXY_ENDPOINTS_FILE = args.ytdlp_proxy_file
         try:
             # make list from file
             with open(YTDLP_PROXY_ENDPOINTS_FILE) as endpoints:
