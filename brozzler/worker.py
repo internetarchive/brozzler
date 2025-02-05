@@ -343,7 +343,7 @@ class BrozzlerWorker:
         # see https://docs.python-requests.org/en/latest/user/advanced/#body-content-workflow
         try:
             with requests.get(
-                page.url, stream=True, verify=False, timeout=HEADER_REQUEST_TIMEOUT
+                page.url, stream=True, verify=False, timeout=self.HEADER_REQUEST_TIMEOUT
             ) as r:
                 return r.headers
         except requests.exceptions.Timeout as e:
