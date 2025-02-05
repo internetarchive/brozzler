@@ -337,16 +337,14 @@ class BrozzlerWorker:
             with requests.get(
                 page.url, stream=True, verify=False, timeout=HEADER_REQUEST_TIMEOUT
             ) as r:
-                page_headers = r.headers
-            return page_headers
+                return r.headers
         except requests.exceptions.Timeout as e:
             self.logger.warning(
                 "Timed out trying to get headers for %s: %s", page.url, e
             )
-            return {}
         except requests.exceptions.RequestException as e:
             self.logger.warning("Failed to get headers for %s: %s", page.url, e)
-            return {}
+        return {}
 
     def _needs_browsing(self, page_headers):
         if (
