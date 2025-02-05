@@ -52,6 +52,7 @@ class BrozzlerWorker:
     # cluster with slow rethinkdb.
     HEARTBEAT_INTERVAL = 200.0
     SITE_SESSION_MINUTES = 15
+    HEADER_REQUEST_TIMEOUT = 30
 
     def __init__(
         self,
@@ -340,13 +341,18 @@ class BrozzlerWorker:
     def _get_page_headers(self, page):
         # bypassing warcprox, requests' stream=True defers downloading the body of the response
         # see https://docs.python-requests.org/en/latest/user/advanced/#body-content-workflow
-        page_headers = {}
         try:
-            with requests.get(page.url, stream=True, verify=False) as r:
-                page_headers = r.headers
+            with requests.get(
+                page.url, stream=True, verify=False, timeout=HEADER_REQUEST_TIMEOUT
+            ) as r:
+                return r.headers
+        except requests.exceptions.Timeout as e:
+            self.logger.warning(
+                "Timed out trying to get headers for %s: %s", page.url, e
+            )
         except requests.exceptions.RequestException as e:
             self.logger.warning("Failed to get headers for %s: %s", page.url, e)
-        return page_headers
+        return {}
 
     def _needs_browsing(self, page_headers) -> bool:
         return not bool(
