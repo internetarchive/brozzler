@@ -34,7 +34,7 @@ def find_package_data(package):
 
 setuptools.setup(
     name="brozzler",
-    version="1.6.5",
+    version="1.6.7a0",
     description="Distributed web crawling with browsers",
     url="https://github.com/internetarchive/brozzler",
     author="Noah Levitt",
