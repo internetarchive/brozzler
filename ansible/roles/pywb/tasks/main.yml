@@ -10,7 +10,7 @@
     version: 0.33.2
     virtualenv: '{{venv_root}}/pywb-ve3'
     virtualenv_python: python3
-    virtualenv_command: python3 /usr/lib/python3/dist-packages/virtualenv.py
+    virtualenv_command: python3 -mvirtualenv
     extra_args: '--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
   become: true
   become_user: '{{user}}'
@@ -22,7 +22,7 @@
     name: '{{brozzler_pip_name}}'
     virtualenv: '{{venv_root}}/pywb-ve3'
     virtualenv_python: python3
-    virtualenv_command: python3 /usr/lib/python3/dist-packages/virtualenv.py
+    virtualenv_command: python3 -mvirtualenv
     extra_args: '--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
   become: true
   become_user: '{{user}}'
