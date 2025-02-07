@@ -584,7 +584,9 @@ class Browser:
                     behavior_script = brozzler.behavior_script(
                         page_url, behavior_parameters, behaviors_dir=behaviors_dir
                     )
-                    self.run_behavior(behavior_script, page_url, timeout=behavior_timeout)
+                    self.run_behavior(
+                        behavior_script, page_url, timeout=behavior_timeout
+                    )
                 final_page_url = self.url()
                 if on_screenshot:
                     if simpler404:
@@ -800,7 +802,7 @@ class Browser:
                     elapsed,
                     valid_behavior_checks,
                     invalid_behavior_checks,
-                    page_url
+                    page_url,
                 )
                 return
 
@@ -848,7 +850,7 @@ class Browser:
                         elapsed,
                         valid_behavior_checks,
                         invalid_behavior_checks,
-                        page_url
+                        page_url,
                     )
                     return
                 invalid_behavior_checks += 1
