@@ -584,7 +584,7 @@ class Browser:
                     behavior_script = brozzler.behavior_script(
                         page_url, behavior_parameters, behaviors_dir=behaviors_dir
                     )
-                    self.run_behavior(behavior_script, timeout=behavior_timeout)
+                    self.run_behavior(behavior_script, page_url, timeout=behavior_timeout)
                 final_page_url = self.url()
                 if on_screenshot:
                     if simpler404:
@@ -779,7 +779,7 @@ class Browser:
         message = self.websock_thread.pop_result(msg_id)
         return message["result"]["result"]["value"]
 
-    def run_behavior(self, behavior_script, timeout=900):
+    def run_behavior(self, behavior_script, page_url, timeout=900):
         self.send_to_chrome(
             method="Runtime.evaluate",
             suppress_logging=True,
@@ -795,10 +795,12 @@ class Browser:
             if elapsed > timeout:
                 logging.info(
                     "behavior reached hard timeout after %.1fs and %s valid checks, "
-                    "and %s invalid checks",
+                    "and %s invalid checks, "
+                    "for url %s",
                     elapsed,
                     valid_behavior_checks,
                     invalid_behavior_checks,
+                    page_url
                 )
                 return
 
@@ -842,10 +844,11 @@ class Browser:
                     elapsed = time.time() - start
                     self.logger.info(
                         "behavior decided it has finished after %.1fs and %s valid checks, "
-                        "and %s invalid checks",
+                        "and %s invalid checks, for url %s",
                         elapsed,
                         valid_behavior_checks,
                         invalid_behavior_checks,
+                        page_url
                     )
                     return
                 invalid_behavior_checks += 1
