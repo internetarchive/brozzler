@@ -52,6 +52,7 @@ class BrozzlerWorker:
     HEARTBEAT_INTERVAL = 200.0
     SITE_SESSION_MINUTES = 15
     HEADER_REQUEST_TIMEOUT = 30
+    FETCH_URL_TIMEOUT = 60
 
     def __init__(
         self,
@@ -334,6 +335,7 @@ class BrozzlerWorker:
         # bypassing warcprox, requests' stream=True defers downloading the body of the response
         # see https://docs.python-requests.org/en/latest/user/advanced/#body-content-workflow
         try:
+            self.logger.info("getting page headers for %s", page.url)
             with requests.get(
                 page.url, stream=True, verify=False, timeout=self.HEADER_REQUEST_TIMEOUT
             ) as r:
@@ -485,8 +487,14 @@ class BrozzlerWorker:
         try:
             # response is ignored
             requests.get(
-                url, proxies=proxies, headers=site.extra_headers(page), verify=False
+                url,
+                proxies=proxies,
+                headers=site.extra_headers(page),
+                verify=False,
+                timeout=self.FETCH_URL_TIMEOUT,
             )
+        except requests.exceptions.Timeout as e:
+            self.logger.warning("Timed out fetching %s: %s", page.url, e)
         except requests.exceptions.ProxyError as e:
             raise brozzler.ProxyError("proxy error fetching %s" % url) from e
 
