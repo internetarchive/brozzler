@@ -1,7 +1,7 @@
 """
 brozzler/browser.py - manages the browsers for brozzler
 
-Copyright (C) 2014-2024 Internet Archive
+Copyright (C) 2014-2025 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -796,9 +796,7 @@ class Browser:
             elapsed = time.time() - start
             if elapsed > timeout:
                 logging.info(
-                    "behavior reached hard timeout after %.1fs and %s valid checks, "
-                    "and %s invalid checks, "
-                    "for url %s",
+                    "behavior reached hard timeout after %.1fs and %s valid checks, and %s invalid checks, for url %s",
                     elapsed,
                     valid_behavior_checks,
                     invalid_behavior_checks,
@@ -845,8 +843,7 @@ class Browser:
                     # {'id': 9, 'result': {'result': {'type': 'boolean', 'value': True}}}
                     elapsed = time.time() - start
                     self.logger.info(
-                        "behavior decided it has finished after %.1fs and %s valid checks, "
-                        "and %s invalid checks, for url %s",
+                        "behavior decided it has finished after %.1fs and %s valid checks, and %s invalid checks, for url %s",
                         elapsed,
                         valid_behavior_checks,
                         invalid_behavior_checks,
