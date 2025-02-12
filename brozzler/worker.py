@@ -531,7 +531,7 @@ class BrozzlerWorker:
         except requests.exceptions.ProxyError as e:
             raise brozzler.ProxyError("proxy error fetching %s" % url) from e
         except requests.exceptions.RequestException as e:
-            self.logger.warning("Failed to get headers for %s: %s", page.url, e)
+            self.logger.warning("Failed to fetch url %s", page.url, e)
 
     def brozzle_site(self, browser, site):
         try:
