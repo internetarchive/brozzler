@@ -52,6 +52,7 @@ class BrozzlerWorker:
     HEARTBEAT_INTERVAL = 200.0
     SITE_SESSION_MINUTES = 15
     HEADER_REQUEST_TIMEOUT = 30
+    FETCH_URL_TIMEOUT = 60
 
     def __init__(
         self,
@@ -271,7 +272,7 @@ class BrozzlerWorker:
         self.logger.info("brozzling {}".format(page))
         outlinks = set()
 
-        page_headers = self._get_page_headers(page)
+        page_headers = self._get_page_headers(site, page)
 
         if not self._needs_browsing(page_headers):
             self.logger.info("needs fetch: %s", page)
@@ -330,12 +331,19 @@ class BrozzlerWorker:
 
     @metrics.brozzler_header_processing_duration_seconds.time()
     @metrics.brozzler_in_progress_headers.track_inprogress()
-    def _get_page_headers(self, page):
+    def _get_page_headers(self, site, page):
         # bypassing warcprox, requests' stream=True defers downloading the body of the response
         # see https://docs.python-requests.org/en/latest/user/advanced/#body-content-workflow
         try:
+            user_agent = site.get("user_agent")
+            headers = {"User-Agent": user_agent} if user_agent else {}
+            self.logger.info("getting page headers for %s", page.url)
             with requests.get(
-                page.url, stream=True, verify=False, timeout=self.HEADER_REQUEST_TIMEOUT
+                page.url,
+                stream=True,
+                verify=False,
+                headers=headers,
+                timeout=self.HEADER_REQUEST_TIMEOUT,
             ) as r:
                 return r.headers
         except requests.exceptions.Timeout as e:
@@ -480,15 +488,26 @@ class BrozzlerWorker:
                 "http": "http://%s" % self._proxy_for(site),
                 "https": "http://%s" % self._proxy_for(site),
             }
+        user_agent = site.get("user_agent")
+        headers = {"User-Agent": user_agent} if user_agent else {}
+        headers.update(site.extra_headers(page))
 
-        self.logger.info("fetching %s", url)
+        self.logger.info("fetching url %s", url)
         try:
             # response is ignored
             requests.get(
-                url, proxies=proxies, headers=site.extra_headers(page), verify=False
+                url,
+                proxies=proxies,
+                headers=headers,
+                verify=False,
+                timeout=self.FETCH_URL_TIMEOUT,
             )
+        except requests.exceptions.Timeout as e:
+            self.logger.warning("Timed out fetching %s: %s", page.url, e)
         except requests.exceptions.ProxyError as e:
             raise brozzler.ProxyError("proxy error fetching %s" % url) from e
+        except requests.exceptions.RequestException as e:
+            self.logger.warning("Failed to fetch url %s", page.url, e)
 
     def brozzle_site(self, browser, site):
         try:
