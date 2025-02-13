@@ -503,7 +503,11 @@ class BrozzlerWorker:
                 timeout=self.FETCH_URL_TIMEOUT,
             )
         except requests.exceptions.Timeout as e:
-            self.logger.warning("Timed out fetching %s: %s", page.url, e)
+            self.logger.warning("Timed out fetching %s", url)
+            if 'archive.org' in e:
+                raise brozzler.ProxyError("proxy error fetching %s" % url) from e
+            else:
+                raise brozzler.PageConnectionError(timeout error fetching %s" % url) from e
         except requests.exceptions.ProxyError as e:
             raise brozzler.ProxyError("proxy error fetching %s" % url) from e
         except requests.exceptions.RequestException as e:
