@@ -807,8 +807,8 @@ class Browser:
 
             brozzler.sleep(check_interval)
 
-            if invalid_behavior_checks > valid_behavior_checks and invalid_behavior checks > MAX_UNMATCHED_INVALID_CHECKS:
-                    logging.warn(
+            if invalid_behavior_checks > valid_behavior_checks and invalid_behavior_checks > MAX_UNMATCHED_INVALID_CHECKS:
+                logging.warn(
                     "behavior logged too many invalid checks, %s, after %.1fs and %s valid checks, for url %s",
                     elapsed,
                     valid_behavior_checks,
