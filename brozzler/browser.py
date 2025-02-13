@@ -33,6 +33,7 @@ from brozzler.chrome import Chrome
 import socket
 import urlcanon
 
+MAX_UNMATCHED_INVALID_CHECKS = 5
 
 class BrowsingException(Exception):
     pass
@@ -805,6 +806,16 @@ class Browser:
                 return
 
             brozzler.sleep(check_interval)
+
+            if invalid_behavior_checks > valid_behavior_checks and invalid_behavior checks > MAX_UNMATCHED_INVALID_CHECKS:
+                    logging.warn(
+                    "behavior logged too many invalid checks, %s, after %.1fs and %s valid checks, for url %s",
+                    elapsed,
+                    valid_behavior_checks,
+                    invalid_behavior_checks,
+                    page_url,
+                )
+                return
 
             self.websock_thread.expect_result(self._command_id.peek())
             msg_id = self.send_to_chrome(
