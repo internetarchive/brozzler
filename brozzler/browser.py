@@ -35,6 +35,7 @@ import urlcanon
 
 MAX_UNMATCHED_INVALID_CHECKS = 5
 
+
 class BrowsingException(Exception):
     pass
 
@@ -807,7 +808,10 @@ class Browser:
 
             brozzler.sleep(check_interval)
 
-            if invalid_behavior_checks > valid_behavior_checks and invalid_behavior_checks > MAX_UNMATCHED_INVALID_CHECKS:
+            if (
+                invalid_behavior_checks > valid_behavior_checks
+                and invalid_behavior_checks > MAX_UNMATCHED_INVALID_CHECKS
+            ):
                 logging.warn(
                     "behavior logged too many invalid checks, %s, after %.1fs and %s valid checks, for url %s",
                     invalid_behavior_checks,
