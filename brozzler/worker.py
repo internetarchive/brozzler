@@ -435,9 +435,7 @@ class BrozzlerWorker:
 
         def _on_service_worker_version_updated(chrome_msg):
             # https://github.com/internetarchive/brozzler/issues/140
-            # FIXME: `trace` is a custom logging level, need to port
-            #        this over to structlog.
-            self.logger.trace("%r", chrome_msg)
+            self.logger.debug("service worker updated", chrome_msg=chrome_msg)
             if chrome_msg.get("params", {}).get("versions"):
                 url = chrome_msg.get("params", {}).get("versions")[0].get("scriptURL")
                 if url and url.startswith("http") and url not in sw_fetched:
@@ -637,8 +635,7 @@ class BrozzlerWorker:
 
         try:
             self.status_info = self._service_registry.heartbeat(status_info)
-            # FIXME: need to implement trace
-            self.logger.trace("status in service registry: %s", self.status_info)
+            self.logger.debug("status in service registry", status=self.status_info)
         except r.ReqlError as e:
             self.logger.exception(
                 "failed to send heartbeat and update service registry",
@@ -690,8 +687,7 @@ class BrozzlerWorker:
                 self._browser_pool.release(browsers[i])
 
     def run(self):
-        # FIXME: need to implement notice
-        self.logger.notice(
+        self.logger.warn(
             "brozzler %s - brozzler-worker starting", brozzler.__version__
         )
         last_nothing_to_claim = 0
@@ -702,16 +698,16 @@ class BrozzlerWorker:
                     try:
                         self._start_browsing_some_sites()
                     except brozzler.browser.NoBrowsersAvailable:
-                        logging.trace("all %s browsers are in use", self._max_browsers)
+                        self.logger.debug("all browsers are in use", max_browsers=self._max_browsers)
                     except brozzler.NothingToClaim:
                         last_nothing_to_claim = time.time()
-                        logging.trace(
+                        self.logger.debug(
                             "nothing to claim, all available active sites "
                             "are already claimed by a brozzler worker"
                         )
                 time.sleep(0.5)
 
-            self.logger.notice("shutdown requested")
+            self.logger.warn("shutdown requested")
         except r.ReqlError as e:
             self.logger.exception(
                 "caught rethinkdb exception, will try to proceed"
