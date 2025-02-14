@@ -810,9 +810,9 @@ class Browser:
             if invalid_behavior_checks > valid_behavior_checks and invalid_behavior_checks > MAX_UNMATCHED_INVALID_CHECKS:
                 logging.warn(
                     "behavior logged too many invalid checks, %s, after %.1fs and %s valid checks, for url %s",
+                    invalid_behavior_checks,
                     elapsed,
                     valid_behavior_checks,
-                    invalid_behavior_checks,
                     page_url,
                 )
                 return
