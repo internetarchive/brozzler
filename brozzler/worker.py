@@ -508,11 +508,12 @@ class BrozzlerWorker:
             )
         except TimeoutError as e:
             self.logger.warning("Timed out fetching %s", url)
-            raise brozzler.ProxyError("proxy error fetching %s" % url) from e
+            raise brozzler.PageConnectionError() from e
         except ProxyError as e:
             raise brozzler.ProxyError("proxy error fetching %s" % url) from e
         except urllib3.exceptions.RequestError as e:
-            self.logger.warning("Failed to fetch url %s", page.url, e)
+            self.logger.warning("Failed to fetch url %s: %s", url, e)
+            raise brozzler.PageConnectionError() from e
 
     def brozzle_site(self, browser, site):
         try:
