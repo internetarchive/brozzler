@@ -530,6 +530,7 @@ class BrozzlerWorker:
                 timeout=self.FETCH_URL_TIMEOUT,
                 retries=False,
             )
+            self.logger.info("Completed fetching url %s", url)
         except TimeoutError as e:
             self.logger.warning("Timed out fetching %s", url)
             raise brozzler.PageConnectionError() from e
