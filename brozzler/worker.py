@@ -31,6 +31,8 @@ import io
 import socket
 import random
 import requests
+import urllib3
+from urllib3.exceptions import TimeoutError, ProxyError
 import doublethink
 import tempfile
 import urlcanon
@@ -480,14 +482,16 @@ class BrozzlerWorker:
         return outlinks
 
     def _fetch_url(self, site, url=None, page=None):
-        proxies = None
+        proxy_url = self._proxy_for(site)
+
         if page:
             url = page.url
-        if self._proxy_for(site):
-            proxies = {
-                "http": "http://%s" % self._proxy_for(site),
-                "https": "http://%s" % self._proxy_for(site),
-            }
+
+        if proxy_url:
+            http = urllib3.ProxyManager("https://%s" % proxy_url)
+        else:
+            http = urllib3.PoolManager()
+
         user_agent = site.get("user_agent")
         headers = {"User-Agent": user_agent} if user_agent else {}
         headers.update(site.extra_headers(page))
@@ -495,24 +499,19 @@ class BrozzlerWorker:
         self.logger.info("fetching url %s", url)
         try:
             # response is ignored
-            requests.get(
+            http.request(
+                "GET",
                 url,
-                proxies=proxies,
                 headers=headers,
-                verify=False,
                 timeout=self.FETCH_URL_TIMEOUT,
+                retries=False
             )
-        except requests.exceptions.Timeout as e:
+        except TimeoutError as e:
             self.logger.warning("Timed out fetching %s", url)
-            if "archive.org" in e:
-                raise brozzler.ProxyError("proxy error fetching %s" % url) from e
-            else:
-                raise brozzler.PageConnectionError(
-                    "timeout error fetching %s" % url
-                ) from e
-        except requests.exceptions.ProxyError as e:
             raise brozzler.ProxyError("proxy error fetching %s" % url) from e
-        except requests.exceptions.RequestException as e:
+        except ProxyError as e:
+            raise brozzler.ProxyError("proxy error fetching %s" % url) from e
+        except urllib3.exceptions.RequestError as e:
             self.logger.warning("Failed to fetch url %s", page.url, e)
 
     def brozzle_site(self, browser, site):
