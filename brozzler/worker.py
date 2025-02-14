@@ -488,7 +488,7 @@ class BrozzlerWorker:
             url = page.url
 
         if proxy_url:
-            http = urllib3.ProxyManager("https://%s" % proxy_url)
+            http = urllib3.ProxyManager("https://%s" % proxy_url, cert_reqs="CERT_NONE")
         else:
             http = urllib3.PoolManager()
 
