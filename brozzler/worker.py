@@ -504,7 +504,7 @@ class BrozzlerWorker:
                 url,
                 headers=headers,
                 timeout=self.FETCH_URL_TIMEOUT,
-                retries=False
+                retries=False,
             )
         except TimeoutError as e:
             self.logger.warning("Timed out fetching %s", url)
