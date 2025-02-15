@@ -18,6 +18,7 @@ limitations under the License.
 """
 
 import logging
+import structlog
 from pkg_resources import get_distribution as _get_distribution
 
 __version__ = _get_distribution("brozzler").version
@@ -146,7 +147,9 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
     """
     Returns the javascript behavior string populated with template_parameters.
     """
-    import re, logging, json
+    import re, json
+
+    logger = structlog.get_logger()
 
     for behavior in behaviors(behaviors_dir=behaviors_dir):
         if re.match(behavior["url_regex"], url):
@@ -159,18 +162,18 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
                 behavior["behavior_js_template"]
             )
             script = template.render(parameters)
-            logging.info(
-                "using template=%r populated with parameters=%r for %r",
-                behavior["behavior_js_template"],
-                json.dumps(parameters),
-                url,
+            logger.info(
+                "rendering template",
+                template=behavior["behavior_js_template"],
+                parameters=json.dumps(parameters),
+                url=url,
             )
             return script
     return None
 
 
 class ThreadExceptionGate:
-    logger = logging.getLogger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(__module__ + "." + __qualname__)
 
     def __init__(self, thread):
         self.thread = thread
@@ -181,7 +184,7 @@ class ThreadExceptionGate:
     def __enter__(self):
         assert self.thread == threading.current_thread()
         if self.pending_exception:
-            self.logger.info("raising pending exception %s", self.pending_exception)
+            self.logger.info("raising pending exception", pending_exception=self.pending_exception)
             tmp = self.pending_exception
             self.pending_exception = None
             raise tmp
@@ -198,10 +201,10 @@ class ThreadExceptionGate:
         with self.lock:
             if self.pending_exception:
                 self.logger.warning(
-                    "%r already pending for thread %r, discarding %r",
-                    self.pending_exception,
-                    self.thread,
-                    e,
+                    "exception already pending for thread, discarding",
+                    pending_exception=self.pending_exception,
+                    thread=self.thread,
+                    exception=e,
                 )
             else:
                 self.pending_exception = e
@@ -266,7 +269,9 @@ def thread_raise(thread, exctype):
         TypeError if `exctype` is not a class
         ValueError, SystemError in case of unexpected problems
     """
-    import ctypes, inspect, threading, logging
+    import ctypes, inspect, threading, structlog
+
+    logger = structlog.get_logger(exctype=exctype, thread=thread)
 
     if not inspect.isclass(exctype):
         raise TypeError(
@@ -278,7 +283,7 @@ def thread_raise(thread, exctype):
     with gate.lock:
         if gate.ok_to_raise.is_set() and thread.is_alive():
             gate.ok_to_raise.clear()
-            logging.info("raising %s in thread %s", exctype, thread)
+            logger.info("raising exception in thread")
             res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
                 ctypes.c_long(thread.ident), ctypes.py_object(exctype)
             )
@@ -290,7 +295,7 @@ def thread_raise(thread, exctype):
                 ctypes.pythonapi.PyThreadState_SetAsyncExc(thread.ident, 0)
                 raise SystemError("PyThreadState_SetAsyncExc failed")
         else:
-            logging.info("queueing %s for thread %s", exctype, thread)
+            logger.info("queueing exception for thread")
             gate.queue_exception(exctype)
 
 
