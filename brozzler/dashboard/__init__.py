@@ -17,13 +17,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import logging
+import structlog
 import sys
+
+logger = structlog.get_logger()
 
 try:
     import flask
 except ImportError as e:
-    logging.critical(
+    logger.critical(
         '%s: %s\n\nYou might need to run "pip install '
         'brozzler[dashboard]".\nSee README.rst for more information.',
         type(e).__name__,
@@ -77,7 +79,7 @@ def queued_count(site_id):
         )
         .count()
     )
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     count = reql.run()
     return flask.jsonify(count=count)
 
@@ -85,7 +87,7 @@ def queued_count(site_id):
 @app.route("/api/sites/<site_id>/queue")
 @app.route("/api/site/<site_id>/queue")
 def queue(site_id):
-    logging.debug("flask.request.args=%s", flask.request.args)
+    logger.debug("flask.request.args", args=flask.request.args)
     start = flask.request.args.get("start", 0)
     end = flask.request.args.get("end", start + 90)
     reql = rr.table("pages").between(
@@ -93,7 +95,7 @@ def queue(site_id):
         [site_id, 0, False, r.maxval],
         index="priority_by_site",
     )[start:end]
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     queue_ = reql.run()
     return flask.jsonify(queue_=list(queue_))
 
@@ -112,7 +114,7 @@ def page_count(site_id):
         )
         .count()
     )
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     count = reql.run()
     return flask.jsonify(count=count)
 
@@ -130,7 +132,7 @@ def pages(site_id):
         )
         .order_by(index="least_hops")[start:end]
     )
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     pages_ = reql.run()
     return flask.jsonify(pages=list(pages_))
 
@@ -139,7 +141,7 @@ def pages(site_id):
 @app.route("/api/page/<page_id>")
 def page(page_id):
     reql = rr.table("pages").get(page_id)
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     page_ = reql.run()
     return flask.jsonify(page_)
 
@@ -148,7 +150,7 @@ def page(page_id):
 @app.route("/api/page/<page_id>/yaml")
 def page_yaml(page_id):
     reql = rr.table("pages").get(page_id)
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     page_ = reql.run()
     return app.response_class(
         yaml.dump(page_, default_flow_style=False), mimetype="application/yaml"
@@ -159,7 +161,7 @@ def page_yaml(page_id):
 @app.route("/api/site/<site_id>")
 def site(site_id):
     reql = rr.table("sites").get(site_id)
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     s = reql.run()
     if "cookie_db" in s:
         s["cookie_db"] = base64.b64encode(s["cookie_db"]).decode("ascii")
@@ -170,7 +172,7 @@ def site(site_id):
 @app.route("/api/site/<site_id>/yaml")
 def site_yaml(site_id):
     reql = rr.table("sites").get(site_id)
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     site_ = reql.run()
     return app.response_class(
         yaml.dump(site_, default_flow_style=False), mimetype="application/yaml"
@@ -180,7 +182,7 @@ def site_yaml(site_id):
 @app.route("/api/stats/<bucket>")
 def stats(bucket):
     reql = rr.table("stats").get(bucket)
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     stats_ = reql.run()
     return flask.jsonify(stats_)
 
@@ -193,7 +195,7 @@ def sites(job_id):
     except ValueError:
         jid = job_id
     reql = rr.table("sites").get_all(jid, index="job_id")
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     sites_ = list(reql.run())
     # TypeError: <binary, 7168 bytes, '53 51 4c 69 74 65...'> is not JSON serializable
     for s in sites_:
@@ -206,7 +208,7 @@ def sites(job_id):
 def jobless_sites():
     # XXX inefficient (unindexed) query
     reql = rr.table("sites").filter(~r.row.has_fields("job_id"))
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     sites_ = list(reql.run())
     # TypeError: <binary, 7168 bytes, '53 51 4c 69 74 65...'> is not JSON serializable
     for s in sites_:
@@ -223,7 +225,7 @@ def job(job_id):
     except ValueError:
         jid = job_id
     reql = rr.table("jobs").get(jid)
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     job_ = reql.run()
     return flask.jsonify(job_)
 
@@ -236,7 +238,7 @@ def job_yaml(job_id):
     except ValueError:
         jid = job_id
     reql = rr.table("jobs").get(jid)
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     job_ = reql.run()
     return app.response_class(
         yaml.dump(job_, default_flow_style=False), mimetype="application/yaml"
@@ -258,7 +260,7 @@ def services():
 @app.route("/api/jobs")
 def jobs():
     reql = rr.table("jobs").order_by(r.desc("id"))
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     jobs_ = list(reql.run())
     return flask.jsonify(jobs=jobs_)
 
@@ -313,13 +315,13 @@ try:
             return self.application
 
     def run(**options):
-        logging.info("running brozzler-dashboard using gunicorn")
+        logger.info("running brozzler-dashboard using gunicorn")
         GunicornBrozzlerDashboard(app, options).run()
 
 except ImportError:
 
     def run():
-        logging.info("running brozzler-dashboard using simple flask app.run")
+        logger.info("running brozzler-dashboard using simple flask app.run")
         app.run(host=SETTINGS["DASHBOARD_INTERFACE"], port=SETTINGS["DASHBOARD_PORT"])
 
 
