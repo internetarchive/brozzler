@@ -19,7 +19,9 @@ limitations under the License.
 """
 
 import sys
-import logging
+import structlog
+
+logger = structlog.get_logger()
 
 try:
     import pywb.apps.cli
@@ -30,7 +32,7 @@ try:
     import pywb.framework.basehandlers
     import pywb.rewrite.wburl
 except ImportError as e:
-    logging.critical(
+    logger.critical(
         '%s: %s\n\nYou might need to run "pip install '
         'brozzler[easy]".\nSee README.rst for more information.',
         type(e).__name__,
@@ -111,7 +113,7 @@ class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
         )
         if cdx_query.limit:
             reql = reql.limit(cdx_query.limit)
-        logging.debug("rethinkdb query: %s", reql)
+        logger.debug("rethinkdb query", query=reql)
         results = reql.run()
         return results
 
