@@ -18,8 +18,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import structlog
 import sys
-import logging
 
 try:
     import warcprox
@@ -30,11 +30,11 @@ try:
     import wsgiref.handlers
     import brozzler.dashboard
 except ImportError as e:
-    logging.critical(
+    structlog.get_logger().critical(
         '%s: %s\n\nYou might need to run "pip install '
         'brozzler[easy]".\nSee README.rst for more information.',
         type(e).__name__,
-        e,
+        exc_info=True,
     )
     sys.exit(1)
 import argparse
@@ -156,7 +156,7 @@ class ThreadingWSGIServer(
 
 
 class BrozzlerEasyController:
-    logger = logging.getLogger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(__module__ + "." + __qualname__)
 
     def __init__(self, args):
         self.stop = threading.Event()
@@ -238,11 +238,11 @@ class BrozzlerEasyController:
         self.logger.info("starting brozzler-worker")
         self.brozzler_worker.start()
 
-        self.logger.info("starting pywb at %s:%s", *self.pywb_httpd.server_address)
+        self.logger.info("starting pywb", address="%s:%s" % self.pywb_httpd.server_address)
         threading.Thread(target=self.pywb_httpd.serve_forever).start()
 
         self.logger.info(
-            "starting brozzler-dashboard at %s:%s", *self.dashboard_httpd.server_address
+            "starting brozzler-dashboard", address="%s:%s" % self.dashboard_httpd.server_address
         )
         threading.Thread(target=self.dashboard_httpd.serve_forever).start()
 
@@ -307,8 +307,8 @@ class BrozzlerEasyController:
             state_strs.append(str(th))
             stack = traceback.format_stack(sys._current_frames()[th.ident])
             state_strs.append("".join(stack))
-        logging.warning(
-            "dumping state (caught signal {})\n{}".format(signum, "\n".join(state_strs))
+        structlog.get_logger().warning(
+            "dumping state (caught signal)", signal=signum, state="\n".join(state_strs)
         )
 
 
