@@ -16,7 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import logging
 import urllib.request
 import time
 import threading
@@ -27,6 +26,7 @@ import select
 import re
 import signal
 import sqlite3
+import structlog
 import json
 import tempfile
 import sys
@@ -65,7 +65,7 @@ def check_version(chrome_exe):
 
 
 class Chrome:
-    logger = logging.getLogger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(__module__ + "." + __qualname__)
 
     def __init__(self, chrome_exe, port=9222, ignore_cert_errors=False):
         """
@@ -97,22 +97,22 @@ class Chrome:
     def _init_cookie_db(self, cookie_db):
         cookie_dir = os.path.join(self._chrome_user_data_dir, "Default")
         cookie_location = os.path.join(cookie_dir, "Cookies")
-        self.logger.debug("cookie DB provided, writing to %s", cookie_location)
+        cookie_logger = self.logger.bind(cookie_location=cookie_location)
+
+        cookie_logger.debug("cookie DB provided, writing to")
         os.makedirs(cookie_dir, exist_ok=True)
 
         try:
             with open(cookie_location, "wb") as cookie_file:
                 cookie_file.write(cookie_db)
         except OSError:
-            self.logger.error(
-                "exception writing cookie file at %s", cookie_location, exc_info=True
-            )
+            cookie_logger.exception("exception writing cookie file")
 
     def persist_and_read_cookie_db(self):
         cookie_location = os.path.join(self._chrome_user_data_dir, "Default", "Cookies")
-        self.logger.debug(
-            "marking cookies persistent then reading file into memory: %s",
-            cookie_location,
+        cookie_logger = self.logger.bind(cookie_location=cookie_location)
+        cookie_logger.debug(
+            "marking cookies persistent then reading file into memory",
         )
         try:
             with sqlite3.connect(cookie_location) as conn:
@@ -125,20 +125,14 @@ class Chrome:
                     cur = conn.cursor()
                     cur.execute("UPDATE cookies SET persistent = 1")
             except sqlite3.Error:
-                self.logger.error(
-                    "exception updating cookie DB %s", cookie_location, exc_info=True
-                )
+                cookie_logger.exception("exception updating cookie DB")
 
         cookie_db = None
         try:
             with open(cookie_location, "rb") as cookie_file:
                 cookie_db = cookie_file.read()
         except OSError:
-            self.logger.error(
-                "exception reading from cookie DB file %s",
-                cookie_location,
-                exc_info=True,
-            )
+            cookie_logger.exception("exception reading from cookie DB file")
         return cookie_db
 
     def start(
@@ -227,7 +221,7 @@ class Chrome:
         if proxy:
             chrome_args.append("--proxy-server=%s" % proxy)
         chrome_args.append("about:blank")
-        self.logger.info("running: %r", subprocess.list2cmdline(chrome_args))
+        self.logger.info("running", chrome_args=subprocess.list2cmdline(chrome_args))
         # start_new_session - new process group so we can kill the whole group
         self.chrome_process = subprocess.Popen(
             chrome_args,
@@ -243,12 +237,13 @@ class Chrome:
             daemon=True,
         )
         self._out_reader_thread.start()
-        self.logger.info("chrome running, pid %s" % self.chrome_process.pid)
+        self.logger.info("chrome running", pid=self.chrome_process.pid)
 
         return self._websocket_url(timeout_sec=websocket_timeout)
 
     def _websocket_url(self, timeout_sec=60):
         json_url = "http://localhost:%s/json" % self.port
+        url_logger = self.logger.bind(json_url=json_url)
         # make this a member variable so that kill -QUIT reports it
         self._start = time.time()
         self._last_warning = self._start
@@ -259,24 +254,21 @@ class Chrome:
                 debug_info = [x for x in all_debug_info if x["url"] == "about:blank"]
 
                 if debug_info and "webSocketDebuggerUrl" in debug_info[0]:
-                    self.logger.debug("%s returned %s", json_url, raw_json)
+                    url_logger.debug("webSocketDebuggerUrl returned", raw_json=raw_json)
                     url = debug_info[0]["webSocketDebuggerUrl"]
-                    self.logger.info(
-                        "got chrome window websocket debug url %s from %s",
-                        url,
-                        json_url,
+                    url_logger.info(
+                        "got chrome window websocket debug url",
+                        debug_url=url,
                     )
                     return url
             except brozzler.ShutdownRequested:
                 raise
             except Exception as e:
                 if time.time() - self._last_warning > 30:
-                    self.logger.warning(
-                        "problem with %s (will keep trying until timeout "
-                        "of %d seconds): %s",
-                        json_url,
-                        timeout_sec,
-                        e,
+                    url_logger.warning(
+                        "problem accessing url (will keep trying until timeout)",
+                        timeout=timeout_sec,
+                        exc_info=True
                     )
                     self._last_warning = time.time()
             finally:
@@ -322,26 +314,28 @@ class Chrome:
             while not self._shutdown.is_set():
                 buf = readline_nonblock(self.chrome_process.stdout)
                 if buf:
-                    self.logger.trace(
+                    self.logger.debug(
                         "chrome pid %s STDOUT %s", self.chrome_process.pid, buf
                     )
 
                 buf = readline_nonblock(self.chrome_process.stderr)
                 if buf:
-                    self.logger.trace(
+                    self.logger.debug(
                         "chrome pid %s STDERR %s", self.chrome_process.pid, buf
                     )
         except:
-            self.logger.error("unexpected exception", exc_info=True)
+            self.logger.exception("unexpected exception")
 
     def stop(self):
         if not self.chrome_process or self._shutdown.is_set():
             return
         self._shutdown.set()
 
+        pid_logger = self.logger.bind(pid=self.chrome_process.pid)
+
         timeout_sec = 300
         if self.chrome_process.poll() is None:
-            self.logger.info("terminating chrome pgid %s", self.chrome_process.pid)
+            pid_logger.info("terminating chrome")
 
             os.killpg(self.chrome_process.pid, signal.SIGTERM)
         t0 = time.time()
@@ -351,14 +345,11 @@ class Chrome:
                 status = self.chrome_process.poll()
                 if status is not None:
                     if status == 0:
-                        self.logger.info(
-                            "chrome pid %s exited normally", self.chrome_process.pid
-                        )
+                        pid_logger.info("chrome exited normally")
                     else:
-                        self.logger.warning(
-                            "chrome pid %s exited with nonzero status %s",
-                            self.chrome_process.pid,
-                            status,
+                        pid_logger.warning(
+                            "chrome exited with nonzero status",
+                            status=status,
                         )
 
                     # XXX I would like to forcefully kill the process group
@@ -368,18 +359,16 @@ class Chrome:
                     return
                 time.sleep(0.5)
 
-            self.logger.warning(
-                "chrome pid %s still alive %.1f seconds after sending "
+            pid_logger.warning(
+                "chrome still alive %.1f seconds after sending "
                 "SIGTERM, sending SIGKILL",
-                self.chrome_process.pid,
                 time.time() - t0,
             )
             os.killpg(self.chrome_process.pid, signal.SIGKILL)
             status = self.chrome_process.wait()
-            self.logger.warning(
-                "chrome pid %s reaped (status=%s) after killing with " "SIGKILL",
-                self.chrome_process.pid,
-                status,
+            pid_logger.warning(
+                "chrome reaped after killing with " "SIGKILL",
+                status=status,
             )
 
         finally:
@@ -388,8 +377,8 @@ class Chrome:
             try:
                 self._home_tmpdir.cleanup()
             except:
-                self.logger.error(
-                    "exception deleting %s", self._home_tmpdir, exc_info=True
+                self.logger.exception(
+                    "exception deleting self._home_tmpdir", tmpdir=self._home_tmpdir
                 )
             self._out_reader_thread.join()
             self.chrome_process = None
