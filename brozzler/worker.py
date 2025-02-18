@@ -126,7 +126,7 @@ class BrozzlerWorker:
                 self._metrics_port, self._registry_url, self._env
             )
         else:
-            logging.warning(
+            self.logger.warning(
                 "not starting prometheus scrape endpoint: metrics_port is undefined"
             )
 
@@ -190,7 +190,7 @@ class BrozzlerWorker:
                     self._proxy_is_warcprox = status["role"] == "warcprox"
                 except Exception as e:
                     self._proxy_is_warcprox = False
-                logging.info(
+                self.logger.info(
                     "%s %s warcprox",
                     self._proxy,
                     "IS" if self._proxy_is_warcprox else "IS NOT",
@@ -426,7 +426,7 @@ class BrozzlerWorker:
                     video["content-length"] = int(response_headers["content-length"])
                 if "content-range" in response_headers:
                     video["content-range"] = response_headers["content-range"]
-                logging.debug("embedded video %s", video)
+                self.logger.debug("embedded video", video=video)
                 if not "videos" in page:
                     page.videos = []
                 page.videos.append(video)
@@ -537,7 +537,7 @@ class BrozzlerWorker:
                 if page.needs_robots_check and not brozzler.is_permitted_by_robots(
                     site, page.url, self._proxy_for(site)
                 ):
-                    logging.warning("page %s is blocked by robots.txt", page.url)
+                    self.logger.warning("page is blocked by robots.txt", url=page.url)
                     page.blocked_by_robots = True
                     self._frontier.completed_page(site, page)
                 else:
