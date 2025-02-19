@@ -29,6 +29,7 @@ import requests
 import doublethink
 import signal
 import string
+import subprocess
 import sys
 import threading
 import time
@@ -126,13 +127,49 @@ def configure_logging(args):
     )
 
 
-def suggest_default_chrome_exe():
-    # mac os x application executable paths
+def mdfind(identifier):
+    try:
+        result = subprocess.check_output(
+            ["mdfind", f"kMDItemCFBundleIdentifier == {identifier}"], text=True
+        )
+    # Just treat any errors as "couldn't find app"
+    except subprocess.CalledProcessError:
+        return None
+
+    if result:
+        return result.rstrip("\n")
+
+
+def suggest_default_chrome_exe_mac():
+    path = None
+    # Try Chromium first, then Chrome
+    result = mdfind("org.chromium.Chromium")
+    if result is not None:
+        path = f"{result}/Contents/MacOS/Chromium"
+
+    result = mdfind("com.google.Chrome")
+    if result is not None:
+        path = f"{result}/Contents/MacOS/Google Chrome"
+
+    if path is not None and os.path.exists(path):
+        return path
+
+    # Fall back to default paths if mdfind couldn't find it
+    # (mdfind might fail to find them even in their default paths
+    # if the system has Spotlight disabled.)
     for path in [
         "/Applications/Chromium.app/Contents/MacOS/Chromium",
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     ]:
         if os.path.exists(path):
+            return path
+
+
+def suggest_default_chrome_exe():
+    # First ask mdfind, which lets us find it in non-default paths
+    if sys.platform == "darwin":
+        path = suggest_default_chrome_exe_mac()
+        if path is not None:
             return path
 
     # "chromium-browser" is the executable on ubuntu trusty
