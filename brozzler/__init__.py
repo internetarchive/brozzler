@@ -80,7 +80,6 @@ class ReachedLimit(Exception):
         return self.__repr__()
 
 
-
 # see https://github.com/internetarchive/brozzler/issues/91
 def _logging_handler_handle(self, record):
     rv = self.filter(record)
