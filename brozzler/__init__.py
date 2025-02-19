@@ -80,31 +80,6 @@ class ReachedLimit(Exception):
         return self.__repr__()
 
 
-# monkey-patch log levels TRACE and NOTICE
-logging.TRACE = (logging.NOTSET + logging.DEBUG) // 2
-
-
-def _logger_trace(self, msg, *args, **kwargs):
-    if self.isEnabledFor(logging.TRACE):
-        self._log(logging.TRACE, msg, args, **kwargs)
-
-
-logging.Logger.trace = _logger_trace
-logging.trace = logging.root.trace
-logging.addLevelName(logging.TRACE, "TRACE")
-
-logging.NOTICE = (logging.INFO + logging.WARN) // 2
-
-
-def _logger_notice(self, msg, *args, **kwargs):
-    if self.isEnabledFor(logging.NOTICE):
-        self._log(logging.NOTICE, msg, args, **kwargs)
-
-
-logging.Logger.notice = _logger_notice
-logging.notice = logging.root.notice
-logging.addLevelName(logging.NOTICE, "NOTICE")
-
 
 # see https://github.com/internetarchive/brozzler/issues/91
 def _logging_handler_handle(self, record):
