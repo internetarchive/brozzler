@@ -1,7 +1,7 @@
 """
 brozzler/browser.py - manages the browsers for brozzler
 
-Copyright (C) 2014-2024 Internet Archive
+Copyright (C) 2014-2025 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,6 +32,8 @@ from ipaddress import AddressValueError
 from brozzler.chrome import Chrome
 import socket
 import urlcanon
+
+MAX_UNMATCHED_INVALID_CHECKS = 5
 
 
 class BrowsingException(Exception):
@@ -584,7 +586,9 @@ class Browser:
                     behavior_script = brozzler.behavior_script(
                         page_url, behavior_parameters, behaviors_dir=behaviors_dir
                     )
-                    self.run_behavior(behavior_script, timeout=behavior_timeout)
+                    self.run_behavior(
+                        behavior_script, page_url, timeout=behavior_timeout
+                    )
                 final_page_url = self.url()
                 if on_screenshot:
                     if simpler404:
@@ -779,7 +783,7 @@ class Browser:
         message = self.websock_thread.pop_result(msg_id)
         return message["result"]["result"]["value"]
 
-    def run_behavior(self, behavior_script, timeout=900):
+    def run_behavior(self, behavior_script, page_url, timeout=900):
         self.send_to_chrome(
             method="Runtime.evaluate",
             suppress_logging=True,
@@ -788,13 +792,34 @@ class Browser:
 
         check_interval = min(timeout, 7)
         start = time.time()
+        valid_behavior_checks = 0
+        invalid_behavior_checks = 0
         while True:
             elapsed = time.time() - start
             if elapsed > timeout:
-                logging.info("behavior reached hard timeout after %.1fs", elapsed)
+                logging.info(
+                    "behavior reached hard timeout after %.1fs and %s valid checks, and %s invalid checks, for url %s",
+                    elapsed,
+                    valid_behavior_checks,
+                    invalid_behavior_checks,
+                    page_url,
+                )
                 return
 
             brozzler.sleep(check_interval)
+
+            if (
+                invalid_behavior_checks > valid_behavior_checks
+                and invalid_behavior_checks > MAX_UNMATCHED_INVALID_CHECKS
+            ):
+                logging.warn(
+                    "behavior logged too many invalid checks, %s, after %.1fs and %s valid checks, for url %s",
+                    invalid_behavior_checks,
+                    elapsed,
+                    valid_behavior_checks,
+                    page_url,
+                )
+                return
 
             self.websock_thread.expect_result(self._command_id.peek())
             msg_id = self.send_to_chrome(
@@ -809,6 +834,17 @@ class Browser:
                 msg = self.websock_thread.pop_result(msg_id)
                 if (
                     msg
+                    and "result" in msg["result"]
+                    and type(msg["result"]["result"]["value"]) is bool
+                    and not msg["result"]["result"]["value"]
+                ):
+                    # valid behavior response while still running
+                    # {'id': 8, 'result': {'result': {'type': 'boolean', 'value': False}}}
+                    valid_behavior_checks += 1
+                    continue
+
+                if (
+                    msg
                     and "result" in msg
                     and not ("exceptionDetails" in msg["result"])
                     and not (
@@ -818,10 +854,21 @@ class Browser:
                     and type(msg["result"]["result"]["value"]) == bool
                     and msg["result"]["result"]["value"]
                 ):
-                    self.logger.info("behavior decided it has finished")
+                    # valid behavior response when finished
+                    # {'id': 9, 'result': {'result': {'type': 'boolean', 'value': True}}}
+                    elapsed = time.time() - start
+                    self.logger.info(
+                        "behavior decided it has finished after %.1fs and %s valid checks, and %s invalid checks, for url %s",
+                        elapsed,
+                        valid_behavior_checks,
+                        invalid_behavior_checks,
+                        page_url,
+                    )
                     return
+                invalid_behavior_checks += 1
+
             except BrowsingTimeout:
-                pass
+                invalid_behavior_checks += 1
 
     def try_login(self, username, password, timeout=300):
         try_login_js = (
