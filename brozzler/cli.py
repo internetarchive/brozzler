@@ -45,6 +45,7 @@ r = rdb.RethinkDB()
 
 logger = structlog.get_logger()
 
+
 def add_common_options(arg_parser, argv=None):
     argv = argv or sys.argv
     arg_parser.add_argument(
@@ -119,12 +120,12 @@ def configure_logging(args):
             structlog.processors.StackInfoRenderer(),
             structlog.dev.set_exc_info,
             structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
-            structlog.dev.ConsoleRenderer()
+            structlog.dev.ConsoleRenderer(),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(args.log_level),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
-        cache_logger_on_first_use=False
+        cache_logger_on_first_use=False,
     )
 
     logging.basicConfig(
@@ -665,7 +666,9 @@ def brozzler_worker(argv=None):
             # make set from seed IDs in SKIP_AV_SEEDS_FILE
             with open(SKIP_AV_SEEDS_FILE) as skips:
                 skip_av_seeds = {int(l) for l in skips.readlines()}
-                logger.info("running with skip_av_seeds file", skip_av_seeds=SKIP_AV_SEEDS_FILE)
+                logger.info(
+                    "running with skip_av_seeds file", skip_av_seeds=SKIP_AV_SEEDS_FILE
+                )
         except Exception as e:
             skip_av_seeds = set()
             logger.info("running with empty skip_av_seeds")
@@ -680,7 +683,7 @@ def brozzler_worker(argv=None):
                 if ytdlp_proxy_endpoints:
                     logger.info(
                         "running with ytdlp proxy endpoints file",
-                        ytdlp_proxy_endpoints=YTDLP_PROXY_ENDPOINTS_FILE
+                        ytdlp_proxy_endpoints=YTDLP_PROXY_ENDPOINTS_FILE,
                     )
         except Exception as e:
             ytdlp_proxy_endpoints = []

@@ -120,8 +120,7 @@ def is_permitted_by_robots(site, url, proxy=None):
             raise brozzler.ProxyError(e)
         else:
             structlog.get_logger().warning(
-                "returning true (permitted) after problem fetching "
-                "robots.txt",
+                "returning true (permitted) after problem fetching " "robots.txt",
                 url=url,
                 exception=e,
             )

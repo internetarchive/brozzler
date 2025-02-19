@@ -184,7 +184,9 @@ class ThreadExceptionGate:
     def __enter__(self):
         assert self.thread == threading.current_thread()
         if self.pending_exception:
-            self.logger.info("raising pending exception", pending_exception=self.pending_exception)
+            self.logger.info(
+                "raising pending exception", pending_exception=self.pending_exception
+            )
             tmp = self.pending_exception
             self.pending_exception = None
             raise tmp

@@ -50,9 +50,7 @@ class RethinkDbFrontier:
             self.rr.db_create(self.rr.dbname).run()
         tables = self.rr.table_list().run()
         if not "sites" in tables:
-            db_logger.info(
-                "creating rethinkdb table 'sites' in database"
-            )
+            db_logger.info("creating rethinkdb table 'sites' in database")
             self.rr.table_create(
                 "sites", shards=self.shards, replicas=self.replicas
             ).run()
@@ -61,9 +59,7 @@ class RethinkDbFrontier:
             ).run()
             self.rr.table("sites").index_create("job_id").run()
         if not "pages" in tables:
-            db_logger.info(
-                "creating rethinkdb table 'pages' in database"
-            )
+            db_logger.info("creating rethinkdb table 'pages' in database")
             self.rr.table_create(
                 "pages", shards=self.shards, replicas=self.replicas
             ).run()
@@ -83,9 +79,7 @@ class RethinkDbFrontier:
                 [r.row["site_id"], r.row["brozzle_count"], r.row["hops_from_seed"]],
             ).run()
         if not "jobs" in tables:
-            db_logger.info(
-                "creating rethinkdb table 'jobs' in database"
-            )
+            db_logger.info("creating rethinkdb table 'jobs' in database")
             self.rr.table_create(
                 "jobs", shards=self.shards, replicas=self.replicas
             ).run()

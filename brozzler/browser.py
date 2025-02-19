@@ -717,9 +717,7 @@ class Browser:
                 # no links found
                 return frozenset()
         else:
-            self.logger.error(
-                "problem extracting outlinks", message=message
-            )
+            self.logger.error("problem extracting outlinks", message=message)
             return frozenset()
 
     def screenshot(self, full_page=False, timeout=45):

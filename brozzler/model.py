@@ -38,6 +38,7 @@ from typing import Optional
 
 logger = structlog.get_logger()
 
+
 def load_schema():
     schema_file = os.path.join(os.path.dirname(__file__), "job_schema.yaml")
     with open(schema_file) as f:

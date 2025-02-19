@@ -223,13 +223,11 @@ class BrozzlerWorker:
         request.type = "http"
         request.set_proxy(warcprox_address, "http")
 
-
-
         try:
             with urllib.request.urlopen(request, timeout=600) as response:
                 if response.getcode() != 204:
                     self.logger.warning(
-                        'got unexpected response on warcprox '
+                        "got unexpected response on warcprox "
                         "WARCPROX_WRITE_RECORD request (expected 204)",
                         code=response.getcode(),
                         reason=response.reason,
@@ -237,7 +235,7 @@ class BrozzlerWorker:
                 return request, response
         except urllib.error.HTTPError as e:
             self.logger.warning(
-                'got unexpected response on warcprox '
+                "got unexpected response on warcprox "
                 "WARCPROX_WRITE_RECORD request (expected 204)",
                 code=e.getcode(),
                 reason=e.info(),
@@ -326,9 +324,7 @@ class BrozzlerWorker:
                             url=page.url,
                         )
                     else:
-                        self.logger.exception(
-                            "youtube_dl raised exception", page=page
-                        )
+                        self.logger.exception("youtube_dl raised exception", page=page)
         return outlinks
 
     @metrics.brozzler_header_processing_duration_seconds.time()
@@ -581,9 +577,7 @@ class BrozzlerWorker:
                     page=page,
                 )
             else:
-                site_logger.exception(
-                    "unexpected exception", page=page
-                )
+                site_logger.exception("unexpected exception", page=page)
             if page:
                 # Calculate backoff in seconds based on number of failed attempts.
                 # Minimum of 60, max of 135 giving delays of 60, 90, 135, 135...
@@ -687,9 +681,7 @@ class BrozzlerWorker:
                 self._browser_pool.release(browsers[i])
 
     def run(self):
-        self.logger.warn(
-            "brozzler %s - brozzler-worker starting", brozzler.__version__
-        )
+        self.logger.warn("brozzler %s - brozzler-worker starting", brozzler.__version__)
         last_nothing_to_claim = 0
         try:
             while not self._shutdown.is_set():
@@ -698,7 +690,9 @@ class BrozzlerWorker:
                     try:
                         self._start_browsing_some_sites()
                     except brozzler.browser.NoBrowsersAvailable:
-                        self.logger.debug("all browsers are in use", max_browsers=self._max_browsers)
+                        self.logger.debug(
+                            "all browsers are in use", max_browsers=self._max_browsers
+                        )
                     except brozzler.NothingToClaim:
                         last_nothing_to_claim = time.time()
                         self.logger.debug(
@@ -709,9 +703,7 @@ class BrozzlerWorker:
 
             self.logger.warn("shutdown requested")
         except r.ReqlError as e:
-            self.logger.exception(
-                "caught rethinkdb exception, will try to proceed"
-            )
+            self.logger.exception("caught rethinkdb exception, will try to proceed")
         except brozzler.ShutdownRequested:
             self.logger.info("shutdown requested")
         except:
@@ -723,12 +715,11 @@ class BrozzlerWorker:
                 try:
                     self._service_registry.unregister(self.status_info["id"])
                 except:
-                    self.logger.exception(
-                        "failed to unregister from service registry"
-                    )
+                    self.logger.exception("failed to unregister from service registry")
 
             self.logger.info(
-                "shutting down brozzling threads", thread_count=len(self._browsing_threads)
+                "shutting down brozzling threads",
+                thread_count=len(self._browsing_threads),
             )
             with self._browsing_threads_lock:
                 for th in self._browsing_threads:

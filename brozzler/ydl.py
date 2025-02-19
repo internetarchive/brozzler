@@ -42,6 +42,7 @@ YTDLP_MAX_REDIRECTS = 5
 
 logger = structlog.get_logger()
 
+
 def should_ytdlp(site, page, page_status, skip_av_seeds):
     # called only after we've passed needs_browsing() check
 
@@ -130,7 +131,9 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
             if result_type in ("url", "url_transparent"):
                 if "extraction_depth" in extra_info:
                     self.logger.info(
-                        f"Following redirect", redirect_url=ie_result['url'], extraction_depth=extra_info['extraction_depth']
+                        f"Following redirect",
+                        redirect_url=ie_result["url"],
+                        extraction_depth=extra_info["extraction_depth"],
                     )
                     extra_info["extraction_depth"] = 1 + extra_info.get(
                         "extraction_depth", 0
@@ -166,7 +169,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
                     except Exception as e:
                         extract_context.warning(
                             "failed to unroll entries ie_result['entries']?",
-                            exc_info=True
+                            exc_info=True,
                         )
                         ie_result["entries_no_dl"] = []
                     ie_result["entries"] = []
@@ -195,7 +198,11 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
                     mimetype = magic.from_file(info_dict["filepath"], mime=True)
                 except ImportError as e:
                     mimetype = "video/%s" % info_dict["ext"]
-                    self.logger.warning("guessing mimetype due to error", mimetype=mimetype, exc_info=True)
+                    self.logger.warning(
+                        "guessing mimetype due to error",
+                        mimetype=mimetype,
+                        exc_info=True,
+                    )
 
             # youtube watch page postprocessor is MoveFiles
 
@@ -217,7 +224,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
                 format=info_dict["format"],
                 mimetype=mimetype,
                 size=size,
-                warcprox=worker._proxy_for(site)
+                warcprox=worker._proxy_for(site),
             )
             with open(info_dict["filepath"], "rb") as f:
                 # include content-length header to avoid chunked
@@ -268,7 +275,10 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
 
     def ydl_postprocess_hook(d):
         if d["status"] == "finished":
-            worker.logger.info("[ydl_postprocess_hook] Finished postprocessing", postprocessor=d["postprocessor"])
+            worker.logger.info(
+                "[ydl_postprocess_hook] Finished postprocessing",
+                postprocessor=d["postprocessor"],
+            )
             is_youtube_host = isyoutubehost(d["info_dict"]["webpage_url"])
 
             metrics.brozzler_ydl_download_successes.labels(is_youtube_host).inc(1)
@@ -397,7 +407,10 @@ def _try_youtube_dl(worker, ydl, site, page):
                 attempt += 1
                 if attempt == max_attempts:
                     logger.warning(
-                        "Failed after %s attempt(s)", max_attempts, attempts=max_attempts, exc_info=True
+                        "Failed after %s attempt(s)",
+                        max_attempts,
+                        attempts=max_attempts,
+                        exc_info=True,
                     )
                     raise brozzler.VideoExtractorError(
                         "yt-dlp hit error extracting info for %s" % ydl.url
@@ -421,8 +434,7 @@ def _try_youtube_dl(worker, ydl, site, page):
     if worker._using_warcprox(site):
         info_json = json.dumps(ie_result, sort_keys=True, indent=4)
         logger.info(
-            "sending WARCPROX_WRITE_RECORD request to warcprox "
-            "with yt-dlp json",
+            "sending WARCPROX_WRITE_RECORD request to warcprox " "with yt-dlp json",
             url=ydl.url,
         )
         worker._warcprox_write_record(

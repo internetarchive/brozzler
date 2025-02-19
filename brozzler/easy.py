@@ -238,11 +238,14 @@ class BrozzlerEasyController:
         self.logger.info("starting brozzler-worker")
         self.brozzler_worker.start()
 
-        self.logger.info("starting pywb", address="%s:%s" % self.pywb_httpd.server_address)
+        self.logger.info(
+            "starting pywb", address="%s:%s" % self.pywb_httpd.server_address
+        )
         threading.Thread(target=self.pywb_httpd.serve_forever).start()
 
         self.logger.info(
-            "starting brozzler-dashboard", address="%s:%s" % self.dashboard_httpd.server_address
+            "starting brozzler-dashboard",
+            address="%s:%s" % self.dashboard_httpd.server_address,
         )
         threading.Thread(target=self.dashboard_httpd.serve_forever).start()
 
