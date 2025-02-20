@@ -45,7 +45,7 @@ r = rdb.RethinkDB()
 
 
 class BrozzlerWorker:
-    logger = structlog.get_logger()
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
 
     # 3⅓ min heartbeat interval => 10 min ttl
     # This is kind of a long time, because `frontier.claim_sites()`, which runs
@@ -739,6 +739,7 @@ class BrozzlerWorker:
                 )
                 return
             self._thread = threading.Thread(target=self.run, name="BrozzlerWorker")
+            self.logger = self.logger.bind(thread=self._thread)
             self._thread.start()
 
     def shutdown_now(self):
