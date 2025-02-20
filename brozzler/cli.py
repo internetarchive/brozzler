@@ -128,6 +128,8 @@ def configure_logging(args):
         cache_logger_on_first_use=False,
     )
 
+    # We still configure logging for now because its handlers
+    # are used for the gunicorn spawned by the brozzler dashboard.
     logging.basicConfig(
         stream=sys.stderr,
         level=args.log_level,
