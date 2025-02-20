@@ -65,7 +65,7 @@ def check_version(chrome_exe):
 
 
 class Chrome:
-    logger = structlog.get_logger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
 
     def __init__(self, chrome_exe, port=9222, ignore_cert_errors=False):
         """

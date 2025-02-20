@@ -194,7 +194,7 @@ class ElapsedMixIn(object):
 
 
 class Job(doublethink.Document, ElapsedMixIn):
-    logger = structlog.get_logger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
     table = "jobs"
 
     def populate_defaults(self):
@@ -223,7 +223,7 @@ class Job(doublethink.Document, ElapsedMixIn):
 
 
 class Site(doublethink.Document, ElapsedMixIn):
-    logger = structlog.get_logger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
     table = "sites"
 
     def populate_defaults(self):
@@ -379,7 +379,7 @@ class Site(doublethink.Document, ElapsedMixIn):
 
 
 class Page(doublethink.Document):
-    logger = structlog.get_logger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
     table = "pages"
 
     @staticmethod

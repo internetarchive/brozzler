@@ -147,7 +147,7 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
 
 
 class ThreadExceptionGate:
-    logger = structlog.get_logger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
 
     def __init__(self, thread):
         self.thread = thread

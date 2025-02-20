@@ -33,7 +33,7 @@ class UnexpectedDbResult(Exception):
 
 
 class RethinkDbFrontier:
-    logger = structlog.get_logger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
 
     def __init__(self, rr, shards=None, replicas=None):
         self.rr = rr

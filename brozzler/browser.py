@@ -53,7 +53,7 @@ class BrowserPool:
     debugging protocol.
     """
 
-    logger = structlog.get_logger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
 
     def __init__(self, size=3, **kwargs):
         """
@@ -144,7 +144,7 @@ class BrowserPool:
 
 
 class WebsockReceiverThread(threading.Thread):
-    logger = structlog.get_logger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
 
     def __init__(self, websock, name=None, daemon=True):
         super().__init__(name=name, daemon=daemon)
@@ -322,7 +322,7 @@ class Browser:
     Manages an instance of Chrome for browsing pages.
     """
 
-    logger = structlog.get_logger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
 
     def __init__(self, **kwargs):
         """
