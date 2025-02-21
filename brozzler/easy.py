@@ -21,6 +21,8 @@ limitations under the License.
 import structlog
 import sys
 
+logger = structlog.get_logger(logger_name=__name__)
+
 try:
     import warcprox
     import warcprox.main
@@ -30,7 +32,7 @@ try:
     import wsgiref.handlers
     import brozzler.dashboard
 except ImportError as e:
-    structlog.get_logger().critical(
+    logger.critical(
         '%s: %s\n\nYou might need to run "pip install '
         'brozzler[easy]".\nSee README.rst for more information.',
         type(e).__name__,
@@ -310,7 +312,7 @@ class BrozzlerEasyController:
             state_strs.append(str(th))
             stack = traceback.format_stack(sys._current_frames()[th.ident])
             state_strs.append("".join(stack))
-        structlog.get_logger().warning(
+        logger.warning(
             "dumping state (caught signal)", signal=signum, state="\n".join(state_strs)
         )
 

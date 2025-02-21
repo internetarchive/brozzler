@@ -21,7 +21,7 @@ limitations under the License.
 import sys
 import structlog
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(logger_name=__name__)
 
 try:
     import pywb.apps.cli

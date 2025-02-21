@@ -43,7 +43,7 @@ import rethinkdb as rdb
 
 r = rdb.RethinkDB()
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(logger_name=__name__)
 
 
 def add_common_options(arg_parser, argv=None):

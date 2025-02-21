@@ -36,7 +36,7 @@ import yaml
 import zlib
 from typing import Optional
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(logger_name=__name__)
 
 
 def load_schema():

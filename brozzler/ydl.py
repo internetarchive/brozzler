@@ -40,7 +40,7 @@ YTDLP_WAIT = 10
 YTDLP_MAX_REDIRECTS = 5
 
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(logger_name=__name__)
 
 
 def should_ytdlp(site, page, page_status, skip_av_seeds):
