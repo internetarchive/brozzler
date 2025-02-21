@@ -112,6 +112,24 @@ def rethinker(args):
     return doublethink.Rethinker(servers.split(","), db)
 
 
+# Decorates the logger name with call location, if provided
+def decorate_logger_name(a, b, event_dict):
+    old_name = event_dict.get("logger_name")
+    if old_name is None:
+        return event_dict
+
+    try:
+        filename = event_dict.pop("filename")
+        func_name = event_dict.pop("func_name")
+        lineno = event_dict.pop("lineno")
+    except KeyError:
+        return event_dict
+    new_name = f"{old_name}.{func_name}({filename}:{lineno})"
+    event_dict["logger_name"] = new_name
+
+    return event_dict
+
+
 def configure_logging(args):
     structlog.configure(
         processors=[
@@ -120,6 +138,14 @@ def configure_logging(args):
             structlog.processors.StackInfoRenderer(),
             structlog.dev.set_exc_info,
             structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
+            structlog.processors.CallsiteParameterAdder(
+                [
+                    structlog.processors.CallsiteParameter.FILENAME,
+                    structlog.processors.CallsiteParameter.FUNC_NAME,
+                    structlog.processors.CallsiteParameter.LINENO,
+                ],
+            ),
+            decorate_logger_name,
             structlog.dev.ConsoleRenderer(),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(args.log_level),
