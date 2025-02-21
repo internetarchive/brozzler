@@ -23,12 +23,12 @@ limitations under the License.
 """
 
 import json
-import logging
 import brozzler
 import reppy
 import reppy.cache
 import reppy.parser
 import requests
+import structlog
 
 __all__ = ["is_permitted_by_robots"]
 
@@ -119,10 +119,9 @@ def is_permitted_by_robots(site, url, proxy=None):
             # reppy has wrapped an exception that we want to bubble up
             raise brozzler.ProxyError(e)
         else:
-            logging.warning(
-                "returning true (permitted) after problem fetching "
-                "robots.txt for %r: %r",
-                url,
-                e,
+            structlog.get_logger().warning(
+                "returning true (permitted) after problem fetching " "robots.txt",
+                url=url,
+                exception=e,
             )
             return True

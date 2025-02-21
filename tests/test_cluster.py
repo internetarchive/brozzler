@@ -31,9 +31,12 @@ import datetime
 import requests
 import subprocess
 import http.server
-import logging
+import structlog
 import sys
 import warcprox
+
+
+logger = structlog.get_logger()
 
 
 # https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
@@ -70,11 +73,11 @@ def stop_service(service):
 def httpd(request):
     class RequestHandler(http.server.SimpleHTTPRequestHandler):
         def do_POST(self):
-            logging.info("\n%s\n%s", self.requestline, self.headers)
+            logger.info("\n%s\n%s", self.requestline, self.headers)
             self.do_GET()
 
         def do_GET(self):
-            logging.info("\n%s\n%s", self.requestline, self.headers)
+            logger.info("\n%s\n%s", self.requestline, self.headers)
             if self.path == "/site5/redirect/":
                 self.send_response(303, "See other")
                 self.send_header("Connection", "close")
@@ -270,7 +273,7 @@ def test_proxy_non_warcprox(httpd):
         def do_HEAD(self):
             if not hasattr(self.server, "requests"):
                 self.server.requests = []
-            logging.info("%s %s", self.command, self.path)
+            logger.info("%s %s", self.command, self.path)
             self.server.requests.append("%s %s" % (self.command, self.path))
             response = urllib.request.urlopen(self.path)
             self.wfile.write(
@@ -292,7 +295,7 @@ def test_proxy_non_warcprox(httpd):
         def do_WARCPROX_WRITE_RECORD(self):
             if not hasattr(self.server, "requests"):
                 self.server.requests = []
-            logging.info("%s %s", self.command, self.path)
+            logger.info("%s %s", self.command, self.path)
             self.send_error(400)
 
     proxy = http.server.HTTPServer(("localhost", 0), DumbProxyRequestHandler)
@@ -826,7 +829,7 @@ def test_warcprox_outage_resiliency(httpd):
         try:
             stop_service("warcprox")
         except Exception as e:
-            logging.warning("problem stopping warcprox service: %s", e)
+            logger.warning("problem stopping warcprox service: %s", exc_info=True)
 
         # queue the site for brozzling
         brozzler.new_site(frontier, site)

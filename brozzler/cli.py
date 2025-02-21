@@ -29,6 +29,8 @@ import requests
 import doublethink
 import signal
 import string
+import structlog
+import subprocess
 import sys
 import threading
 import time
@@ -41,6 +43,8 @@ import rethinkdb as rdb
 
 r = rdb.RethinkDB()
 
+logger = structlog.get_logger()
+
 
 def add_common_options(arg_parser, argv=None):
     argv = argv or sys.argv
@@ -50,7 +54,7 @@ def add_common_options(arg_parser, argv=None):
         dest="log_level",
         action="store_const",
         default=logging.INFO,
-        const=logging.NOTICE,
+        const=logging.WARN,
         help="quiet logging",
     )
     arg_parser.add_argument(
@@ -67,7 +71,7 @@ def add_common_options(arg_parser, argv=None):
         dest="log_level",
         action="store_const",
         default=logging.INFO,
-        const=logging.TRACE,
+        const=logging.DEBUG,
         help=("very verbose logging"),
     )
     # arg_parser.add_argument(
@@ -108,7 +112,50 @@ def rethinker(args):
     return doublethink.Rethinker(servers.split(","), db)
 
 
+# Decorates the logger name with call location, if provided
+def decorate_logger_name(a, b, event_dict):
+    old_name = event_dict.get("logger_name")
+    if old_name is None:
+        return event_dict
+
+    try:
+        filename = event_dict.pop("filename")
+        func_name = event_dict.pop("func_name")
+        lineno = event_dict.pop("lineno")
+    except KeyError:
+        return event_dict
+    new_name = f"{old_name}.{func_name}({filename}:{lineno})"
+    event_dict["logger_name"] = new_name
+
+    return event_dict
+
+
 def configure_logging(args):
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            structlog.processors.StackInfoRenderer(),
+            structlog.dev.set_exc_info,
+            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
+            structlog.processors.CallsiteParameterAdder(
+                [
+                    structlog.processors.CallsiteParameter.FILENAME,
+                    structlog.processors.CallsiteParameter.FUNC_NAME,
+                    structlog.processors.CallsiteParameter.LINENO,
+                ],
+            ),
+            decorate_logger_name,
+            structlog.dev.ConsoleRenderer(),
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(args.log_level),
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=False,
+    )
+
+    # We still configure logging for now because its handlers
+    # are used for the gunicorn spawned by the brozzler dashboard.
     logging.basicConfig(
         stream=sys.stderr,
         level=args.log_level,
@@ -126,14 +173,50 @@ def configure_logging(args):
     )
 
 
-def suggest_default_chrome_exe():
-    # mac os x application executable paths
+def mdfind(identifier):
+    try:
+        result = subprocess.check_output(
+            ["mdfind", f"kMDItemCFBundleIdentifier == {identifier}"], text=True
+        )
+    # Just treat any errors as "couldn't find app"
+    except subprocess.CalledProcessError:
+        return None
+
+    if result:
+        return result.rstrip("\n")
+
+
+def suggest_default_chrome_exe_mac():
+    path = None
+    # Try Chromium first, then Chrome
+    result = mdfind("org.chromium.Chromium")
+    if result is not None:
+        path = f"{result}/Contents/MacOS/Chromium"
+
+    result = mdfind("com.google.Chrome")
+    if result is not None:
+        path = f"{result}/Contents/MacOS/Google Chrome"
+
+    if path is not None and os.path.exists(path):
+        return path
+
+    # Fall back to default paths if mdfind couldn't find it
+    # (mdfind might fail to find them even in their default paths
+    # if the system has Spotlight disabled.)
     for path in [
         "/Applications/Thorium.app/Contents/MacOS/Thorium",
         "/Applications/Chromium.app/Contents/MacOS/Chromium",
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     ]:
         if os.path.exists(path):
+            return path
+
+
+def suggest_default_chrome_exe():
+    # First ask mdfind, which lets us find it in non-default paths
+    if sys.platform == "darwin":
+        path = suggest_default_chrome_exe_mac()
+        if path is not None:
             return path
 
     # "chromium-browser" is the executable on ubuntu trusty
@@ -319,7 +402,7 @@ def brozzle_page(argv=None):
         )
         with open(filename, "wb") as f:
             f.write(screenshot_jpeg)
-        logging.info("wrote screenshot to %s", filename)
+        logger.info("wrote screenshot", filename=filename)
 
     browser = brozzler.Browser(chrome_exe=args.chrome_exe)
     try:
@@ -335,11 +418,11 @@ def brozzle_page(argv=None):
             on_screenshot=on_screenshot,
             enable_youtube_dl=not args.skip_youtube_dl,
         )
-        logging.info("outlinks: \n\t%s", "\n\t".join(sorted(outlinks)))
+        logger.info("outlinks: \n\t%s", "\n\t".join(sorted(outlinks)))
     except brozzler.ReachedLimit as e:
-        logging.error("reached limit %s", e)
+        logger.exception("reached limit")
     except brozzler.PageInterstitialShown as e:
-        logging.error("page interstitial shown %s", e)
+        logger.exception("page interstitial shown")
     finally:
         browser.stop()
 
@@ -597,11 +680,11 @@ def brozzler_worker(argv=None):
                     state_strs.append("<???:thread:ident=%s>" % ident)
                 stack = traceback.format_stack(frames[ident])
                 state_strs.append("".join(stack))
-            logging.info(
-                "dumping state (caught signal %s)\n%s" % (signum, "\n".join(state_strs))
+            logger.info(
+                "dumping state (caught signal)\n%s", signal=signum, state=state_strs
             )
         except BaseException as e:
-            logging.error("exception dumping state: %s" % e)
+            logger.exception("exception dumping state")
         finally:
             signal.signal(signal.SIGQUIT, dump_state)
 
@@ -612,13 +695,13 @@ def brozzler_worker(argv=None):
             with open(YTDLP_PROXY_ENDPOINTS_FILE) as endpoints:
                 ytdlp_proxy_endpoints = [l for l in endpoints.readlines()]
                 if ytdlp_proxy_endpoints:
-                    logging.info(
-                        "running with ytdlp proxy endpoints file %s"
-                        % YTDLP_PROXY_ENDPOINTS_FILE
+                    logger.info(
+                        "running with ytdlp proxy endpoints file",
+                        ytdlp_proxy_endpoints=YTDLP_PROXY_ENDPOINTS_FILE,
                     )
         except Exception as e:
             ytdlp_proxy_endpoints = []
-            logging.info("running with empty proxy endpoints file")
+            logger.info("running with empty proxy endpoints file")
         return ytdlp_proxy_endpoints
 
     rr = rethinker(args)
@@ -650,7 +733,7 @@ def brozzler_worker(argv=None):
     th = threading.Thread(target=worker.run, name="BrozzlerWorkerThread")
     th.start()
     th.join()
-    logging.info("brozzler-worker is all done, exiting")
+    logger.info("brozzler-worker is all done, exiting")
 
 
 def brozzler_ensure_tables(argv=None):
@@ -724,18 +807,18 @@ def brozzler_list_jobs(argv=None):
         except ValueError:
             job_id = args.job
         reql = rr.table("jobs").get(job_id)
-        logging.debug("querying rethinkdb: %s", reql)
+        logger.debug("querying rethinkdb", query=reql)
         result = reql.run()
         if result:
             results = [reql.run()]
         else:
-            logging.error("no such job with id %r", job_id)
+            logger.error("no such job with id", job_id=job_id)
             sys.exit(1)
     else:
         reql = rr.table("jobs").order_by("id")
         if args.active:
             reql = reql.filter({"status": "ACTIVE"})
-        logging.debug("querying rethinkdb: %s", reql)
+        logger.debug("querying rethinkdb", query=reql)
         results = reql.run()
     if args.yaml:
         yaml.dump_all(
@@ -800,7 +883,7 @@ def brozzler_list_sites(argv=None):
         )
     elif args.site:
         reql = reql.get_all(args.site)
-    logging.debug("querying rethinkdb: %s", reql)
+    logger.debug("querying rethinkdb", query=reql)
     results = reql.run()
     if args.yaml:
         yaml.dump_all(
@@ -868,7 +951,7 @@ def brozzler_list_pages(argv=None):
         except ValueError:
             job_id = args.job
         reql = rr.table("sites").get_all(job_id, index="job_id")["id"]
-        logging.debug("querying rethinkb: %s", reql)
+        logger.debug("querying rethinkb", query=reql)
         site_ids = reql.run()
     elif args.site:
         try:
@@ -897,7 +980,7 @@ def brozzler_list_pages(argv=None):
         reql = reql.order_by(index="least_hops")
         if args.claimed:
             reql = reql.filter({"claimed": True})
-        logging.debug("querying rethinkb: %s", reql)
+        logger.debug("querying rethinkb", query=reql)
         results = reql.run()
         if args.yaml:
             yaml.dump_all(
@@ -963,20 +1046,20 @@ def brozzler_purge(argv=None):
             job_id = args.job
         job = brozzler.Job.load(rr, job_id)
         if not job:
-            logging.fatal("no such job %r", job_id)
+            logger.fatal("no such job", job_id=job_id)
             sys.exit(1)
         if job.status == "ACTIVE":
             if args.force:
-                logging.warning(
-                    "job %s has status ACTIVE, purging anyway because "
+                logger.warning(
+                    "job has status ACTIVE, purging anyway because "
                     "--force was supplied",
-                    job_id,
+                    job_id=job_id,
                 )
             else:
-                logging.fatal(
-                    "refusing to purge job %s because status is ACTIVE "
+                logger.fatal(
+                    "refusing to purge job because status is ACTIVE "
                     "(override with --force)",
-                    job_id,
+                    job_id=job_id,
                 )
                 sys.exit(1)
         _purge_job(rr, job_id)
@@ -984,20 +1067,20 @@ def brozzler_purge(argv=None):
         site_id = args.site
         site = brozzler.Site.load(rr, site_id)
         if not site:
-            logging.fatal("no such job %r", job_id)
+            logger.fatal("no such job", job_id=job_id)
             sys.exit(1)
         if site.status == "ACTIVE":
             if args.force:
-                logging.warning(
-                    "site %s has status ACTIVE, purging anyway because "
+                logger.warning(
+                    "site has status ACTIVE, purging anyway because "
                     "--force was supplied",
-                    site_id,
+                    site_id=site_id,
                 )
             else:
-                logging.fatal(
-                    "refusing to purge site %s because status is ACTIVE "
+                logger.fatal(
+                    "refusing to purge site because status is ACTIVE "
                     "(override with --force)",
-                    site_id,
+                    site_id=site_id,
                 )
                 sys.exit(1)
         _purge_site(rr, site_id)
@@ -1016,7 +1099,7 @@ def brozzler_purge(argv=None):
                 .lt(finished_before)
             )
         )
-        logging.debug("retrieving jobs older than %s: %s", finished_before, reql)
+        logger.debug("retrieving jobs older than %s", finished_before, query=reql)
         for job in reql.run():
             # logging.info('job %s finished=%s starts_and_stops[-1]["stop"]=%s',
             #         job['id'], job.get('finished'),
@@ -1034,27 +1117,31 @@ def _purge_site(rr, site_id):
         )
         .delete()
     )
-    logging.debug("purging pages for site %s: %s", site_id, reql)
+    site_logger = logger.bind(site_id=site_id)
+
+    site_logger.debug("purging pages for site", query=reql)
     result = reql.run()
-    logging.info("purged pages for site %s: %s", site_id, result)
+    site_logger.info("purged pages for site", result=result)
 
     reql = rr.table("sites").get(site_id).delete()
-    logging.debug("purging site %s: %s", site_id, reql)
+    site_logger.debug("purging site", query=reql)
     result = reql.run()
-    logging.info("purged site %s: %s", site_id, result)
+    site_logger.info("purged site", result=result)
 
 
 def _purge_job(rr, job_id):
+    job_logger = logger.bind(job_id=job_id)
+
     reql = rr.table("sites").get_all(job_id, index="job_id").get_field("id")
-    logging.debug("querying rethinkdb: %s", reql)
+    job_logger.debug("querying rethinkdb", query=reql)
     site_ids = list(reql.run())
     for site_id in site_ids:
         _purge_site(rr, site_id)
 
     reql = rr.table("jobs").get(job_id).delete()
-    logging.debug("purging job %s: %s", job_id, reql)
+    job_logger.debug("purging job", query=reql)
     result = reql.run()
-    logging.info("purged job %s: %s", job_id, result)
+    job_logger.info("purged job", result=result)
 
 
 def brozzler_list_captures(argv=None):
@@ -1101,7 +1188,7 @@ def brozzler_list_captures(argv=None):
 
     if args.url_or_sha1[:5] == "sha1:":
         if args.prefix:
-            logging.warning(
+            logger.warning(
                 "ignoring supplied --prefix option which does not apply "
                 "to lookup by sha1"
             )
@@ -1112,7 +1199,7 @@ def brozzler_list_captures(argv=None):
             [sha1base32, r.maxval, r.maxval],
             index="sha1_warc_type",
         )
-        logging.debug("querying rethinkdb: %s", reql)
+        logger.debug("querying rethinkdb", query=reql)
         results = reql.run()
     else:
         key = urlcanon.semantic(args.url_or_sha1).surt().decode("ascii")
@@ -1135,7 +1222,7 @@ def brozzler_list_captures(argv=None):
             lambda capture: (capture["canon_surt"] >= key)
             & (capture["canon_surt"] <= end_key)
         )
-        logging.debug("querying rethinkdb: %s", reql)
+        logger.debug("querying rethinkdb", query=reql)
         results = reql.run()
 
     if args.yaml:
@@ -1180,7 +1267,7 @@ def brozzler_stop_crawl(argv=None):
             job_id = args.job_id
         job = brozzler.Job.load(rr, job_id)
         if not job:
-            logging.fatal("job not found with id=%r", job_id)
+            logger.fatal("job not found with", id=job_id)
             sys.exit(1)
         job.stop_requested = doublethink.utcnow()
         job.save()
@@ -1191,7 +1278,7 @@ def brozzler_stop_crawl(argv=None):
             site_id = args.site_id
         site = brozzler.Site.load(rr, site_id)
         if not site:
-            logging.fatal("site not found with id=%r", site_id)
+            logger.fatal("site not found with", id=site_id)
             sys.exit(1)
         site.stop_requested = doublethink.utcnow()
         site.save()

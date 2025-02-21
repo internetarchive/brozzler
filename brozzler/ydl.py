@@ -16,7 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import logging
 import yt_dlp
 from yt_dlp.utils import match_filter_func, ExtractorError
 import brozzler
@@ -31,6 +30,7 @@ import datetime
 from . import metrics
 
 import random
+import structlog
 import threading
 import traceback
 import doublethink
@@ -44,17 +44,20 @@ YTDLP_WAIT = 10
 YTDLP_MAX_REDIRECTS = 5
 
 
+logger = structlog.get_logger()
+
+
 def should_ytdlp(site, page, page_status):
     # called only after we've passed needs_browsing() check
 
     if page_status != 200:
-        logging.info("skipping ytdlp: non-200 page status %s", page_status)
+        logger.info("skipping ytdlp: non-200 page status %s", page_status)
         return False
     if site.video_capture in [
         VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value,
         VideoCaptureOptions.DISABLE_YTDLP_CAPTURE.value,
     ]:
-        logging.info("skipping ytdlp: site has video capture disabled")
+        logger.info("skipping ytdlp: site has video capture disabled")
         return False
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
@@ -104,7 +107,13 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
     """
 
     class _YoutubeDL(yt_dlp.YoutubeDL):
-        logger = logging.getLogger(__module__ + "." + __qualname__)
+        logger = structlog.get_logger(__module__ + "." + __qualname__)
+
+        def __init__(self, url, params=None, auto_init=True):
+            super().__init__(params, auto_init)
+
+            self.url = url
+            self.logger = self.logger.bind(url=url)
 
         def process_ie_result(self, ie_result, download=True, extra_info=None):
             if extra_info is None:
@@ -114,7 +123,9 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
             if result_type in ("url", "url_transparent"):
                 if "extraction_depth" in extra_info:
                     self.logger.info(
-                        f"Following redirect URL: {ie_result['url']} extraction_depth: {extra_info['extraction_depth']}"
+                        f"Following redirect",
+                        redirect_url=ie_result["url"],
+                        extraction_depth=extra_info["extraction_depth"],
                     )
                     extra_info["extraction_depth"] = 1 + extra_info.get(
                         "extraction_depth", 0
@@ -131,8 +142,9 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         def add_default_extra_info(self, ie_result, ie, url):
             # hook in some logging
             super().add_default_extra_info(ie_result, ie, url)
+            extract_context = self.logger.bind(extractor=ie.IE_NAME)
             if ie_result.get("_type") == "playlist":
-                self.logger.info("extractor %r found playlist in %s", ie.IE_NAME, url)
+                extract_context.info("found playlist")
                 if ie.IE_NAME in {
                     "youtube:playlist",
                     "youtube:tab",
@@ -147,22 +159,20 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
                     try:
                         ie_result["entries_no_dl"] = list(ie_result["entries"])
                     except Exception as e:
-                        self.logger.warning(
-                            "failed to unroll ie_result['entries']? for %s, %s; exception %s",
-                            ie.IE_NAME,
-                            url,
-                            e,
+                        extract_context.warning(
+                            "failed to unroll entries ie_result['entries']?",
+                            exc_info=True,
                         )
                         ie_result["entries_no_dl"] = []
                     ie_result["entries"] = []
                     self.logger.info(
-                        "not downloading %s media files from this "
+                        "not downloading media files from this "
                         "playlist because we expect to capture them from "
                         "individual watch/track/detail pages",
-                        len(ie_result["entries_no_dl"]),
+                        media_file_count=len(ie_result["entries_no_dl"]),
                     )
             else:
-                self.logger.info("extractor %r found a download in %s", ie.IE_NAME, url)
+                extract_context.info("found a download")
 
         def _push_video_to_warcprox(self, site, info_dict, postprocessor):
             # 220211 update: does yt-dlp supply content-type? no, not as such
@@ -180,7 +190,11 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
                     mimetype = magic.from_file(info_dict["filepath"], mime=True)
                 except ImportError as e:
                     mimetype = "video/%s" % info_dict["ext"]
-                    self.logger.warning("guessing mimetype %s because %r", mimetype, e)
+                    self.logger.warning(
+                        "guessing mimetype due to error",
+                        mimetype=mimetype,
+                        exc_info=True,
+                    )
 
             # youtube watch page postprocessor is MoveFiles
 
@@ -198,12 +212,11 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
 
             size = os.path.getsize(info_dict["filepath"])
             self.logger.info(
-                "pushing %r video as %s (%s bytes) to " "warcprox at %s with url %s",
-                info_dict["format"],
-                mimetype,
-                size,
-                worker._proxy_for(site),
-                url,
+                "pushing video to warcprox",
+                format=info_dict["format"],
+                mimetype=mimetype,
+                size=size,
+                warcprox=worker._proxy_for(site),
             )
             with open(info_dict["filepath"], "rb") as f:
                 # include content-length header to avoid chunked
@@ -240,23 +253,23 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
             ):
                 worker.logger.debug(
                     "heartbeating site.last_claimed to prevent another "
-                    "brozzler-worker claiming this site id=%r",
-                    site.id,
+                    "brozzler-worker claiming this site",
+                    id=site.id,
                 )
                 site.last_claimed = doublethink.utcnow()
                 site.save()
         except:
             worker.logger.debug(
-                "problem heartbeating site.last_claimed site id=%r",
-                site.id,
+                "problem heartbeating site.last_claimed site",
+                id=site.id,
                 exc_info=True,
             )
 
     def ydl_postprocess_hook(d):
         if d["status"] == "finished":
-            worker.logger.info("[ydl_postprocess_hook] Finished postprocessing")
             worker.logger.info(
-                "[ydl_postprocess_hook] postprocessor: {}".format(d["postprocessor"])
+                "[ydl_postprocess_hook] Finished postprocessing",
+                postprocessor=d["postprocessor"],
             )
             is_youtube_host = isyoutubehost(d["info_dict"]["webpage_url"])
 
@@ -290,7 +303,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         # --cache-dir local or..
         # this looked like a problem with nsf-mounted homedir, maybe not a problem for brozzler on focal?
         "cache_dir": "/home/archiveit",
-        "logger": logging.getLogger("yt_dlp"),
+        "logger": logger,
         "verbose": False,
         "quiet": False,
         # recommended to avoid bot detection
@@ -306,17 +319,16 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         ytdlp_proxy_for_logs = (
             ydl_opts["proxy"].split("@")[1] if "@" in ydl_opts["proxy"] else "@@@"
         )
-        logging.info("using yt-dlp proxy ... %s", ytdlp_proxy_for_logs)
+        logger.info("using yt-dlp proxy ...", proxy=ytdlp_proxy_for_logs)
 
     # skip warcprox proxying yt-dlp v.2023.07.06: youtube extractor using ranges
     # if worker._proxy_for(site):
     #    ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
 
-    ydl = _YoutubeDL(ydl_opts)
+    ydl = _YoutubeDL(ytdlp_url, params=ydl_opts)
     if site.extra_headers():
         ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers(page)))
     ydl.pushed_videos = []
-    ydl.url = ytdlp_url
     ydl.is_youtube_host = is_youtube_host
 
     return ydl
@@ -336,7 +348,7 @@ def _remember_videos(page, pushed_videos=None):
             "content-type": pushed_video["content-type"],
             "content-length": pushed_video["content-length"],
         }
-        logging.debug("pushed video %s", video)
+        logger.debug("pushed video", video=video)
         page.videos.append(video)
 
 
@@ -345,7 +357,7 @@ def _try_youtube_dl(worker, ydl, site, page):
     attempt = 0
     while attempt < max_attempts:
         try:
-            logging.info("trying yt-dlp on %s", ydl.url)
+            logger.info("trying yt-dlp", url=ydl.url)
             # should_download_vid = not ydl.is_youtube_host
             # then
             # ydl.extract_info(str(urlcanon.whatwg(ydl.url)), download=should_download_vid)
@@ -386,15 +398,18 @@ def _try_youtube_dl(worker, ydl, site, page):
                 # and others...
                 attempt += 1
                 if attempt == max_attempts:
-                    logging.warning(
-                        "Failed after %s attempt(s). Error: %s", max_attempts, e
+                    logger.warning(
+                        "Failed after %s attempt(s)",
+                        max_attempts,
+                        attempts=max_attempts,
+                        exc_info=True,
                     )
                     raise brozzler.VideoExtractorError(
                         "yt-dlp hit error extracting info for %s" % ydl.url
                     )
                 else:
                     retry_wait = min(60, YTDLP_WAIT * (1.5 ** (attempt - 1)))
-                    logging.info(
+                    logger.info(
                         "Attempt %s failed. Retrying in %s seconds...",
                         attempt,
                         retry_wait,
@@ -405,15 +420,14 @@ def _try_youtube_dl(worker, ydl, site, page):
             "yt-dlp hit unknown error extracting info for %s" % ydl.url
         )
 
-    logging.info("ytdlp completed successfully")
+    logger.info("ytdlp completed successfully")
 
     _remember_videos(page, ydl.pushed_videos)
     if worker._using_warcprox(site):
         info_json = json.dumps(ie_result, sort_keys=True, indent=4)
-        logging.info(
-            "sending WARCPROX_WRITE_RECORD request to warcprox "
-            "with yt-dlp json for %s",
-            ydl.url,
+        logger.info(
+            "sending WARCPROX_WRITE_RECORD request to warcprox " "with yt-dlp json",
+            url=ydl.url,
         )
         worker._warcprox_write_record(
             warcprox_address=worker._proxy_for(site),
@@ -444,7 +458,7 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
     with tempfile.TemporaryDirectory(
         prefix="brzl-ydl-", dir=worker._ytdlp_tmpdir
     ) as tempdir:
-        logging.info("tempdir for yt-dlp: %s", tempdir)
+        logger.info("tempdir for yt-dlp", tempdir=tempdir)
         ydl = _build_youtube_dl(worker, tempdir, site, page, ytdlp_proxy_endpoints)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
         outlinks = set()

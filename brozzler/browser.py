@@ -31,6 +31,7 @@ import base64
 from ipaddress import AddressValueError
 from brozzler.chrome import Chrome
 import socket
+import structlog
 import urlcanon
 
 MAX_UNMATCHED_INVALID_CHECKS = 5
@@ -53,7 +54,7 @@ class BrowserPool:
     debugging protocol.
     """
 
-    logger = logging.getLogger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
 
     def __init__(self, size=3, **kwargs):
         """
@@ -144,7 +145,7 @@ class BrowserPool:
 
 
 class WebsockReceiverThread(threading.Thread):
-    logger = logging.getLogger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
 
     def __init__(self, websock, name=None, daemon=True):
         super().__init__(name=name, daemon=daemon)
@@ -194,7 +195,7 @@ class WebsockReceiverThread(threading.Thread):
         ):
             self.logger.error("websocket closed, did chrome die?")
         else:
-            self.logger.error("exception from websocket receiver thread", exc_info=1)
+            self.logger.exception("exception from websocket receiver thread")
         brozzler.thread_raise(self.calling_thread, BrowsingException)
 
     def run(self):
@@ -214,10 +215,9 @@ class WebsockReceiverThread(threading.Thread):
         try:
             self._handle_message(websock, message)
         except:
-            self.logger.error(
-                "uncaught exception in _handle_message message=%s",
-                message,
-                exc_info=True,
+            self.logger.exception(
+                "uncaught exception in _handle_message",
+                message=message,
             )
 
     def _network_response_received(self, message):
@@ -232,7 +232,7 @@ class WebsockReceiverThread(threading.Thread):
                     ]
                 )
                 self.reached_limit = brozzler.ReachedLimit(warcprox_meta=warcprox_meta)
-                self.logger.info("reached limit %s", self.reached_limit)
+                self.logger.info("reached limit", limit=self.reached_limit)
                 brozzler.thread_raise(self.calling_thread, brozzler.ReachedLimit)
             else:
                 self.logger.info(
@@ -246,7 +246,7 @@ class WebsockReceiverThread(threading.Thread):
             self.page_status = status
 
     def _javascript_dialog_opening(self, message):
-        self.logger.info("javascript dialog opened: %s", message)
+        self.logger.info("javascript dialog opened", message=message)
         if message["params"]["type"] == "alert":
             accept = True
         else:
@@ -293,7 +293,7 @@ class WebsockReceiverThread(threading.Thread):
                     message["params"]["message"]["text"],
                 )
             elif message["method"] == "Runtime.exceptionThrown":
-                self.logger.debug("uncaught exception: %s", message)
+                self.logger.debug("uncaught exception", exception=message)
             elif message["method"] == "Page.javascriptDialogOpening":
                 self._javascript_dialog_opening(message)
             elif (
@@ -323,7 +323,7 @@ class Browser:
     Manages an instance of Chrome for browsing pages.
     """
 
-    logger = logging.getLogger(__module__ + "." + __qualname__)
+    logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
 
     def __init__(self, **kwargs):
         """
@@ -366,11 +366,10 @@ class Browser:
         msg_id = next(self._command_id)
         kwargs["id"] = msg_id
         msg = json.dumps(kwargs, separators=",:")
-        logging.log(
-            logging.TRACE if suppress_logging else logging.DEBUG,
-            "sending message to %s: %s",
-            self.websock,
-            msg,
+        self.logger.debug(
+            "sending message",
+            websock=self.websock,
+            message=msg,
         )
         self.websock.send(msg)
         return msg_id
@@ -398,7 +397,7 @@ class Browser:
             # Enable Console & Runtime output only when debugging.
             # After all, we just print these events with debug(), we don't use
             # them in Brozzler logic.
-            if self.logger.isEnabledFor(logging.DEBUG):
+            if self.logger.is_enabled_for(logging.DEBUG):
                 self.send_to_chrome(method="Console.enable")
                 self.send_to_chrome(method="Runtime.enable")
             self.send_to_chrome(method="ServiceWorker.enable")
@@ -433,8 +432,8 @@ class Browser:
                 try:
                     self.websock.close()
                 except BaseException as e:
-                    self.logger.error(
-                        "exception closing websocket %s - %s", self.websock, e
+                    self.logger.exception(
+                        "exception closing websocket", websocket=self.websock
                     )
 
             self.chrome.stop()
@@ -461,7 +460,7 @@ class Browser:
 
             self.websock_url = None
         except:
-            self.logger.error("problem stopping", exc_info=True)
+            self.logger.exception("problem stopping")
 
     def is_running(self):
         return self.websock_url is not None
@@ -567,7 +566,7 @@ class Browser:
                     # if login redirected us, return to page_url
                     if page_url != self.url().split("#")[0]:
                         self.logger.debug(
-                            "login navigated away from %s; returning!", page_url
+                            "login navigated away; returning!", page_url=page_url
                         )
                         self.navigate_to_page(page_url, timeout=page_timeout)
                 # If the target page HTTP status is 4xx/5xx, there is no point
@@ -611,7 +610,7 @@ class Browser:
             # more information, raise that one
             raise self.websock_thread.reached_limit
         except websocket.WebSocketConnectionClosedException as e:
-            self.logger.error("websocket closed, did chrome die?")
+            self.logger.exception("websocket closed, did chrome die?")
             raise BrowsingException(e)
         finally:
             self.is_browsing = False
@@ -633,7 +632,7 @@ class Browser:
                 on_screenshot(jpeg_bytes)
                 return
             except BrowsingTimeout as e:
-                logging.error("attempt %s/3: %s", i + 1, e)
+                self.logger.exception("attempt %s/3", i + 1)
 
     def visit_hashtags(self, page_url, hashtags, outlinks):
         _hashtags = set(hashtags or [])
@@ -647,7 +646,7 @@ class Browser:
         # out which hashtags were visited already and skip those
         for hashtag in _hashtags:
             # navigate_to_hashtag (nothing to wait for so no timeout?)
-            self.logger.debug("navigating to hashtag %s", hashtag)
+            self.logger.debug("navigating to hashtag", hashtag=hashtag)
             url = urlcanon.whatwg(page_url)
             url.hash_sign = b"#"
             url.fragment = hashtag[1:].encode("utf-8")
@@ -687,7 +686,7 @@ class Browser:
             )
 
     def navigate_to_page(self, page_url, timeout=300):
-        self.logger.info("navigating to page %s", page_url)
+        self.logger.info("navigating to page", page_url=page_url)
         self.websock_thread.got_page_load_event = None
         self.websock_thread.page_status = None
         self.send_to_chrome(method="Page.navigate", params={"url": page_url})
@@ -715,15 +714,13 @@ class Browser:
                     try:
                         out.append(str(urlcanon.whatwg(link)))
                     except AddressValueError:
-                        self.logger.warning("skip invalid outlink: %s", link)
+                        self.logger.warning("skip invalid outlink", outlink=link)
                 return frozenset(out)
             else:
                 # no links found
                 return frozenset()
         else:
-            self.logger.error(
-                "problem extracting outlinks, result message: %s", message
-            )
+            self.logger.error("problem extracting outlinks", message=message)
             return frozenset()
 
     def screenshot(self, full_page=False, timeout=45):
@@ -797,11 +794,11 @@ class Browser:
             elapsed = time.time() - start
             if elapsed > timeout:
                 logging.info(
-                    "behavior reached hard timeout after %.1fs and %s valid checks, and %s invalid checks, for url %s",
+                    "behavior reached hard timeout after %.1fs and %s valid checks, and %s invalid checks",
                     elapsed,
                     valid_behavior_checks,
                     invalid_behavior_checks,
-                    page_url,
+                    page_url=page_url,
                 )
                 return
 
