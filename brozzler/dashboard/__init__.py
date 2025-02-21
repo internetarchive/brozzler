@@ -20,7 +20,7 @@ limitations under the License.
 import structlog
 import sys
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(logger_name=__name__)
 
 try:
     import flask

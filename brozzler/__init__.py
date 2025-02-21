@@ -123,7 +123,7 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
     """
     import re, json
 
-    logger = structlog.get_logger()
+    logger = structlog.get_logger(logger_name=__name__)
 
     for behavior in behaviors(behaviors_dir=behaviors_dir):
         if re.match(behavior["url_regex"], url):
@@ -139,7 +139,7 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
             logger.info(
                 "rendering template",
                 template=behavior["behavior_js_template"],
-                parameters=json.dumps(parameters),
+                parameters=parameters,
                 url=url,
             )
             return script

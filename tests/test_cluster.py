@@ -36,7 +36,7 @@ import sys
 import warcprox
 
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(logger_name=__name__)
 
 
 # https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib

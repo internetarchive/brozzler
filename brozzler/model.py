@@ -37,7 +37,7 @@ import zlib
 from enum import Enum
 from typing import Optional
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(logger_name=__name__)
 
 
 def load_schema():

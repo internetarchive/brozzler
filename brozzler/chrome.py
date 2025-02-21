@@ -268,7 +268,7 @@ class Chrome:
                 if time.time() - self._last_warning > 30:
                     url_logger.warning(
                         "problem accessing url (will keep trying until timeout)",
-                        timeout=timeout_sec,
+                        timeout_sec=timeout_sec,
                         exc_info=True,
                     )
                     self._last_warning = time.time()

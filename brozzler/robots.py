@@ -119,7 +119,7 @@ def is_permitted_by_robots(site, url, proxy=None):
             # reppy has wrapped an exception that we want to bubble up
             raise brozzler.ProxyError(e)
         else:
-            structlog.get_logger().warning(
+            structlog.get_logger(logger_name=__name__).warning(
                 "returning true (permitted) after problem fetching " "robots.txt",
                 url=url,
                 exception=e,

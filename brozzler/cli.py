@@ -43,7 +43,7 @@ import rethinkdb as rdb
 
 r = rdb.RethinkDB()
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(logger_name=__name__)
 
 
 def add_common_options(arg_parser, argv=None):
@@ -137,7 +137,7 @@ def configure_logging(args):
             structlog.processors.add_log_level,
             structlog.processors.StackInfoRenderer(),
             structlog.dev.set_exc_info,
-            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
+            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=True),
             structlog.processors.CallsiteParameterAdder(
                 [
                     structlog.processors.CallsiteParameter.FILENAME,
