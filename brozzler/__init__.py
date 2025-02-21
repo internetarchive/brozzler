@@ -139,7 +139,7 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
             logger.info(
                 "rendering template",
                 template=behavior["behavior_js_template"],
-                parameters=json.dumps(parameters),
+                parameters=parameters,
                 url=url,
             )
             return script
