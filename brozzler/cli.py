@@ -417,7 +417,7 @@ def brozzle_page(argv=None):
             on_screenshot=on_screenshot,
             enable_youtube_dl=not args.skip_youtube_dl,
         )
-        logger.info("outlinks: \n\t%s", "\n\t".join(sorted(outlinks)))
+        logger.info("outlinks", outlinks=sorted(outlinks))
     except brozzler.ReachedLimit as e:
         logger.exception("reached limit")
     except brozzler.PageInterstitialShown as e:

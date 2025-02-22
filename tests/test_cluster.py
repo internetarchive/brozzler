@@ -73,11 +73,19 @@ def stop_service(service):
 def httpd(request):
     class RequestHandler(http.server.SimpleHTTPRequestHandler):
         def do_POST(self):
-            logger.info("\n%s\n%s", self.requestline, self.headers)
+            logger.info(
+                "RequestHandler.do_POST",
+                requestline=self.requestline,
+                headers=self.headers,
+            )
             self.do_GET()
 
         def do_GET(self):
-            logger.info("\n%s\n%s", self.requestline, self.headers)
+            logger.info(
+                "RequestHandler.do_GET",
+                requestline=self.requestline,
+                headers=self.headers,
+            )
             if self.path == "/site5/redirect/":
                 self.send_response(303, "See other")
                 self.send_header("Connection", "close")
