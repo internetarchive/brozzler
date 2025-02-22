@@ -24,7 +24,6 @@ import os
 import brozzler
 import brozzler.chrome
 import brozzler.ydl
-import logging
 import yaml
 import datetime
 import requests
@@ -35,15 +34,6 @@ import time
 import sys
 import threading
 from unittest import mock
-
-logging.basicConfig(
-    stream=sys.stderr,
-    level=logging.INFO,
-    format=(
-        "%(asctime)s %(process)d %(levelname)s %(threadName)s "
-        "%(name)s.%(funcName)s(%(filename)s:%(lineno)d) %(message)s"
-    ),
-)
 
 
 @pytest.fixture(scope="module")
