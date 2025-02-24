@@ -293,7 +293,7 @@ class WebsockReceiverThread(threading.Thread):
                     message["params"]["message"]["text"],
                 )
             elif message["method"] == "Runtime.exceptionThrown":
-                self.logger.debug("uncaught exception", exception=message)
+                self.logger.debug("uncaught exception", message=message)
             elif message["method"] == "Page.javascriptDialogOpening":
                 self._javascript_dialog_opening(message)
             elif (
