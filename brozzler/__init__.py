@@ -180,7 +180,7 @@ class ThreadExceptionGate:
                     "exception already pending for thread, discarding",
                     pending_exception=self.pending_exception,
                     thread=self.thread,
-                    exception=e,
+                    discarded_exception=e,
                 )
             else:
                 self.pending_exception = e

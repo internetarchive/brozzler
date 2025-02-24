@@ -122,6 +122,6 @@ def is_permitted_by_robots(site, url, proxy=None):
             structlog.get_logger(logger_name=__name__).warning(
                 "returning true (permitted) after problem fetching " "robots.txt",
                 url=url,
-                exception=e,
+                raised_exception=e,
             )
             return True
