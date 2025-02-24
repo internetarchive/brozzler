@@ -80,6 +80,11 @@ def add_common_options(arg_parser, argv=None):
         action="store_true",
         help="add syslogd log level prefix for journalctl filtering",
     )
+    arg_parser.add_argument(
+        "--worker-id",
+        dest="worker_id",
+        help="ID for this worker, displayed in logs if provided",
+    )
     # arg_parser.add_argument(
     #         '-s', '--silent', dest='log_level', action='store_const',
     #         default=logging.INFO, const=logging.CRITICAL)
@@ -184,6 +189,10 @@ def configure_logging(args):
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=False,
     )
+
+    # Adds the worker ID to the global binding, if supplied
+    if args.worker_id is not None:
+        structlog.contextvars.bind_contextvars(worker_id=args.worker_id)
 
     # We still configure logging for now because its handlers
     # are used for the gunicorn spawned by the brozzler dashboard.
