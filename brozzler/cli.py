@@ -74,6 +74,12 @@ def add_common_options(arg_parser, argv=None):
         const=logging.DEBUG,
         help=("very verbose logging"),
     )
+    arg_parser.add_argument(
+        "--syslogd-log-prefix",
+        dest="syslogd_log_prefix",
+        action="store_true",
+        help="add syslogd log level prefix for journalctl filtering",
+    )
     # arg_parser.add_argument(
     #         '-s', '--silent', dest='log_level', action='store_const',
     #         default=logging.INFO, const=logging.CRITICAL)
@@ -131,24 +137,48 @@ def decorate_logger_name(a, b, event_dict):
     return event_dict
 
 
+# https://manpages.debian.org/testing/libsystemd-dev/sd-daemon.3.en.html
+def _systemd_log_prefix(_, level, log):
+    SYSLOG_MAP = {
+        "critical": 2,
+        "error": 3,
+        "exception": 3,
+        "warn": 3,
+        "warning": 3,
+        "info": 6,
+        "debug": 7,
+        "notset": 7,
+    }
+    prefix = SYSLOG_MAP.get(level)
+    if prefix is not None:
+        log = f"<{prefix}>{log}"
+
+    return log
+
+
 def configure_logging(args):
+    processors = [
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.StackInfoRenderer(),
+        structlog.dev.set_exc_info,
+        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=True),
+        structlog.processors.CallsiteParameterAdder(
+            [
+                structlog.processors.CallsiteParameter.FILENAME,
+                structlog.processors.CallsiteParameter.FUNC_NAME,
+                structlog.processors.CallsiteParameter.LINENO,
+            ],
+        ),
+        decorate_logger_name,
+        structlog.dev.ConsoleRenderer(),
+    ]
+
+    if args.syslogd_log_prefix:
+        processors.append(_systemd_log_prefix)
+
     structlog.configure(
-        processors=[
-            structlog.contextvars.merge_contextvars,
-            structlog.processors.add_log_level,
-            structlog.processors.StackInfoRenderer(),
-            structlog.dev.set_exc_info,
-            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=True),
-            structlog.processors.CallsiteParameterAdder(
-                [
-                    structlog.processors.CallsiteParameter.FILENAME,
-                    structlog.processors.CallsiteParameter.FUNC_NAME,
-                    structlog.processors.CallsiteParameter.LINENO,
-                ],
-            ),
-            decorate_logger_name,
-            structlog.dev.ConsoleRenderer(),
-        ],
+        processors=processors,
         wrapper_class=structlog.make_filtering_bound_logger(args.log_level),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
