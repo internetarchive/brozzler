@@ -112,8 +112,9 @@ def rethinker(args):
     return doublethink.Rethinker(servers.split(","), db)
 
 
-# Decorates the logger name with call location, if provided
 def decorate_logger_name(a, b, event_dict):
+    """Decorates the logger name with call location, if provided"""
+
     old_name = event_dict.get("logger_name")
     if old_name is None:
         return event_dict
