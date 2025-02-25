@@ -434,7 +434,7 @@ def _try_youtube_dl(worker, ydl, site, page):
     if worker._using_warcprox(site):
         info_json = json.dumps(ie_result, sort_keys=True, indent=4)
         logger.info(
-            "sending WARCPROX_WRITE_RECORD request to warcprox " "with yt-dlp json",
+            "sending WARCPROX_WRITE_RECORD request to warcprox with yt-dlp json",
             url=ydl.url,
         )
         worker._warcprox_write_record(

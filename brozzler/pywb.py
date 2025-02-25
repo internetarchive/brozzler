@@ -447,8 +447,6 @@ def main(argv=sys.argv):
     wayback_cli = BrozzlerWaybackCli(
         args=argv[1:],
         default_port=8880,
-        desc=(
-            "brozzler-wayback - pywb wayback (monkey-patched for use " "with brozzler)"
-        ),
+        desc=("brozzler-wayback - pywb wayback (monkey-patched for use with brozzler)"),
     )
     wayback_cli.run()
