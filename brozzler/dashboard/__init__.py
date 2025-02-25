@@ -334,7 +334,7 @@ def main(argv=None):
         prog=os.path.basename(argv[0]),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=(
-            "brozzler-dashboard - web application for viewing brozzler " "crawl status"
+            "brozzler-dashboard - web application for viewing brozzler crawl status"
         ),
         epilog=(
             "brozzler-dashboard has no command line options, but can be "

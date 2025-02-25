@@ -169,7 +169,7 @@ class BrozzlerWorker:
             svc = self._choose_warcprox()
             if svc is None:
                 raise brozzler.ProxyError(
-                    "no available instances of warcprox in the service " "registry"
+                    "no available instances of warcprox in the service registry"
                 )
             site.proxy = "%s:%s" % (svc["host"], svc["port"])
             site.save()
@@ -735,7 +735,7 @@ class BrozzlerWorker:
         with self._start_stop_lock:
             if self._thread:
                 self.logger.warning(
-                    "ignoring start request because self._thread is " "not None"
+                    "ignoring start request because self._thread is not None"
                 )
                 return
             self._thread = threading.Thread(target=self.run, name="BrozzlerWorker")

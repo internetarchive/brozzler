@@ -953,7 +953,7 @@ def brozzler_list_pages(argv=None):
         "--claimed",
         dest="claimed",
         action="store_true",
-        help=("limit to pages that are currently claimed by a brozzler " "worker"),
+        help=("limit to pages that are currently claimed by a brozzler worker"),
     )
     add_rethinkdb_options(arg_parser)
     add_common_options(arg_parser, argv)
@@ -1024,22 +1024,21 @@ def brozzler_purge(argv=None):
         dest="job",
         metavar="JOB_ID",
         help=(
-            "purge crawl state from rethinkdb for a job, including all "
-            "sites and pages"
+            "purge crawl state from rethinkdb for a job, including all sites and pages"
         ),
     )
     group.add_argument(
         "--site",
         dest="site",
         metavar="SITE_ID",
-        help=("purge crawl state from rethinkdb for a site, including all " "pages"),
+        help=("purge crawl state from rethinkdb for a site, including all pages"),
     )
     group.add_argument(
         "--finished-before",
         dest="finished_before",
         metavar="YYYY-MM-DD",
         help=(
-            "purge crawl state from rethinkdb for a jobs that ended " "before this date"
+            "purge crawl state from rethinkdb for a jobs that ended before this date"
         ),
     )
     arg_parser.add_argument(

@@ -367,7 +367,7 @@ class Chrome:
             os.killpg(self.chrome_process.pid, signal.SIGKILL)
             status = self.chrome_process.wait()
             pid_logger.warning(
-                "chrome reaped after killing with " "SIGKILL",
+                "chrome reaped after killing with SIGKILL",
                 status=status,
             )
 

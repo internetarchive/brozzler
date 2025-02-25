@@ -81,8 +81,7 @@ def _build_arg_parser(argv=None):
         dest="cacert",
         default="./%s-warcprox-ca.pem" % socket.gethostname(),
         help=(
-            "warcprox CA certificate file; if file does not exist, it "
-            "will be created"
+            "warcprox CA certificate file; if file does not exist, it will be created"
         ),
     )
     arg_parser.add_argument(
@@ -95,7 +94,7 @@ def _build_arg_parser(argv=None):
         "--onion-tor-socks-proxy",
         dest="onion_tor_socks_proxy",
         default=None,
-        help=("host:port of tor socks proxy, used only to connect to " ".onion sites"),
+        help=("host:port of tor socks proxy, used only to connect to .onion sites"),
     )
 
     # brozzler-worker args
@@ -112,7 +111,7 @@ def _build_arg_parser(argv=None):
         dest="max_browsers",
         type=int,
         default=1,
-        help=("max number of chrome instances simultaneously " "browsing pages"),
+        help=("max number of chrome instances simultaneously browsing pages"),
     )
 
     # pywb args

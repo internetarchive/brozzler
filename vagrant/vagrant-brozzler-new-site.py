@@ -82,7 +82,7 @@ def main(argv=[]):
     os.chdir(os.path.dirname(__file__))
 
     cmd = (
-        "/opt/brozzler-ve3/bin/python /opt/brozzler-ve3/bin/brozzler-new-site " "%s %s"
+        "/opt/brozzler-ve3/bin/python /opt/brozzler-ve3/bin/brozzler-new-site %s %s"
     ) % (" ".join(options), args.seed)
     subprocess.call(["vagrant", "ssh", "--", cmd])
 
