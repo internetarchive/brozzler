@@ -28,7 +28,9 @@ import pytest
 
 import brozzler
 
-args = argparse.Namespace()
+arg_parser = argparse.ArgumentParser()
+brozzler.cli.add_common_options(arg_parser)
+args = arg_parser.parse_args([])
 args.log_level = logging.INFO
 brozzler.cli.configure_logging(args)
 
