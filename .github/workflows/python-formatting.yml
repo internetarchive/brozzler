@@ -22,10 +22,10 @@ jobs:
     - name: Create virtual environment
       run: python -m venv venv
 
-    - name: Install black
+    - name: Install ruff
       run: |
         ./venv/bin/pip install --upgrade pip
-        ./venv/bin/pip install black
+        ./venv/bin/pip install ruff
 
     - name: Run formatting check
       run: make ck-format
