@@ -81,6 +81,11 @@ setuptools.setup(
     extras_require={
         "yt-dlp": ["yt-dlp>=2024.7.25"],
         "dashboard": ["flask>=1.0", "gunicorn>=19.8.1"],
+        "ci": [
+            "warcprox>=2.4.31",
+            "rethinkdb==2.4.9",
+            "doublethink==0.4.9",
+        ],
         "easy": [
             "warcprox>=2.4.31",
             "pywb>=0.33.2,<2",

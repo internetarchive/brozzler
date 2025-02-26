@@ -581,7 +581,7 @@ class BrozzlerWorker:
             if page:
                 # Calculate backoff in seconds based on number of failed attempts.
                 # Minimum of 60, max of 135 giving delays of 60, 90, 135, 135...
-                retry_delay = min(135, 60 * (1.5**page.failed_attempts))
+                retry_delay = min(135, 60 * (1.5 ** (page.failed_attempts or 0)))
                 page.retry_after = doublethink.utcnow() + datetime.timedelta(
                     seconds=retry_delay
                 )

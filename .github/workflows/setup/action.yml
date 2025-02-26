@@ -1,0 +1,27 @@
+name: Test setup
+
+runs:
+  using: composite
+  steps:
+    - name: Install apt dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install libjpeg-dev chromium-browser
+      shell: bash
+
+    - name: Set up rethinkdb
+      run: |
+        wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo gpg --dearmor -o /usr/share/keyrings/rethinkdb-archive-keyrings.gpg
+        echo "deb [signed-by=/usr/share/keyrings/rethinkdb-archive-keyrings.gpg] https://download.rethinkdb.com/repository/ubuntu-$(lsb_release -cs) $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
+        sudo apt-get update
+        sudo apt-get install rethinkdb
+        sudo cp /etc/rethinkdb/default.conf.sample /etc/rethinkdb/instances.d/instance1.conf
+        sudo /etc/init.d/rethinkdb restart
+      shell: bash
+
+    - name: Install pip dependencies
+      run: |
+        pip install .[ci,yt-dlp]
+        # setuptools required by rethinkdb==2.4.9
+        pip install pytest setuptools
+      shell: bash
