@@ -261,6 +261,7 @@ blocks:
 
 
 # Some changes to the brozzler ydl interface not represented in this test
+# https://github.com/internetarchive/brozzler/issues/330
 @pytest.mark.xfail
 def test_proxy_down():
     """
@@ -474,6 +475,7 @@ def test_thread_raise_second_with_block():
 
 
 # brozzler.ydl.YoutubeDLSpy is missing
+# https://github.com/internetarchive/brozzler/issues/330
 @pytest.mark.xfail
 def test_needs_browsing():
     # only one test case here right now, which exposed a bug
