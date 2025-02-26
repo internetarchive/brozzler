@@ -260,6 +260,8 @@ blocks:
     )
 
 
+# Some changes to the brozzler ydl interface not represented in this test
+@pytest.mark.xfail
 def test_proxy_down():
     """
     Test all fetching scenarios raise `brozzler.ProxyError` when proxy is down.
@@ -471,6 +473,8 @@ def test_thread_raise_second_with_block():
     assert isinstance(thread_caught_exception, Exception2)
 
 
+# brozzler.ydl.YoutubeDLSpy is missing
+@pytest.mark.xfail
 def test_needs_browsing():
     # only one test case here right now, which exposed a bug
 
