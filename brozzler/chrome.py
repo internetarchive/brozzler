@@ -199,14 +199,13 @@ class Chrome:
             "--disable-first-run-ui",
             "--no-first-run",
             "--homepage=about:blank",
-            "--disable-features=HttpsUpgrades",
+            "--disable-features=HttpsUpgrades,OptimizationGuideModelDownloading,OptimizationHintsFetching,OptimizationTargetPrediction,OptimizationHints",
             "--disable-direct-npapi-requests",
             "--disable-web-security",
             "--disable-notifications",
             "--disable-extensions",
             "--disable-save-password-bubble",
             "--disable-sync",
-            "--disable-features=OptimizationGuideModelDownloading,OptimizationHintsFetching,OptimizationTargetPrediction,OptimizationHints",
         ]
         major_version = check_version(self.chrome_exe)
         if major_version >= 109:
