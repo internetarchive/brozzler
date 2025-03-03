@@ -193,7 +193,7 @@ class Chrome:
             "--disable-first-run-ui",
             "--no-first-run",
             "--homepage=about:blank",
-            "--disable-features=HttpsUpgrades",
+            "--disable-features=HttpsUpgrades,OptimizationGuideModelDownloading,OptimizationHintsFetching,OptimizationTargetPrediction,OptimizationHints",
             "--disable-direct-npapi-requests",
             "--disable-web-security",
             "--disable-notifications",
