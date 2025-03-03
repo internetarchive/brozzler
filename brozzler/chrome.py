@@ -200,7 +200,6 @@ class Chrome:
             "--disable-extensions",
             "--disable-save-password-bubble",
             "--disable-sync",
-            "--disable-features=OptimizationGuideModelDownloading,OptimizationHintsFetching,OptimizationTargetPrediction,OptimizationHints",
         ]
         major_version = check_version(self.chrome_exe)
         if major_version >= 109:
