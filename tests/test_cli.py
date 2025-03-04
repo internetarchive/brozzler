@@ -18,14 +18,24 @@ limitations under the License.
 """
 
 import brozzler.cli
-import pkg_resources
+import importlib.metadata
 import pytest
 import subprocess
 import doublethink
 
 
+def console_scripts():
+    # We do a dict comprehension here because the select filters aren't
+    # available until Python 3.10's importlib.
+    return {
+        ep.name: ep
+        for ep in importlib.metadata.distribution("brozzler").entry_points
+        if ep.group == "console_scripts"
+    }
+
+
 def cli_commands():
-    commands = set(pkg_resources.get_entry_map("brozzler")["console_scripts"].keys())
+    commands = set(console_scripts().keys())
     commands.remove("brozzler-wayback")
     try:
         import gunicorn
@@ -40,8 +50,8 @@ def cli_commands():
 
 @pytest.mark.parametrize("cmd", cli_commands())
 def test_call_entrypoint(capsys, cmd):
-    entrypoint = pkg_resources.get_entry_map("brozzler")["console_scripts"][cmd]
-    callable = entrypoint.resolve()
+    entrypoint = console_scripts()[cmd]
+    callable = entrypoint.load()
     with pytest.raises(SystemExit):
         callable(["/whatever/bin/%s" % cmd, "--version"])
     out, err = capsys.readouterr()
