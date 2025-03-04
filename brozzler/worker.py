@@ -95,6 +95,16 @@ class BrozzlerWorker:
         self._skip_extract_outlinks = skip_extract_outlinks
         self._skip_visit_hashtags = skip_visit_hashtags
         self._skip_youtube_dl = skip_youtube_dl
+
+        # We definitely shouldn't ytdlp if the optional extra is missing
+        try:
+            import yt_dlp
+        except ImportError:
+            self.logger.info(
+                "optional yt-dlp extra not installed; setting skip_youtube_dl to True"
+            )
+            self._skip_youtube_dl = True
+
         self._ytdlp_tmpdir = ytdlp_tmpdir
         self._simpler404 = simpler404
         self._screenshot_full_page = screenshot_full_page
