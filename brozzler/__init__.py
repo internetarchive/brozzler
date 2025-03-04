@@ -390,6 +390,11 @@ def suggest_default_chrome_exe():
     return "chromium-browser"
 
 
+import datetime
+
+EPOCH_UTC = datetime.datetime.fromtimestamp(0.0, tz=datetime.timezone.utc)
+
+
 from brozzler.robots import is_permitted_by_robots
 from brozzler.browser import Browser, BrowserPool, BrowsingException
 
@@ -404,13 +409,8 @@ __all__ = [
     "suggest_default_chrome_exe",
 ]
 
-import datetime
-
 try:
     import doublethink
-
-    # Synchronize epoch with doublethink if available
-    EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(tzinfo=doublethink.UTC)
 
     # All of these imports use doublethink for real and are unsafe
     # to do if doublethink is unavailable.
@@ -440,9 +440,7 @@ try:
         ]
     )
 except ImportError:
-    EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(
-        tzinfo=datetime.timezone.utc
-    )
+    pass
 
 # we could make this configurable if there's a good reason
 MAX_PAGE_FAILURES = 3
