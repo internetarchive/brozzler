@@ -321,10 +321,9 @@ def _remove_query(url):
 # XXX chop off path after last slash??
 site_surt_canon = urlcanon.Canonicalizer(urlcanon.semantic.steps + [_remove_query])
 
-import doublethink
 import datetime
 
-EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(tzinfo=doublethink.UTC)
+EPOCH_UTC = datetime.datetime.fromtimestamp(0.0, tz=datetime.timezone.utc)
 
 # we could make this configurable if there's a good reason
 MAX_PAGE_FAILURES = 3
