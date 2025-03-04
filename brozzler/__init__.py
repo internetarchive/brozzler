@@ -19,9 +19,9 @@ limitations under the License.
 
 import logging
 import structlog
-from pkg_resources import get_distribution as _get_distribution
+from importlib.metadata import version as _version
 
-__version__ = _get_distribution("brozzler").version
+__version__ = _version("brozzler")
 
 
 class ShutdownRequested(Exception):
