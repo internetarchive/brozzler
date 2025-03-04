@@ -321,44 +321,128 @@ def _remove_query(url):
 # XXX chop off path after last slash??
 site_surt_canon = urlcanon.Canonicalizer(urlcanon.semantic.steps + [_remove_query])
 
-import doublethink
-import datetime
 
-EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(tzinfo=doublethink.UTC)
+def _mdfind(identifier):
+    import subprocess
 
-# we could make this configurable if there's a good reason
-MAX_PAGE_FAILURES = 3
+    try:
+        result = subprocess.check_output(
+            ["mdfind", f"kMDItemCFBundleIdentifier == {identifier}"], text=True
+        )
+    # Just treat any errors as "couldn't find app"
+    except subprocess.CalledProcessError:
+        return None
 
-from brozzler.worker import BrozzlerWorker
+    if result:
+        return result.rstrip("\n")
+
+
+def _suggest_default_chrome_exe_mac():
+    import os
+
+    path = None
+    # Try Chromium first, then Chrome
+    result = _mdfind("org.chromium.Chromium")
+    if result is not None:
+        path = f"{result}/Contents/MacOS/Chromium"
+
+    result = _mdfind("com.google.Chrome")
+    if result is not None:
+        path = f"{result}/Contents/MacOS/Google Chrome"
+
+    if path is not None and os.path.exists(path):
+        return path
+
+    # Fall back to default paths if mdfind couldn't find it
+    # (mdfind might fail to find them even in their default paths
+    # if the system has Spotlight disabled.)
+    for path in [
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    ]:
+        if os.path.exists(path):
+            return path
+
+
+def suggest_default_chrome_exe():
+    import shutil, sys
+
+    # First ask mdfind, which lets us find it in non-default paths
+    if sys.platform == "darwin":
+        path = _suggest_default_chrome_exe_mac()
+        if path is not None:
+            return path
+
+    # "chromium-browser" is the executable on ubuntu trusty
+    # https://github.com/internetarchive/brozzler/pull/6/files uses "chromium"
+    # google chrome executable names taken from these packages:
+    # http://www.ubuntuupdates.org/ppa/google_chrome
+    for exe in [
+        "chromium-browser",
+        "chromium",
+        "google-chrome",
+        "google-chrome-stable",
+        "google-chrome-beta",
+        "google-chrome-unstable",
+    ]:
+        if shutil.which(exe):
+            return exe
+    return "chromium-browser"
+
+
 from brozzler.robots import is_permitted_by_robots
-from brozzler.frontier import RethinkDbFrontier
 from brozzler.browser import Browser, BrowserPool, BrowsingException
-from brozzler.model import (
-    new_job,
-    new_job_file,
-    new_site,
-    Job,
-    Page,
-    Site,
-    InvalidJobConf,
-)
-from brozzler.cli import suggest_default_chrome_exe
 
 __all__ = [
-    "Page",
-    "Site",
-    "BrozzlerWorker",
     "is_permitted_by_robots",
-    "RethinkDbFrontier",
     "Browser",
     "BrowserPool",
     "BrowsingException",
-    "new_job",
-    "new_site",
-    "Job",
-    "new_job_file",
-    "InvalidJobConf",
     "sleep",
     "thread_accept_exceptions",
     "thread_raise",
+    "suggest_default_chrome_exe",
 ]
+
+import datetime
+
+try:
+    import doublethink
+
+    # Synchronize epoch with doublethink if available
+    EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(tzinfo=doublethink.UTC)
+
+    # All of these imports use doublethink for real and are unsafe
+    # to do if doublethink is unavailable.
+    from brozzler.worker import BrozzlerWorker
+    from brozzler.frontier import RethinkDbFrontier
+    from brozzler.model import (
+        new_job,
+        new_job_file,
+        new_site,
+        Job,
+        Page,
+        Site,
+        InvalidJobConf,
+    )
+
+    __all__.extend(
+        [
+            "Page",
+            "BrozzlerWorker",
+            "RethinkDbFrontier",
+            "Site",
+            "new_job",
+            "new_site",
+            "Job",
+            "new_job_file",
+            "InvalidJobConf",
+        ]
+    )
+except ImportError:
+    EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(
+        tzinfo=datetime.timezone.utc
+    )
+
+# we could make this configurable if there's a good reason
+MAX_PAGE_FAILURES = 3
