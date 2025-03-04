@@ -43,37 +43,7 @@ YTDLP_MAX_REDIRECTS = 5
 logger = structlog.get_logger(logger_name=__name__)
 
 
-def should_ytdlp(site, page, page_status, skip_av_seeds):
-    # called only after we've passed needs_browsing() check
 
-    if page_status != 200:
-        logger.info("skipping ytdlp: non-200 page status", page_status=page_status)
-        return False
-    if site.skip_ytdlp:
-        logger.info("skipping ytdlp: site marked skip_ytdlp")
-        return False
-
-    ytdlp_url = page.redirect_url if page.redirect_url else page.url
-
-    if "chrome-error:" in ytdlp_url:
-        return False
-
-    ytdlp_seed = (
-        site["metadata"]["ait_seed_id"]
-        if "metadata" in site and "ait_seed_id" in site["metadata"]
-        else None
-    )
-
-    # TODO: develop UI and refactor
-    if ytdlp_seed:
-        if site.skip_ytdlp is None and ytdlp_seed in skip_av_seeds:
-            logger.info("skipping ytdlp: site in skip_av_seeds")
-            site.skip_ytdlp = True
-            return False
-        else:
-            site.skip_ytdlp = False
-
-    return True
 
 
 def isyoutubehost(url):

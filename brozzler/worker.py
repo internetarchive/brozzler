@@ -39,7 +39,6 @@ import urlcanon
 from requests.structures import CaseInsensitiveDict
 import rethinkdb as rdb
 from . import metrics
-from . import ydl
 
 r = rdb.RethinkDB()
 
@@ -260,6 +259,38 @@ class BrozzlerWorker:
         img.save(out, "jpeg", quality=95)
         return out.getbuffer()
 
+    def should_ytdlp(self, logger, site, page, page_status, skip_av_seeds):
+        # called only after we've passed needs_browsing() check
+
+        if page_status != 200:
+            logger.info("skipping ytdlp: non-200 page status", page_status=page_status)
+            return False
+        if site.skip_ytdlp:
+            logger.info("skipping ytdlp: site marked skip_ytdlp")
+            return False
+
+        ytdlp_url = page.redirect_url if page.redirect_url else page.url
+
+        if "chrome-error:" in ytdlp_url:
+            return False
+
+        ytdlp_seed = (
+            site["metadata"]["ait_seed_id"]
+            if "metadata" in site and "ait_seed_id" in site["metadata"]
+            else None
+        )
+
+        # TODO: develop UI and refactor
+        if ytdlp_seed:
+            if site.skip_ytdlp is None and ytdlp_seed in skip_av_seeds:
+                logger.info("skipping ytdlp: site in skip_av_seeds")
+                site.skip_ytdlp = True
+                return False
+            else:
+                site.skip_ytdlp = False
+
+        return True
+
     @metrics.brozzler_page_processing_duration_seconds.time()
     @metrics.brozzler_in_progress_pages.track_inprogress()
     def brozzle_page(
@@ -293,10 +324,12 @@ class BrozzlerWorker:
             except brozzler.PageInterstitialShown:
                 page_logger.info("page interstitial shown (http auth)")
 
-            if enable_youtube_dl and ydl.should_ytdlp(
-                site, page, status_code, self._skip_av_seeds
+            if enable_youtube_dl and self.should_ytdlp(
+                page_logger, site, page, status_code, self._skip_av_seeds
             ):
                 try:
+                    from . import ydl
+
                     ydl_outlinks = ydl.do_youtube_dl(
                         self, site, page, self._ytdlp_proxy_endpoints
                     )
