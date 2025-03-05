@@ -25,3 +25,9 @@ Issues = "https://github.com/internetarchive/brozzler/issues"
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3.5",
+  "ruff>=0.9.9"
+]
