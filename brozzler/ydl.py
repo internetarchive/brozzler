@@ -47,27 +47,6 @@ YTDLP_MAX_REDIRECTS = 5
 logger = structlog.get_logger(logger_name=__name__)
 
 
-def should_ytdlp(site, page, page_status):
-    # called only after we've passed needs_browsing() check
-
-    if page_status != 200:
-        logger.info("skipping ytdlp: non-200 page status %s", page_status)
-        return False
-    if site.video_capture in [
-        VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value,
-        VideoCaptureOptions.DISABLE_YTDLP_CAPTURE.value,
-    ]:
-        logger.info("skipping ytdlp: site has video capture disabled")
-        return False
-
-    ytdlp_url = page.redirect_url if page.redirect_url else page.url
-
-    if "chrome-error:" in ytdlp_url:
-        return False
-
-    return True
-
-
 def isyoutubehost(url):
     # split 1 splits scheme from url, split 2 splits path from hostname, split 3 splits query string on hostname
     return "youtube.com" in url.split("//")[-1].split("/")[0].split("?")[0]
