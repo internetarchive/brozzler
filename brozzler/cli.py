@@ -74,6 +74,17 @@ def add_common_options(arg_parser, argv=None):
         const=logging.DEBUG,
         help=("very verbose logging"),
     )
+    arg_parser.add_argument(
+        "--syslogd-log-prefix",
+        dest="syslogd_log_prefix",
+        action="store_true",
+        help="add syslogd log level prefix for journalctl filtering",
+    )
+    arg_parser.add_argument(
+        "--worker-id",
+        dest="worker_id",
+        help="ID for this worker, displayed in logs if provided",
+    )
     # arg_parser.add_argument(
     #         '-s', '--silent', dest='log_level', action='store_const',
     #         default=logging.INFO, const=logging.CRITICAL)
@@ -131,29 +142,57 @@ def decorate_logger_name(a, b, event_dict):
     return event_dict
 
 
+# https://manpages.debian.org/testing/libsystemd-dev/sd-daemon.3.en.html
+def _systemd_log_prefix(_, level, log):
+    SYSLOG_MAP = {
+        "critical": 2,
+        "error": 3,
+        "exception": 3,
+        "warn": 3,
+        "warning": 3,
+        "info": 6,
+        "debug": 7,
+        "notset": 7,
+    }
+    prefix = SYSLOG_MAP.get(level)
+    if prefix is not None:
+        log = f"<{prefix}>{log}"
+
+    return log
+
+
 def configure_logging(args):
+    processors = [
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.StackInfoRenderer(),
+        structlog.dev.set_exc_info,
+        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=True),
+        structlog.processors.CallsiteParameterAdder(
+            [
+                structlog.processors.CallsiteParameter.FILENAME,
+                structlog.processors.CallsiteParameter.FUNC_NAME,
+                structlog.processors.CallsiteParameter.LINENO,
+            ],
+        ),
+        decorate_logger_name,
+        structlog.dev.ConsoleRenderer(),
+    ]
+
+    if args.syslogd_log_prefix:
+        processors.append(_systemd_log_prefix)
+
     structlog.configure(
-        processors=[
-            structlog.contextvars.merge_contextvars,
-            structlog.processors.add_log_level,
-            structlog.processors.StackInfoRenderer(),
-            structlog.dev.set_exc_info,
-            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=True),
-            structlog.processors.CallsiteParameterAdder(
-                [
-                    structlog.processors.CallsiteParameter.FILENAME,
-                    structlog.processors.CallsiteParameter.FUNC_NAME,
-                    structlog.processors.CallsiteParameter.LINENO,
-                ],
-            ),
-            decorate_logger_name,
-            structlog.dev.ConsoleRenderer(),
-        ],
+        processors=processors,
         wrapper_class=structlog.make_filtering_bound_logger(args.log_level),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=False,
     )
+
+    # Adds the worker ID to the global binding, if supplied
+    if args.worker_id is not None:
+        structlog.contextvars.bind_contextvars(worker_id=args.worker_id)
 
     # We still configure logging for now because its handlers
     # are used for the gunicorn spawned by the brozzler dashboard.
@@ -953,7 +992,7 @@ def brozzler_list_pages(argv=None):
         "--claimed",
         dest="claimed",
         action="store_true",
-        help=("limit to pages that are currently claimed by a brozzler " "worker"),
+        help=("limit to pages that are currently claimed by a brozzler worker"),
     )
     add_rethinkdb_options(arg_parser)
     add_common_options(arg_parser, argv)
@@ -1024,22 +1063,21 @@ def brozzler_purge(argv=None):
         dest="job",
         metavar="JOB_ID",
         help=(
-            "purge crawl state from rethinkdb for a job, including all "
-            "sites and pages"
+            "purge crawl state from rethinkdb for a job, including all sites and pages"
         ),
     )
     group.add_argument(
         "--site",
         dest="site",
         metavar="SITE_ID",
-        help=("purge crawl state from rethinkdb for a site, including all " "pages"),
+        help=("purge crawl state from rethinkdb for a site, including all pages"),
     )
     group.add_argument(
         "--finished-before",
         dest="finished_before",
         metavar="YYYY-MM-DD",
         help=(
-            "purge crawl state from rethinkdb for a jobs that ended " "before this date"
+            "purge crawl state from rethinkdb for a jobs that ended before this date"
         ),
     )
     arg_parser.add_argument(
