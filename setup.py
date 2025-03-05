@@ -87,7 +87,7 @@ setuptools.setup(
         "rethinkdb": [
             "rethinkdb==2.4.9",
             "doublethink==0.4.9",
-        ]
+        ],
     },
     zip_safe=False,
     classifiers=[
