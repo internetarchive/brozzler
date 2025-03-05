@@ -88,6 +88,9 @@ setuptools.setup(
             "rethinkdb==2.4.9",
             "doublethink==0.4.9",
         ],
+        "pywb": [
+            "pywb==2.8.3"
+        ]
     },
     zip_safe=False,
     classifiers=[

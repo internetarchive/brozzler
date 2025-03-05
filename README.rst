@@ -48,8 +48,10 @@ Mac instructions:
     # no brew? try rethinkdb's installer: https://www.rethinkdb.com/docs/install/osx/
     rethinkdb &>>rethinkdb.log &
 
-    # install brozzler with special dependencies pywb and warcprox
-    pip install brozzler[easy]  # in a virtualenv if desired
+    # install brozzler with special dependencies (in a virtualenv if desired)
+    pip install brozzler[warcprox]
+    pip install brozzler[rethinkdb]
+    pip install brozzler[pywb]
 
     # queue a site to crawl
     brozzler-new-site http://example.com/
