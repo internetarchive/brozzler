@@ -133,7 +133,7 @@ To start the app, run
 
     brozzler-dashboard
 
-At this point Brozzler Dashboard will be accessible at https://localhost:8000/.
+At this point Brozzler Dashboard will be accessible at http://localhost:8000/.
 
 .. image:: Brozzler-Dashboard.png
 
