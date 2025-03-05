@@ -1,6 +1,3 @@
-.. image:: https://api.travis-ci.org/internetarchive/brozzler.svg?branch=master
-    :target: https://travis-ci.org/internetarchive/brozzler
-
 .. |logo| image:: https://cdn.rawgit.com/internetarchive/brozzler/1.1b12/brozzler/dashboard/static/brozzler.svg
    :width: 60px
 
@@ -10,11 +7,12 @@
 
 Brozzler is a distributed web crawler (爬虫) that uses a real browser (Chrome
 or Chromium) to fetch pages and embedded URLs and to extract links. It employs
-`yt-dlp <https://github.com/yt-dlp/yt-dlp>`_ (formerly youtube-dl) to enhance media capture
-capabilities and `rethinkdb <https://github.com/rethinkdb/rethinkdb>`_ to
-manage crawl state.
+`yt-dlp <https://github.com/yt-dlp/yt-dlp>`_ (formerly youtube-dl) to enhance
+media capture capabilities and `rethinkdb
+<https://github.com/rethinkdb/rethinkdb>`_ to manage crawl state.
 
-Brozzler is designed to work in conjunction with warcprox for web archiving.
+Brozzler is designed to work in conjunction with `warcprox
+<https://github.com/internetarchive/warcprox>`_ for web archiving.
 
 Requirements
 ------------
@@ -34,10 +32,10 @@ so Xvnc4 is preferred at this time.)
 Getting Started
 ---------------
 
-The easiest way to get started with brozzler for web archiving is with
-``brozzler-easy``. Brozzler-easy runs brozzler-worker, warcprox, brozzler
-wayback, and brozzler-dashboard, configured to work with each other in a single
-process.
+The simplest way to get started with Brozzler is to use the ``brozzle-page``
+command-line utility to pass in a single URL to crawl. You can also add a new
+job defined with a YAML file (see `job-const.rst`) and start a local Brozzler
+worker for a more complex crawl.
 
 Mac instructions:
 
@@ -48,23 +46,24 @@ Mac instructions:
     # no brew? try rethinkdb's installer: https://www.rethinkdb.com/docs/install/osx/
     rethinkdb &>>rethinkdb.log &
 
-    # install brozzler with special dependencies pywb and warcprox
-    pip install brozzler[easy]  # in a virtualenv if desired
+    # optional: create a virtualenv
+    python -m venv .venv
 
-    # queue a site to crawl
-    brozzler-new-site http://example.com/
+    # install brozzler with rethinkdb extra
+    pip install brozzler[rethinkdb]
 
-    # or a job
+    # crawl a single site
+    brozzle-page https://example.org
+
+    # or enqueue a job and start brozzler-worker
     brozzler-new-job job1.yml
+    brozzler-worker
 
-    # start brozzler-easy
-    brozzler-easy
+At this point Brozzler will start archiving your site.
 
-At this point brozzler-easy will start archiving your site. Results will be
-immediately available for playback in pywb at http://localhost:8880/brozzler/.
-
-*Brozzler-easy demonstrates the full brozzler archival crawling workflow, but
-does not take advantage of brozzler's distributed nature.*
+*Running Brozzler locally in this manner demonstrates the full Brozzler
+archival crawling workflow, but does not take advantage of Brozzler's
+distributed nature.*
 
 Installation and Usage
 ----------------------
@@ -83,7 +82,7 @@ Submit jobs::
 
 Submit sites not tied to a job::
 
-    brozzler-new-site --time-limit=600 http://example.com/
+    brozzler-new-site --time-limit=600 https://example.org/
 
 .. [*] A note about ``--warcprox-auto``: this option tells brozzler to
    look for a healthy warcprox instance in the `rethinkdb service registry
@@ -108,14 +107,14 @@ however everything else is optional. For details, see `<job-conf.rst>`_.
     warcprox_meta: null
     metadata: {}
     seeds:
-      - url: http://one.example.org/
-      - url: http://two.example.org/
+      - url: https://one.example.org/
+      - url: https://two.example.org/
         time_limit: 30
-      - url: http://three.example.org/
+      - url: https://three.example.org/
         time_limit: 10
         ignore_robots: true
         scope:
-          surt: http://(org,example,
+          surt: https://(org,example,
 
 Brozzler Dashboard
 ------------------
@@ -139,47 +138,6 @@ At this point Brozzler Dashboard will be accessible at http://localhost:8000/.
 .. image:: Brozzler-Dashboard.png
 
 See ``brozzler-dashboard --help`` for configuration options.
-
-Brozzler Wayback
-----------------
-
-Brozzler comes with a customized version of `pywb
-<https://github.com/ikreymer/pywb>`_, which supports using the rethinkdb
-"captures" table (populated by warcprox) as its index.
-
-To use, first install dependencies.
-
-::
-
-    pip install brozzler[easy]
-
-Write a configuration file pywb.yml.
-
-::
-
-    # 'archive_paths' should point to the output directory of warcprox
-    archive_paths: warcs/  # pywb will fail without a trailing slash
-    collections:
-      brozzler:
-        index_paths: !!python/object:brozzler.pywb.RethinkCDXSource
-          db: brozzler
-          table: captures
-          servers:
-          - localhost
-    enable_auto_colls: false
-    enable_cdx_api: true
-    framed_replay: true
-    port: 8880
-
-Run pywb like so:
-
-::
-
-    $ PYWB_CONFIG_FILE=pywb.yml brozzler-wayback
-
-Then browse http://localhost:8880/brozzler/.
-
-.. image:: Brozzler-Wayback.png
 
 Headless Chrome (experimental)
 ------------------------------
