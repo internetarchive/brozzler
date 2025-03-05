@@ -393,7 +393,7 @@ def brozzle_page(argv=None):
             site,
             page,
             on_screenshot=on_screenshot,
-            enable_youtube_dl=not args.skip_youtube_dl,
+            enable_youtube_dl=not worker._skip_youtube_dl,
         )
         logger.info("outlinks", outlinks=sorted(outlinks))
     except brozzler.ReachedLimit as e:
