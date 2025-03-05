@@ -34,10 +34,8 @@ so Xvnc4 is preferred at this time.)
 Getting Started
 ---------------
 
-The easiest way to get started with brozzler for web archiving is with
-``brozzler-easy``. Brozzler-easy runs brozzler-worker, warcprox, brozzler
-wayback, and brozzler-dashboard, configured to work with each other in a single
-process.
+The simplest way to get started with brozzler is to use the ``brozzle-page``
+command-line tool to pass in a single URL to crawl.
 
 Mac instructions:
 
@@ -48,19 +46,20 @@ Mac instructions:
     # no brew? try rethinkdb's installer: https://www.rethinkdb.com/docs/install/osx/
     rethinkdb &>>rethinkdb.log &
 
-    # install brozzler with special dependencies (in a virtualenv if desired)
-    pip install brozzler[warcprox]
-    pip install brozzler[rethinkdb]
-    pip install brozzler[pywb]
+    # optional: create a virtualenv
+    python -m venv .venv
+
+    # install brozzler
+    pip install brozzler
 
     # queue a site to crawl
-    brozzler-new-site http://example.com/
+    brozzle-page http://example.com/
 
     # or a job
     brozzler-new-job job1.yml
 
-    # start brozzler-easy
-    brozzler-easy
+    # start brozzler-worker
+    brozzler-worker
 
 At this point brozzler-easy will start archiving your site. Results will be
 immediately available for playback in pywb at http://localhost:8880/brozzler/.
