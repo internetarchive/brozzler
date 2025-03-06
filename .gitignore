@@ -1,9 +1,13 @@
 *.pyc
 *.diff
 .*.sw*
-/brozzler.egg-info/
 venv
-.idea
+.venv
 
 # build artifacts
 build/
+brozzler.egg-info/
+
+# editor config
+.idea
+.vscode
