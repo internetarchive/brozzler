@@ -21,11 +21,16 @@ $(BROZZLER_EGG_LINK): $(VIRTUAL_ENV_DIR) pyproject.toml
 ifeq ($(PACKAGE_MANAGER),UV)
 	VIRTUAL_ENV=$(shell pwd)/$(VIRTUAL_ENV_DIR) uv build
 else ifeq ($(PACKAGE_MANAGER),PIP)
-	VIRTUAL_ENV=$(shell pwd)/$(VIRTUAL_ENV_DIR) pip wheel --no-deps --wheel-dir dist .
+	VIRTUAL_ENV=$(shell pwd)/$(VIRTUAL_ENV_DIR) pip$(PYTHON_VERSION) wheel --no-deps --wheel-dir dist .
 endif
 
 .PHONY: build
 build: $(BROZZLER_EGG_LINK)
+
+.PHONY: clean
+clean: $(BROZZLER_EGG_LINK)
+	rm -rf $(BROZZLER_EGG_LINK)
+	rm -rf $(shell pwd)/dist
 
 .git/hooks/pre-commit:
 	ln -s $(realpath ./dev/pre-commit) $@
@@ -36,8 +41,10 @@ check:
 
 .PHONY: check-format
 check-format:
+	$(VIRTUAL_ENV_DIR)/bin/ruff check --select I
 	$(VIRTUAL_ENV_DIR)/bin/ruff format --check --target-version py37 .
 
 .PHONY: format
 format:
+	$(VIRTUAL_ENV_DIR)/bin/ruff check --select I --fix
 	$(VIRTUAL_ENV_DIR)/bin/ruff format --target-version py37 .
