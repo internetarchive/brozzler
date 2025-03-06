@@ -18,8 +18,9 @@ limitations under the License.
 """
 
 import logging
-import structlog
 from importlib.metadata import version as _version
+
+import structlog
 
 __version__ = _version("brozzler")
 
@@ -106,7 +107,10 @@ def behaviors(behaviors_dir=None):
     :param behaviors_dir: Directory containing `behaviors.yaml` and
     `js-templates/`. Defaults to brozzler dir.
     """
-    import os, yaml, string
+    import os
+    import string
+
+    import yaml
 
     global _behaviors
     if _behaviors is None:
@@ -121,7 +125,8 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
     """
     Returns the javascript behavior string populated with template_parameters.
     """
-    import re, json
+    import json
+    import re
 
     logger = structlog.get_logger(logger_name=__name__)
 
@@ -245,7 +250,11 @@ def thread_raise(thread, exctype):
         TypeError if `exctype` is not a class
         ValueError, SystemError in case of unexpected problems
     """
-    import ctypes, inspect, threading, structlog
+    import ctypes
+    import inspect
+    import threading
+
+    import structlog
 
     logger = structlog.get_logger(exctype=exctype, thread=thread)
 
@@ -297,7 +306,10 @@ _jinja2_env = None
 def jinja2_environment(behaviors_dir=None):
     global _jinja2_env
     if not _jinja2_env:
-        import os, jinja2, json
+        import json
+        import os
+
+        import jinja2
 
         if behaviors_dir:
             _loader = jinja2.FileSystemLoader(
@@ -321,28 +333,29 @@ def _remove_query(url):
 # XXX chop off path after last slash??
 site_surt_canon = urlcanon.Canonicalizer(urlcanon.semantic.steps + [_remove_query])
 
-import doublethink
 import datetime
+
+import doublethink
 
 EPOCH_UTC = datetime.datetime.utcfromtimestamp(0.0).replace(tzinfo=doublethink.UTC)
 
 # we could make this configurable if there's a good reason
 MAX_PAGE_FAILURES = 3
 
-from brozzler.worker import BrozzlerWorker
-from brozzler.robots import is_permitted_by_robots
-from brozzler.frontier import RethinkDbFrontier
 from brozzler.browser import Browser, BrowserPool, BrowsingException
+from brozzler.cli import suggest_default_chrome_exe
+from brozzler.frontier import RethinkDbFrontier
 from brozzler.model import (
-    new_job,
-    new_job_file,
-    new_site,
+    InvalidJobConf,
     Job,
     Page,
     Site,
-    InvalidJobConf,
+    new_job,
+    new_job_file,
+    new_site,
 )
-from brozzler.cli import suggest_default_chrome_exe
+from brozzler.robots import is_permitted_by_robots
+from brozzler.worker import BrozzlerWorker
 
 __all__ = [
     "Page",

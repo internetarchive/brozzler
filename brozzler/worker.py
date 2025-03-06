@@ -18,28 +18,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import brozzler
-import brozzler.browser
 import datetime
+import io
+import json
+import random
+import socket
+import tempfile
 import threading
 import time
 import urllib.request
-import json
-import PIL.Image
-import io
-import socket
-import random
-import requests
-import structlog
-import urllib3
-from urllib3.exceptions import TimeoutError, ProxyError
+
 import doublethink
-import tempfile
-import urlcanon
-from requests.structures import CaseInsensitiveDict
+import PIL.Image
+import requests
 import rethinkdb as rdb
-from . import metrics
-from . import ydl
+import structlog
+import urlcanon
+import urllib3
+from requests.structures import CaseInsensitiveDict
+from urllib3.exceptions import ProxyError, TimeoutError
+
+import brozzler
+import brozzler.browser
+
+from . import metrics, ydl
 
 r = rdb.RethinkDB()
 

@@ -18,28 +18,30 @@ limitations under the License.
 """
 
 import argparse
-import brozzler
-import brozzler.worker
+import base64
 import datetime
 import json
 import logging
 import os
 import re
-import requests
-import doublethink
+import shutil
 import signal
 import string
-import structlog
 import subprocess
 import sys
 import threading
 import time
 import traceback
 import warnings
-import yaml
-import shutil
-import base64
+
+import doublethink
+import requests
 import rethinkdb as rdb
+import structlog
+import yaml
+
+import brozzler
+import brozzler.worker
 
 r = rdb.RethinkDB()
 

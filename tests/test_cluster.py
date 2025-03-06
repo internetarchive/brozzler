@@ -18,23 +18,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import pytest
+import datetime
 import http.server
-import threading
-import urllib.request
 import os
 import socket
-import doublethink
-import time
-import brozzler
-import datetime
-import requests
 import subprocess
-import http.server
-import structlog
 import sys
+import threading
+import time
+import urllib.request
+
+import doublethink
+import pytest
+import requests
+import structlog
 import warcprox
 
+import brozzler
 
 logger = structlog.get_logger(logger_name=__name__)
 
