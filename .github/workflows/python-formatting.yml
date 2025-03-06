@@ -28,4 +28,4 @@ jobs:
         ./venv/bin/pip install ruff
 
     - name: Run formatting check
-      run: make ck-format
+      run: make check-format
