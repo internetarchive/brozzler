@@ -1,0 +1,11 @@
+
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# pre-commit.sh
+# -------------
+# An optional script which runs checks on code before commits.
+
+make check
+make check-format

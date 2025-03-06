@@ -4,3 +4,6 @@
 /brozzler.egg-info/
 venv
 .idea
+
+# build artifacts
+build/
