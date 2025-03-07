@@ -17,11 +17,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import brozzler.cli
 import importlib.metadata
-import pytest
 import subprocess
+
 import doublethink
+import pytest
+
+import brozzler.cli
 
 
 def console_scripts():

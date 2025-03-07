@@ -16,21 +16,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import yt_dlp
-from yt_dlp.utils import match_filter_func, ExtractorError
-import brozzler
-import urllib.request
-import tempfile
-import urlcanon
-import os
-import json
-import doublethink
 import datetime
-from . import metrics
+import json
+import os
 import random
-import structlog
+import tempfile
 import threading
 import time
+import urllib.request
+
+import doublethink
+import structlog
+import urlcanon
+import yt_dlp
+from yt_dlp.utils import ExtractorError, match_filter_func
+
+import brozzler
+
+from . import metrics
 
 thread_local = threading.local()
 

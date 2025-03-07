@@ -16,14 +16,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import brozzler
+import datetime
 import random
 import time
-import datetime
+
+import doublethink
 import rethinkdb as rdb
 import structlog
-import doublethink
 import urlcanon
+
+import brozzler
 
 r = rdb.RethinkDB()
 

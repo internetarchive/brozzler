@@ -19,6 +19,7 @@ limitations under the License.
 """
 
 import sys
+
 import structlog
 
 logger = structlog.get_logger(logger_name=__name__)
@@ -28,9 +29,9 @@ try:
     import pywb.cdx.cdxdomainspecific
     import pywb.cdx.cdxobject
     import pywb.cdx.cdxserver
-    import pywb.webapp.query_handler
     import pywb.framework.basehandlers
     import pywb.rewrite.wburl
+    import pywb.webapp.query_handler
 except ImportError as e:
     logger.critical(
         '%s: %s\n\nYou might need to run "pip install '
@@ -39,12 +40,14 @@ except ImportError as e:
         e,
     )
     sys.exit(1)
+import argparse
+import json
+
 import doublethink
 import rethinkdb as rdb
 import urlcanon
-import json
+
 import brozzler
-import argparse
 
 r = rdb.RethinkDB()
 
@@ -219,13 +222,17 @@ def support_in_progress_warcs():
 class SomeWbUrl(pywb.rewrite.wburl.WbUrl):
     def __init__(self, orig_url):
         import re
+
         import six
-
-        from six.moves.urllib.parse import urlsplit, urlunsplit
-        from six.moves.urllib.parse import quote_plus, quote, unquote_plus
-
-        from pywb.utils.loaders import to_native_str
         from pywb.rewrite.wburl import WbUrl
+        from pywb.utils.loaders import to_native_str
+        from six.moves.urllib.parse import (
+            quote,
+            quote_plus,
+            unquote_plus,
+            urlsplit,
+            urlunsplit,
+        )
 
         pywb.rewrite.wburl.BaseWbUrl.__init__(self)
 
@@ -372,8 +379,8 @@ def monkey_patch_fuzzy_query():
 # as such
 def _calc_search_range(url, match_type, surt_ordered=True, url_canon=None):
     # imports added here for brozzler
-    from pywb.utils.canonicalize import UrlCanonicalizer, UrlCanonicalizeException
     import six.moves.urllib.parse as urlparse
+    from pywb.utils.canonicalize import UrlCanonicalizeException, UrlCanonicalizer
 
     def inc_last_char(x):
         return x[0:-1] + chr(ord(x[-1]) + 1)
