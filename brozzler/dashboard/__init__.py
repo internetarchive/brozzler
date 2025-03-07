@@ -17,8 +17,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import structlog
 import sys
+
+import structlog
 
 logger = structlog.get_logger(logger_name=__name__)
 
@@ -32,13 +33,14 @@ except ImportError as e:
         e,
     )
     sys.exit(1)
-import doublethink
+import base64
+import importlib
 import json
 import os
-import importlib
+
+import doublethink
 import rethinkdb as rdb
 import yaml
-import base64
 
 r = rdb.RethinkDB()
 
@@ -284,8 +286,8 @@ def root(path):
 
 try:
     import gunicorn.app.base
-    from gunicorn.six import iteritems
     import gunicorn.glogging
+    from gunicorn.six import iteritems
 
     class BypassGunicornLogging(gunicorn.glogging.Logger):
         def setup(self, cfg):
@@ -327,6 +329,7 @@ except ImportError:
 
 def main(argv=None):
     import argparse
+
     import brozzler.cli
 
     argv = argv or sys.argv

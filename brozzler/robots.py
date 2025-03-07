@@ -23,12 +23,14 @@ limitations under the License.
 """
 
 import json
-import brozzler
+
 import reppy
 import reppy.cache
 import reppy.parser
 import requests
 import structlog
+
+import brozzler
 
 __all__ = ["is_permitted_by_robots"]
 

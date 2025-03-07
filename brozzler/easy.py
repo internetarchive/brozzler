@@ -18,19 +18,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import structlog
 import sys
+
+import structlog
 
 logger = structlog.get_logger(logger_name=__name__)
 
 try:
+    import wsgiref.handlers
+    import wsgiref.simple_server
+
+    import pywb
     import warcprox
     import warcprox.main
-    import pywb
-    import brozzler.pywb
-    import wsgiref.simple_server
-    import wsgiref.handlers
+
     import brozzler.dashboard
+    import brozzler.pywb
 except ImportError as e:
     logger.critical(
         '%s: %s\n\nYou might need to run "pip install '
@@ -40,16 +43,18 @@ except ImportError as e:
     )
     sys.exit(1)
 import argparse
-import brozzler
-import brozzler.cli
 import os
-import socket
 import signal
+import socket
+import socketserver
 import threading
 import time
-import doublethink
 import traceback
-import socketserver
+
+import doublethink
+
+import brozzler
+import brozzler.cli
 
 
 def _build_arg_parser(argv=None):
