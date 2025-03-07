@@ -425,6 +425,8 @@ __all__ = [
 try:
     import doublethink
 
+    # All of these imports use doublethink for real and are unsafe
+    # to do if doublethink is unavailable.
     from brozzler.frontier import RethinkDbFrontier
     from brozzler.model import (
         InvalidJobConf,
@@ -435,9 +437,6 @@ try:
         new_job_file,
         new_site,
     )
-
-    # All of these imports use doublethink for real and are unsafe
-    # to do if doublethink is unavailable.
     from brozzler.worker import BrozzlerWorker
 
     __all__.extend(
