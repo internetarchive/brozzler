@@ -32,7 +32,7 @@ import sys
 
 try:
     from shlex import quote
-except:
+except:  # noqa: E722
     from pipes import quote
 
 

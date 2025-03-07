@@ -40,11 +40,11 @@ def cli_commands():
     commands = set(console_scripts().keys())
     commands.remove("brozzler-wayback")
     try:
-        import gunicorn
+        import gunicorn  # noqa: F401
     except ImportError:
         commands.remove("brozzler-dashboard")
     try:
-        import pywb
+        import pywb  # noqa: F401
     except ImportError:
         commands.remove("brozzler-easy")
     return commands

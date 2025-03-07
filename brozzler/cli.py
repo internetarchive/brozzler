@@ -23,12 +23,10 @@ import datetime
 import json
 import logging
 import os
-import re
 import signal
 import string
 import sys
 import threading
-import time
 import traceback
 import warnings
 
@@ -397,9 +395,9 @@ def brozzle_page(argv=None):
             enable_youtube_dl=not worker._skip_youtube_dl,
         )
         logger.info("outlinks", outlinks=sorted(outlinks))
-    except brozzler.ReachedLimit as e:
+    except brozzler.ReachedLimit:
         logger.exception("reached limit")
-    except brozzler.PageInterstitialShown as e:
+    except brozzler.PageInterstitialShown:
         logger.exception("page interstitial shown")
     finally:
         browser.stop()
@@ -661,7 +659,7 @@ def brozzler_worker(argv=None):
             logger.info(
                 "dumping state (caught signal)\n%s", signal=signum, state=state_strs
             )
-        except BaseException as e:
+        except BaseException:
             logger.exception("exception dumping state")
         finally:
             signal.signal(signal.SIGQUIT, dump_state)
@@ -672,11 +670,11 @@ def brozzler_worker(argv=None):
         try:
             # make set from seed IDs in SKIP_AV_SEEDS_FILE
             with open(SKIP_AV_SEEDS_FILE) as skips:
-                skip_av_seeds = {int(l) for l in skips.readlines()}
+                skip_av_seeds = {int(line) for line in skips.readlines()}
                 logger.info(
                     "running with skip_av_seeds file", skip_av_seeds=SKIP_AV_SEEDS_FILE
                 )
-        except Exception as e:
+        except Exception:
             skip_av_seeds = set()
             logger.info("running with empty skip_av_seeds")
         return skip_av_seeds
@@ -686,13 +684,13 @@ def brozzler_worker(argv=None):
         try:
             # make list from file
             with open(YTDLP_PROXY_ENDPOINTS_FILE) as endpoints:
-                ytdlp_proxy_endpoints = [l for l in endpoints.readlines()]
+                ytdlp_proxy_endpoints = [line for line in endpoints.readlines()]
                 if ytdlp_proxy_endpoints:
                     logger.info(
                         "running with ytdlp proxy endpoints file",
                         ytdlp_proxy_endpoints=YTDLP_PROXY_ENDPOINTS_FILE,
                     )
-        except Exception as e:
+        except Exception:
             ytdlp_proxy_endpoints = []
             logger.info("running with empty proxy endpoints file")
         return ytdlp_proxy_endpoints
@@ -1032,7 +1030,7 @@ def brozzler_purge(argv=None):
     configure_logging(args)
 
     rr = rethinker(args)
-    frontier = brozzler.RethinkDbFrontier(rr)
+    brozzler.RethinkDbFrontier(rr)
     if args.job:
         try:
             job_id = int(args.job)

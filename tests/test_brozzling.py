@@ -110,7 +110,7 @@ def test_httpd(httpd):
     of the same url return the same payload, proving it can be used to test
     deduplication.
     """
-    payload1 = content2 = None
+    payload1 = None
     url = "http://localhost:%s/site1/file1.txt" % httpd.server_port
     with urllib.request.urlopen(url) as response:
         assert response.status == 200
@@ -175,7 +175,6 @@ def test_420(httpd):
 
 def test_js_dialogs(httpd):
     chrome_exe = brozzler.suggest_default_chrome_exe()
-    url = "http://localhost:%s/site4/alert.html" % httpd.server_port
     with brozzler.Browser(chrome_exe=chrome_exe) as browser:
         # before commit d2ed6b97a24 these would hang and eventually raise
         # brozzler.browser.BrowsingTimeout, which would cause this test to fail

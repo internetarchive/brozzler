@@ -71,7 +71,7 @@ _robots_caches = {}  # {site_id:reppy.cache.RobotsCache}
 
 
 def _robots_cache(site, proxy=None):
-    if not site.id in _robots_caches:
+    if site.id not in _robots_caches:
         req_sesh = _SessionRaiseOn420()
         req_sesh.verify = False  # ignore cert errors
         if proxy:

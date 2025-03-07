@@ -101,7 +101,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
             if result_type in ("url", "url_transparent"):
                 if "extraction_depth" in extra_info:
                     self.logger.info(
-                        f"Following redirect",
+                        "Following redirect",
                         redirect_url=ie_result["url"],
                         extraction_depth=extra_info["extraction_depth"],
                     )
@@ -136,7 +136,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
                     # use it later to extract the watch pages as outlinks.
                     try:
                         ie_result["entries_no_dl"] = list(ie_result["entries"])
-                    except Exception as e:
+                    except Exception:
                         extract_context.warning(
                             "failed to unroll entries ie_result['entries']?",
                             exc_info=True,
@@ -166,7 +166,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
                     import magic
 
                     mimetype = magic.from_file(info_dict["filepath"], mime=True)
-                except ImportError as e:
+                except ImportError:
                     mimetype = "video/%s" % info_dict["ext"]
                     self.logger.warning(
                         "guessing mimetype due to error",
@@ -236,7 +236,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
                 )
                 site.last_claimed = doublethink.utcnow()
                 site.save()
-        except:
+        except:  # noqa: E722
             worker.logger.debug(
                 "problem heartbeating site.last_claimed site",
                 id=site.id,
@@ -316,7 +316,7 @@ def _remember_videos(page, pushed_videos=None):
     """
     Saves info about videos captured by yt-dlp in `page.videos`.
     """
-    if not "videos" in page:
+    if "videos" not in page:
         page.videos = []
     for pushed_video in pushed_videos or []:
         video = {
@@ -351,7 +351,7 @@ def _try_youtube_dl(worker, ydl, site, page):
                 )
             metrics.brozzler_ydl_extract_successes.labels(ydl.is_youtube_host).inc(1)
             break
-        except brozzler.ShutdownRequested as e:
+        except brozzler.ShutdownRequested:
             raise
         except Exception as e:
             if (

@@ -18,7 +18,6 @@ limitations under the License.
 
 import base64
 import datetime
-import itertools
 import json
 import logging
 import socket
@@ -213,7 +212,7 @@ class WebsockReceiverThread(threading.Thread):
     def _on_message(self, websock, message):
         try:
             self._handle_message(websock, message)
-        except:
+        except:  # noqa: E722
             self.logger.exception(
                 "uncaught exception in _handle_message",
                 message=message,
@@ -430,7 +429,7 @@ class Browser:
                 self.logger.info("shutting down websocket connection")
                 try:
                     self.websock.close()
-                except BaseException as e:
+                except BaseException:
                     self.logger.exception(
                         "exception closing websocket", websocket=self.websock
                     )
@@ -458,7 +457,7 @@ class Browser:
                         )
 
             self.websock_url = None
-        except:
+        except:  # noqa: E722
             self.logger.exception("problem stopping")
 
     def is_running(self):
@@ -628,7 +627,7 @@ class Browser:
                 jpeg_bytes = self.screenshot(full_page)
                 on_screenshot(jpeg_bytes)
                 return
-            except BrowsingTimeout as e:
+            except BrowsingTimeout:
                 self.logger.exception("attempt %s/3", i + 1)
 
     def visit_hashtags(self, page_url, hashtags, outlinks):
@@ -807,12 +806,12 @@ class Browser:
                 if (
                     msg
                     and "result" in msg
-                    and not ("exceptionDetails" in msg["result"])
+                    and "exceptionDetails" not in msg["result"]
                     and not (
                         "wasThrown" in msg["result"] and msg["result"]["wasThrown"]
                     )
                     and "result" in msg["result"]
-                    and type(msg["result"]["result"]["value"]) == bool
+                    and isinstance(msg["result"]["result"]["value"], bool)
                     and msg["result"]["result"]["value"]
                 ):
                     self.logger.info("behavior decided it has finished")
