@@ -17,23 +17,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import pytest
+import datetime
 import http.server
-import threading
 import os
+import socket
+import sys
+import tempfile
+import threading
+import time
+import uuid
+from unittest import mock
+
+import pytest
+import requests
+import yaml
+
 import brozzler
 import brozzler.chrome
 import brozzler.ydl
-import yaml
-import datetime
-import requests
-import tempfile
-import uuid
-import socket
-import time
-import sys
-import threading
-from unittest import mock
 
 
 @pytest.fixture(scope="module")

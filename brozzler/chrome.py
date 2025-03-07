@@ -16,20 +16,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import urllib.request
-import time
-import threading
-import subprocess
+import json
 import os
-import brozzler
-import select
 import re
+import select
 import signal
 import sqlite3
-import structlog
-import json
-import tempfile
+import subprocess
 import sys
+import tempfile
+import threading
+import time
+import urllib.request
+
+import structlog
+
+import brozzler
 
 
 def check_version(chrome_exe):

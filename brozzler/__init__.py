@@ -18,8 +18,9 @@ limitations under the License.
 """
 
 import logging
-import structlog
 from importlib.metadata import version as _version
+
+import structlog
 
 __version__ = _version("brozzler")
 
@@ -106,7 +107,10 @@ def behaviors(behaviors_dir=None):
     :param behaviors_dir: Directory containing `behaviors.yaml` and
     `js-templates/`. Defaults to brozzler dir.
     """
-    import os, yaml, string
+    import os
+    import string
+
+    import yaml
 
     global _behaviors
     if _behaviors is None:
@@ -121,7 +125,8 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
     """
     Returns the javascript behavior string populated with template_parameters.
     """
-    import re, json
+    import json
+    import re
 
     logger = structlog.get_logger(logger_name=__name__)
 
@@ -245,7 +250,11 @@ def thread_raise(thread, exctype):
         TypeError if `exctype` is not a class
         ValueError, SystemError in case of unexpected problems
     """
-    import ctypes, inspect, threading, structlog
+    import ctypes
+    import inspect
+    import threading
+
+    import structlog
 
     logger = structlog.get_logger(exctype=exctype, thread=thread)
 
@@ -297,7 +306,10 @@ _jinja2_env = None
 def jinja2_environment(behaviors_dir=None):
     global _jinja2_env
     if not _jinja2_env:
-        import os, jinja2, json
+        import json
+        import os
+
+        import jinja2
 
         if behaviors_dir:
             _loader = jinja2.FileSystemLoader(
@@ -365,7 +377,8 @@ def _suggest_default_chrome_exe_mac():
 
 
 def suggest_default_chrome_exe():
-    import shutil, sys
+    import shutil
+    import sys
 
     # First ask mdfind, which lets us find it in non-default paths
     if sys.platform == "darwin":
@@ -395,8 +408,8 @@ import datetime
 EPOCH_UTC = datetime.datetime.fromtimestamp(0.0, tz=datetime.timezone.utc)
 
 
-from brozzler.robots import is_permitted_by_robots
 from brozzler.browser import Browser, BrowserPool, BrowsingException
+from brozzler.robots import is_permitted_by_robots
 
 __all__ = [
     "is_permitted_by_robots",
@@ -414,17 +427,17 @@ try:
 
     # All of these imports use doublethink for real and are unsafe
     # to do if doublethink is unavailable.
-    from brozzler.worker import BrozzlerWorker
     from brozzler.frontier import RethinkDbFrontier
     from brozzler.model import (
-        new_job,
-        new_job_file,
-        new_site,
+        InvalidJobConf,
         Job,
         Page,
         Site,
-        InvalidJobConf,
+        new_job,
+        new_job_file,
+        new_site,
     )
+    from brozzler.worker import BrozzlerWorker
 
     __all__.extend(
         [

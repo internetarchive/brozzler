@@ -16,23 +16,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import logging
-import time
-import brozzler
+import base64
+import datetime
 import itertools
 import json
-import websocket
-import time
-import threading
-import brozzler
-from requests.structures import CaseInsensitiveDict
-import datetime
-import base64
-from ipaddress import AddressValueError
-from brozzler.chrome import Chrome
+import logging
 import socket
+import threading
+import time
+from ipaddress import AddressValueError
+
 import structlog
 import urlcanon
+import websocket
+from requests.structures import CaseInsensitiveDict
+
+import brozzler
+from brozzler.chrome import Chrome
 
 MAX_UNMATCHED_INVALID_CHECKS = 5
 

@@ -17,17 +17,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import pytest
-import brozzler
+import argparse
+import http.server
+import json
 import logging
 import os
-import http.server
-import threading
-import argparse
-import urllib
-import json
-import threading
 import socket
+import threading
+import urllib
+
+import pytest
+
+import brozzler
 
 arg_parser = argparse.ArgumentParser()
 brozzler.cli.add_common_options(arg_parser)

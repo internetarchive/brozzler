@@ -16,25 +16,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import datetime
+import json
+import os
+import random
+import tempfile
+import threading
+import time
+import traceback
+import urllib.request
+
+import doublethink
+import structlog
+import urlcanon
 import yt_dlp
-from yt_dlp.utils import match_filter_func, ExtractorError
+from yt_dlp.utils import ExtractorError, match_filter_func
+
 import brozzler
 from brozzler.model import VideoCaptureOptions
-import urllib.request
-import tempfile
-import urlcanon
-import os
-import json
-import datetime
 
 from . import metrics
-
-import random
-import structlog
-import threading
-import traceback
-import doublethink
-import time
 
 thread_local = threading.local()
 

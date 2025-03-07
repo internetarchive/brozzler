@@ -17,25 +17,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import brozzler
 import base64
-import cerberus
 import copy
 import datetime
-import doublethink
 import hashlib
 import json
 import os
 import re
-import structlog
 import time
-import urlcanon
 import urllib
 import uuid
-import yaml
 import zlib
 from enum import Enum
 from typing import Optional
+
+import cerberus
+import doublethink
+import structlog
+import urlcanon
+import yaml
+
+import brozzler
 
 logger = structlog.get_logger(logger_name=__name__)
 
