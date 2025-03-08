@@ -88,6 +88,9 @@ setuptools.setup(
         "rethinkdb": [
             "rethinkdb==2.4.9",
             "doublethink==0.4.9",
+            # Needed because of rethinkdb 2.4.9;
+            # can be removed when we can upgrade to 2.4.10.post1
+            "setuptools>=75.8.0;python_version>='3.12'",
         ],
     },
     zip_safe=False,
