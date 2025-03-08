@@ -20,12 +20,12 @@ jobs:
       with:
         python-version: '3.8'
     - name: Create virtual environment
-      run: python -m venv venv
+      run: python -m venv .venv
 
     - name: Install ruff
       run: |
-        ./venv/bin/pip install --upgrade pip
-        ./venv/bin/pip install ruff
+        ./.venv/bin/pip install --upgrade pip
+        ./.venv/bin/pip install ruff
 
     - name: Run formatting check
-      run: make ck-format
+      run: make check-format
