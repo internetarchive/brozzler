@@ -41,10 +41,10 @@ check:
 
 .PHONY: check-format
 check-format:
-	$(VIRTUAL_ENV_DIR)/bin/ruff check --select I
+	$(VIRTUAL_ENV_DIR)/bin/ruff check --select I --target-version py37 .
 	$(VIRTUAL_ENV_DIR)/bin/ruff format --check --target-version py37 .
 
 .PHONY: format
 format:
-	$(VIRTUAL_ENV_DIR)/bin/ruff check --select I --fix
+	$(VIRTUAL_ENV_DIR)/bin/ruff check --select I --target-version py37 --fix .
 	$(VIRTUAL_ENV_DIR)/bin/ruff format --target-version py37 .
