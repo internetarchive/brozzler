@@ -23,7 +23,6 @@ import http.server
 import os
 import socket
 import subprocess
-import sys
 import threading
 import time
 import urllib.request
@@ -47,7 +46,7 @@ def _local_address():
     try:
         s.connect(("10.255.255.255", 1))  # ip doesn't need to be reachable
         return s.getsockname()[0]
-    except:
+    except:  # noqa: E722
         return "127.0.0.1"
     finally:
         s.close()
@@ -148,7 +147,7 @@ def test_httpd(httpd):
     of the same url return the same payload, proving it can be used to test
     deduplication.
     """
-    payload1 = content2 = None
+    payload1 = None
     url = make_url(httpd, "/site1/file1.txt")
     with urllib.request.urlopen(url) as response:
         assert response.status == 200
@@ -351,8 +350,8 @@ def test_warcprox_auto(httpd):
 
 
 def test_proxy_conflict():
-    with pytest.raises(AssertionError) as excinfo:
-        worker = brozzler.worker.BrozzlerWorker(
+    with pytest.raises(AssertionError):
+        brozzler.worker.BrozzlerWorker(
             None, None, warcprox_auto=True, proxy="localhost:12345"
         )
 
@@ -523,7 +522,6 @@ def test_login(httpd):
 
     # take a look at the captures table
     time.sleep(2)  # in case warcprox hasn't finished processing urls
-    robots_url = make_url(httpd, "/robots.txt")
     captures = list(
         rr.table("captures").filter({"test_id": test_id}).order_by("timestamp").run()
     )
@@ -730,7 +728,6 @@ def test_redirect_hashtags(httpd):
 
 
 def test_stop_crawl(httpd):
-    test_id = "test_stop_crawl_job-%s" % datetime.datetime.utcnow().isoformat()
     rr = doublethink.Rethinker("localhost", db="brozzler")
     frontier = brozzler.RethinkDbFrontier(rr)
 
@@ -804,7 +801,6 @@ def test_warcprox_outage_resiliency(httpd):
     """
     rr = doublethink.Rethinker("localhost", db="brozzler")
     frontier = brozzler.RethinkDbFrontier(rr)
-    svcreg = doublethink.ServiceRegistry(rr)
 
     # run two instances of warcprox
     opts = warcprox.Options()
@@ -836,7 +832,7 @@ def test_warcprox_outage_resiliency(httpd):
         # the system, if any
         try:
             stop_service("warcprox")
-        except Exception as e:
+        except Exception:
             logger.warning("problem stopping warcprox service: %s", exc_info=True)
 
         # queue the site for brozzling
@@ -917,7 +913,6 @@ def test_warcprox_outage_resiliency(httpd):
 
 
 def test_time_limit(httpd):
-    test_id = "test_time_limit-%s" % datetime.datetime.utcnow().isoformat()
     rr = doublethink.Rethinker("localhost", db="brozzler")
     frontier = brozzler.RethinkDbFrontier(rr)
 
@@ -928,7 +923,6 @@ def test_time_limit(httpd):
 
     sites = list(frontier.job_sites(job.id))
     assert len(sites) == 1
-    site = sites[0]
 
     # time limit should be enforced pretty soon
     start = time.time()
@@ -986,7 +980,7 @@ def test_ydl_stitching(httpd):
     time.sleep(2)  # in case warcprox hasn't finished processing urls
     # take a look at the captures table
     captures = list(rr.table("captures").filter({"test_id": test_id}).run())
-    l = [c for c in captures if c["url"] == stitched_url]
+    l = [c for c in captures if c["url"] == stitched_url]  # noqa: E741
     assert len(l) == 1
     c = l[0]
     assert c["filename"].startswith("test_ydl_stitching")

@@ -21,7 +21,6 @@ import datetime
 import http.server
 import os
 import socket
-import sys
 import tempfile
 import threading
 import time
@@ -29,7 +28,6 @@ import uuid
 from unittest import mock
 
 import pytest
-import requests
 import yaml
 
 import brozzler
@@ -291,7 +289,7 @@ def test_proxy_down():
             )
 
         # youtube-dl fetch
-        with tempfile.TemporaryDirectory(prefix="brzl-ydl-") as tempdir:
+        with tempfile.TemporaryDirectory(prefix="brzl-ydl-"):
             with pytest.raises(brozzler.ProxyError):
                 brozzler.ydl.do_youtube_dl(worker, site, page)
 
@@ -315,7 +313,7 @@ def test_start_stop_backwards_compat():
     assert len(site.starts_and_stops) == 1
     assert site.starts_and_stops[0]["start"]
     assert site.starts_and_stops[0]["stop"] is None
-    assert not "start_time" in site
+    assert "start_time" not in site
 
     site = brozzler.Site(
         None,
@@ -324,13 +322,13 @@ def test_start_stop_backwards_compat():
     assert len(site.starts_and_stops) == 1
     assert site.starts_and_stops[0]["start"] == datetime.datetime(2017, 1, 1)
     assert site.starts_and_stops[0]["stop"] is None
-    assert not "start_time" in site
+    assert "start_time" not in site
 
     job = brozzler.Job(None, {"seeds": [{"url": "https://example.com/"}]})
     assert job.starts_and_stops[0]["start"]
     assert job.starts_and_stops[0]["stop"] is None
-    assert not "started" in job
-    assert not "finished" in job
+    assert "started" not in job
+    assert "finished" not in job
 
     job = brozzler.Job(
         None,
@@ -342,8 +340,8 @@ def test_start_stop_backwards_compat():
     )
     assert job.starts_and_stops[0]["start"] == datetime.datetime(2017, 1, 1)
     assert job.starts_and_stops[0]["stop"] == datetime.datetime(2017, 1, 2)
-    assert not "started" in job
-    assert not "finished" in job
+    assert "started" not in job
+    assert "finished" not in job
 
 
 class Exception1(Exception):
@@ -452,9 +450,9 @@ def test_thread_raise_second_with_block():
             with brozzler.thread_accept_exceptions():
                 time.sleep(2)
             return  # test fails
-        except Exception1 as e:
+        except Exception1:
             pass
-        except:
+        except:  # noqa: E722
             return  # fail test
 
         try:

@@ -17,9 +17,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import base64
+import os
 import sys
 
+import doublethink
+import rethinkdb as rdb
 import structlog
+import yaml
 
 logger = structlog.get_logger(logger_name=__name__)
 
@@ -33,14 +38,6 @@ except ImportError as e:
         e,
     )
     sys.exit(1)
-import base64
-import importlib
-import json
-import os
-
-import doublethink
-import rethinkdb as rdb
-import yaml
 
 r = rdb.RethinkDB()
 
@@ -285,6 +282,8 @@ def root(path):
 
 
 try:
+    import logging
+
     import gunicorn.app.base
     import gunicorn.glogging
     from gunicorn.six import iteritems

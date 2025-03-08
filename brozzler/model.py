@@ -19,12 +19,9 @@ limitations under the License.
 
 import base64
 import copy
-import datetime
 import hashlib
 import json
 import os
-import re
-import time
 import urllib
 import uuid
 import zlib
@@ -61,7 +58,7 @@ class InvalidJobConf(Exception):
             # debugged, I found it here. Maybe there's a better way to see it.
             value = validator._errors[0].info[0][0].info[0][0].value
             self.errors["bad value"] = value
-        except:
+        except:  # noqa: E722
             value = None
 
 
@@ -122,10 +119,10 @@ def new_job(frontier, job_conf):
     # rethinkdb.errors.ReqlDriverError: Query size (167883036) greater than maximum (134217727) in:
     for batch in (pages[i : i + 500] for i in range(0, len(pages), 500)):
         logger.info("inserting batch of %s pages", len(batch))
-        result = frontier.rr.table("pages").insert(batch).run()
+        frontier.rr.table("pages").insert(batch).run()
     for batch in (sites[i : i + 100] for i in range(0, len(sites), 100)):
         logger.info("inserting batch of %s sites", len(batch))
-        result = frontier.rr.table("sites").insert(batch).run()
+        frontier.rr.table("sites").insert(batch).run()
     logger.info("job fully started", job_id=job.id)
 
     return job
@@ -200,9 +197,9 @@ class Job(doublethink.Document, ElapsedMixIn):
     table = "jobs"
 
     def populate_defaults(self):
-        if not "status" in self:
+        if "status" not in self:
             self.status = "ACTIVE"
-        if not "starts_and_stops" in self:
+        if "starts_and_stops" not in self:
             if self.get("started"):  # backward compatibility
                 self.starts_and_stops = [
                     {"start": self.get("started"), "stop": self.get("finished")}
@@ -229,28 +226,28 @@ class Site(doublethink.Document, ElapsedMixIn):
     table = "sites"
 
     def populate_defaults(self):
-        if not "status" in self:
+        if "status" not in self:
             self.status = "ACTIVE"
-        if not "claimed" in self:
+        if "claimed" not in self:
             self.claimed = False
-        if not "last_disclaimed" in self:
+        if "last_disclaimed" not in self:
             self.last_disclaimed = brozzler.EPOCH_UTC
-        if not "last_claimed" in self:
+        if "last_claimed" not in self:
             self.last_claimed = brozzler.EPOCH_UTC
-        if not "scope" in self:
+        if "scope" not in self:
             self.scope = {}
-        if not "skip_ytdlp" in self:
+        if "skip_ytdlp" not in self:
             self.skip_ytdlp = None
 
         # backward compatibility
         if "surt" in self.scope:
-            if not "accepts" in self.scope:
+            if "accepts" not in self.scope:
                 self.scope["accepts"] = []
             self.scope["accepts"].append({"surt": self.scope["surt"]})
             del self.scope["surt"]
 
         # backward compatibility
-        if "max_hops_off_surt" in self.scope and not "max_hops_off" in self.scope:
+        if "max_hops_off_surt" in self.scope and "max_hops_off" not in self.scope:
             self.scope["max_hops_off"] = self.scope["max_hops_off_surt"]
         if "max_hops_off_surt" in self.scope:
             del self.scope["max_hops_off_surt"]
@@ -260,7 +257,7 @@ class Site(doublethink.Document, ElapsedMixIn):
                 brozzler.site_surt_canon(self.seed).ssurt().decode("ascii")
             )
 
-        if not "starts_and_stops" in self:
+        if "starts_and_stops" not in self:
             if self.get("start_time"):  # backward compatibility
                 self.starts_and_stops = [
                     {"start": self.get("start_time"), "stop": None}
@@ -275,7 +272,7 @@ class Site(doublethink.Document, ElapsedMixIn):
         return 'Site({"id":"%s","seed":"%s",...})' % (self.id, self.seed)
 
     def _accept_ssurt_if_not_redundant(self, ssurt):
-        if not "accepts" in self.scope:
+        if "accepts" not in self.scope:
             self.scope["accepts"] = []
         simple_rule_ssurts = (
             rule["ssurt"]
@@ -334,7 +331,7 @@ class Site(doublethink.Document, ElapsedMixIn):
         if not isinstance(url, urlcanon.ParsedUrl):
             url = urlcanon.semantic(url)
 
-        if not url.scheme in (b"http", b"https"):
+        if url.scheme not in (b"http", b"https"):
             # XXX doesn't belong here maybe (where? worker ignores unknown
             # schemes?)
             return False
@@ -390,31 +387,31 @@ class Page(doublethink.Document):
         return hashlib.sha1(digest_this.encode("utf-8")).hexdigest()
 
     def populate_defaults(self):
-        if not "retry_after" in self:
+        if "retry_after" not in self:
             self.retry_after = None
-        if not "failed_attempts" in self:
+        if "failed_attempts" not in self:
             self.failed_attempts = 0
-        if not "hops_from_seed" in self:
+        if "hops_from_seed" not in self:
             self.hops_from_seed = 0
-        if not "hop_path" in self:
+        if "hop_path" not in self:
             self.hop_path = None
-        if not "via_page_url" in self:
+        if "via_page_url" not in self:
             self.via_page_url = None
-        if not "brozzle_count" in self:
+        if "brozzle_count" not in self:
             self.brozzle_count = 0
-        if not "claimed" in self:
+        if "claimed" not in self:
             self.claimed = False
-        if "hops_off_surt" in self and not "hops_off" in self:
+        if "hops_off_surt" in self and "hops_off" not in self:
             self.hops_off = self.hops_off_surt
         if "hops_off_surt" in self:
             del self["hops_off_surt"]
-        if not "hops_off" in self:
+        if "hops_off" not in self:
             self.hops_off = 0
-        if not "needs_robots_check" in self:
+        if "needs_robots_check" not in self:
             self.needs_robots_check = False
-        if not "priority" in self:
+        if "priority" not in self:
             self.priority = self._calc_priority()
-        if not "id" in self:
+        if "id" not in self:
             self.id = self.compute_id(self.site_id, self.url)
 
     def __str__(self):

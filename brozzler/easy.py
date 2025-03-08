@@ -18,9 +18,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import argparse
+import os
+import signal
+import socket
+import socketserver
 import sys
+import threading
+import time
+import traceback
 
+import doublethink
 import structlog
+
+import brozzler
+import brozzler.cli
 
 logger = structlog.get_logger(logger_name=__name__)
 
@@ -42,19 +54,6 @@ except ImportError as e:
         exc_info=True,
     )
     sys.exit(1)
-import argparse
-import os
-import signal
-import socket
-import socketserver
-import threading
-import time
-import traceback
-
-import doublethink
-
-import brozzler
-import brozzler.cli
 
 
 def _build_arg_parser(argv=None):

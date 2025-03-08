@@ -21,9 +21,7 @@ limitations under the License.
 import datetime
 import io
 import json
-import random
 import socket
-import tempfile
 import threading
 import time
 import urllib.request
@@ -99,9 +97,13 @@ class BrozzlerWorker:
         self._skip_visit_hashtags = skip_visit_hashtags
         self._skip_youtube_dl = skip_youtube_dl
 
+        # TODO try using importlib.util.find_spec to test for dependency
+        # presence rather than try/except on import.
+        # See https://docs.astral.sh/ruff/rules/unused-import/#example
+
         # We definitely shouldn't ytdlp if the optional extra is missing
         try:
-            import yt_dlp
+            import yt_dlp  # noqa: F401
         except ImportError:
             self.logger.info(
                 "optional yt-dlp extra not installed; setting skip_youtube_dl to True"
@@ -200,7 +202,7 @@ class BrozzlerWorker:
                     response = requests.get("http://%s/status" % self._proxy)
                     status = json.loads(response.text)
                     self._proxy_is_warcprox = status["role"] == "warcprox"
-                except Exception as e:
+                except Exception:
                     self._proxy_is_warcprox = False
                 self.logger.info(
                     "%s %s warcprox",
@@ -348,13 +350,13 @@ class BrozzlerWorker:
                     )
                     metrics.brozzler_ydl_urls_checked.inc(1)
                     outlinks.update(ydl_outlinks)
-                except brozzler.ReachedLimit as e:
+                except brozzler.ReachedLimit:
                     raise
                 except brozzler.ShutdownRequested:
                     raise
                 except brozzler.ProxyError:
                     raise
-                except brozzler.VideoExtractorError as e:
+                except brozzler.VideoExtractorError:
                     self.logger.exception("error extracting video info")
                 except Exception as e:
                     if (
@@ -391,9 +393,9 @@ class BrozzlerWorker:
                 timeout=self.HEADER_REQUEST_TIMEOUT,
             ) as r:
                 return r.headers
-        except requests.exceptions.Timeout as e:
+        except requests.exceptions.Timeout:
             url_logger.warning("Timed out trying to get headers", exc_info=True)
-        except requests.exceptions.RequestException as e:
+        except requests.exceptions.RequestException:
             url_logger.warning("Failed to get headers", exc_info=True)
         return {}
 
@@ -469,7 +471,7 @@ class BrozzlerWorker:
                 if "content-range" in response_headers:
                     video["content-range"] = response_headers["content-range"]
                 self.logger.debug("embedded video", video=video)
-                if not "videos" in page:
+                if "videos" not in page:
                     page.videos = []
                 page.videos.append(video)
 
@@ -598,13 +600,13 @@ class BrozzlerWorker:
             site_logger.info("no pages left for site")
         except brozzler.ReachedLimit as e:
             self._frontier.reached_limit(site, e)
-        except brozzler.ReachedTimeLimit as e:
+        except brozzler.ReachedTimeLimit:
             self._frontier.finished(site, "FINISHED_TIME_LIMIT")
         except brozzler.CrawlStopped:
             self._frontier.finished(site, "FINISHED_STOP_REQUESTED")
         # except brozzler.browser.BrowsingAborted:
         #     self.logger.info("{} shut down".format(browser))
-        except brozzler.ProxyError as e:
+        except brozzler.ProxyError:
             if self._warcprox_auto:
                 self.logger.exception(
                     "proxy error, will try to choose a "
@@ -676,7 +678,7 @@ class BrozzlerWorker:
         try:
             self.status_info = self._service_registry.heartbeat(status_info)
             self.logger.debug("status in service registry", status=self.status_info)
-        except r.ReqlError as e:
+        except r.ReqlError:
             self.logger.exception(
                 "failed to send heartbeat and update service registry",
                 info=status_info,
@@ -748,11 +750,11 @@ class BrozzlerWorker:
                 time.sleep(0.5)
 
             self.logger.warn("shutdown requested")
-        except r.ReqlError as e:
+        except r.ReqlError:
             self.logger.exception("caught rethinkdb exception, will try to proceed")
         except brozzler.ShutdownRequested:
             self.logger.info("shutdown requested")
-        except:
+        except:  # noqa: E722
             self.logger.critical(
                 "thread exiting due to unexpected exception", exc_info=True
             )
@@ -760,7 +762,7 @@ class BrozzlerWorker:
             if self._service_registry and hasattr(self, "status_info"):
                 try:
                     self._service_registry.unregister(self.status_info["id"])
-                except:
+                except:  # noqa: E722
                     self.logger.exception("failed to unregister from service registry")
 
             self.logger.info(

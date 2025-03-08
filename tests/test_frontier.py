@@ -559,7 +559,7 @@ def test_parent_url_scoping():
     assert parent_page.outlinks["accepted"] == outlinks
 
     # parent page redirect_url matches accept parent_url_regex
-    parent_page_c = brozzler.Page(
+    brozzler.Page(
         rr,
         {
             "site_id": site.id,
@@ -606,7 +606,7 @@ def test_parent_url_scoping():
     assert parent_page.outlinks["accepted"] == []
 
     # parent page redirect_url matches block parent_url_regex
-    parent_page_c = brozzler.Page(
+    brozzler.Page(
         rr,
         {
             "site_id": site.id,
@@ -659,10 +659,10 @@ def test_completed_page():
         ]
     }
     assert page.brozzle_count == 1
-    assert page.claimed == False
+    assert page.claimed is False
     page.refresh()
     assert page.brozzle_count == 1
-    assert page.claimed == False
+    assert page.claimed is False
 
     # redirect that doesn't change scope surt because destination is covered by
     # the original surt
@@ -686,10 +686,10 @@ def test_completed_page():
     site.refresh()
     assert site.scope == {"accepts": [{"ssurt": "com,example,//http:/a/"}]}
     assert page.brozzle_count == 1
-    assert page.claimed == False
+    assert page.claimed is False
     page.refresh()
     assert page.brozzle_count == 1
-    assert page.claimed == False
+    assert page.claimed is False
 
     # redirect that doesn't change scope surt because page is not the seed page
     site = brozzler.Site(rr, {"seed": "http://example.com/a/"})
@@ -712,10 +712,10 @@ def test_completed_page():
     site.refresh()
     assert site.scope == {"accepts": [{"ssurt": "com,example,//http:/a/"}]}
     assert page.brozzle_count == 1
-    assert page.claimed == False
+    assert page.claimed is False
     page.refresh()
     assert page.brozzle_count == 1
-    assert page.claimed == False
+    assert page.claimed is False
 
 
 def test_seed_page():
@@ -931,7 +931,7 @@ def test_max_claimed_sites():
     claimed_sites = frontier.claim_sites(3)
     assert len(claimed_sites) == 2
     with pytest.raises(brozzler.NothingToClaim):
-        claimed_site = frontier.claim_sites(3)
+        frontier.claim_sites(3)
 
     # clean slate for the next one
     rr.table("jobs").delete().run()
@@ -1074,7 +1074,7 @@ def test_max_hops_off():
     site.refresh()  # get it back from the db
 
     # renamed this param
-    assert not "max_hops_off_surt" in site.scope
+    assert "max_hops_off_surt" not in site.scope
     assert site.scope["max_hops_off"] == 1
 
     seed_page = frontier.seed_page(site.id)
@@ -1109,7 +1109,7 @@ def test_max_hops_off():
     assert len(pages) == 4
     assert pages[0].url == "http://example.com/"
     assert pages[0].hops_off == 0
-    assert not "hops_off_surt" in pages[0]
+    assert "hops_off_surt" not in pages[0]
     assert set(pages[0].outlinks["accepted"]) == {
         "https://example.com/toot",
         "http://foo.org/",

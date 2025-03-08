@@ -265,7 +265,7 @@ class Chrome:
                     return url
             except brozzler.ShutdownRequested:
                 raise
-            except Exception as e:
+            except Exception:
                 if time.time() - self._last_warning > 30:
                     url_logger.warning(
                         "problem accessing url (will keep trying until timeout)",
@@ -325,7 +325,7 @@ class Chrome:
                     self.logger.debug(
                         "chrome pid %s STDERR %s", self.chrome_process.pid, buf
                     )
-        except:
+        except:  # noqa: E722
             self.logger.exception("unexpected exception")
 
     def stop(self):
@@ -378,7 +378,7 @@ class Chrome:
             self.chrome_process.stderr.close()
             try:
                 self._home_tmpdir.cleanup()
-            except:
+            except:  # noqa: E722
                 self.logger.exception(
                     "exception deleting self._home_tmpdir", tmpdir=self._home_tmpdir
                 )

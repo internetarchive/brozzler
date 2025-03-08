@@ -18,9 +18,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import argparse
+import json
 import sys
 
+import doublethink
+import rethinkdb as rdb
 import structlog
+import urlcanon
+
+import brozzler
 
 logger = structlog.get_logger(logger_name=__name__)
 
@@ -40,14 +47,7 @@ except ImportError as e:
         e,
     )
     sys.exit(1)
-import argparse
-import json
 
-import doublethink
-import rethinkdb as rdb
-import urlcanon
-
-import brozzler
 
 r = rdb.RethinkDB()
 
@@ -137,7 +137,7 @@ class TheGoodUrlCanonicalizer(object):
             key = urlcanon.semantic(url).surt().decode("ascii")
             # logging.debug('%s -> %s', url, key)
             return key
-        except Exception as e:
+        except Exception:
             return url
 
     def replace_default_canonicalizer():
@@ -221,18 +221,9 @@ def support_in_progress_warcs():
 
 class SomeWbUrl(pywb.rewrite.wburl.WbUrl):
     def __init__(self, orig_url):
-        import re
-
         import six
         from pywb.rewrite.wburl import WbUrl
-        from pywb.utils.loaders import to_native_str
-        from six.moves.urllib.parse import (
-            quote,
-            quote_plus,
-            unquote_plus,
-            urlsplit,
-            urlunsplit,
-        )
+        from six.moves.urllib.parse import quote
 
         pywb.rewrite.wburl.BaseWbUrl.__init__(self)
 
@@ -320,7 +311,6 @@ def _fuzzy_query_call(self, query):
     urlkey = to_native_str(query.key, "utf-8")
     url = query.url
     filter_ = query.filters
-    output = query.output
 
     for rule in self.rules.iter_matching(urlkey):
         m = rule.regex.search(urlkey)

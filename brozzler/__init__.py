@@ -17,10 +17,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import datetime
 import logging
+import threading
 from importlib.metadata import version as _version
 
 import structlog
+import urlcanon
 
 __version__ = _version("brozzler")
 
@@ -91,7 +94,7 @@ def _logging_handler_handle(self, record):
         finally:
             try:
                 self.release()
-            except:
+            except:  # noqa: E722
                 pass
     return rv
 
@@ -108,7 +111,6 @@ def behaviors(behaviors_dir=None):
     `js-templates/`. Defaults to brozzler dir.
     """
     import os
-    import string
 
     import yaml
 
@@ -125,7 +127,6 @@ def behavior_script(url, template_parameters=None, behaviors_dir=None):
     """
     Returns the javascript behavior string populated with template_parameters.
     """
-    import json
     import re
 
     logger = structlog.get_logger(logger_name=__name__)
@@ -194,8 +195,6 @@ class ThreadExceptionGate:
         return "<ThreadExceptionGate(%s)>" % self.thread
 
 
-import threading
-
 _thread_exception_gates = {}
 _thread_exception_gates_lock = threading.Lock()
 
@@ -225,7 +224,7 @@ def thread_exception_gate(thread=None):
         thread = threading.current_thread()
 
     with _thread_exception_gates_lock:
-        if not thread in _thread_exception_gates:
+        if thread not in _thread_exception_gates:
             _thread_exception_gates[thread] = ThreadExceptionGate(thread)
 
     return _thread_exception_gates[thread]
@@ -252,7 +251,6 @@ def thread_raise(thread, exctype):
     """
     import ctypes
     import inspect
-    import threading
 
     import structlog
 
@@ -320,9 +318,6 @@ def jinja2_environment(behaviors_dir=None):
         _jinja2_env = jinja2.Environment(loader=_loader, auto_reload=False)
         _jinja2_env.filters["json"] = json.dumps
     return _jinja2_env
-
-
-import urlcanon
 
 
 def _remove_query(url):
@@ -403,13 +398,10 @@ def suggest_default_chrome_exe():
     return "chromium-browser"
 
 
-import datetime
-
 EPOCH_UTC = datetime.datetime.fromtimestamp(0.0, tz=datetime.timezone.utc)
 
-
-from brozzler.browser import Browser, BrowserPool, BrowsingException
-from brozzler.robots import is_permitted_by_robots
+from brozzler.browser import Browser, BrowserPool, BrowsingException  # noqa: E402
+from brozzler.robots import is_permitted_by_robots  # noqa: E402
 
 __all__ = [
     "is_permitted_by_robots",
@@ -422,22 +414,25 @@ __all__ = [
     "suggest_default_chrome_exe",
 ]
 
+# TODO try using importlib.util.find_spec to test for dependency presence
+# rather than try/except on import.
+# See https://docs.astral.sh/ruff/rules/unused-import/#example
 try:
-    import doublethink
+    import doublethink  # noqa: F401
 
     # All of these imports use doublethink for real and are unsafe
     # to do if doublethink is unavailable.
-    from brozzler.frontier import RethinkDbFrontier
+    from brozzler.frontier import RethinkDbFrontier  # noqa: F401
     from brozzler.model import (
-        InvalidJobConf,
-        Job,
-        Page,
-        Site,
-        new_job,
-        new_job_file,
-        new_site,
+        InvalidJobConf,  # noqa: F401
+        Job,  # noqa: F401
+        Page,  # noqa: F401
+        Site,  # noqa: F401
+        new_job,  # noqa: F401
+        new_job_file,  # noqa: F401
+        new_site,  # noqa: F401
     )
-    from brozzler.worker import BrozzlerWorker
+    from brozzler.worker import BrozzlerWorker  # noqa: F401
 
     __all__.extend(
         [

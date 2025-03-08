@@ -16,10 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import datetime
-import random
-import time
-
 import doublethink
 import rethinkdb as rdb
 import structlog
@@ -47,11 +43,11 @@ class RethinkDbFrontier:
         db_logger = self.logger.bind(dbname=self.rr.dbname)
 
         dbs = self.rr.db_list().run()
-        if not self.rr.dbname in dbs:
+        if self.rr.dbname not in dbs:
             db_logger.info("creating rethinkdb database")
             self.rr.db_create(self.rr.dbname).run()
         tables = self.rr.table_list().run()
-        if not "sites" in tables:
+        if "sites" not in tables:
             db_logger.info("creating rethinkdb table 'sites' in database")
             self.rr.table_create(
                 "sites", shards=self.shards, replicas=self.replicas
@@ -60,7 +56,7 @@ class RethinkDbFrontier:
                 "sites_last_disclaimed", [r.row["status"], r.row["last_disclaimed"]]
             ).run()
             self.rr.table("sites").index_create("job_id").run()
-        if not "pages" in tables:
+        if "pages" not in tables:
             db_logger.info("creating rethinkdb table 'pages' in database")
             self.rr.table_create(
                 "pages", shards=self.shards, replicas=self.replicas
@@ -80,7 +76,7 @@ class RethinkDbFrontier:
                 "least_hops",
                 [r.row["site_id"], r.row["brozzle_count"], r.row["hops_from_seed"]],
             ).run()
-        if not "jobs" in tables:
+        if "jobs" not in tables:
             db_logger.info("creating rethinkdb table 'jobs' in database")
             self.rr.table_create(
                 "jobs", shards=self.shards, replicas=self.replicas
@@ -352,7 +348,6 @@ class RethinkDbFrontier:
         site.save()
 
     def _build_fresh_page(self, site, parent_page, url, hops_off=0):
-        url_for_scoping = urlcanon.semantic(url)
         url_for_crawling = urlcanon.whatwg(url)
         hashtag = (url_for_crawling.hash_sign + url_for_crawling.fragment).decode(
             "utf-8"
@@ -461,8 +456,8 @@ class RethinkDbFrontier:
         # "rethinkdb.errors.ReqlDriverError: Query size (167883036) greater than maximum (134217727) in:"
         # there can be many pages and each one can be very large (many videos,
         # in and out of scope links, etc)
-        l = list(pages.values())
-        for batch in (l[i : i + 50] for i in range(0, len(l), 50)):
+        pages_list = list(pages.values())
+        for batch in (pages_list[i : i + 50] for i in range(0, len(pages_list), 50)):
             try:
                 self.logger.debug("inserting/replacing batch of %s pages", len(batch))
                 reql = self.rr.table("pages").insert(batch, conflict="replace")
@@ -471,8 +466,8 @@ class RethinkDbFrontier:
                     'conflict="replace")',
                     batch,
                 )
-                result = reql.run()
-            except Exception as e:
+                reql.run()
+            except Exception:
                 self.logger.exception(
                     "problem inserting/replacing batch of %s pages",
                     len(batch),
