@@ -25,9 +25,6 @@ from importlib.metadata import version as _version
 import structlog
 import urlcanon
 
-from brozzler.browser import Browser, BrowserPool, BrowsingException
-from brozzler.robots import is_permitted_by_robots
-
 __version__ = _version("brozzler")
 
 
@@ -402,6 +399,9 @@ def suggest_default_chrome_exe():
 
 
 EPOCH_UTC = datetime.datetime.fromtimestamp(0.0, tz=datetime.timezone.utc)
+
+from brozzler.browser import Browser, BrowserPool, BrowsingException  # noqa: E402
+from brozzler.robots import is_permitted_by_robots  # noqa: E402
 
 __all__ = [
     "is_permitted_by_robots",
