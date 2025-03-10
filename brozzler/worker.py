@@ -82,6 +82,7 @@ class BrozzlerWorker:
         metrics_port=0,
         registry_url=None,
         env=None,
+        worker_id=None,
     ):
         self._frontier = frontier
         self._service_registry = service_registry
@@ -96,6 +97,9 @@ class BrozzlerWorker:
         self._skip_extract_outlinks = skip_extract_outlinks
         self._skip_visit_hashtags = skip_visit_hashtags
         self._skip_youtube_dl = skip_youtube_dl
+
+        if worker_id is not None:
+            self.logger = self.logger.bind(worker_id=worker_id)
 
         # TODO try using importlib.util.find_spec to test for dependency
         # presence rather than try/except on import.
