@@ -312,12 +312,12 @@ class BrozzlerWorker:
         if not self._needs_browsing(page_headers):
             page_logger.info("needs fetch")
             if site.pdfs_only and not self._is_pdf(page_headers):
-                self.logger.info("skipping non-PDF content: PDFs only option enabled")
+                page_logger.info("skipping non-PDF content: PDFs only option enabled")
             elif site.video_capture in [
                 VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value,
                 VideoCaptureOptions.BLOCK_VIDEO_MIME_TYPES.value,
             ] and self._is_video_type(page_headers):
-                self.logger.info(
+                page_logger.info(
                     "skipping video content: video MIME type capture disabled for site"
                 )
             else:
