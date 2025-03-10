@@ -368,6 +368,7 @@ def brozzle_page(argv=None):
         metrics_port=args.metrics_port,
         registry_url=args.registry_url,
         env=args.env,
+        worker_id=args.worker_id,
     )
 
     def on_screenshot(screenshot_jpeg):
@@ -717,6 +718,7 @@ def brozzler_worker(argv=None):
         metrics_port=args.metrics_port,
         registry_url=args.registry_url,
         env=args.env,
+        worker_id=args.worker_id,
     )
 
     signal.signal(signal.SIGQUIT, dump_state)
