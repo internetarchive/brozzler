@@ -28,7 +28,7 @@ import urllib
 
 import pytest
 
-import brozzler
+import brozzler.cli
 
 arg_parser = argparse.ArgumentParser()
 brozzler.cli.add_common_options(arg_parser)
