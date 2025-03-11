@@ -33,7 +33,7 @@ import requests
 import structlog
 import warcprox
 
-import brozzler
+import brozzler.cli
 
 logger = structlog.get_logger(logger_name=__name__)
 
