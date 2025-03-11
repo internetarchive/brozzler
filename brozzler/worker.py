@@ -284,6 +284,7 @@ class BrozzlerWorker:
             VideoCaptureOptions.DISABLE_YTDLP_CAPTURE.value,
         ]:
             logger.info("skipping ytdlp: site has video capture disabled")
+            return False
 
         ytdlp_url = page.redirect_url if page.redirect_url else page.url
 
@@ -396,7 +397,7 @@ class BrozzlerWorker:
         return {}
 
     def _needs_browsing(self, page_headers) -> bool:
-        return not bool(
+        return not (
             "content-type" in page_headers
             and "html" not in page_headers["content-type"]
         )
