@@ -115,21 +115,24 @@ class RethinkDbFrontier:
                         index="sites_last_disclaimed",
                     )
                     .order_by(r.desc("claimed"), "last_disclaimed")
-                    .fold(
+                    .fold(  # apply functions to sequence
                         {},
-                        lambda acc, site: acc.merge(
-                            r.branch(
+                        lambda acc, site: acc.merge(  #add the following to the accumulator
+                            r.branch(  # if has job_id
                                 site.has_fields("job_id"),
-                                r.object(
+                                r.object(  # then add this: key is stringified job_id,
+                                    # value starts at 0, but is incremented each time a site with
+                                    # the same job_id shows up in the result set. Used to get a
+                                    # value of how many sites for any given job are active
                                     site["job_id"].coerce_to("string"),
                                     acc[site["job_id"].coerce_to("string")]
                                     .default(0)
                                     .add(1),
                                 ),
-                                {},
+                                {},  # else add nothing
                             )
                         ),
-                        emit=lambda acc, site, new_acc: r.branch(
+                        emit=lambda acc, site, new_acc: r.branch(  #big if conditional
                             r.and_(
                                 r.or_(
                                     # Avoid tight loop when unclaimed site was recently disclaimed
@@ -149,14 +152,16 @@ class RethinkDbFrontier:
                                     ),
                                 ),
                             ),
-                            [site["id"]],
-                            [],
+                            [site["id"]],  #then return this
+                            [],  #else nothing
                         ),
                     )
-                    .limit(n)
+                    .limit(n)  # trim results to max we want
                 )
             )
-            .update(
+            .update(  # mark the sites we're claiming, and return changed sites (our final claim
+                # results)
+                #
                 # try to avoid a race condition resulting in multiple
                 # brozzler-workers claiming the same site
                 # see https://github.com/rethinkdb/rethinkdb/issues/3235#issuecomment-60283038
