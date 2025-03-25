@@ -117,7 +117,7 @@ class RethinkDbFrontier:
                     .order_by(r.desc("claimed"), "last_disclaimed")
                     .fold(  # apply functions to sequence
                         {},
-                        lambda acc, site: acc.merge(  #add the following to the accumulator
+                        lambda acc, site: acc.merge(  # add the following to the accumulator
                             r.branch(  # if has job_id
                                 site.has_fields("job_id"),
                                 r.object(  # then add this: key is stringified job_id,
@@ -132,10 +132,11 @@ class RethinkDbFrontier:
                                 {},  # else add nothing
                             )
                         ),
-                        emit=lambda acc, site, new_acc: r.branch(  #big if conditional
+                        emit=lambda acc, site, new_acc: r.branch(  # big if conditional
                             r.and_(
                                 r.or_(
                                     # Avoid tight loop when unclaimed site was recently disclaimed
+                                    # Not claimed and not disclaimed within last 20 seconds
                                     r.and_(
                                         site["claimed"].not_(),
                                         r.or_(
@@ -143,8 +144,10 @@ class RethinkDbFrontier:
                                             site["last_disclaimed"].lt(r.now().sub(20)),
                                         ),
                                     ),
+                                    # or last claimed over 1 hour ago
                                     site["last_claimed"].lt(r.now().sub(60 * 60)),
                                 ),
+                                # and either max_claimed_sites isn't set, or not exceeded
                                 r.or_(
                                     site.has_fields("max_claimed_sites").not_(),
                                     new_acc[site["job_id"].coerce_to("string")].le(
@@ -152,8 +155,8 @@ class RethinkDbFrontier:
                                     ),
                                 ),
                             ),
-                            [site["id"]],  #then return this
-                            [],  #else nothing
+                            [site["id"]],  # then return this
+                            [],  # else nothing
                         ),
                     )
                     .limit(n)  # trim results to max we want
