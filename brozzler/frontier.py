@@ -117,7 +117,8 @@ class RethinkDbFrontier:
                     .order_by(r.desc("claimed"), "last_disclaimed")
                     .fold(  # apply functions to sequence
                         {},
-                        lambda acc, site: acc.merge(  # add the following to the accumulator
+                        lambda acc,
+                        site: acc.merge(  # add the following to the accumulator
                             r.branch(  # if has job_id
                                 site.has_fields("job_id"),
                                 r.object(  # then add this: key is stringified job_id,
