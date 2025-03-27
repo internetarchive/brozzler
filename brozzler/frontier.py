@@ -16,6 +16,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import datetime
+from typing import List, Dict
+
 import doublethink
 import rethinkdb as rdb
 import structlog
@@ -28,6 +31,57 @@ r = rdb.RethinkDB()
 
 class UnexpectedDbResult(Exception):
     pass
+
+
+def filter_claimable_site_ids(
+    active_sites: List[Dict], max_sites_to_claim=1
+) -> List[str]:
+    job_counts = {}
+    claimable_sites = []
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    for site in active_sites:
+        is_claimable = False
+
+        # If site not claimed and not disclaimed within last 20 seconds
+        if not site["claimed"] and site.get("last_disclaimed", 0) <= (
+            now - datetime.timedelta(seconds=20)
+        ):
+            is_claimable = True
+
+        # or site has been disclaimed more than an hour ago
+        if "last_claimed" in site and site["last_claimed"] <= (
+            now - datetime.timedelta(hours=1)
+        ):
+            is_claimable = True
+
+        # Count number of claimed sites per job_id (optional field)
+        if site["claimed"] and "max_claimed_sites" in site and "job_id" in site:
+            job_id = site["job_id"]
+            job_counts[job_id] = job_counts.get(job_id, 0) + 1
+
+        if is_claimable:
+            claimable_sites.append(site)
+
+    site_ids_to_claim = []
+    # gather sites that are under the max without going over
+    for site in claimable_sites:
+        if (
+            "max_claimed_sites" in site
+            and "job_id" in site
+            and job_counts.get(site["job_id"], 0) < site["max_claimed_sites"]
+        ):
+            site_ids_to_claim.append(site["id"])
+            job_counts[site["job_id"]] = job_counts.get(site["job_id"], 0) + 1
+
+        if "max_claimed_sites" not in site or "job_id" not in site:
+            site_ids_to_claim.append(site["id"])
+
+        # short circuit if we already have more than requested
+        if len(site_ids_to_claim) >= max_sites_to_claim:
+            break
+
+    return site_ids_to_claim
 
 
 class RethinkDbFrontier:
@@ -101,68 +155,35 @@ class RethinkDbFrontier:
                         "expected %r to be %r in %r" % (k, expected, result)
                     )
 
-    def claim_sites(self, n=1):
-        self.logger.debug("claiming up to %s sites to brozzle", n)
-        result = (
-            self.rr.table("sites")
-            .get_all(
-                r.args(
-                    r.db(self.rr.dbname)
-                    .table("sites", read_mode="majority")
-                    .between(
-                        ["ACTIVE", r.minval],
-                        ["ACTIVE", r.maxval],
-                        index="sites_last_disclaimed",
-                    )
-                    .order_by(r.desc("claimed"), "last_disclaimed")
-                    .fold(  # apply functions to sequence
-                        {},
-                        lambda acc,
-                        site: acc.merge(  # add the following to the accumulator
-                            r.branch(  # if has job_id
-                                site.has_fields("job_id"),
-                                r.object(  # then add this: key is stringified job_id,
-                                    # value starts at 0, but is incremented each time a site with
-                                    # the same job_id shows up in the result set. Used to get a
-                                    # value of how many sites for any given job are active
-                                    site["job_id"].coerce_to("string"),
-                                    acc[site["job_id"].coerce_to("string")]
-                                    .default(0)
-                                    .add(1),
-                                ),
-                                {},  # else add nothing
-                            )
-                        ),
-                        emit=lambda acc, site, new_acc: r.branch(  # big if conditional
-                            r.and_(
-                                r.or_(
-                                    # Avoid tight loop when unclaimed site was recently disclaimed
-                                    # Not claimed and not disclaimed within last 20 seconds
-                                    r.and_(
-                                        site["claimed"].not_(),
-                                        r.or_(
-                                            site.has_fields("last_disclaimed").not_(),
-                                            site["last_disclaimed"].lt(r.now().sub(20)),
-                                        ),
-                                    ),
-                                    # or last claimed over 1 hour ago
-                                    site["last_claimed"].lt(r.now().sub(60 * 60)),
-                                ),
-                                # and either max_claimed_sites isn't set, or not exceeded
-                                r.or_(
-                                    site.has_fields("max_claimed_sites").not_(),
-                                    new_acc[site["job_id"].coerce_to("string")].le(
-                                        site["max_claimed_sites"]
-                                    ),
-                                ),
-                            ),
-                            [site["id"]],  # then return this
-                            [],  # else nothing
-                        ),
-                    )
-                    .limit(n)  # trim results to max we want
-                )
+    def get_active_sites(self) -> List[Dict]:
+        active_sites = (
+            self.rr.table("sites", read_mode="majority")
+            .between(
+                ["ACTIVE", r.minval],
+                ["ACTIVE", r.maxval],
+                index="sites_last_disclaimed",
             )
+            .pluck(
+                "id",
+                "last_disclaimed",
+                "claimed",
+                "last_claimed",
+                "job_id",
+                "max_claimed_sites",
+            )
+            .order_by(r.desc("claimed"), "last_disclaimed")
+            .run()
+        )
+        return active_sites
+
+    def claim_sites(self, n=1) -> List[Dict]:
+        self.logger.debug("claiming up to %s sites to brozzle", n)
+
+        active_sites = self.get_active_sites()
+        site_ids_to_claim = filter_claimable_site_ids(active_sites, n)
+        result = (
+            self.rr.table("sites", read_mode="majority")
+            .get_all(r.args(site_ids_to_claim))
             .update(  # mark the sites we're claiming, and return changed sites (our final claim
                 # results)
                 #
