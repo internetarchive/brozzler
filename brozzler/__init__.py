@@ -22,7 +22,6 @@ import logging
 import threading
 from importlib.metadata import version as _version
 
-import doublethink
 import structlog
 import urlcanon
 
@@ -399,7 +398,7 @@ def suggest_default_chrome_exe():
     return "chromium-browser"
 
 
-EPOCH_UTC = datetime.datetime.fromtimestamp(0.0, tz=doublethink.UTC)
+EPOCH_UTC = datetime.datetime.fromtimestamp(0.0, tz=datetime.timezone.utc)
 
 from brozzler.browser import Browser, BrowserPool, BrowsingException  # noqa: E402
 from brozzler.robots import is_permitted_by_robots  # noqa: E402

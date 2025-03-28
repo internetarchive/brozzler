@@ -40,10 +40,10 @@ brozzler.cli.configure_logging(args)
 def rethinker(request):
     db = request.param if hasattr(request, "param") else "ignoreme"
     servers = os.environ.get("BROZZLER_RETHINKDB_SERVERS", "localhost")
-    return doublethink.Rethinker(db=db, servers=servers.split(","))  # built-in db
+    return doublethink.Rethinker(db=db, servers=servers.split(","))
 
 
-@pytest.mark.parametrize("rethinker", ["rethinkdb"], indirect=True)
+@pytest.mark.parametrize("rethinker", ["rethinkdb"], indirect=True)  # build-in db
 def test_rethinkdb_up(rethinker):
     """Checks that rethinkdb is listening and looks sane."""
     rr = rethinker
@@ -269,7 +269,9 @@ def test_resume_job(rethinker):
     site1 = list(frontier.job_sites(job.id))[0]
     site2 = list(frontier.job_sites(job.id))[1]
 
-    job.stop_requested = datetime.datetime.utcnow().replace(tzinfo=doublethink.UTC)
+    job.stop_requested = datetime.datetime.now(datetime.timezone.utc).replace(
+        tzinfo=doublethink.UTC
+    )
     job.save()
 
     # should raise a CrawlStopped
@@ -317,7 +319,9 @@ def test_resume_job(rethinker):
     assert site2.starts_and_stops[1]["stop"] is None
 
     # simulate a site stop request
-    site1.stop_requested = datetime.datetime.utcnow().replace(tzinfo=doublethink.UTC)
+    site1.stop_requested = datetime.datetime.now(datetime.timezone.utc).replace(
+        tzinfo=doublethink.UTC
+    )
     site1.save()
 
     # should not raise a CrawlStopped
@@ -849,7 +853,9 @@ def test_honor_stop_request(rethinker):
     frontier.honor_stop_request(site)
 
     # set job.stop_requested
-    job.stop_requested = datetime.datetime.utcnow().replace(tzinfo=doublethink.UTC)
+    job.stop_requested = datetime.datetime.now(datetime.timezone.utc).replace(
+        tzinfo=doublethink.UTC
+    )
     job.save()
     with pytest.raises(brozzler.CrawlStopped):
         frontier.honor_stop_request(site)
@@ -951,6 +957,18 @@ def test_max_claimed_sites(rethinker):
     assert len(claimed_sites) == 2
     with pytest.raises(brozzler.NothingToClaim):
         frontier.claim_sites(3)
+
+    # clean slate for the next one
+    rr.table("jobs").delete().run()
+    rr.table("sites").delete().run()
+
+    job = brozzler.new_job(frontier, job_conf)
+    claimed_sites = frontier.claim_sites(2)
+    assert len(claimed_sites) == 2
+    claimed_sites = frontier.claim_sites(1)
+    assert len(claimed_sites) == 1
+    with pytest.raises(brozzler.NothingToClaim):
+        claimed_sites = frontier.claim_sites(1)
 
     # clean slate for the next one
     rr.table("jobs").delete().run()
