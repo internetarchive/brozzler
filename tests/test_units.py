@@ -262,6 +262,21 @@ blocks:
 # Some changes to the brozzler ydl interface not represented in this test
 # https://github.com/internetarchive/brozzler/issues/330
 @pytest.mark.xfail
+def test_ydl_proxy_down():
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    for not_listening_proxy in ("127.0.0.1:4", "127.0.0.1:%s" % sock.getsockname()[1]):
+        worker = brozzler.BrozzlerWorker(frontier=None, proxy=not_listening_proxy)
+        site = brozzler.Site(
+            None, {"id": str(uuid.uuid4()), "seed": "http://example.com/"}
+        )
+        page = brozzler.Page(None, {"url": "http://example.com/"})
+
+        # youtube-dl fetch
+        with tempfile.TemporaryDirectory(prefix="brzl-ydl-"):
+            with pytest.raises(brozzler.ProxyError):
+                brozzler.ydl.do_youtube_dl(worker, site, page)
+
 def test_proxy_down():
     """
     Test all fetching scenarios raise `brozzler.ProxyError` when proxy is down.
@@ -287,11 +302,6 @@ def test_proxy_down():
             brozzler.is_permitted_by_robots(
                 site, "http://example.com/", proxy=not_listening_proxy
             )
-
-        # youtube-dl fetch
-        with tempfile.TemporaryDirectory(prefix="brzl-ydl-"):
-            with pytest.raises(brozzler.ProxyError):
-                brozzler.ydl.do_youtube_dl(worker, site, page)
 
         # raw fetch
         with pytest.raises(brozzler.ProxyError):
@@ -557,7 +567,7 @@ def test_limit_failures():
     site = mock.Mock()
     site.status = "ACTIVE"
     site.active_brozzling_time = 0
-    site.starts_and_stops = [{"start": datetime.datetime.utcnow()}]
+    site.starts_and_stops = [{"start": datetime.datetime.now(datetime.timezone.utc)}]
 
     rr = mock.Mock()
     rr.servers = [mock.Mock()]
