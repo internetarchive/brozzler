@@ -277,6 +277,7 @@ def test_ydl_proxy_down():
             with pytest.raises(brozzler.ProxyError):
                 brozzler.ydl.do_youtube_dl(worker, site, page)
 
+
 def test_proxy_down():
     """
     Test all fetching scenarios raise `brozzler.ProxyError` when proxy is down.

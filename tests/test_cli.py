@@ -76,8 +76,11 @@ def test_run_command(capsys, cmd):
     )
     out, err = proc.communicate()
     # Remove lines from syntax warning in imported library
-    filtered_lines = [line for line in err.decode("utf-8").splitlines() if "reppy" not in line and
-                    "re.compile" not in line]
+    filtered_lines = [
+        line
+        for line in err.decode("utf-8").splitlines()
+        if "reppy" not in line and "re.compile" not in line
+    ]
     assert filtered_lines == []
     assert out == ("brozzler %s - %s\n" % (brozzler.__version__, cmd)).encode("ascii")
 

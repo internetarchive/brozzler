@@ -17,7 +17,7 @@ limitations under the License.
 """
 
 import datetime
-from typing import List, Dict
+from typing import Dict, List
 
 import doublethink
 import rethinkdb as rdb
@@ -34,7 +34,9 @@ class UnexpectedDbResult(Exception):
 
 
 def filter_claimable_site_ids(
-    active_sites: List[Dict], max_sites_to_claim=1
+    active_sites: List[Dict],
+    reclaim_cooldown: int,
+    max_sites_to_claim=1,
 ) -> List[str]:
     job_counts = {}
     claimable_sites = []
@@ -45,7 +47,7 @@ def filter_claimable_site_ids(
 
         # If site not claimed and not disclaimed within last 20 seconds
         if not site["claimed"] and site.get("last_disclaimed", 0) <= (
-            now - datetime.timedelta(seconds=20)
+            now - datetime.timedelta(seconds=reclaim_cooldown)
         ):
             is_claimable = True
 
@@ -176,11 +178,13 @@ class RethinkDbFrontier:
         )
         return active_sites
 
-    def claim_sites(self, n=1) -> List[Dict]:
+    def claim_sites(self, n=1, reclaim_cooldown=20) -> List[Dict]:
         self.logger.debug("claiming up to %s sites to brozzle", n)
 
         active_sites = self.get_active_sites()
-        site_ids_to_claim = filter_claimable_site_ids(active_sites, n)
+        site_ids_to_claim = filter_claimable_site_ids(
+            active_sites, reclaim_cooldown, max_sites_to_claim=n
+        )
         result = (
             self.rr.table("sites", read_mode="majority")
             .get_all(r.args(site_ids_to_claim))

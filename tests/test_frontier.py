@@ -20,6 +20,7 @@ limitations under the License.
 
 import argparse
 import datetime
+import itertools
 import logging
 import os
 import time
@@ -933,6 +934,7 @@ def test_max_claimed_sites(rethinker):
     rr.table("sites").delete().run()
 
     job_conf = {
+        "id": 1,
         "seeds": [
             {"url": "http://example.com/1"},
             {"url": "http://example.com/2"},
@@ -942,7 +944,7 @@ def test_max_claimed_sites(rethinker):
         ],
         "max_claimed_sites": 3,
     }
-
+    seeds_seen = []
     job = brozzler.new_job(frontier, job_conf)
 
     assert job.id
@@ -962,13 +964,88 @@ def test_max_claimed_sites(rethinker):
     rr.table("jobs").delete().run()
     rr.table("sites").delete().run()
 
-    job = brozzler.new_job(frontier, job_conf)
-    claimed_sites = frontier.claim_sites(2)
-    assert len(claimed_sites) == 2
-    claimed_sites = frontier.claim_sites(1)
-    assert len(claimed_sites) == 1
+
+def test_max_claimed_sites_cross_job(rethinker):
+    rr = rethinker
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # clean slate
+    rr.table("jobs").delete().run()
+    rr.table("sites").delete().run()
+
+    job_conf_1 = {
+        "id": 1,
+        "seeds": [
+            {"url": "http://example.com/1"},
+            {"url": "http://example.com/2"},
+            {"url": "http://example.com/3"},
+            {"url": "http://example.com/4"},
+            {"url": "http://example.com/5"},
+        ],
+        "max_claimed_sites": 3,
+    }
+    job_conf_2 = {
+        "id": 2,
+        "seeds": [
+            {"url": "http://example.com/6"},
+            {"url": "http://example.com/7"},
+            {"url": "http://example.com/8"},
+            {"url": "http://example.com/9"},
+            {"url": "http://example.com/10"},
+        ],
+        "max_claimed_sites": 3,
+    }
+
+    seeds_seen = []
+    job_1 = brozzler.new_job(frontier, job_conf_1)
+    job_2 = brozzler.new_job(frontier, job_conf_2)
+
+    assert len(list(frontier.job_sites(job_1.id))) == 5
+    assert len(list(frontier.job_sites(job_2.id))) == 5
+
+    claimed_sites_1 = frontier.claim_sites(4)
+    assert len(claimed_sites_1) == 4
+
+    sites_per_job = {}
+    for site in claimed_sites_1:
+        sites_per_job[site["job_id"]] = sites_per_job.get(site["job_id"], 0) + 1
+
+    # 2 jobs, max of 3 each.
+    assert len(sites_per_job.keys()) == 2
+    assert sites_per_job[1] + sites_per_job[2] == 4
+    assert sites_per_job[1] <= 3 and sites_per_job[2] <= 3
+
+    # 6 sites left in queue, but only 2 are still claimable due to max
+    claimed_sites_2 = frontier.claim_sites(6)
+    assert len(claimed_sites_2) == 2
+
+    # disclaim sites
+    for site in itertools.chain(claimed_sites_1, claimed_sites_2):
+        frontier.disclaim_site(site)
+        seeds_seen.append(site["seed"])
+
+    # Only 4 sites left in queue, that aren't recently claimed
+    claimed_sites_3 = frontier.claim_sites(6)
+    assert len(claimed_sites_3) == 4
+
     with pytest.raises(brozzler.NothingToClaim):
         claimed_sites = frontier.claim_sites(1)
+        assert len(claimed_sites) == 1
+
+    for site in claimed_sites_3:
+        seeds_seen.append(site["seed"])
+
+    # ensure all sites have been claimed at this point
+    for seed in itertools.chain(job_conf_1["seeds"], job_conf_2["seeds"]):
+        assert seed["url"] in seeds_seen
+
+    # All unclaimed sites have been recently disclaimed and are not claimable
+    with pytest.raises(brozzler.NothingToClaim):
+        frontier.claim_sites(3)
+
+    # Disable reclaim cooldown. With 4 claimed, we should have 2 available
+    claimed_sites_4 = frontier.claim_sites(4, reclaim_cooldown=0)
+    assert len(claimed_sites_4) == 2
 
     # clean slate for the next one
     rr.table("jobs").delete().run()

@@ -271,7 +271,7 @@ def test_proxy_down():
         chrome_exe = brozzler.suggest_default_chrome_exe()
 
         with brozzler.Browser(chrome_exe=chrome_exe) as browser:
-            browser.stop() # We're manually instantiating the browser without arguments,
+            browser.stop()  # We're manually instantiating the browser without arguments,
             # so it is running without a proxy. Stop it first.
             with pytest.raises(brozzler.ProxyError):
                 worker.brozzle_page(browser, site, page)
