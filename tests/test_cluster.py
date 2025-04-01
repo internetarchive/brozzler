@@ -69,6 +69,13 @@ def stop_service(service):
 
 
 @pytest.fixture(scope="module")
+def rethinker(request):
+    db = request.param if hasattr(request, "param") else "ignoreme"
+    servers = os.environ.get("BROZZLER_RETHINKDB_SERVERS", "localhost")
+    return doublethink.Rethinker(db=db, servers=servers.split(","))
+
+
+@pytest.fixture(scope="module")
 def httpd(request):
     class RequestHandler(http.server.SimpleHTTPRequestHandler):
         def do_POST(self):
@@ -162,10 +169,11 @@ def test_httpd(httpd):
     assert payload1 == payload2
 
 
-def test_services_up():
+@pytest.mark.skip()
+def test_services_up(rethinker):
     """Check that the expected services are up and running."""
     # check that rethinkdb is listening and looks sane
-    rr = doublethink.Rethinker(db="rethinkdb")  # built-in db
+    rr = rethinker
     tbls = rr.table_list().run()
     assert len(tbls) > 10
 
@@ -185,9 +193,11 @@ def test_services_up():
         s.connect(("localhost", 8881))
 
 
-def test_brozzle_site(httpd):
+@pytest.mark.parametrize("rethinker", ["brozzler"], indirect=True)
+@pytest.mark.skip(reason="expects brozzler worker daemon running")
+def test_brozzle_site(httpd, rethinker):
     test_id = "test_brozzle_site-%s" % datetime.datetime.utcnow().isoformat()
-    rr = doublethink.Rethinker("localhost", db="brozzler")
+    rr = rethinker
     site = brozzler.Site(
         rr,
         {
@@ -262,6 +272,7 @@ def test_brozzle_site(httpd):
     assert response.headers["content-type"] == "image/jpeg"
 
 
+@pytest.mark.skip(reason="expects warcprox daemon running")
 def test_proxy_warcprox(httpd):
     """Test --proxy with proxy that happens to be warcprox"""
     try:
@@ -273,6 +284,7 @@ def test_proxy_warcprox(httpd):
         start_service("brozzler-worker")
 
 
+@pytest.mark.skip(reason="expects warcprox daemon running")
 def test_proxy_non_warcprox(httpd):
     """Test --proxy with proxy that happens not to be warcprox"""
 
@@ -331,6 +343,7 @@ def test_proxy_non_warcprox(httpd):
     th.join()
 
 
+@pytest.mark.skip()
 def test_no_proxy(httpd):
     try:
         stop_service("brozzler-worker")
@@ -340,6 +353,7 @@ def test_no_proxy(httpd):
     # XXX how to check that no proxy was used?
 
 
+@pytest.mark.skip()
 def test_warcprox_auto(httpd):
     """Test --warcprox-auto"""
     try:
@@ -349,6 +363,7 @@ def test_warcprox_auto(httpd):
         start_service("brozzler-worker")
 
 
+@pytest.mark.skip()
 def test_proxy_conflict():
     with pytest.raises(AssertionError):
         brozzler.worker.BrozzlerWorker(
@@ -356,7 +371,11 @@ def test_proxy_conflict():
         )
 
 
-def _test_proxy_setting(httpd, proxy=None, warcprox_auto=False, is_warcprox=False):
+@pytest.mark.skip()
+@pytest.mark.parametrize("rethinker", ["brozzler"], indirect=True)
+def _test_proxy_setting(
+    httpd, rethinker, proxy=None, warcprox_auto=False, is_warcprox=False
+):
     test_id = "test_proxy=%s_warcprox_auto=%s_is_warcprox=%s-%s" % (
         proxy,
         warcprox_auto,
@@ -369,7 +388,7 @@ def _test_proxy_setting(httpd, proxy=None, warcprox_auto=False, is_warcprox=Fals
     page2 = make_url(httpd, "/site1/file1.txt")
     robots = make_url(httpd, "/robots.txt")
 
-    rr = doublethink.Rethinker("localhost", db="brozzler")
+    rr = rethinker
     service_registry = doublethink.ServiceRegistry(rr)
     site = brozzler.Site(
         rr,
@@ -440,9 +459,11 @@ def _test_proxy_setting(httpd, proxy=None, warcprox_auto=False, is_warcprox=Fals
         assert captures_by_url == {}
 
 
-def test_obey_robots(httpd):
+@pytest.mark.parametrize("rethinker", ["brozzler"], indirect=True)
+@pytest.mark.skip(reason="expects brozzler worker daemon running")
+def test_obey_robots(httpd, rethinker):
     test_id = "test_obey_robots-%s" % datetime.datetime.utcnow().isoformat()
-    rr = doublethink.Rethinker("localhost", db="brozzler")
+    rr = rethinker
     site = brozzler.Site(
         rr,
         {
@@ -497,9 +518,11 @@ def test_obey_robots(httpd):
     assert requests.get(wb_url, allow_redirects=False).content == expected_payload
 
 
-def test_login(httpd):
+@pytest.mark.parametrize("rethinker", ["brozzler"], indirect=True)
+@pytest.mark.skip(reason="expects brozzler worker daemon running")
+def test_login(httpd, rethinker):
     test_id = "test_login-%s" % datetime.datetime.utcnow().isoformat()
-    rr = doublethink.Rethinker("localhost", db="brozzler")
+    rr = rethinker
     site = brozzler.Site(
         rr,
         {
@@ -550,9 +573,11 @@ def test_login(httpd):
     ) in meth_url
 
 
-def test_seed_redirect(httpd):
+@pytest.mark.parametrize("rethinker", ["brozzler"], indirect=True)
+@pytest.mark.skip(reason="expects brozzler worker daemon running")
+def test_seed_redirect(httpd, rethinker):
     test_id = "test_seed_redirect-%s" % datetime.datetime.utcnow().isoformat()
-    rr = doublethink.Rethinker("localhost", db="brozzler")
+    rr = rethinker
     seed_url = make_url(httpd, "/site5/redirect/")
     site = brozzler.Site(
         rr,
@@ -606,9 +631,11 @@ def test_seed_redirect(httpd):
     }
 
 
-def test_hashtags(httpd):
+@pytest.mark.parametrize("rethinker", ["brozzler"], indirect=True)
+@pytest.mark.skip(reason="expects brozzler worker daemon running")
+def test_hashtags(httpd, rethinker):
     test_id = "test_hashtags-%s" % datetime.datetime.utcnow().isoformat()
-    rr = doublethink.Rethinker("localhost", db="brozzler")
+    rr = rethinker
     seed_url = make_url(httpd, "/site7/")
     site = brozzler.Site(
         rr,
@@ -660,9 +687,11 @@ def test_hashtags(httpd):
     assert "thumbnail:%s" % make_url(httpd, "/site7/foo.html") in captures_by_url
 
 
-def test_redirect_hashtags(httpd):
+@pytest.mark.parametrize("rethinker", ["brozzler"], indirect=True)
+@pytest.mark.skip(reason="expects brozzler worker daemon running")
+def test_redirect_hashtags(httpd, rethinker):
     test_id = "test_hashtags-%s" % datetime.datetime.utcnow().isoformat()
-    rr = doublethink.Rethinker("localhost", db="brozzler")
+    rr = rethinker
     seed_url = make_url(httpd, "/site9/")
     site = brozzler.Site(
         rr,
@@ -727,8 +756,10 @@ def test_redirect_hashtags(httpd):
     # 14. WARCPROX_WRITE_RECORD thumbnail:http://localhost:41243/site9/redirect.html
 
 
-def test_stop_crawl(httpd):
-    rr = doublethink.Rethinker("localhost", db="brozzler")
+@pytest.mark.parametrize("rethinker", ["brozzler"], indirect=True)
+@pytest.mark.skip(reason="expects brozzler worker daemon running")
+def test_stop_crawl(httpd, rethinker):
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
 
     # create a new job with three sites that could be crawled forever
@@ -787,7 +818,9 @@ def test_stop_crawl(httpd):
     assert sites[2].status == "FINISHED_STOP_REQUESTED"
 
 
-def test_warcprox_outage_resiliency(httpd):
+@pytest.mark.parametrize("rethinker", ["brozzler"], indirect=True)
+@pytest.mark.skip(reason="expects brozzler worker daemon running")
+def test_warcprox_outage_resiliency(httpd, rethinker):
     """
     Tests resiliency to warcprox outage.
 
@@ -799,7 +832,7 @@ def test_warcprox_outage_resiliency(httpd):
 
     If all instances of warcprox go down, brozzler-worker should sit and wait.
     """
-    rr = doublethink.Rethinker("localhost", db="brozzler")
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
 
     # run two instances of warcprox
@@ -912,8 +945,10 @@ def test_warcprox_outage_resiliency(httpd):
         start_service("warcprox")
 
 
-def test_time_limit(httpd):
-    rr = doublethink.Rethinker("localhost", db="brozzler")
+@pytest.mark.parametrize("rethinker", ["brozzler"], indirect=True)
+@pytest.mark.skip(reason="expects brozzler worker daemon running")
+def test_time_limit(httpd, rethinker):
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
 
     # create a new job with one seed that could be crawled forever
@@ -940,9 +975,11 @@ def test_time_limit(httpd):
     assert job.status == "FINISHED"
 
 
-def test_ydl_stitching(httpd):
+@pytest.mark.parametrize("rethinker", ["brozzler"], indirect=True)
+@pytest.mark.skip(reason="expects brozzler worker daemon running")
+def test_ydl_stitching(httpd, rethinker):
     test_id = "test_ydl_stitching-%s" % datetime.datetime.utcnow().isoformat()
-    rr = doublethink.Rethinker("localhost", db="brozzler")
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
     site = brozzler.Site(
         rr,

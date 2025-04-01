@@ -1052,6 +1052,38 @@ def test_max_claimed_sites_cross_job(rethinker):
     rr.table("sites").delete().run()
 
 
+def test_max_claimed_sites_load_perf(rethinker):
+    rr = rethinker
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # clean slate
+    rr.table("jobs").delete().run()
+    rr.table("sites").delete().run()
+
+    job_conf = {
+        "id": 1,
+        "seeds": [],
+        "max_claimed_sites": 25,
+    }
+    for i in range(1, 20):
+        job_conf["seeds"].clear()
+        for j in range(0, 1000):
+            job_conf["id"] = i
+            job_conf["seeds"].append({"url": "http://example.com/{}".format(j)})
+
+        assert (len(job_conf["seeds"])) == 1000
+        brozzler.new_job(frontier, job_conf)
+        assert len(list(frontier.job_sites(i))) == 1000
+
+    claim_start_time = time.perf_counter()
+    claimed_sites = frontier.claim_sites(50)
+    claim_end_time = time.perf_counter()
+    assert claim_end_time - claim_start_time < 2
+    assert len(claimed_sites) == 50
+    rr.table("jobs").delete().run()
+    rr.table("sites").delete().run()
+
+
 def test_choose_warcprox(rethinker):
     rr = rethinker
     svcreg = doublethink.ServiceRegistry(rr)
