@@ -37,10 +37,12 @@ command-line utility to pass in a single URL to crawl. You can also add a new
 job defined with a YAML file (see `job-const.rst`) and start a local Brozzler
 worker for a more complex crawl.
 
-Mac instructions:
+macOS instructions:
 
 ::
 
+    # install chromium
+    brew cask install chromium
     # install and start rethinkdb
     brew install rethinkdb
     # no brew? try rethinkdb's installer: https://www.rethinkdb.com/docs/install/osx/
