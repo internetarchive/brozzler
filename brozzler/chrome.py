@@ -222,9 +222,8 @@ class Chrome:
             chrome_args.append("--ignore-certificate-errors")
         if proxy:
             chrome_args.append("--proxy-server=%s" % proxy)
-        self.logger.info(f"Chrome launched with args {chrome_args} proxy is {proxy}")
         chrome_args.append("about:blank")
-        self.logger.info("running", chrome_args=subprocess.list2cmdline(chrome_args))
+        self.logger.info("running", chrome_args=subprocess.list2cmdline(chrome_args), proxy=proxy)
         # start_new_session - new process group so we can kill the whole group
         self.chrome_process = subprocess.Popen(
             chrome_args,
