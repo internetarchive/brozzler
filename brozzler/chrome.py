@@ -223,7 +223,9 @@ class Chrome:
         if proxy:
             chrome_args.append("--proxy-server=%s" % proxy)
         chrome_args.append("about:blank")
-        self.logger.info("running", chrome_args=subprocess.list2cmdline(chrome_args), proxy=proxy)
+        self.logger.info(
+            "running", chrome_args=subprocess.list2cmdline(chrome_args), proxy=proxy
+        )
         # start_new_session - new process group so we can kill the whole group
         self.chrome_process = subprocess.Popen(
             chrome_args,
