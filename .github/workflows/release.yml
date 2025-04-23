@@ -1,0 +1,23 @@
+name: Release
+
+on:
+  pull_request:
+  push:
+    tags:
+      - '**[0-9]+.[0-9]+.[0-9]+*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish package
+        run: uv publish
+        if: ${{ !github.event.pull_request }}
