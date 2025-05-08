@@ -1,0 +1,9 @@
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: "qa"
+    allow:
+      - dependency-name: yt-dlp
