@@ -277,7 +277,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         "format_sort": ["res:720", "vcodec:h264", "acodec:aac"],
         # skip live streams
         "match_filter": match_filter_func("!is_live"),
-        "extractor_args": {"youtube": {"skip": ["hls"]}, "generic": {"impersonate": [""]}},
+        "extractor_args": {"generic": {"impersonate": [""]}},
         # --cache-dir local or..
         # this looked like a problem with nsf-mounted homedir, maybe not a problem for brozzler on focal?
         "cache_dir": "/home/archiveit",
