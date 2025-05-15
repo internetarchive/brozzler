@@ -172,6 +172,8 @@ def configure_logging(args):
                 structlog.processors.CallsiteParameter.FILENAME,
                 structlog.processors.CallsiteParameter.FUNC_NAME,
                 structlog.processors.CallsiteParameter.LINENO,
+                structlog.processors.CallsiteParameter.PROCESS,
+                structlog.processors.CallsiteParameter.THREAD_NAME,
             ],
         ),
         decorate_logger_name,
