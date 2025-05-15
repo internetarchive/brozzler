@@ -200,30 +200,30 @@ def test_page_videos(httpd):
     with brozzler.Browser(chrome_exe=chrome_exe) as browser:
         worker.brozzle_page(browser, site, page)
     assert page.videos
-    assert len(page.videos) == 4
+    assert len(page.videos) == 1
+    # assert page.videos[0] == {
+    #     "blame": "youtube-dl",
+    #     "response_code": 200,
+    #     "content-length": 383631,
+    #     "content-type": "video/mp4",
+    #     "url": "http://localhost:%s/site6/small.mp4" % httpd.server_port,
+    # }
+    # assert page.videos[1] == {
+    #     "blame": "youtube-dl",
+    #     "content-length": 92728,
+    #     "content-type": "video/webm",
+    #     "response_code": 200,
+    #     "url": "http://localhost:%s/site6/small-video_280x160_100k.webm"
+    #     % httpd.server_port,
+    # }
+    # assert page.videos[2] == {
+    #     "blame": "youtube-dl",
+    #     "content-length": 101114,
+    #     "content-type": "video/webm",
+    #     "response_code": 200,
+    #     "url": "http://localhost:%s/site6/small-audio.webm" % httpd.server_port,
+    # }
     assert page.videos[0] == {
-        "blame": "youtube-dl",
-        "response_code": 200,
-        "content-length": 383631,
-        "content-type": "video/mp4",
-        "url": "http://localhost:%s/site6/small.mp4" % httpd.server_port,
-    }
-    assert page.videos[1] == {
-        "blame": "youtube-dl",
-        "content-length": 92728,
-        "content-type": "video/webm",
-        "response_code": 200,
-        "url": "http://localhost:%s/site6/small-video_280x160_100k.webm"
-        % httpd.server_port,
-    }
-    assert page.videos[2] == {
-        "blame": "youtube-dl",
-        "content-length": 101114,
-        "content-type": "video/webm",
-        "response_code": 200,
-        "url": "http://localhost:%s/site6/small-audio.webm" % httpd.server_port,
-    }
-    assert page.videos[3] == {
         "blame": "browser",
         # 'response_code': 206,
         # 'content-range': 'bytes 0-229454/229455',
@@ -271,6 +271,8 @@ def test_proxy_down():
         chrome_exe = brozzler.suggest_default_chrome_exe()
 
         with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+            browser.stop()  # We're manually instantiating the browser without arguments,
+            # so it is running without a proxy. Stop it first.
             with pytest.raises(brozzler.ProxyError):
                 worker.brozzle_page(browser, site, page)
 

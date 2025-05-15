@@ -20,7 +20,9 @@ limitations under the License.
 
 import argparse
 import datetime
+import itertools
 import logging
+import os
 import time
 
 import doublethink
@@ -35,15 +37,23 @@ args.log_level = logging.INFO
 brozzler.cli.configure_logging(args)
 
 
-def test_rethinkdb_up():
+@pytest.fixture(scope="module")
+def rethinker(request):
+    db = request.param if hasattr(request, "param") else "ignoreme"
+    servers = os.environ.get("BROZZLER_RETHINKDB_SERVERS", "localhost")
+    return doublethink.Rethinker(db=db, servers=servers.split(","))
+
+
+@pytest.mark.parametrize("rethinker", ["rethinkdb"], indirect=True)  # build-in db
+def test_rethinkdb_up(rethinker):
     """Checks that rethinkdb is listening and looks sane."""
-    rr = doublethink.Rethinker(db="rethinkdb")  # built-in db
+    rr = rethinker
     tbls = rr.table_list().run()
     assert len(tbls) > 10
 
 
-def test_basics():
-    rr = doublethink.Rethinker(db="ignoreme")
+def test_basics(rethinker):
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
     job_conf = {
         "seeds": [{"url": "http://example.com"}, {"url": "https://example.org/"}]
@@ -73,6 +83,7 @@ def test_basics():
         "last_disclaimed": brozzler.EPOCH_UTC,
         "scope": {"accepts": [{"ssurt": "com,example,//http:/"}]},
         "seed": "http://example.com",
+        "skip_ytdlp": None,
         "starts_and_stops": [
             {"start": sites[0].starts_and_stops[0]["start"], "stop": None}
         ],
@@ -86,6 +97,7 @@ def test_basics():
         "last_disclaimed": brozzler.EPOCH_UTC,
         "scope": {"accepts": [{"ssurt": "org,example,//https:/"}]},
         "seed": "https://example.org/",
+        "skip_ytdlp": None,
         "starts_and_stops": [
             {
                 "start": sites[1].starts_and_stops[0]["start"],
@@ -100,28 +112,36 @@ def test_basics():
     assert pages[0] == {
         "brozzle_count": 0,
         "claimed": False,
+        "failed_attempts": 0,
+        "hop_path": None,
         "hops_from_seed": 0,
         "hops_off": 0,
         "id": brozzler.Page.compute_id(sites[0].id, "http://example.com"),
         "job_id": job.id,
         "needs_robots_check": True,
         "priority": 1000,
+        "retry_after": None,
         "site_id": sites[0].id,
         "url": "http://example.com",
+        "via_page_url": None,
     }
     pages = list(frontier.site_pages(sites[1].id))
     assert len(pages) == 1
     assert pages[0] == {
         "brozzle_count": 0,
         "claimed": False,
+        "failed_attempts": 0,
+        "hop_path": None,
         "hops_from_seed": 0,
         "hops_off": 0,
         "id": brozzler.Page.compute_id(sites[1].id, "https://example.org/"),
         "job_id": job.id,
         "needs_robots_check": True,
         "priority": 1000,
+        "retry_after": None,
         "site_id": sites[1].id,
         "url": "https://example.org/",
+        "via_page_url": None,
     }
 
     # test "brozzled" parameter of frontier.site_pages
@@ -140,13 +160,13 @@ def test_basics():
     assert len(list(frontier.site_pages(sites[1].id, brozzled=False))) == 0
 
 
-def test_resume_job():
+def test_resume_job(rethinker):
     """
     Tests that the right stuff gets twiddled in rethinkdb when we "start" and
     "finish" crawling a job. Doesn't actually crawl anything.
     """
     # vagrant brozzler-worker isn't configured to look at the "ignoreme" db
-    rr = doublethink.Rethinker(db="ignoreme")
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
     job_conf = {"seeds": [{"url": "http://example.com/"}]}
     job = brozzler.new_job(frontier, job_conf)
@@ -250,7 +270,9 @@ def test_resume_job():
     site1 = list(frontier.job_sites(job.id))[0]
     site2 = list(frontier.job_sites(job.id))[1]
 
-    job.stop_requested = datetime.datetime.utcnow().replace(tzinfo=doublethink.UTC)
+    job.stop_requested = datetime.datetime.now(datetime.timezone.utc).replace(
+        tzinfo=doublethink.UTC
+    )
     job.save()
 
     # should raise a CrawlStopped
@@ -298,7 +320,9 @@ def test_resume_job():
     assert site2.starts_and_stops[1]["stop"] is None
 
     # simulate a site stop request
-    site1.stop_requested = datetime.datetime.utcnow().replace(tzinfo=doublethink.UTC)
+    site1.stop_requested = datetime.datetime.now(datetime.timezone.utc).replace(
+        tzinfo=doublethink.UTC
+    )
     site1.save()
 
     # should not raise a CrawlStopped
@@ -343,12 +367,12 @@ def test_resume_job():
     assert site2.starts_and_stops[1]["stop"] is None
 
 
-def test_time_limit():
+def test_time_limit(rethinker):
     # XXX test not thoroughly adapted to change in time accounting, since
     # starts_and_stops is no longer used to enforce time limits
 
     # vagrant brozzler-worker isn't configured to look at the "ignoreme" db
-    rr = doublethink.Rethinker("localhost", db="ignoreme")
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
     site = brozzler.Site(rr, {"seed": "http://example.com/", "time_limit": 99999})
     brozzler.new_site(frontier, site)
@@ -395,8 +419,8 @@ def test_time_limit():
         frontier.enforce_time_limit(site)
 
 
-def test_field_defaults():
-    rr = doublethink.Rethinker("localhost", db="ignoreme")
+def test_field_defaults(rethinker):
+    rr = rethinker
 
     # page
     brozzler.Page.table_ensure(rr)
@@ -466,8 +490,8 @@ def test_field_defaults():
     assert kob.starts_and_stops
 
 
-def test_scope_and_schedule_outlinks():
-    rr = doublethink.Rethinker("localhost", db="ignoreme")
+def test_scope_and_schedule_outlinks(rethinker):
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
     site = brozzler.Site(rr, {"seed": "http://example.com/"})
     parent_page = brozzler.Page(
@@ -510,8 +534,8 @@ def test_scope_and_schedule_outlinks():
         assert brozzler.Page.load(rr, id)
 
 
-def test_parent_url_scoping():
-    rr = doublethink.Rethinker("localhost", db="ignoreme")
+def test_parent_url_scoping(rethinker):
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
 
     # scope rules that look at parent page url should consider both the
@@ -624,8 +648,8 @@ def test_parent_url_scoping():
     assert parent_page.outlinks["accepted"] == []
 
 
-def test_completed_page():
-    rr = doublethink.Rethinker("localhost", db="ignoreme")
+def test_completed_page(rethinker):
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
 
     # redirect that changes scope surt
@@ -718,8 +742,8 @@ def test_completed_page():
     assert page.claimed is False
 
 
-def test_seed_page():
-    rr = doublethink.Rethinker("localhost", db="ignoreme")
+def test_seed_page(rethinker):
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
 
     site = brozzler.Site(rr, {"seed": "http://example.com/a/"})
@@ -742,8 +766,8 @@ def test_seed_page():
     assert frontier.seed_page(site.id) == page0
 
 
-def test_hashtag_seed():
-    rr = doublethink.Rethinker("localhost", db="ignoreme")
+def test_hashtag_seed(rethinker):
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
 
     # no hash tag
@@ -771,8 +795,8 @@ def test_hashtag_seed():
     ]
 
 
-def test_hashtag_links():
-    rr = doublethink.Rethinker("localhost", db="test_hashtag_links")
+def test_hashtag_links(rethinker):
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
 
     site = brozzler.Site(rr, {"seed": "http://example.org/"})
@@ -813,8 +837,8 @@ def test_hashtag_links():
     assert pages[2].priority == 12
 
 
-def test_honor_stop_request():
-    rr = doublethink.Rethinker("localhost", db="ignoreme")
+def test_honor_stop_request(rethinker):
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
 
     # 1. test stop request on job
@@ -830,7 +854,9 @@ def test_honor_stop_request():
     frontier.honor_stop_request(site)
 
     # set job.stop_requested
-    job.stop_requested = datetime.datetime.utcnow().replace(tzinfo=doublethink.UTC)
+    job.stop_requested = datetime.datetime.now(datetime.timezone.utc).replace(
+        tzinfo=doublethink.UTC
+    )
     job.save()
     with pytest.raises(brozzler.CrawlStopped):
         frontier.honor_stop_request(site)
@@ -854,8 +880,8 @@ def test_honor_stop_request():
         frontier.honor_stop_request(site)
 
 
-def test_claim_site():
-    rr = doublethink.Rethinker("localhost", db="ignoreme")
+def test_claim_site(rethinker):
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
 
     rr.table("sites").delete().run()  # clean slate
@@ -897,10 +923,10 @@ def test_claim_site():
     rr.table("sites").get(claimed_site.id).delete().run()
 
 
-def test_max_claimed_sites():
+def test_max_claimed_sites(rethinker):
     # max_claimed_sites is a brozzler job setting that puts a cap on the number
     # of the job's sites that can be brozzled simultaneously across the cluster
-    rr = doublethink.Rethinker("localhost", db="ignoreme")
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
 
     # clean slate
@@ -908,6 +934,7 @@ def test_max_claimed_sites():
     rr.table("sites").delete().run()
 
     job_conf = {
+        "id": 1,
         "seeds": [
             {"url": "http://example.com/1"},
             {"url": "http://example.com/2"},
@@ -917,7 +944,7 @@ def test_max_claimed_sites():
         ],
         "max_claimed_sites": 3,
     }
-
+    seeds_seen = []
     job = brozzler.new_job(frontier, job_conf)
 
     assert job.id
@@ -938,8 +965,127 @@ def test_max_claimed_sites():
     rr.table("sites").delete().run()
 
 
-def test_choose_warcprox():
-    rr = doublethink.Rethinker("localhost", db="ignoreme")
+def test_max_claimed_sites_cross_job(rethinker):
+    rr = rethinker
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # clean slate
+    rr.table("jobs").delete().run()
+    rr.table("sites").delete().run()
+
+    job_conf_1 = {
+        "id": 1,
+        "seeds": [
+            {"url": "http://example.com/1"},
+            {"url": "http://example.com/2"},
+            {"url": "http://example.com/3"},
+            {"url": "http://example.com/4"},
+            {"url": "http://example.com/5"},
+        ],
+        "max_claimed_sites": 3,
+    }
+    job_conf_2 = {
+        "id": 2,
+        "seeds": [
+            {"url": "http://example.com/6"},
+            {"url": "http://example.com/7"},
+            {"url": "http://example.com/8"},
+            {"url": "http://example.com/9"},
+            {"url": "http://example.com/10"},
+        ],
+        "max_claimed_sites": 3,
+    }
+
+    seeds_seen = []
+    job_1 = brozzler.new_job(frontier, job_conf_1)
+    job_2 = brozzler.new_job(frontier, job_conf_2)
+
+    assert len(list(frontier.job_sites(job_1.id))) == 5
+    assert len(list(frontier.job_sites(job_2.id))) == 5
+
+    claimed_sites_1 = frontier.claim_sites(4)
+    assert len(claimed_sites_1) == 4
+
+    sites_per_job = {}
+    for site in claimed_sites_1:
+        sites_per_job[site["job_id"]] = sites_per_job.get(site["job_id"], 0) + 1
+
+    # 2 jobs, max of 3 each.
+    assert len(sites_per_job.keys()) == 2
+    assert sites_per_job[1] + sites_per_job[2] == 4
+    assert sites_per_job[1] <= 3 and sites_per_job[2] <= 3
+
+    # 6 sites left in queue, but only 2 are still claimable due to max
+    claimed_sites_2 = frontier.claim_sites(6)
+    assert len(claimed_sites_2) == 2
+
+    # disclaim sites
+    for site in itertools.chain(claimed_sites_1, claimed_sites_2):
+        frontier.disclaim_site(site)
+        seeds_seen.append(site["seed"])
+
+    # Only 4 sites left in queue, that aren't recently claimed
+    claimed_sites_3 = frontier.claim_sites(6)
+    assert len(claimed_sites_3) == 4
+
+    with pytest.raises(brozzler.NothingToClaim):
+        claimed_sites = frontier.claim_sites(1)
+        assert len(claimed_sites) == 1
+
+    for site in claimed_sites_3:
+        seeds_seen.append(site["seed"])
+
+    # ensure all sites have been claimed at this point
+    for seed in itertools.chain(job_conf_1["seeds"], job_conf_2["seeds"]):
+        assert seed["url"] in seeds_seen
+
+    # All unclaimed sites have been recently disclaimed and are not claimable
+    with pytest.raises(brozzler.NothingToClaim):
+        frontier.claim_sites(3)
+
+    # Disable reclaim cooldown. With 4 claimed, we should have 2 available
+    claimed_sites_4 = frontier.claim_sites(4, reclaim_cooldown=0)
+    assert len(claimed_sites_4) == 2
+
+    # clean slate for the next one
+    rr.table("jobs").delete().run()
+    rr.table("sites").delete().run()
+
+
+def test_max_claimed_sites_load_perf(rethinker):
+    rr = rethinker
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # clean slate
+    rr.table("jobs").delete().run()
+    rr.table("sites").delete().run()
+
+    job_conf = {
+        "id": 1,
+        "seeds": [],
+        "max_claimed_sites": 25,
+    }
+    for i in range(1, 20):
+        job_conf["seeds"].clear()
+        for j in range(0, 1000):
+            job_conf["id"] = i
+            job_conf["seeds"].append({"url": "http://example.com/{}".format(j)})
+
+        assert (len(job_conf["seeds"])) == 1000
+        brozzler.new_job(frontier, job_conf)
+        assert len(list(frontier.job_sites(i))) == 1000
+
+    claim_start_time = time.perf_counter()
+    claimed_sites = frontier.claim_sites(50)
+    claim_end_time = time.perf_counter()
+    assert claim_end_time - claim_start_time < 2
+    assert len(claimed_sites) == 50
+    rr.table("jobs").delete().run()
+    rr.table("sites").delete().run()
+
+
+def test_choose_warcprox(rethinker):
+    rr = rethinker
     svcreg = doublethink.ServiceRegistry(rr)
     frontier = brozzler.RethinkDbFrontier(rr)
 
@@ -1060,8 +1206,8 @@ def test_choose_warcprox():
     rr.table("services").delete().run()
 
 
-def test_max_hops_off():
-    rr = doublethink.Rethinker("localhost", db="ignoreme")
+def test_max_hops_off(rethinker):
+    rr = rethinker
     frontier = brozzler.RethinkDbFrontier(rr)
     site = brozzler.Site(
         rr,
@@ -1120,44 +1266,56 @@ def test_max_hops_off():
     assert {
         "brozzle_count": 0,
         "claimed": False,
+        "failed_attempts": 0,
         "hashtags": [],
+        "hop_path": "L",
         "hops_from_seed": 1,
         "hops_off": 0,
         "id": brozzler.Page.compute_id(site.id, "http://example.com/toot"),
         "job_id": None,
         "needs_robots_check": False,
         "priority": 12,
+        "retry_after": None,
         "site_id": site.id,
         "url": "http://example.com/toot",
         "via_page_id": seed_page.id,
+        "via_page_url": "http://example.com/",
     } in pages
     assert {
         "brozzle_count": 0,
         "claimed": False,
+        "failed_attempts": 0,
         "hashtags": [],
+        "hop_path": "L",
         "hops_from_seed": 1,
         "hops_off": 1,
         "id": brozzler.Page.compute_id(site.id, "http://foo.org/"),
         "job_id": None,
         "needs_robots_check": False,
         "priority": 12,
+        "retry_after": None,
         "site_id": site.id,
         "url": "http://foo.org/",
         "via_page_id": seed_page.id,
+        "via_page_url": "http://example.com/",
     } in pages
     assert {
         "brozzle_count": 0,
         "claimed": False,
+        "failed_attempts": 0,
         "hashtags": [],
+        "hop_path": "L",
         "hops_from_seed": 1,
         "hops_off": 1,
         "id": brozzler.Page.compute_id(site.id, "https://example.com/toot"),
         "job_id": None,
         "needs_robots_check": False,
         "priority": 12,
+        "retry_after": None,
         "site_id": site.id,
         "url": "https://example.com/toot",
         "via_page_id": seed_page.id,
+        "via_page_url": "http://example.com/",
     } in pages
 
     # next hop is past max_hops_off, but normal in scope url is in scope
@@ -1173,16 +1331,20 @@ def test_max_hops_off():
     assert foo_page == {
         "brozzle_count": 0,
         "claimed": False,
+        "failed_attempts": 0,
         "hashtags": [],
+        "hop_path": "L",
         "hops_from_seed": 1,
         "hops_off": 1,
         "id": brozzler.Page.compute_id(site.id, "http://foo.org/"),
         "job_id": None,
         "needs_robots_check": False,
         "priority": 12,
+        "retry_after": None,
         "site_id": site.id,
         "url": "http://foo.org/",
         "via_page_id": seed_page.id,
+        "via_page_url": "http://example.com/",
         "outlinks": {
             "accepted": ["http://example.com/blah"],
             "blocked": [],
@@ -1194,14 +1356,18 @@ def test_max_hops_off():
     assert {
         "brozzle_count": 0,
         "claimed": False,
+        "failed_attempts": 0,
         "hashtags": [],
+        "hop_path": "LL",
         "hops_from_seed": 2,
         "hops_off": 0,
         "id": brozzler.Page.compute_id(site.id, "http://example.com/blah"),
         "job_id": None,
         "needs_robots_check": False,
         "priority": 11,
+        "retry_after": None,
         "site_id": site.id,
         "url": "http://example.com/blah",
         "via_page_id": foo_page.id,
+        "via_page_url": "http://foo.org/",
     } in pages
