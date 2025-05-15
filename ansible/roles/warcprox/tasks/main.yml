@@ -18,7 +18,7 @@
     virtualenv: '{{venv_root}}/warcprox-ve3'
     virtualenv_python: python3
     extra_args: --no-input --upgrade --pre --cache-dir=/tmp/pip-cache
-    virtualenv_command: python3 /usr/lib/python3/dist-packages/virtualenv.py
+    virtualenv_command: python3 -mvirtualenv
   become: true
   become_user: '{{user}}'
   notify:
