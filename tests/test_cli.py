@@ -18,12 +18,20 @@ limitations under the License.
 """
 
 import importlib.metadata
+import os
 import subprocess
 
 import doublethink
 import pytest
 
 import brozzler.cli
+
+
+@pytest.fixture(scope="module")
+def rethinker(request):
+    db = request.param if hasattr(request, "param") else "ignoreme"
+    servers = os.environ.get("BROZZLER_RETHINKDB_SERVERS", "localhost")
+    return doublethink.Rethinker(db=db, servers=servers.split(","))
 
 
 def console_scripts():
@@ -67,14 +75,21 @@ def test_run_command(capsys, cmd):
         [cmd, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     out, err = proc.communicate()
-    assert err == b""
+    # Remove lines from syntax warning in imported library
+    filtered_lines = [
+        line
+        for line in err.decode("utf-8").splitlines()
+        if "reppy" not in line and "re.compile" not in line
+    ]
+    assert filtered_lines == []
     assert out == ("brozzler %s - %s\n" % (brozzler.__version__, cmd)).encode("ascii")
 
 
-def test_rethinkdb_up():
+@pytest.mark.parametrize("rethinker", ["rethinkdb"], indirect=True)  # build-in db
+def test_rethinkdb_up(rethinker):
     """Check that rethinkdb is up and running."""
     # check that rethinkdb is listening and looks sane
-    rr = doublethink.Rethinker(db="rethinkdb")  # built-in db
+    rr = rethinker
     tbls = rr.table_list().run()
     assert len(tbls) > 10
 
