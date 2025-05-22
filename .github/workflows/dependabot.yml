@@ -9,6 +9,22 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'internetarchive/brozzler'
     steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Test new yt-dlp
+        run: |
+          set -euo pipefail
+
+          uv sync --extra yt-dlp --extra rethinkdb --extra warcprox --python 3.12
+
+          # Warcprox has to be running to get video capture results
+          .venv/bin/warcprox &
+          warcprox_pid=$!
+
+          uv run scripts/ytdlp_test.py
+
+          kill $warcprox_pid
       - name: Dependabot metadata
         id: metadata
         uses: dependabot/fetch-metadata@d7267f607e9d3fb96fc2fbe83e0af444713e90b7
