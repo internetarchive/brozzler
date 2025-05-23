@@ -1074,7 +1074,7 @@ wheels = [
 
 [[package]]
 name = "warcprox"
-version = "2.6.2"
+version = "2.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -1089,9 +1089,9 @@ dependencies = [
     { name = "urllib3" },
     { name = "warctools" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bb/50/d4bdd176b63c7820503e5850686ca34cbe296718ca45e224fbe88eb29685/warcprox-2.6.2.tar.gz", hash = "sha256:bae708c3a8afbe815bf059af57a416538eeea22456ef1c014f23da26801e5dff", size = 85368 }
+sdist = { url = "https://files.pythonhosted.org/packages/0e/84/0f87e7d9d4f3a3bd8f39b2a8fcb6319943f2ec920b171bc7a10a240797b9/warcprox-2.7.0.tar.gz", hash = "sha256:2849356fd4fc2a451fc8ac6d6ae016adcf2dbff46cfdf2e9966e9497370d6205", size = 85760 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2a/ef/c44f6cf2b9e349a5a87c32e733f9f1fb1ae91f33a9b7d592a50ee1c46ca5/warcprox-2.6.2-py3-none-any.whl", hash = "sha256:6904364bfc7b5070c5dfb255916893878e4acb21c7bcad570f4fd24bb74bb71b", size = 67640 },
+    { url = "https://files.pythonhosted.org/packages/85/85/ab872b1b7cfeeb4f08d738d179cee7c7b5f75bd41846953841ad75e43095/warcprox-2.7.0-py3-none-any.whl", hash = "sha256:79739aec4197f266c8898b1e57fa6d3e2127d674239eaa4585a39608ee6630af", size = 68314 },
 ]
 
 [[package]]
