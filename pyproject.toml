@@ -1,5 +1,6 @@
 [project]
 name = "brozzler"
+version = "1.6.13"
 authors = [
   { name="Noah Levitt", email="nlevitt@archive.org" },
 ]
@@ -14,7 +15,6 @@ readme = "README.rst"
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
 dependencies = [
@@ -31,7 +31,7 @@ dependencies = [
   "prometheus-client>=0.20.0",
   "structlog>=25.1.0",
 ]
-dynamic = [ "version", "license", "scripts" ]
+license = { text = "Apache-2.0" }
 
 [project.optional-dependencies]
 yt-dlp = ["yt-dlp>=2024.7.25"]
@@ -44,6 +44,22 @@ rethinkdb = [
   # can be removed when we can upgrade to 2.4.10.post1
   "setuptools>=75.8.0;python_version>='3.12'",
 ]
+
+[project.scripts]
+brozzle-page = "brozzler.cli:brozzle_page"
+brozzler-new-job = "brozzler.cli:brozzler_new_job"
+brozzler-new-site = "brozzler.cli:brozzler_new_site"
+brozzler-worker = "brozzler.cli:brozzler_worker"
+brozzler-ensure-tables = "brozzler.cli:brozzler_ensure_tables"
+brozzler-list-captures = "brozzler.cli:brozzler_list_captures"
+brozzler-list-jobs = "brozzler.cli:brozzler_list_jobs"
+brozzler-list-sites = "brozzler.cli:brozzler_list_sites"
+brozzler-list-pages = "brozzler.cli:brozzler_list_pages"
+brozzler-stop-crawl = "brozzler.cli:brozzler_stop_crawl"
+brozzler-purge = "brozzler.cli:brozzler_purge"
+brozzler-dashboard = "brozzler.dashboard:main"
+brozzler-easy = "brozzler.easy:main"
+brozzler-wayback = "brozzler.pywb:main"
 
 [project.urls]
 Homepage = "https://github.com/internetarchive/brozzler"

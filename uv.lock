@@ -151,6 +151,7 @@ wheels = [
 
 [[package]]
 name = "brozzler"
+version = "1.6.13"
 source = { editable = "." }
 dependencies = [
     { name = "cerberus" },
