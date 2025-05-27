@@ -17,7 +17,33 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
-dynamic = [ "version", "license", "scripts", "dependencies", "optional-dependencies" ]
+dependencies = [
+  "PyYAML>=5.1",
+  "reppy==0.3.4",
+  "requests>=2.21",
+  "websocket-client==1.8.0",
+  "pillow>=5.2.0",
+  "urlcanon>=0.1.dev23",
+  "cerberus>=1.0.1",
+  "jinja2>=2.10",
+  "cryptography>=2.3",
+  "python-magic>=0.4.15",
+  "prometheus-client>=0.20.0",
+  "structlog>=25.1.0",
+]
+dynamic = [ "version", "license", "scripts" ]
+
+[project.optional-dependencies]
+yt-dlp = ["yt-dlp>=2024.7.25"]
+dashboard = ["flask>=1.0", "gunicorn>=19.8.1"]
+warcprox = ["warcprox>=2.4.31"]
+rethinkdb = [
+  "rethinkdb==2.4.9",
+  "doublethink==0.4.9",
+  # Needed because of rethinkdb 2.4.9;
+  # can be removed when we can upgrade to 2.4.10.post1
+  "setuptools>=75.8.0;python_version>='3.12'",
+]
 
 [project.urls]
 Homepage = "https://github.com/internetarchive/brozzler"
