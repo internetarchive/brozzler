@@ -31,13 +31,16 @@ def brozzle_page(worker, page) -> bool:
 
 worker = brozzler.BrozzlerWorker(None, proxy="localhost:8000")
 
-videos = [
+youtube_videos = [
     # Short YouTube video
     "https://www.youtube.com/watch?v=AdtZtvlFi9o",
     # Long YouTube video (former livestream we've had trouble capturing)
     "https://www.youtube.com/watch?v=v4f6InE9X_c",
     # YouTube Short
     "https://www.youtube.com/shorts/ee_lH4qlfzc",
+]
+
+videos = [
     # Vimeo
     "https://vimeo.com/175568834",
     # Instagram
@@ -56,6 +59,14 @@ videos = [
 
 successes = 0
 min_successes = math.floor(len(videos) * 0.75) or 1
+
+# We expect YouTube videos to fail, so we separate these out and
+# don't count these towards failures. It's still useful to perform
+# the setup and attempt so we get insight into whether other things
+# may have messed up.
+for url in youtube_videos:
+    page = brozzler.Page(None, {"url": url})
+    brozzle_page(worker, page)
 
 for url in videos:
     page = brozzler.Page(None, {"url": url})
