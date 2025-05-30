@@ -38,6 +38,7 @@ from urllib3.exceptions import ProxyError, TimeoutError
 
 import brozzler
 import brozzler.browser
+from brozzler.model import VideoCaptureOptions
 
 from . import metrics
 
@@ -60,7 +61,6 @@ class BrozzlerWorker:
         self,
         frontier,
         service_registry=None,
-        skip_av_seeds=None,
         ytdlp_proxy_endpoints=None,
         max_browsers=1,
         chrome_exe="chromium-browser",
@@ -86,7 +86,6 @@ class BrozzlerWorker:
     ):
         self._frontier = frontier
         self._service_registry = service_registry
-        self._skip_av_seeds = skip_av_seeds
         self._ytdlp_proxy_endpoints = ytdlp_proxy_endpoints
         self._max_browsers = max_browsers
 
@@ -278,35 +277,23 @@ class BrozzlerWorker:
         img.save(out, "jpeg", quality=95)
         return out.getbuffer()
 
-    def should_ytdlp(self, logger, site, page, page_status, skip_av_seeds):
+    def should_ytdlp(self, logger, site, page, page_status):
         # called only after we've passed needs_browsing() check
 
         if page_status != 200:
             logger.info("skipping ytdlp: non-200 page status", page_status=page_status)
             return False
-        if site.skip_ytdlp:
-            logger.info("skipping ytdlp: site marked skip_ytdlp")
+        if site.video_capture in [
+            VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value,
+            VideoCaptureOptions.DISABLE_YTDLP_CAPTURE.value,
+        ]:
+            logger.info("skipping ytdlp: site has video capture disabled")
             return False
 
         ytdlp_url = page.redirect_url if page.redirect_url else page.url
 
         if "chrome-error:" in ytdlp_url:
             return False
-
-        ytdlp_seed = (
-            site["metadata"]["ait_seed_id"]
-            if "metadata" in site and "ait_seed_id" in site["metadata"]
-            else None
-        )
-
-        # TODO: develop UI and refactor
-        if ytdlp_seed:
-            if site.skip_ytdlp is None and ytdlp_seed in skip_av_seeds:
-                logger.info("skipping ytdlp: site in skip_av_seeds")
-                site.skip_ytdlp = True
-                return False
-            else:
-                site.skip_ytdlp = False
 
         return True
 
@@ -329,7 +316,17 @@ class BrozzlerWorker:
 
         if not self._needs_browsing(page_headers):
             page_logger.info("needs fetch")
-            self._fetch_url(site, page=page)
+            if site.pdfs_only and not self._is_pdf(page_headers):
+                page_logger.info("skipping non-PDF content: PDFs only option enabled")
+            elif site.video_capture in [
+                VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value,
+                VideoCaptureOptions.BLOCK_VIDEO_MIME_TYPES.value,
+            ] and self._is_video_type(page_headers):
+                page_logger.info(
+                    "skipping video content: video MIME type capture disabled for site"
+                )
+            else:
+                self._fetch_url(site, page=page)
         else:
             page_logger.info("needs browsing")
             try:
@@ -344,7 +341,7 @@ class BrozzlerWorker:
                 page_logger.info("page interstitial shown (http auth)")
 
             if enable_youtube_dl and self.should_ytdlp(
-                page_logger, site, page, status_code, self._skip_av_seeds
+                page_logger, site, page, status_code
             ):
                 try:
                     from . import ydl
@@ -403,13 +400,29 @@ class BrozzlerWorker:
             url_logger.warning("Failed to get headers", exc_info=True)
         return {}
 
-    def _needs_browsing(self, page_headers):
-        if (
+    def _needs_browsing(self, page_headers) -> bool:
+        return not (
             "content-type" in page_headers
             and "html" not in page_headers["content-type"]
-        ):
-            return False
-        return True
+        )
+
+    def _is_video_type(self, page_headers) -> bool:
+        """
+        Determines if the page's Content-Type header specifies that it contains
+        a video.
+        """
+        return (
+            "content-type" in page_headers and "video" in page_headers["content-type"]
+        )
+
+    def _is_pdf(self, page_headers) -> bool:
+        """
+        Determines if the page's Content-Type header specifies that it is a PDF.
+        """
+        return (
+            "content-type" in page_headers
+            and "application/pdf" in page_headers["content-type"]
+        )
 
     @metrics.brozzler_browsing_duration_seconds.time()
     @metrics.brozzler_in_progress_browses.track_inprogress()
