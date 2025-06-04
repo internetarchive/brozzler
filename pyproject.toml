@@ -34,7 +34,7 @@ dependencies = [
 license = { text = "Apache-2.0" }
 
 [project.optional-dependencies]
-yt-dlp = ["yt-dlp>=2024.7.25"]
+yt-dlp = ["yt-dlp[default,curl-cffi]>=2024.7.25"]
 dashboard = ["flask>=1.0", "gunicorn>=19.8.1"]
 warcprox = ["warcprox>=2.4.31"]
 rethinkdb = [
