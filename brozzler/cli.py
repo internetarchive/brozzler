@@ -667,21 +667,6 @@ def brozzler_worker(argv=None):
         finally:
             signal.signal(signal.SIGQUIT, dump_state)
 
-    def get_skip_av_seeds():
-        # TODO: develop UI and refactor
-        SKIP_AV_SEEDS_FILE = "/opt/local/brozzler/skip_av_seeds.txt"
-        try:
-            # make set from seed IDs in SKIP_AV_SEEDS_FILE
-            with open(SKIP_AV_SEEDS_FILE) as skips:
-                skip_av_seeds = {int(line) for line in skips.readlines()}
-                logger.info(
-                    "running with skip_av_seeds file", skip_av_seeds=SKIP_AV_SEEDS_FILE
-                )
-        except Exception:
-            skip_av_seeds = set()
-            logger.info("running with empty skip_av_seeds")
-        return skip_av_seeds
-
     def get_ytdlp_proxy_endpoints():
         YTDLP_PROXY_ENDPOINTS_FILE = args.ytdlp_proxy_file
         try:
@@ -701,12 +686,10 @@ def brozzler_worker(argv=None):
     rr = rethinker(args)
     frontier = brozzler.RethinkDbFrontier(rr)
     service_registry = doublethink.ServiceRegistry(rr)
-    skip_av_seeds_from_file = get_skip_av_seeds()
     ytdlp_proxy_endpoints_from_file = get_ytdlp_proxy_endpoints()
     worker = brozzler.worker.BrozzlerWorker(
         frontier,
         service_registry,
-        skip_av_seeds=skip_av_seeds_from_file,
         ytdlp_proxy_endpoints=ytdlp_proxy_endpoints_from_file,
         max_browsers=int(args.max_browsers),
         chrome_exe=args.chrome_exe,
