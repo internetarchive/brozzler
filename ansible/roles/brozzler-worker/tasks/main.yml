@@ -60,7 +60,7 @@
   file: path={{venv_root}}/websockify-ve3 state=directory owner={{user}}
  
 #get python3 version for checks below 
-- shell: "python --version"
+- shell: "python3 --version"
   register: python_installed
   
  #websockify's dependency numpy's latest version no longer supports 3.5
