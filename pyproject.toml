@@ -14,8 +14,13 @@ description = "Distributed web crawling with browsers"
 readme = "README.rst"
 requires-python = ">=3.9"
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
     "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: System :: Archiving",
 ]
 dependencies = [
   "PyYAML>=5.1",
