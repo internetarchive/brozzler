@@ -17,7 +17,7 @@ Brozzler is designed to work in conjunction with `warcprox
 Requirements
 ------------
 
-- Python 3.8 or later
+- Python 3.9 or later
 - RethinkDB deployment
 - Chromium or Google Chrome >= version 64
 

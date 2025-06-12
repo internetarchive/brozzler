@@ -12,7 +12,7 @@ maintainers = [
 ]
 description = "Distributed web crawling with browsers"
 readme = "README.rst"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
@@ -31,7 +31,7 @@ dependencies = [
   "prometheus-client>=0.20.0",
   "structlog>=25.1.0",
 ]
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 
 [project.optional-dependencies]
 yt-dlp = ["yt-dlp[default,curl-cffi]>=2024.7.25"]
