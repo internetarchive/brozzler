@@ -110,7 +110,7 @@ name = "brotlicffi"
 version = "1.1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi" },
+    { name = "cffi", marker = "implementation_name != 'cpython'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/95/9d/70caa61192f570fcf0352766331b735afa931b4c6bc9a348a0925cc13288/brotlicffi-1.1.0.0.tar.gz", hash = "sha256:b77827a689905143f87915310b93b273ab17888fd43ef350d4832c4a71083c13", size = 465192, upload-time = "2023-09-14T14:22:40.707Z" }
 wheels = [
@@ -165,7 +165,7 @@ warcprox = [
     { name = "warcprox" },
 ]
 yt-dlp = [
-    { name = "yt-dlp", extra = ["curl-cffi"] },
+    { name = "yt-dlp", extra = ["curl-cffi", "default"] },
 ]
 
 [package.dev-dependencies]
@@ -428,39 +428,16 @@ wheels = [
 name = "curl-cffi"
 version = "0.5.10"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.12' and implementation_name == 'cpython' and os_name == 'nt'",
-    "python_full_version < '3.12' and implementation_name == 'cpython' and os_name == 'nt'",
-]
 dependencies = [
-    { name = "cffi", marker = "implementation_name == 'cpython' and os_name == 'nt'" },
+    { name = "cffi", marker = "implementation_name == 'cpython'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/57/43d0e4475c336282deb7acf5285c35fbdce6a041d1583dbe30e0d761117d/curl_cffi-0.5.10.tar.gz", hash = "sha256:55bac4b73e2d80ceeaabea33270fc8ca6ace594128a46710242f2e688b4f8bfc", size = 35231, upload-time = "2023-11-25T10:07:20.473Z" }
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/30/18/72d6d4f5ec0db3ea68dde9ad775f9985ce22e699a47ab5b4cfcf8d74f3f5/curl_cffi-0.5.10-cp37-abi3-macosx_10_9_x86_64.whl", hash = "sha256:892603dab5e56fb72bfff7ae969136138971f63f63defe98232e1ec55cb0f1c6", size = 4930761, upload-time = "2023-11-25T10:07:08.441Z" },
+    { url = "https://files.pythonhosted.org/packages/23/25/3c9fdb7e08e4722eb9e7ebcc59c74d7eaf32ca4a878a3fdf581030940431/curl_cffi-0.5.10-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:9937b8e13b1a6963c63e155b6621ec74649965105efedb919bc226fe731861cc", size = 2158498, upload-time = "2023-11-25T10:15:44.424Z" },
+    { url = "https://files.pythonhosted.org/packages/16/2e/df2c475bae057af3fff4d288a388062032e7005ad312e8f55490faef82e2/curl_cffi-0.5.10-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b537595b9610a4dd0927c09823925b4e32b1ce0fd04385bfc5bb72ab830720e6", size = 6890322, upload-time = "2023-11-25T10:07:12.034Z" },
+    { url = "https://files.pythonhosted.org/packages/93/04/0d57a51690451437f72563031036ea4f4b529bc0cfd8e8d93487075cbe80/curl_cffi-0.5.10-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1b2bc8822d23415f6533c8b750475e9bbc76764025fe1dcb5866dc033607fd7b", size = 7208146, upload-time = "2023-11-25T10:07:15.331Z" },
     { url = "https://files.pythonhosted.org/packages/4e/70/0d4d667287d54cb4daf8ce67068565c8e09e4f839a835119cd27f229a446/curl_cffi-0.5.10-cp37-abi3-win_amd64.whl", hash = "sha256:f9a1874b860c4e8db49bdfd9b9d4dc39999a1397d271ec78624c35c838e9e92a", size = 2643997, upload-time = "2023-11-25T10:07:18.005Z" },
-]
-
-[[package]]
-name = "curl-cffi"
-version = "0.7.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.12' and implementation_name == 'cpython' and os_name != 'nt'",
-    "python_full_version < '3.12' and implementation_name == 'cpython' and os_name != 'nt'",
-]
-dependencies = [
-    { name = "certifi", marker = "implementation_name == 'cpython' and os_name != 'nt'" },
-    { name = "cffi", marker = "implementation_name == 'cpython' and os_name != 'nt'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/63/31/00b346537ece64d835fc5d7310f89acee5318fdd9fa72247913274e28817/curl_cffi-0.7.1.tar.gz", hash = "sha256:8a64b12432146a3f178c4792c91188c18f50cc4b76e908ffc3206442c4610894", size = 133179, upload-time = "2024-07-13T09:07:44.938Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a4/11/0be8b95d21dc34811c68c45ab382ed20dfbfb4cbc8899f732d8b04651fd9/curl_cffi-0.7.1-cp38-abi3-macosx_10_9_x86_64.whl", hash = "sha256:54edae42b25f30048fd6c2de06ed9df37bbe6ffdce14cc8a27c79f8c7d47977a", size = 5101433, upload-time = "2024-07-13T09:07:25.409Z" },
-    { url = "https://files.pythonhosted.org/packages/78/67/8dd0c86435a3a7860fafbd72d572498e89a2ccc5ac2654bd3ebd26eecbb1/curl_cffi-0.7.1-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:5c347e221ddbbde2275aa7cde00933402638c2062a3984104f66b1bb20528545", size = 2482887, upload-time = "2024-07-13T09:07:28.656Z" },
-    { url = "https://files.pythonhosted.org/packages/ae/61/8015cfcfdd7487f2cfeca90a18fd5504d29192b4700af93494d6915f508d/curl_cffi-0.7.1-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:99a5cc1d9ca59692cc5c175da0b397104283a0fea7515045fd22a7296296d82b", size = 5712868, upload-time = "2024-07-13T09:07:30.623Z" },
-    { url = "https://files.pythonhosted.org/packages/d2/d5/0569f453994c94901e85392e72a5df268646e8f19b829a8c807ddd3b996f/curl_cffi-0.7.1-cp38-abi3-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:0719fec4b5e1c300bf58411b1cea26cb91c44492fcf5a14ef684fe085f4d8b6e", size = 5518309, upload-time = "2024-07-13T09:07:32.741Z" },
-    { url = "https://files.pythonhosted.org/packages/25/25/56cbb1fc9cff46999a11ccb75dab1ee62be629d6e871142c37d26ed460d7/curl_cffi-0.7.1-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1e53ab76259b575017d3260854456ba6a3fbe31cee9b44edd275d4ea9f0f20e1", size = 6073331, upload-time = "2024-07-13T09:07:34.83Z" },
-    { url = "https://files.pythonhosted.org/packages/49/68/66b047ee7664554d97adc3e4f566d7afcaf57a8d5979508002eecea0da09/curl_cffi-0.7.1-cp38-abi3-musllinux_1_1_aarch64.whl", hash = "sha256:39d04ee1fc5f668ce53234051153031b3a3714300b772379e276565ad7cd244c", size = 6218360, upload-time = "2024-07-13T09:07:36.791Z" },
-    { url = "https://files.pythonhosted.org/packages/56/08/3d03b147545cb14f4d1dfe24a581d6671522e465586fc57efeec4f9e5807/curl_cffi-0.7.1-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:e60f0dca3a55298898c62c21f0d8461e61aab96d033a7e9cead6160462728f7f", size = 6001290, upload-time = "2024-07-13T09:07:38.947Z" },
 ]
 
 [[package]]
@@ -1170,9 +1147,18 @@ wheels = [
 
 [[package]]
 name = "yt-dlp"
-version = "2024.10.22"
+version = "2025.5.22"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
+sdist = { url = "https://files.pythonhosted.org/packages/09/93/695cef32796dc7e76597e68a267a34a1b4e29bef8e12da445fa7c0ad1e55/yt_dlp-2025.5.22.tar.gz", hash = "sha256:ea73854c5dabc124f29a35a8fae9bc5d422ef3231bebeea2bdfa82ac191a9c29", size = 3017654, upload-time = "2025-05-22T09:58:35.694Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/25/68/4f108193ebce3ee7beb5f9a21daa6bc875e261150b510be468626f151959/yt_dlp-2025.5.22-py3-none-any.whl", hash = "sha256:a49c4b76afeaded6254c3e2b759d8d5a13271aa963d5fccb51fe059d1c313151", size = 3264137, upload-time = "2025-05-22T09:58:32.613Z" },
+]
+
+[package.optional-dependencies]
+curl-cffi = [
+    { name = "curl-cffi", marker = "implementation_name == 'cpython'" },
+]
+default = [
     { name = "brotli", marker = "implementation_name == 'cpython'" },
     { name = "brotlicffi", marker = "implementation_name != 'cpython'" },
     { name = "certifi" },
@@ -1181,16 +1167,6 @@ dependencies = [
     { name = "requests" },
     { name = "urllib3" },
     { name = "websockets" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/2f/79/acfe1c2bf64ed83e1b465e6550c0f5bc2214ea447a900b102f5ca6e4186e/yt_dlp-2024.10.22.tar.gz", hash = "sha256:47b82a1fd22411b5c95ef2f0a1ae1af4e6dfd736ea99fdb2a0ea41445abc62ba", size = 2885622, upload-time = "2024-10-22T05:14:40.575Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/68/548f9819b41d53561d4f3d39588111cf39993c066b6e5300b4ae118eb2e6/yt_dlp-2024.10.22-py3-none-any.whl", hash = "sha256:ba166602ebe22a220e4dc1ead45bf00eb469ed812b22f4fb8bb54734f9b02084", size = 3155189, upload-time = "2024-10-22T05:14:37.631Z" },
-]
-
-[package.optional-dependencies]
-curl-cffi = [
-    { name = "curl-cffi", version = "0.5.10", source = { registry = "https://pypi.org/simple" }, marker = "implementation_name == 'cpython' and os_name == 'nt'" },
-    { name = "curl-cffi", version = "0.7.1", source = { registry = "https://pypi.org/simple" }, marker = "implementation_name == 'cpython' and os_name != 'nt'" },
 ]
 
 [[package]]
