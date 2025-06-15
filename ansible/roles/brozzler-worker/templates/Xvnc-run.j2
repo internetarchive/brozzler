@@ -6,9 +6,9 @@ logfile=/var/log/Xvnc.log
 touch $logfile
 chown {{user}} $logfile
 
-exec nice setuidgid {{user}} Xvnc4 :1 -auth /tmp/Xauthority.{{user}} \
-    -geometry 1600x1000 -depth 24 -rfbwait 0 -nolisten tcp -rfbport 5901 \
-    -SecurityTypes None -pn -fp /usr/share/fonts/X11/misc/ -co /etc/X11/rgb \
+exec nice setuidgid {{user}} Xvnc :1 -auth /tmp/Xauthority.{{user}} \
+    -geometry 1600x1000 -depth 24 -nolisten tcp -rfbport 5901 \
+    -SecurityTypes None -pn -fp /usr/share/fonts/X11/misc/ \
     AcceptCutText=0 AcceptPointerEvents=0 AcceptKeyEvents=0 \
     >> $logfile 2>&1
 

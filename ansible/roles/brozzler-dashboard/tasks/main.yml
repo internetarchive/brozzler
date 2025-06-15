@@ -9,7 +9,7 @@
     name: '{{brozzler_pip_name}}[dashboard]'
     virtualenv: '{{venv_root}}/brozzler-dashboard-ve3'
     virtualenv_python: python3
-    virtualenv_command: python3 /usr/lib/python3/dist-packages/virtualenv.py
+    virtualenv_command: python3 -mvirtualenv
     extra_args: '--no-input --upgrade --pre --cache-dir=/tmp/pip-cache'
   become: true
   become_user: '{{user}}'
