@@ -146,6 +146,7 @@ class Chrome:
         websocket_timeout=60,
         window_height=900,
         window_width=1400,
+        headless=True,
     ):
         """
         Starts chrome/chromium process.
@@ -203,13 +204,14 @@ class Chrome:
             "--disable-save-password-bubble",
             "--disable-sync",
         ]
-        major_version = check_version(self.chrome_exe)
-        if major_version >= 109:
-            chrome_args.append("--headless=new")
-        elif 96 <= major_version <= 108:
-            chrome_args.append("--headless=chrome")
-        else:
-            chrome_args.append("--headless")
+        if headless:
+            major_version = check_version(self.chrome_exe)
+            if major_version >= 109:
+                chrome_args.append("--headless=new")
+            elif 96 <= major_version <= 108:
+                chrome_args.append("--headless=chrome")
+            else:
+                chrome_args.append("--headless")
 
         extra_chrome_args = os.environ.get("BROZZLER_EXTRA_CHROME_ARGS")
         if extra_chrome_args:
