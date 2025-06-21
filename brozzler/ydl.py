@@ -464,7 +464,7 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
             captured_youtube_watch_pages = get_video_captures(site, source="youtube")
             uncaptured_youtube_watch_pages = []
             for e in ie_result.get("entries_no_dl", []):
-                youtube_watch_url = f"https://www.youtube.com/watch?v={e["id"]}"
+                youtube_watch_url = f"https://www.youtube.com/watch?v={e['id']}"
                 if youtube_watch_url in captured_youtube_watch_pages:
                     continue
                 uncaptured_youtube_watch_pages.append(youtube_watch_url)
