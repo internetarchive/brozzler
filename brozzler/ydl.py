@@ -427,7 +427,7 @@ def get_video_captures(site, source=None):
     seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
     if account_id and seed and source:
         pg_query = (
-            "SELECT containing_page_url from video where account_id = %s and seed = %s and containing_page_url like '%'+%s+'%'",
+            "SELECT containing_page_url from video where account_id = %s and seed = %s and containing_page_url like CONCAT('%',%s,'%')",
             (
                 account_id,
                 seed,
@@ -436,7 +436,7 @@ def get_video_captures(site, source=None):
         )
     elif seed:
         pg_query = (
-            "SELECT containing_page_url from video where seed = %s and containing_page_url like '%'+%s+'%'",
+            "SELECT containing_page_url from video where seed = %s and containing_page_url like CONCAT('%',%s,'%')",
             (seed, source),
         )
     else:
