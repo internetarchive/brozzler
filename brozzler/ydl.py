@@ -418,6 +418,23 @@ def _try_youtube_dl(worker, ydl, site, page):
     return ie_result
 
 
+def get_video_captures(site, source=None):
+    import psycopg
+    # todo: read pg_url from environment var
+    pg_url = "postgresql://ait_crawling:archive-it-crawling@db.qa-archive-it.org/ait_crawling"
+    account_id = site.account_id if site.account_id else None
+    seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
+    if account_id and seed and source:
+        pg_query = ("SELECT containing_page_url from video where account_id = %s and seed = %s and containing_page_url like '%'+%s+'%'", (account_id, seed, source,))
+    elif seed:
+        pg_query = ("SELECT containing_page_url from video where seed = %s and containing_page_url like '%'+%s+'%'", (seed, source))
+    else:
+        return None
+    with psycopg.connect(pg_url) as conn:
+        with conn.cursor(row_factory=psycopg.rows.scalar_row) as cur:
+            cur.execute(pg_query)
+            return cur.fetchall()
+
 @metrics.brozzler_ytdlp_duration_seconds.time()
 @metrics.brozzler_in_progress_ytdlps.track_inprogress()
 def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
@@ -444,10 +461,14 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
             ie_result.get("extractor") == "youtube:playlist"
             or ie_result.get("extractor") == "youtube:tab"
         ):
-            # youtube watch pages as outlinks
-            outlinks = {
-                "https://www.youtube.com/watch?v=%s" % e["id"]
-                for e in ie_result.get("entries_no_dl", [])
-            }
-        # any outlinks for other cases? soundcloud, maybe?
+            captured_youtube_watch_pages = get_video_captures(site, source="youtube")
+            uncaptured_youtube_watch_pages = []
+            for e in ie_result.get("entries_no_dl", []):
+                youtube_watch_url = f"https://www.youtube.com/watch?v={e["id"]}"
+                if youtube_watch_url in captured_youtube_watch_pages:
+                    continue
+                uncaptured_youtube_watch_pages.append(youtube_watch_url)
+            if uncaptured_youtube_watch_pages:
+                outlinks.add(uncaptured_youtube_watch_pages)
+        # todo: handle outlinks for instagram and soundcloud here (if anywhere)
         return outlinks
