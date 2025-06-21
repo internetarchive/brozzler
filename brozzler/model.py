@@ -2,7 +2,7 @@
 brozzler/models.py - model classes representing jobs, sites, and pages, with
 related logic
 
-Copyright (C) 2014-2024 Internet Archive
+Copyright (C) 2014-2025 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -100,6 +100,10 @@ def new_job(frontier, job_conf):
     )
     if "id" in job_conf:
         job.id = job_conf["id"]
+    if "account_id" in job_conf:
+        job.account_id = job_conf["account_id"]
+    else:
+        job.account_id = None
     if "max_claimed_sites" in job_conf:
         job.max_claimed_sites = job_conf["max_claimed_sites"]
     if "pdfs_only" in job_conf:
@@ -115,6 +119,7 @@ def new_job(frontier, job_conf):
         merged_conf["seed"] = merged_conf.pop("url")
         site = brozzler.Site(frontier.rr, merged_conf)
         site.id = str(uuid.uuid4())
+        site.account_id = job.account_id
         sites.append(site)
         pages.append(new_seed_page(frontier, site))
 
