@@ -420,20 +420,32 @@ def _try_youtube_dl(worker, ydl, site, page):
 
 def get_video_captures(site, source=None):
     import psycopg
+
     # todo: read pg_url from environment var
     pg_url = "postgresql://ait_crawling:archive-it-crawling@db.qa-archive-it.org/ait_crawling"
     account_id = site.account_id if site.account_id else None
     seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
     if account_id and seed and source:
-        pg_query = ("SELECT containing_page_url from video where account_id = %s and seed = %s and containing_page_url like '%'+%s+'%'", (account_id, seed, source,))
+        pg_query = (
+            "SELECT containing_page_url from video where account_id = %s and seed = %s and containing_page_url like '%'+%s+'%'",
+            (
+                account_id,
+                seed,
+                source,
+            ),
+        )
     elif seed:
-        pg_query = ("SELECT containing_page_url from video where seed = %s and containing_page_url like '%'+%s+'%'", (seed, source))
+        pg_query = (
+            "SELECT containing_page_url from video where seed = %s and containing_page_url like '%'+%s+'%'",
+            (seed, source),
+        )
     else:
         return None
     with psycopg.connect(pg_url) as conn:
         with conn.cursor(row_factory=psycopg.rows.scalar_row) as cur:
             cur.execute(pg_query)
             return cur.fetchall()
+
 
 @metrics.brozzler_ytdlp_duration_seconds.time()
 @metrics.brozzler_in_progress_ytdlps.track_inprogress()
