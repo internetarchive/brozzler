@@ -430,7 +430,11 @@ def get_video_captures(site, source="youtube"):
         pg_url = VIDEO_DATA
         account_id = site.account_id if site.account_id else None
         seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
-        containing_page_url_pattern = "http://youtube.com/watch" if source == "youtube"
+        if source == "youtube":
+            containing_page_url_pattern = "http://youtube.com/watch"
+        # support other sources here
+        else:
+            containing_page_url_pattern = None
         if account_id and seed and source:
             pg_query = (
                 "SELECT containing_page_url from video where account_id = %s and seed = %s and containing_page_url like %s",
