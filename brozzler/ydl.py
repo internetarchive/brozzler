@@ -42,6 +42,8 @@ PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
 YTDLP_MAX_REDIRECTS = 5
 
+VIDEO_DATA = ""
+
 
 logger = structlog.get_logger(logger_name=__name__)
 
@@ -418,33 +420,37 @@ def _try_youtube_dl(worker, ydl, site, page):
     return ie_result
 
 
-def get_video_captures(site, source=None):
-    import psycopg
-
-    # todo: read pg_url from environment var
-    pg_url = "postgresql://ait_crawling:archive-it-crawling@db.qa-archive-it.org/ait_crawling"
-    account_id = site.account_id if site.account_id else None
-    seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
-    if account_id and seed and source:
-        pg_query = (
-            "SELECT containing_page_url from video where account_id = %s and seed = %s and containing_page_url like CONCAT('%',%s,'%')",
-            (
-                account_id,
-                seed,
-                source,
-            ),
-        )
-    elif seed:
-        pg_query = (
-            "SELECT containing_page_url from video where seed = %s and containing_page_url like CONCAT('%',%s,'%')",
-            (seed, source),
-        )
-    else:
+def get_video_captures(site, source="youtube"):
+    if not VIDEO_DATA:
         return None
-    with psycopg.connect(pg_url) as conn:
-        with conn.cursor(row_factory=psycopg.rows.scalar_row) as cur:
-            cur.execute(pg_query)
-            return cur.fetchall()
+
+    if VIDEO_DATA and VIDEO_DATA.startswith("postgresql"):
+        import psycopg
+
+        pg_url = VIDEO_DATA
+        account_id = site.account_id if site.account_id else None
+        seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
+        containing_page_url_pattern = "http://youtube.com/watch" if source == "youtube"
+        if account_id and seed and source:
+            pg_query = (
+                "SELECT containing_page_url from video where account_id = %s and seed = %s and containing_page_url like %s",
+                (
+                    account_id,
+                    seed,
+                    containing_page_url_pattern,
+                ),
+            )
+        elif seed and source:
+            pg_query = (
+                "SELECT containing_page_url from video where seed = %s and containing_page_url like %s",
+                (seed, containing_page_url_pattern),
+            )
+        else:
+            return None
+        with psycopg.connect(pg_url) as conn:
+            with conn.cursor(row_factory=psycopg.rows.scalar_row) as cur:
+                cur.execute(pg_query)
+                return cur.fetchall()
 
 
 @metrics.brozzler_ytdlp_duration_seconds.time()
