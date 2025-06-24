@@ -27,6 +27,7 @@ import urllib.request
 
 import doublethink
 import structlog
+from typing import List
 import urlcanon
 import yt_dlp
 from yt_dlp.utils import ExtractorError, match_filter_func
@@ -420,9 +421,9 @@ def _try_youtube_dl(worker, ydl, site, page):
     return ie_result
 
 
-def get_video_captures(site, source="youtube"):
+def get_video_captures(site, source="youtube") -> List[str]:
     if not VIDEO_DATA_SOURCE:
-        return None
+        return []
 
     if VIDEO_DATA_SOURCE and VIDEO_DATA_SOURCE.startswith("postgresql"):
         import psycopg
@@ -449,12 +450,12 @@ def get_video_captures(site, source="youtube"):
                 (seed, containing_page_url_pattern),
             )
         else:
-            return None
+            return []
         with psycopg.connect(VIDEO_DATA_SOURCE) as conn:
             with conn.cursor(row_factory=psycopg.rows.scalar_row) as cur:
                 cur.execute(pg_query)
                 return cur.fetchall()
-    return None
+    return []
 
 
 @metrics.brozzler_ytdlp_duration_seconds.time()
@@ -483,7 +484,8 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
             ie_result.get("extractor") == "youtube:playlist"
             or ie_result.get("extractor") == "youtube:tab"
         ):
-            captured_youtube_watch_pages = get_video_captures(site, source="youtube")
+            captured_youtube_watch_pages = set()
+            captured_youtube_watch_pages.add(get_video_captures(site, source="youtube"))
             uncaptured_youtube_watch_pages = []
             for e in ie_result.get("entries_no_dl", []):
                 youtube_watch_url = f"https://www.youtube.com/watch?v={e['id']}"
