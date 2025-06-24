@@ -35,12 +35,12 @@ dependencies = [
   "python-magic>=0.4.15",
   "prometheus-client>=0.20.0",
   "structlog>=25.1.0",
-  "psycopg[binary]>=3.2.6",
 ]
 license = "Apache-2.0"
 
 [project.optional-dependencies]
 yt-dlp = ["yt-dlp[default,curl-cffi]>=2024.7.25"]
+psycopg = ["psycopg[binary]>=3.2.6"]
 dashboard = ["flask>=1.0", "gunicorn>=19.8.1"]
 warcprox = ["warcprox>=2.4.31"]
 rethinkdb = [
