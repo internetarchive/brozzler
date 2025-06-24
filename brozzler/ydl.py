@@ -430,7 +430,7 @@ def get_video_captures(site, source="youtube"):
         account_id = site.account_id if site.account_id else None
         seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
         if source == "youtube":
-            containing_page_url_pattern = "http://youtube.com/watch"  # yes, video data canonicalization uses "http"
+            containing_page_url_pattern = "http://youtube.com/watch%"  # yes, video data canonicalization uses "http"
         # support other sources here
         else:
             containing_page_url_pattern = None
