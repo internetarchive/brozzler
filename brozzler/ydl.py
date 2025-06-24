@@ -24,10 +24,10 @@ import tempfile
 import threading
 import time
 import urllib.request
+from typing import List
 
 import doublethink
 import structlog
-from typing import List
 import urlcanon
 import yt_dlp
 from yt_dlp.utils import ExtractorError, match_filter_func
