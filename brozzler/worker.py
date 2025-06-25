@@ -339,6 +339,7 @@ class BrozzlerWorker:
                     raise brozzler.PageConnectionError()
             except brozzler.PageInterstitialShown:
                 page_logger.info("page interstitial shown (http auth)")
+                status_code = -1
 
             if enable_youtube_dl and self.should_ytdlp(
                 page_logger, site, page, status_code
