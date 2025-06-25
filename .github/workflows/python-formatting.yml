@@ -27,5 +27,8 @@ jobs:
         ./.venv/bin/pip install --upgrade pip
         ./.venv/bin/pip install ruff
 
+    - name: Run check
+      run: make check
+
     - name: Run formatting check
       run: make check-format
