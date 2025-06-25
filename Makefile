@@ -4,6 +4,12 @@ VIRTUAL_ENV_DIR = .venv
 BROZZLER_EGG_LINK = ./brozzler.egg-info
 # Where's the Makefile running? Valid options: LOCAL, CI
 ENV ?= LOCAL
+
+# GitHub Actions sets CI=true
+ifeq ($(CI),true)
+	ENV = CI
+endif
+
 # Which package manager to use? Valid options: UV, PIP
 PACKAGE_MANAGER ?= UV
 OUTPUT_FLAGS =
