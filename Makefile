@@ -6,6 +6,11 @@ BROZZLER_EGG_LINK = ./brozzler.egg-info
 ENV ?= LOCAL
 # Which package manager to use? Valid options: UV, PIP
 PACKAGE_MANAGER ?= UV
+OUTPUT_FLAGS =
+
+ifeq ($(ENV),CI)
+	OUTPUT_FLAGS = --output-format=github
+endif
 
 $(VIRTUAL_ENV_DIR):
 ifeq ($(PACKAGE_MANAGER),UV)
@@ -37,14 +42,14 @@ clean: $(BROZZLER_EGG_LINK)
 
 .PHONY: check
 check:
-	$(VIRTUAL_ENV_DIR)/bin/ruff check --target-version py37 .
+	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) --target-version py37 .
 
 .PHONY: check-format
 check-format:
-	$(VIRTUAL_ENV_DIR)/bin/ruff check --select I --target-version py37 .
+	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) --select I --target-version py37 .
 	$(VIRTUAL_ENV_DIR)/bin/ruff format --check --target-version py37 .
 
 .PHONY: format
 format:
-	$(VIRTUAL_ENV_DIR)/bin/ruff check --select I --target-version py37 --fix .
+	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) --select I --target-version py37 --fix .
 	$(VIRTUAL_ENV_DIR)/bin/ruff format --target-version py37 .
