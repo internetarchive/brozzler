@@ -48,14 +48,14 @@ clean: $(BROZZLER_EGG_LINK)
 
 .PHONY: check
 check:
-	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) --target-version py37 .
+	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) .
 
 .PHONY: check-format
 check-format:
-	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) --select I --target-version py37 .
-	$(VIRTUAL_ENV_DIR)/bin/ruff format --check --target-version py37 .
+	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) --select I .
+	$(VIRTUAL_ENV_DIR)/bin/ruff format --check .
 
 .PHONY: format
 format:
-	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) --select I --target-version py37 --fix .
-	$(VIRTUAL_ENV_DIR)/bin/ruff format --target-version py37 .
+	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) --select I --fix .
+	$(VIRTUAL_ENV_DIR)/bin/ruff format .
