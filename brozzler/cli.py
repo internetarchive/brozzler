@@ -39,6 +39,7 @@ import yaml
 import brozzler
 import brozzler.worker
 from brozzler import suggest_default_chrome_exe
+from brozzler.model import VideoCaptureOptions
 
 r = rdb.RethinkDB()
 
@@ -500,10 +501,21 @@ def brozzler_new_site(argv=None):
         default=None,
         help="use this password to try to log in if a login form is found",
     )
+    arg_parser.add_argument(
+        "--disable-video-capture",
+        dest="disable_video",
+        action="store_true",
+        help="disable video capture for this site",
+    )
     add_common_options(arg_parser, argv)
 
     args = arg_parser.parse_args(args=argv[1:])
     configure_logging(args)
+
+    if args.disable_video:
+        video_capture = VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value
+    else:
+        video_capture = VideoCaptureOptions.ENABLE_VIDEO_CAPTURE.value
 
     rr = rethinker(args)
     site = brozzler.Site(
@@ -522,6 +534,7 @@ def brozzler_new_site(argv=None):
             ),
             "username": args.username,
             "password": args.password,
+            "video_capture": video_capture,
         },
     )
 
