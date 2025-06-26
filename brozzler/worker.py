@@ -412,8 +412,10 @@ class BrozzlerWorker:
         Determines if the page's Content-Type header specifies that it contains
         a video.
         """
-        return (
-            "content-type" in page_headers and "video" in page_headers["content-type"]
+        return "content-type" in page_headers and (
+            "video" in page_headers["content-type"]
+            # https://github.com/gsuberland/UMP_Format/blob/main/UMP_Format.md
+            or page_headers["content-type"] == "application/vnd.yt-ump"
         )
 
     def _is_pdf(self, page_headers) -> bool:
