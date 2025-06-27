@@ -24,6 +24,7 @@ import tempfile
 import threading
 import time
 import urllib.request
+from typing import List
 
 import doublethink
 import structlog
@@ -41,6 +42,8 @@ thread_local = threading.local()
 PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
 YTDLP_MAX_REDIRECTS = 5
+
+VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 
 
 logger = structlog.get_logger(logger_name=__name__)
@@ -418,6 +421,43 @@ def _try_youtube_dl(worker, ydl, site, page):
     return ie_result
 
 
+def get_video_captures(site, source="youtube") -> List[str]:
+    if not VIDEO_DATA_SOURCE:
+        return []
+
+    if VIDEO_DATA_SOURCE and VIDEO_DATA_SOURCE.startswith("postgresql"):
+        import psycopg
+
+        account_id = site.account_id if site.account_id else None
+        seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
+        if source == "youtube":
+            containing_page_url_pattern = "http://youtube.com/watch%"  # yes, video data canonicalization uses "http"
+        # support other sources here
+        else:
+            containing_page_url_pattern = None
+        if account_id and seed and source:
+            pg_query = (
+                "SELECT distinct(containing_page_url) from video where account_id = %s and seed = %s and containing_page_url like %s",
+                (
+                    account_id,
+                    seed,
+                    containing_page_url_pattern,
+                ),
+            )
+        elif seed and source:
+            pg_query = (
+                "SELECT containing_page_url from video where seed = %s and containing_page_url like %s",
+                (seed, containing_page_url_pattern),
+            )
+        else:
+            return []
+        with psycopg.connect(VIDEO_DATA_SOURCE) as conn:
+            with conn.cursor(row_factory=psycopg.rows.scalar_row) as cur:
+                cur.execute(pg_query)
+                return cur.fetchall()
+    return []
+
+
 @metrics.brozzler_ytdlp_duration_seconds.time()
 @metrics.brozzler_in_progress_ytdlps.track_inprogress()
 def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
@@ -444,10 +484,15 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
             ie_result.get("extractor") == "youtube:playlist"
             or ie_result.get("extractor") == "youtube:tab"
         ):
-            # youtube watch pages as outlinks
-            outlinks = {
-                "https://www.youtube.com/watch?v=%s" % e["id"]
-                for e in ie_result.get("entries_no_dl", [])
-            }
-        # any outlinks for other cases? soundcloud, maybe?
+            captured_youtube_watch_pages = set()
+            captured_youtube_watch_pages.add(get_video_captures(site, source="youtube"))
+            uncaptured_youtube_watch_pages = []
+            for e in ie_result.get("entries_no_dl", []):
+                youtube_watch_url = f"https://www.youtube.com/watch?v={e['id']}"
+                if youtube_watch_url in captured_youtube_watch_pages:
+                    continue
+                uncaptured_youtube_watch_pages.append(youtube_watch_url)
+            if uncaptured_youtube_watch_pages:
+                outlinks.add(uncaptured_youtube_watch_pages)
+        # todo: handle outlinks for instagram and soundcloud here (if anywhere)
         return outlinks
