@@ -49,6 +49,81 @@ VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 logger = structlog.get_logger(logger_name=__name__)
 
 
+class VideoDataClient:
+    def __init__(self):
+        if VIDEO_DATA_SOURCE and VIDEO_DATA_SOURCE.startswith("postgresql"):
+            import psycopg
+            from psycopg_pool import ConnectionPool
+
+            pool = ConnectionPool(VIDEO_DATA_SOURCE, min_size=1, max_size=9)
+            pool.wait()
+            logger.info("pg pool ready")
+            atexit.register(pool.close)
+
+            self.pool = pool
+
+    def _execute_pg_query(
+        self, query: str, row_factory=None, fetchone=False, fetchall=False
+    ) -> Optional[Any]:
+        with self.pool.connection() as conn:
+            with conn.cursor(row_factory=row_factory) as cur:
+                cur.execute(query)
+                if fetchone:
+                    return cur.fetchone()
+                if fetchall:
+                    return cur.fetchall()
+
+    def get_pg_video_captures(self, site=None, source=None) -> List[str]:
+        account_id = site.account_id if site.account_id else None
+        seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
+
+        # TODO: generalize, maybe make variable?
+        containing_page_timestamp_pattern = "2025%"
+
+        if source == "youtube":
+            containing_page_url_pattern = "http://youtube.com/watch%"  # yes, video data canonicalization uses "http"
+        # support other media sources here
+
+        if account_id and seed and source:
+            pg_query = (
+                "SELECT distinct(containing_page_url) from video where account_id = %s and seed = %s and containing_page_url like %s",
+                (
+                    account_id,
+                    seed,
+                    containing_page_url_pattern,
+                ),
+            )
+        elif account_id and seed:
+            pg_query = (
+                "SELECT distinct(containing_page_url) from video where account_id = %s and seed = %s and containing_page_timestamp like %s",
+                (
+                    account_id,
+                    seed,
+                    containing_page_timestamp_pattern,
+                ),
+            )
+        elif seed and source:
+            pg_query = (
+                "SELECT distinct(containing_page_url) from video where seed = %s and containing_page_url like %s",
+                (seed, containing_page_url_pattern),
+            )
+        elif seed:
+            pg_query = (
+                "SELECT distinct(containing_page_url) from video where seed = %s and containing_page_timestamp like %s",
+                (
+                    seed,
+                    containing_page_timestamp_pattern,
+                ),
+            )
+        try:
+            results = self._execute_query(
+                pg_query, row_factory=psycopg.rows.scalar_row, fetchall=True
+            )
+        except Exception as e:
+            logger.warn("postgres query failed: %s", e)
+        return results
+
+
 def isyoutubehost(url):
     # split 1 splits scheme from url, split 2 splits path from hostname, split 3 splits query string on hostname
     return "youtube.com" in url.split("//")[-1].split("/")[0].split("?")[0]
@@ -421,58 +496,6 @@ def _try_youtube_dl(worker, ydl, site, page):
     return ie_result
 
 
-class VideoDataWrapper:
-    import psycopg
-    from psycopg_pool import ConnectionPool
-
-    def __init__(self):
-        if VIDEO_DATA_SOURCE and VIDEO_DATA_SOURCE.startswith("postgresql"):
-            pool = ConnectionPool(VIDEO_DATA_SOURCE, min_size=1, max_size=9)
-            pool.wait()
-            logger.info("pg pool ready")
-            self.pool = pool
-            atexit.register(pool.close)
-
-    def _execute_query(
-        self, query: str, row_factory=None, fetchone=False, fetchall=False
-    ) -> Optional[Any]:
-        with self.pool.connection() as conn:
-            with conn.cursor(row_factory=row_factory) as cur:
-                cur.execute(pg_query)
-                if fetchone:
-                    return cur.fetchone()
-                if fetchall:
-                    return cur.fetchall()
-
-    def get_pg_video_captures(self, site=None, source="youtube") -> List[str]:
-        account_id = site.account_id if site.account_id else None
-        seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
-
-        if source == "youtube":
-            containing_page_url_pattern = "http://youtube.com/watch%"  # yes, video data canonicalization uses "http"
-        # support other sources here
-        else:
-            containing_page_url_pattern = None
-        if account_id and seed and source:
-            pg_query = (
-                "SELECT distinct(containing_page_url) from video where account_id = %s and seed = %s and containing_page_url like %s",
-                (
-                    account_id,
-                    seed,
-                    containing_page_url_pattern,
-                ),
-            )
-        elif seed and source:
-            pg_query = (
-                "SELECT containing_page_url from video where seed = %s and containing_page_url like %s",
-                (seed, containing_page_url_pattern),
-            )
-        results = self._execute_query(
-            pg_query, row_factory=psycopg.rows.scalar_row, fetchall=True
-        )
-        return results
-
-
 @metrics.brozzler_ytdlp_duration_seconds.time()
 @metrics.brozzler_in_progress_ytdlps.track_inprogress()
 def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
@@ -500,10 +523,10 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
             or ie_result.get("extractor") == "youtube:tab"
         ):
             if VIDEO_DATA_SOURCE and VIDEO_DATA_SOURCE.startswith("postgresql"):
-                video_data = VideoDataWrapper()
+                video_data = VideoDataClient()
                 captured_youtube_watch_pages = set()
                 captured_youtube_watch_pages.add(
-                    video_data.get_pg_video_captures(site, source="youtube")
+                    video_data.get_pg_video_captures_by_source(site, source="youtube")
                 )
                 uncaptured_youtube_watch_pages = []
                 for e in ie_result.get("entries_no_dl", []):
@@ -513,5 +536,5 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
                     uncaptured_youtube_watch_pages.append(youtube_watch_url)
                 if uncaptured_youtube_watch_pages:
                     outlinks.add(uncaptured_youtube_watch_pages)
-        # todo: handle outlinks for instagram and soundcloud here (if anywhere)
+        # todo: handle outlinks for instagram and soundcloud, other media source, here (if anywhere)
         return outlinks
