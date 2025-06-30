@@ -39,6 +39,7 @@ from urllib3.exceptions import ProxyError, TimeoutError
 import brozzler
 import brozzler.browser
 from brozzler.model import VideoCaptureOptions
+from brozzler.ydl import VideoDataClient
 
 from . import metrics
 
