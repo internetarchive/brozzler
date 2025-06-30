@@ -24,12 +24,14 @@ import tempfile
 import threading
 import time
 import urllib.request
-from typing import List
+from typing import Any, List, Optional
 
 import doublethink
+import psycopg
 import structlog
 import urlcanon
 import yt_dlp
+from psycopg_pool import ConnectionPool, PoolTimeout
 from yt_dlp.utils import ExtractorError, match_filter_func
 
 import brozzler
@@ -37,7 +39,6 @@ import brozzler
 from . import metrics
 
 thread_local = threading.local()
-
 
 PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
@@ -52,26 +53,29 @@ logger = structlog.get_logger(logger_name=__name__)
 class VideoDataClient:
     def __init__(self):
         if VIDEO_DATA_SOURCE and VIDEO_DATA_SOURCE.startswith("postgresql"):
-            import psycopg
-            from psycopg_pool import ConnectionPool
-
             pool = ConnectionPool(VIDEO_DATA_SOURCE, min_size=1, max_size=9)
             pool.wait()
             logger.info("pg pool ready")
-            atexit.register(pool.close)
+            # atexit.register(pool.close)
 
             self.pool = pool
 
     def _execute_pg_query(
         self, query: str, row_factory=None, fetchone=False, fetchall=False
     ) -> Optional[Any]:
-        with self.pool.connection() as conn:
-            with conn.cursor(row_factory=row_factory) as cur:
-                cur.execute(query)
-                if fetchone:
-                    return cur.fetchone()
-                if fetchall:
-                    return cur.fetchall()
+        try:
+            with self.pool.connection() as conn:
+                with conn.cursor(row_factory=row_factory) as cur:
+                    cur.execute(query)
+                    if fetchone:
+                        return cur.fetchone()
+                    if fetchall:
+                        return cur.fetchall()
+        except PoolTimeout as e:
+            logger.warn("hit PoolTimeout: %s", e)
+            self.pool.check()
+        except Exception as e:
+            logger.warn("postgres query failed: %s", e)
         return None
 
     def get_pg_video_captures(self, site=None, source=None) -> List[str]:
@@ -79,7 +83,7 @@ class VideoDataClient:
         seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
 
         # TODO: generalize, maybe make variable?
-        containing_page_timestamp_pattern = "2025%"  # for future pre-dup additions
+        # containing_page_timestamp_pattern = "2025%"  # for future pre-dup additions
 
         if source == "youtube":
             containing_page_url_pattern = "http://youtube.com/watch%"  # yes, video data canonicalization uses "http"
