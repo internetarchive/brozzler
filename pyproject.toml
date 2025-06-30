@@ -1,6 +1,6 @@
 [project]
 name = "brozzler"
-version = "1.7.0"
+version = "1.7.1"
 authors = [
   { name="Noah Levitt", email="nlevitt@archive.org" },
 ]
@@ -40,7 +40,7 @@ license = "Apache-2.0"
 
 [project.optional-dependencies]
 yt-dlp = ["yt-dlp[default,curl-cffi]>=2024.7.25"]
-psycopg = ["psycopg[binary]>=3.2.6"]
+psycopg = ["psycopg[binary,pool]>=3.2.6"]
 dashboard = ["flask>=1.0", "gunicorn>=19.8.1"]
 warcprox = ["warcprox>=2.4.31"]
 rethinkdb = [
