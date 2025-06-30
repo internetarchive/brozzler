@@ -72,13 +72,14 @@ class VideoDataClient:
                     return cur.fetchone()
                 if fetchall:
                     return cur.fetchall()
+        return None
 
     def get_pg_video_captures(self, site=None, source=None) -> List[str]:
         account_id = site.account_id if site.account_id else None
         seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
 
         # TODO: generalize, maybe make variable?
-        containing_page_timestamp_pattern = "2025%"
+        containing_page_timestamp_pattern = "2025%"  # for future pre-dup additions
 
         if source == "youtube":
             containing_page_url_pattern = "http://youtube.com/watch%"  # yes, video data canonicalization uses "http"
@@ -93,27 +94,10 @@ class VideoDataClient:
                     containing_page_url_pattern,
                 ),
             )
-        elif account_id and seed:
-            pg_query = (
-                "SELECT distinct(containing_page_url) from video where account_id = %s and seed = %s and containing_page_timestamp like %s",
-                (
-                    account_id,
-                    seed,
-                    containing_page_timestamp_pattern,
-                ),
-            )
-        elif seed and source:
+        elif seed and source:  # account_id should usually be present
             pg_query = (
                 "SELECT distinct(containing_page_url) from video where seed = %s and containing_page_url like %s",
                 (seed, containing_page_url_pattern),
-            )
-        elif seed:
-            pg_query = (
-                "SELECT distinct(containing_page_url) from video where seed = %s and containing_page_timestamp like %s",
-                (
-                    seed,
-                    containing_page_timestamp_pattern,
-                ),
             )
         try:
             results = self._execute_query(
@@ -121,6 +105,7 @@ class VideoDataClient:
             )
         except Exception as e:
             logger.warn("postgres query failed: %s", e)
+            results = []
         return results
 
 
