@@ -50,7 +50,8 @@ VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 
 logger = structlog.get_logger(logger_name=__name__)
 
-# video_title and video_source_id are new fields, from yt-dlp metadata
+
+# video_title, video_display_id, video_resolution, video_capture_status are new fields, mostly from yt-dlp metadata
 @dataclass(frozen=True)
 class VideoCaptureRecord:
     crawl_job_id: int
@@ -69,7 +70,11 @@ class VideoCaptureRecord:
     containing_page_url: str
     video_url: str
     video_title: str
-    video_source_id: str
+    video_display_id: (
+        str  # aka yt-dlp metadata as display_id, e.g., youtube watch page v param
+    )
+    video_resolution: str
+    video_capture_status: str  # recrawl?  what else?
 
 
 class VideoDataClient:
