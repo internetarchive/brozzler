@@ -50,6 +50,7 @@ VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 
 logger = structlog.get_logger(logger_name=__name__)
 
+# video_title and video_source_id are new fields, from yt-dlp metadata
 @dataclass(frozen=True)
 class VideoCaptureRecord:
     crawl_job_id: int
@@ -136,7 +137,8 @@ class VideoDataClient:
         return results
 
     def create_video_capture_record(self, video_capture_record):
-
+        # to be implemented
+        pass
 
 
 def isyoutubehost(url):
