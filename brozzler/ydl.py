@@ -51,7 +51,7 @@ VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 logger = structlog.get_logger(logger_name=__name__)
 
 @dataclass(frozen=True)
-class VideoDataRecord:
+class VideoCaptureRecord:
     crawl_job_id: int
     is_test_crawl: bool
     seed_id: int
