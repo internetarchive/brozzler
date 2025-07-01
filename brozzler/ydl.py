@@ -51,14 +51,16 @@ logger = structlog.get_logger(logger_name=__name__)
 
 
 class VideoDataClient:
-    def __init__(self):
-        if VIDEO_DATA_SOURCE and VIDEO_DATA_SOURCE.startswith("postgresql"):
-            pool = ConnectionPool(VIDEO_DATA_SOURCE, min_size=1, max_size=9)
-            pool.wait()
-            logger.info("pg pool ready")
-            # atexit.register(pool.close)
+    import psycopg
+    from psycopg_pool import ConnectionPool, PoolTimeout
 
-            self.pool = pool
+    def __init__(self):
+        pool = ConnectionPool(VIDEO_DATA_SOURCE, min_size=1, max_size=9)
+        pool.wait()
+        logger.info("pg pool ready")
+        # atexit.register(pool.close)
+
+        self.pool = pool
 
     def _execute_pg_query(
         self, query: str, row_factory=None, fetchone=False, fetchall=False
@@ -512,10 +514,11 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
             or ie_result.get("extractor") == "youtube:tab"
         ):
             if VIDEO_DATA_SOURCE and VIDEO_DATA_SOURCE.startswith("postgresql"):
-                video_data = VideoDataClient()
                 captured_youtube_watch_pages = set()
                 captured_youtube_watch_pages.add(
-                    video_data.get_pg_video_captures_by_source(site, source="youtube")
+                    worker._video_data.get_pg_video_captures_by_source(
+                        site, source="youtube"
+                    )
                 )
                 uncaptured_youtube_watch_pages = []
                 for e in ie_result.get("entries_no_dl", []):
