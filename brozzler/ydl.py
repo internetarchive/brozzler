@@ -31,6 +31,7 @@ import psycopg
 import structlog
 import urlcanon
 import yt_dlp
+from dataclasses import dataclass
 from psycopg_pool import ConnectionPool, PoolTimeout
 from yt_dlp.utils import ExtractorError, match_filter_func
 
@@ -48,6 +49,26 @@ VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 
 
 logger = structlog.get_logger(logger_name=__name__)
+
+@dataclass(frozen=True)
+class VideoDataRecord:
+    crawl_job_id: int
+    is_test_crawl: bool
+    seed_id: int
+    collection_id: int
+    containing_page_timestamp: str
+    containing_page_digest: str
+    containing_page_media_index: int
+    containing_page_media_count: int
+    video_digest: str
+    video_timestamp: str
+    video_mimetype: str
+    video_http_status: int
+    video_size: int
+    containing_page_url: str
+    video_url: str
+    video_title: str
+    video_source_id: str
 
 
 class VideoDataClient:
@@ -113,6 +134,9 @@ class VideoDataClient:
             logger.warn("postgres query failed: %s", e)
             results = []
         return results
+
+    def create_video_capture_record(self, video_capture_record):
+
 
 
 def isyoutubehost(url):
