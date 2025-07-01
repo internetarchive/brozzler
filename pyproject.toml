@@ -1,6 +1,6 @@
 [project]
 name = "brozzler"
-version = "1.6.13"
+version = "1.6.14"
 authors = [
   { name="Noah Levitt", email="nlevitt@archive.org" },
 ]
