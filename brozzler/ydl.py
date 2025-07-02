@@ -45,8 +45,6 @@ PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
 YTDLP_MAX_REDIRECTS = 5
 
-VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
-
 
 logger = structlog.get_logger(logger_name=__name__)
 
@@ -107,9 +105,9 @@ class VideoDataClient:
             logger.warn("postgres query failed: %s", e)
         return None
 
-    def get_pg_video_captures(self, site=None, source=None) -> List[str]:
+    def get_video_captures(self, site=None, source=None) -> List[str]:
         account_id = site.account_id if site.account_id else None
-        seed = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
+        seed_id = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
 
         # TODO: generalize, maybe make variable?
         # containing_page_timestamp_pattern = "2025%"  # for future pre-dup additions
@@ -118,20 +116,18 @@ class VideoDataClient:
             containing_page_url_pattern = "http://youtube.com/watch%"  # yes, video data canonicalization uses "http"
         # support other media sources here
 
-        if account_id and seed and source:
+        if account_id and seed_id and source:
             pg_query = (
-                "SELECT distinct(containing_page_url) from video where account_id = %s and seed = %s and containing_page_url like %s",
+                "SELECT containing_page_url from video where account_id = %s and seed_id = %s and containing_page_url like %s",
                 (
                     account_id,
-                    seed,
+                    seed_id,
                     containing_page_url_pattern,
                 ),
             )
-        elif seed and source:  # account_id should usually be present
-            pg_query = (
-                "SELECT distinct(containing_page_url) from video where seed = %s and containing_page_url like %s",
-                (seed, containing_page_url_pattern),
-            )
+        else:
+            logger.warn("missing account_id, seed_id, or source")
+            results = []
         try:
             results = self._execute_query(
                 pg_query, row_factory=psycopg.rows.scalar_row, fetchall=True
@@ -142,7 +138,7 @@ class VideoDataClient:
         return results
 
     def create_video_capture_record(self, video_capture_record):
-        # to be implemented
+        # note: brozzler postcrawl step 72 includes info from crawl-log
         pass
 
 
@@ -539,15 +535,16 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
         logger.info("tempdir for yt-dlp", tempdir=tempdir)
         ydl = _build_youtube_dl(worker, tempdir, site, page, ytdlp_proxy_endpoints)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
+        # print(ie_result)
         outlinks = set()
         if ie_result and (
             ie_result.get("extractor") == "youtube:playlist"
             or ie_result.get("extractor") == "youtube:tab"
         ):
-            if VIDEO_DATA_SOURCE and VIDEO_DATA_SOURCE.startswith("postgresql"):
+            if worker._video_data:
                 captured_youtube_watch_pages = set()
                 captured_youtube_watch_pages.add(
-                    worker._video_data.get_pg_video_captures_by_source(
+                    worker._video_data.get_video_captures_by_source(
                         site, source="youtube"
                     )
                 )
