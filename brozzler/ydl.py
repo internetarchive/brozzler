@@ -408,9 +408,9 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
     return ydl
 
 
-def _remember_videos(page, pushed_videos=None):
+def _remember_videos(page, worker, info_json=None, pushed_videos=None):
     """
-    Saves info about videos captured by yt-dlp in `page.videos`.
+    Saves info about videos captured by yt-dlp in `page.videos` and postgres.
     """
     if "videos" not in page:
         page.videos = []
@@ -422,6 +422,29 @@ def _remember_videos(page, pushed_videos=None):
             "content-type": pushed_video["content-type"],
             "content-length": pushed_video["content-length"],
         }
+        # grab info from info_json if it's available
+        video_record = worker._video_data.VideoCaptureRecord()
+        video_record.crawl_job_id = None
+        video_record.is_test_crawl = None
+        video_record.seed_id = None
+        video_record.collection_id = None
+        video_record.containing_page_timestamp = None
+        video_record.containing_page_digest = None
+        video_record.containing_page_media_index = None
+        video_record.containing_page_media_count = None
+        video_record.video_digest = None
+        video_record.video_timestamp = None
+        video_record.video_mimetype = pushed_video["content-type"]
+        video_record.video_http_status = pushed_video["response_code"]
+        video_record.video_size = None
+        video_record.containing_page_url = None
+        video_record.video_url = pushed_video["url"]
+        video_record.video_title = None
+        video_record.video_display_id = None
+        video_record.video_resolution = None
+        video_record.video_capture_status = None  # "recrawl"
+        worker._video_data.save_video_capture_record(video_record)
+
         logger.debug("embedded video", video=video)
         page.videos.append(video)
 
@@ -496,9 +519,9 @@ def _try_youtube_dl(worker, ydl, site, page):
 
     logger.info("ytdlp completed successfully")
 
-    _remember_videos(page, ydl.pushed_videos)
+    info_json = json.dumps(ie_result, sort_keys=True, indent=4)
+    _remember_videos(page, info_json, ydl.pushed_videos)
     if worker._using_warcprox(site):
-        info_json = json.dumps(ie_result, sort_keys=True, indent=4)
         logger.info(
             "sending WARCPROX_WRITE_RECORD request to warcprox with yt-dlp json",
             url=ydl.url,
