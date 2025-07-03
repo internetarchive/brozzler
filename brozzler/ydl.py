@@ -138,8 +138,20 @@ class VideoDataClient:
         return results
 
     def create_video_capture_record(self, video_capture_record):
-        # note: brozzler postcrawl step 72 includes info from crawl-log
-        pass
+        # note: brozzler postcrawl step 72 includes info from crawl-log — watch for differences!
+        # TODO: needs added fields added to postgres table, refinement
+        pg_query = (
+            f"INSERT INTO video ({VideoCaptureRecord - items}) VALUES (%s, %s, ...)",
+            VideoCaptureRecord - values,
+        )
+        try:
+            results = self._execute_query(
+                pg_query, row_factory=psycopg.rows.scalar_row, fetchall=True
+            )
+        except Exception as e:
+            logger.warn("postgres query failed: %s", e)
+            results = []
+        return results
 
 
 def isyoutubehost(url):
@@ -408,7 +420,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
     return ydl
 
 
-def _remember_videos(page, worker, info_json=None, pushed_videos=None):
+def _remember_videos(page, site, worker, ydl, ie_result, pushed_videos=None):
     """
     Saves info about videos captured by yt-dlp in `page.videos` and postgres.
     """
@@ -422,12 +434,14 @@ def _remember_videos(page, worker, info_json=None, pushed_videos=None):
             "content-type": pushed_video["content-type"],
             "content-length": pushed_video["content-length"],
         }
-        # grab info from info_json if it's available
+
+        warc_prefix_items = site.warcprox_meta["warc-prefix"].split("-")
+
         video_record = worker._video_data.VideoCaptureRecord()
-        video_record.crawl_job_id = None
-        video_record.is_test_crawl = None
-        video_record.seed_id = None
-        video_record.collection_id = None
+        video_record.crawl_job_id = site.job_id
+        video_record.is_test_crawl = True if warc_prefix_items[2] == "TEST" else False
+        video_record.seed_id = site.ait_seed_id
+        video_record.collection_id = int(warc_prefix_items[1])
         video_record.containing_page_timestamp = None
         video_record.containing_page_digest = None
         video_record.containing_page_media_index = None
@@ -436,13 +450,17 @@ def _remember_videos(page, worker, info_json=None, pushed_videos=None):
         video_record.video_timestamp = None
         video_record.video_mimetype = pushed_video["content-type"]
         video_record.video_http_status = pushed_video["response_code"]
-        video_record.video_size = None
-        video_record.containing_page_url = None
+        video_record.video_size = pushed_video["content-length"]  # probably?
+        video_record.containing_page_url = str(
+            urlcanon.aggressive(ydl.url)
+        )  # probably?
         video_record.video_url = pushed_video["url"]
-        video_record.video_title = None
-        video_record.video_display_id = None
-        video_record.video_resolution = None
-        video_record.video_capture_status = None  # "recrawl"
+        # note: ie_result may not be correct when multiple videos present
+        video_record.video_title = ie_result.get("title")
+        video_record.video_display_id = ie_result.get("display_id")
+        video_record.video_resolution = ie_result.get("resolution")
+        video_record.video_capture_status = None  # "recrawl" maybe
+
         worker._video_data.save_video_capture_record(video_record)
 
         logger.debug("embedded video", video=video)
