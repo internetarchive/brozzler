@@ -465,28 +465,22 @@ class BrozzlerWorker:
                 )
 
         def _on_response(chrome_msg):
+            response = chrome_msg.get("params", {}).get("response", {})
+            mime_type = response.get("mimeType", "")
             if (
-                "params" in chrome_msg
-                and "response" in chrome_msg["params"]
-                and "mimeType" in chrome_msg["params"]["response"]
-                and chrome_msg["params"]["response"]
-                .get("mimeType", "")
-                .startswith("video/")
+                mime_type.startswith("video/")
                 # skip manifests of DASH segmented video -
                 # see https://github.com/internetarchive/brozzler/pull/70
-                and chrome_msg["params"]["response"]["mimeType"]
-                != "video/vnd.mpeg.dash.mpd"
-                and chrome_msg["params"]["response"].get("status") in (200, 206)
+                and mime_type != "video/vnd.mpeg.dash.mpd"
+                and response.get("status") in (200, 206)
             ):
                 video = {
                     "blame": "browser",
-                    "url": chrome_msg["params"]["response"].get("url"),
-                    "response_code": chrome_msg["params"]["response"]["status"],
-                    "content-type": chrome_msg["params"]["response"]["mimeType"],
+                    "url": response.get("url"),
+                    "response_code": response["status"],
+                    "content-type": mime_type,
                 }
-                response_headers = CaseInsensitiveDict(
-                    chrome_msg["params"]["response"]["headers"]
-                )
+                response_headers = CaseInsensitiveDict(response["headers"])
                 if "content-length" in response_headers:
                     video["content-length"] = int(response_headers["content-length"])
                 if "content-range" in response_headers:
