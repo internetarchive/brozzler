@@ -321,9 +321,9 @@ class BrozzlerWorker:
             elif site.video_capture in [
                 VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value,
                 VideoCaptureOptions.BLOCK_VIDEO_MIME_TYPES.value,
-            ] and self._is_video_type(page_headers):
+            ] and self._is_media_type(page_headers):
                 page_logger.info(
-                    "skipping video content: video MIME type capture disabled for site"
+                    "skipping audio/video content: video MIME type capture disabled for site"
                 )
             else:
                 self._fetch_url(site, page=page)
@@ -407,13 +407,14 @@ class BrozzlerWorker:
             and "html" not in page_headers["content-type"]
         )
 
-    def _is_video_type(self, page_headers) -> bool:
+    def _is_media_type(self, page_headers) -> bool:
         """
         Determines if the page's Content-Type header specifies that it contains
-        a video.
+        audio or video.
         """
         return "content-type" in page_headers and (
             "video" in page_headers["content-type"]
+            or "audio" in page_headers["content-type"]
             # https://github.com/gsuberland/UMP_Format/blob/main/UMP_Format.md
             or page_headers["content-type"] == "application/vnd.yt-ump"
         )
