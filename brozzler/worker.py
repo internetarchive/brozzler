@@ -21,6 +21,7 @@ limitations under the License.
 import datetime
 import io
 import json
+import os
 import socket
 import threading
 import time
@@ -39,6 +40,7 @@ from urllib3.exceptions import ProxyError, TimeoutError
 import brozzler
 import brozzler.browser
 from brozzler.model import VideoCaptureOptions
+from brozzler.ydl import VideoDataClient
 
 from . import metrics
 
@@ -56,6 +58,7 @@ class BrozzlerWorker:
     SITE_SESSION_MINUTES = 15
     HEADER_REQUEST_TIMEOUT = 30
     FETCH_URL_TIMEOUT = 60
+    VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 
     def __init__(
         self,
@@ -88,6 +91,8 @@ class BrozzlerWorker:
         self._service_registry = service_registry
         self._ytdlp_proxy_endpoints = ytdlp_proxy_endpoints
         self._max_browsers = max_browsers
+        if VIDEO_DATA_SOURCE and VIDEO_DATA_SOURCE.startswith("postgresql"):
+            self._video_data = VideoDataClient()
 
         self._warcprox_auto = warcprox_auto
         self._proxy = proxy
