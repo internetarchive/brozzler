@@ -20,12 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - uses: ./.github/workflows/setup
         with:
           python-version: ${{ matrix.version }}
 
-      - uses: ./.github/workflows/setup
-
       - name: Run tests
         run: |
-          py.test --tb=native --verbose tests/test_cli.py tests/test_units.py
+          uv run py.test --tb=native --verbose tests/test_cli.py tests/test_units.py
