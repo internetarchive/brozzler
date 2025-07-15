@@ -4,8 +4,19 @@ VIRTUAL_ENV_DIR = .venv
 BROZZLER_EGG_LINK = ./brozzler.egg-info
 # Where's the Makefile running? Valid options: LOCAL, CI
 ENV ?= LOCAL
+
+# GitHub Actions sets CI=true
+ifeq ($(CI),true)
+	ENV = CI
+endif
+
 # Which package manager to use? Valid options: UV, PIP
 PACKAGE_MANAGER ?= UV
+OUTPUT_FLAGS =
+
+ifeq ($(ENV),CI)
+	OUTPUT_FLAGS = --output-format=github
+endif
 
 $(VIRTUAL_ENV_DIR):
 ifeq ($(PACKAGE_MANAGER),UV)
@@ -37,14 +48,14 @@ clean: $(BROZZLER_EGG_LINK)
 
 .PHONY: check
 check:
-	$(VIRTUAL_ENV_DIR)/bin/ruff check --target-version py37 .
+	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) .
 
 .PHONY: check-format
 check-format:
-	$(VIRTUAL_ENV_DIR)/bin/ruff check --select I --target-version py37 .
-	$(VIRTUAL_ENV_DIR)/bin/ruff format --check --target-version py37 .
+	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) --select I .
+	$(VIRTUAL_ENV_DIR)/bin/ruff format --check .
 
 .PHONY: format
 format:
-	$(VIRTUAL_ENV_DIR)/bin/ruff check --select I --target-version py37 --fix .
-	$(VIRTUAL_ENV_DIR)/bin/ruff format --target-version py37 .
+	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) --select I --fix .
+	$(VIRTUAL_ENV_DIR)/bin/ruff format .

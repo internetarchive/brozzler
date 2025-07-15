@@ -46,11 +46,4 @@ setuptools.setup(
         "brozzler.dashboard": find_package_data("brozzler.dashboard"),
     },
     zip_safe=False,
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Environment :: Console",
-        "Programming Language :: Python :: 3.8",
-        "Topic :: Internet :: WWW/HTTP",
-        "Topic :: System :: Archiving",
-    ],
 )

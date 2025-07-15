@@ -14,7 +14,7 @@ def brozzle_page(worker, page) -> bool:
 
     # This gets assigned after a video is captured; if an
     # exception was raised by yt-dlp, it never gets assigned.
-    if not "videos" in page:
+    if "videos" not in page:
         return False
 
     if len(page.videos) > 0:

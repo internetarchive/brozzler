@@ -1,5 +1,9 @@
 name: Test setup
 
+inputs:
+  python-version:
+    required: true
+
 runs:
   using: composite
   steps:
@@ -21,7 +25,7 @@ runs:
 
     - name: Install pip dependencies
       run: |
-        pip install .[rethinkdb,warcprox,yt-dlp]
+        pip install .[rethinkdb,warcprox,yt-dlp,psycopg]
         # setuptools required by rethinkdb==2.4.9
         pip install pytest setuptools
       shell: bash

@@ -944,7 +944,6 @@ def test_max_claimed_sites(rethinker):
         ],
         "max_claimed_sites": 3,
     }
-    seeds_seen = []
     job = brozzler.new_job(frontier, job_conf)
 
     assert job.id

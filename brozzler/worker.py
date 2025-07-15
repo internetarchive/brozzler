@@ -21,6 +21,7 @@ limitations under the License.
 import datetime
 import io
 import json
+import os
 import socket
 import threading
 import time
@@ -39,6 +40,7 @@ from urllib3.exceptions import ProxyError, TimeoutError
 import brozzler
 import brozzler.browser
 from brozzler.model import VideoCaptureOptions
+from brozzler.ydl import VideoDataClient
 
 from . import metrics
 
@@ -56,6 +58,7 @@ class BrozzlerWorker:
     SITE_SESSION_MINUTES = 15
     HEADER_REQUEST_TIMEOUT = 60
     FETCH_URL_TIMEOUT = 60
+    VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 
     def __init__(
         self,
@@ -88,6 +91,8 @@ class BrozzlerWorker:
         self._service_registry = service_registry
         self._ytdlp_proxy_endpoints = ytdlp_proxy_endpoints
         self._max_browsers = max_browsers
+        if VIDEO_DATA_SOURCE and VIDEO_DATA_SOURCE.startswith("postgresql"):
+            self._video_data = VideoDataClient()
 
         self._warcprox_auto = warcprox_auto
         self._proxy = proxy
@@ -321,9 +326,9 @@ class BrozzlerWorker:
             elif site.video_capture in [
                 VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value,
                 VideoCaptureOptions.BLOCK_VIDEO_MIME_TYPES.value,
-            ] and self._is_video_type(page_headers):
+            ] and self._is_media_type(page_headers):
                 page_logger.info(
-                    "skipping video content: video MIME type capture disabled for site"
+                    "skipping audio/video content: video MIME type capture disabled for site"
                 )
             else:
                 self._fetch_url(site, page=page)
@@ -339,6 +344,7 @@ class BrozzlerWorker:
                     raise brozzler.PageConnectionError()
             except brozzler.PageInterstitialShown:
                 page_logger.info("page interstitial shown (http auth)")
+                status_code = -1
 
             if enable_youtube_dl and self.should_ytdlp(
                 page_logger, site, page, status_code
@@ -406,13 +412,16 @@ class BrozzlerWorker:
             and "html" not in page_headers["content-type"]
         )
 
-    def _is_video_type(self, page_headers) -> bool:
+    def _is_media_type(self, page_headers) -> bool:
         """
         Determines if the page's Content-Type header specifies that it contains
-        a video.
+        audio or video.
         """
-        return (
-            "content-type" in page_headers and "video" in page_headers["content-type"]
+        return "content-type" in page_headers and (
+            "video" in page_headers["content-type"]
+            or "audio" in page_headers["content-type"]
+            # https://github.com/gsuberland/UMP_Format/blob/main/UMP_Format.md
+            or page_headers["content-type"] == "application/vnd.yt-ump"
         )
 
     def _is_pdf(self, page_headers) -> bool:

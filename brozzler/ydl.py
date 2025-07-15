@@ -24,11 +24,15 @@ import tempfile
 import threading
 import time
 import urllib.request
+from typing import Any, Bool, List, Optional
 
 import doublethink
+import psycopg
 import structlog
 import urlcanon
 import yt_dlp
+from dataclasses import dataclass
+from psycopg_pool import ConnectionPool, PoolTimeout
 from yt_dlp.utils import ExtractorError, match_filter_func
 
 import brozzler
@@ -37,13 +41,139 @@ from . import metrics
 
 thread_local = threading.local()
 
-
 PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
 YTDLP_MAX_REDIRECTS = 5
 
 
 logger = structlog.get_logger(logger_name=__name__)
+
+
+# video_title, video_display_id, video_resolution, video_capture_status are new fields, mostly from yt-dlp metadata
+@dataclass(frozen=True)
+class VideoCaptureRecord:
+    crawl_job_id: int
+    is_test_crawl: bool
+    seed_id: int
+    collection_id: int
+    containing_page_timestamp: str
+    containing_page_digest: str
+    containing_page_media_index: int
+    containing_page_media_count: int
+    video_digest: str
+    video_timestamp: str
+    video_mimetype: str
+    video_http_status: int
+    video_size: int
+    containing_page_url: str
+    video_url: str
+    video_title: str
+    video_display_id: (
+        str  # aka yt-dlp metadata as display_id, e.g., youtube watch page v param
+    )
+    video_resolution: str
+    video_capture_status: str  # recrawl?  what else?
+
+
+class VideoDataClient:
+    import psycopg
+    from psycopg_pool import ConnectionPool, PoolTimeout
+
+    def __init__(self):
+        pool = ConnectionPool(VIDEO_DATA_SOURCE, min_size=1, max_size=9)
+        pool.wait()
+        logger.info("pg pool ready")
+        # atexit.register(pool.close)
+
+        self.pool = pool
+
+    def _execute_pg_query(
+        self, query: str, row_factory=None, fetchone=False, fetchall=False
+    ) -> Optional[Any]:
+        try:
+            with self.pool.connection() as conn:
+                with conn.cursor(row_factory=row_factory) as cur:
+                    cur.execute(query)
+                    if fetchone:
+                        return cur.fetchone()
+                    if fetchall:
+                        return cur.fetchall()
+        except PoolTimeout as e:
+            logger.warn("hit PoolTimeout: %s", e)
+            self.pool.check()
+        except Exception as e:
+            logger.warn("postgres query failed: %s", e)
+        return None
+
+    def get_recent_video_capture(self, site=None, containing_page_url=None) -> List:
+        account_id = site.account_id if site.account_id else None
+        seed_id = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
+
+        if account_id and seed_id and containing_page_url:
+            # check for postgres query for most recent record
+            pg_query = (
+                "SELECT * from video where account_id = %s and seed_id = %s and containing_page_url = %s LIMIT 1",
+                (account_id, seed_id, str(urlcanon.aggressive(containing_page_url))),
+            )
+            try:
+                results = self._execute_query(pg_query, fetchall=True)
+            except Exception as e:
+                logger.warn("postgres query failed: %s", e)
+                results = []
+        else:
+            logger.warn("missing account_id, seed_id, or containing_page_url")
+            results = []
+
+        return results
+
+    def get_video_captures(self, site=None, source=None) -> List[str]:
+        account_id = site.account_id if site.account_id else None
+        seed_id = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
+
+        # TODO: generalize, maybe make variable?
+        # containing_page_timestamp_pattern = "2025%"  # for future pre-dup additions
+
+        if source == "youtube":
+            containing_page_url_pattern = "http://youtube.com/watch%"  # yes, video data canonicalization uses "http"
+        # support other media sources here
+
+        if account_id and seed_id and source:
+            pg_query = (
+                "SELECT containing_page_url from video where account_id = %s and seed_id = %s and containing_page_url like %s",
+                (
+                    account_id,
+                    seed_id,
+                    containing_page_url_pattern,
+                ),
+            )
+            try:
+                results = self._execute_query(
+                    pg_query, row_factory=psycopg.rows.scalar_row, fetchall=True
+                )
+            except Exception as e:
+                logger.warn("postgres query failed: %s", e)
+                results = []
+        else:
+            logger.warn("missing account_id, seed_id, or source")
+            results = []
+
+        return results
+
+    def create_video_capture_record(self, video_capture_record):
+        # note: brozzler postcrawl step 72 includes info from crawl-log — watch for differences!
+        # TODO: needs added fields added to postgres table, refinement
+        pg_query = (
+            f"INSERT INTO video ({VideoCaptureRecord - items}) VALUES (%s, %s, ...)",
+            VideoCaptureRecord - values,
+        )
+        try:
+            results = self._execute_query(
+                pg_query, row_factory=psycopg.rows.scalar_row, fetchall=True
+            )
+        except Exception as e:
+            logger.warn("postgres query failed: %s", e)
+            results = []
+        return results
 
 
 def isyoutubehost(url):
@@ -312,9 +442,9 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
     return ydl
 
 
-def _remember_videos(page, pushed_videos=None):
+def _remember_videos(page, site, worker, ydl, ie_result, pushed_videos=None):
     """
-    Saves info about videos captured by yt-dlp in `page.videos`.
+    Saves info about videos captured by yt-dlp in `page.videos` and postgres.
     """
     if "videos" not in page:
         page.videos = []
@@ -326,6 +456,36 @@ def _remember_videos(page, pushed_videos=None):
             "content-type": pushed_video["content-type"],
             "content-length": pushed_video["content-length"],
         }
+        """
+        # WIP: add new video record to QA postgres here, or in postcrawl only?
+        warc_prefix_items = site.warcprox_meta["warc-prefix"].split("-")
+
+        video_record = worker._video_data.VideoCaptureRecord()
+        video_record.crawl_job_id = site.job_id
+        video_record.is_test_crawl = True if warc_prefix_items[2] == "TEST" else False
+        video_record.seed_id = site.ait_seed_id
+        video_record.collection_id = int(warc_prefix_items[1])
+        video_record.containing_page_timestamp = None
+        video_record.containing_page_digest = None
+        video_record.containing_page_media_index = None
+        video_record.containing_page_media_count = None
+        video_record.video_digest = None
+        video_record.video_timestamp = None
+        video_record.video_mimetype = pushed_video["content-type"]
+        video_record.video_http_status = pushed_video["response_code"]
+        video_record.video_size = pushed_video["content-length"]  # probably?
+        video_record.containing_page_url = str(
+            urlcanon.aggressive(ydl.url)
+        )  # probably?
+        video_record.video_url = pushed_video["url"]
+        # note: ie_result may not be correct when multiple videos present
+        video_record.video_title = ie_result.get("title")
+        video_record.video_display_id = ie_result.get("display_id")
+        video_record.video_resolution = ie_result.get("resolution")
+        video_record.video_capture_status = None  # "recrawl" maybe
+
+        worker._video_data.save_video_capture_record(video_record)
+        """
         logger.debug("embedded video", video=video)
         page.videos.append(video)
 
@@ -400,9 +560,9 @@ def _try_youtube_dl(worker, ydl, site, page):
 
     logger.info("ytdlp completed successfully")
 
-    _remember_videos(page, ydl.pushed_videos)
+    info_json = json.dumps(ie_result, sort_keys=True, indent=4)
+    _remember_videos(page, info_json, ydl.pushed_videos)
     if worker._using_warcprox(site):
-        info_json = json.dumps(ie_result, sort_keys=True, indent=4)
         logger.info(
             "sending WARCPROX_WRITE_RECORD request to warcprox with yt-dlp json",
             url=ydl.url,
@@ -439,15 +599,31 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
         logger.info("tempdir for yt-dlp", tempdir=tempdir)
         ydl = _build_youtube_dl(worker, tempdir, site, page, ytdlp_proxy_endpoints)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
+        # print(ie_result)
         outlinks = set()
         if ie_result and (
             ie_result.get("extractor") == "youtube:playlist"
             or ie_result.get("extractor") == "youtube:tab"
         ):
-            # youtube watch pages as outlinks
-            outlinks = {
-                "https://www.youtube.com/watch?v=%s" % e["id"]
-                for e in ie_result.get("entries_no_dl", [])
-            }
-        # any outlinks for other cases? soundcloud, maybe?
+            if worker._video_data:
+                captured_youtube_watch_pages = set()
+                captured_youtube_watch_pages.add(
+                    worker._video_data.get_video_captures_by_source(
+                        site, source="youtube"
+                    )
+                )
+                uncaptured_youtube_watch_pages = []
+                for e in ie_result.get("entries_no_dl", []):
+                    # note: http needed for match
+                    youtube_watch_url = str(
+                        urlcanon.aggressive(f"http://www.youtube.com/watch?v={e['id']}")
+                    )
+                    if youtube_watch_url in captured_youtube_watch_pages:
+                        continue
+                    uncaptured_youtube_watch_pages.append(
+                        f"https://www.youtube.com/watch?v={e['id']}"
+                    )
+                if uncaptured_youtube_watch_pages:
+                    outlinks.add(uncaptured_youtube_watch_pages)
+        # todo: handle outlinks for instagram and soundcloud, other media source, here (if anywhere)
         return outlinks

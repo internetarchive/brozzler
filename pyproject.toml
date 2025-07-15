@@ -1,6 +1,6 @@
 [project]
 name = "brozzler"
-version = "1.6.13"
+version = "1.7.1"
 authors = [
   { name="Noah Levitt", email="nlevitt@archive.org" },
 ]
@@ -12,10 +12,15 @@ maintainers = [
 ]
 description = "Distributed web crawling with browsers"
 readme = "README.rst"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
     "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: System :: Archiving",
 ]
 dependencies = [
   "PyYAML>=5.1",
@@ -31,10 +36,11 @@ dependencies = [
   "prometheus-client>=0.20.0",
   "structlog>=25.1.0",
 ]
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 
 [project.optional-dependencies]
 yt-dlp = ["yt-dlp[default,curl-cffi]>=2024.7.25"]
+psycopg = ["psycopg[binary,pool]>=3.2.6"]
 dashboard = ["flask>=1.0", "gunicorn>=19.8.1"]
 warcprox = ["warcprox>=2.4.31"]
 rethinkdb = [
