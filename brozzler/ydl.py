@@ -113,16 +113,10 @@ class VideoDataClient:
             # check for postgres query for most recent record
             pg_query = (
                 "SELECT * from video where account_id = %s and seed_id = %s and containing_page_url = %s LIMIT 1",
-                (
-                    account_id,
-                    seed_id,
-                    str(urlcanon.aggressive(containing_page_url))
-                )
+                (account_id, seed_id, str(urlcanon.aggressive(containing_page_url))),
             )
             try:
-                results = self._execute_query(
-                    pg_query, fetchall=True
-                )
+                results = self._execute_query(pg_query, fetchall=True)
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
                 results = []
@@ -462,7 +456,8 @@ def _remember_videos(page, site, worker, ydl, ie_result, pushed_videos=None):
             "content-type": pushed_video["content-type"],
             "content-length": pushed_video["content-length"],
         }
-
+        """
+        # WIP: add new video record to QA postgres here, or in postcrawl only?
         warc_prefix_items = site.warcprox_meta["warc-prefix"].split("-")
 
         video_record = worker._video_data.VideoCaptureRecord()
@@ -490,7 +485,7 @@ def _remember_videos(page, site, worker, ydl, ie_result, pushed_videos=None):
         video_record.video_capture_status = None  # "recrawl" maybe
 
         worker._video_data.save_video_capture_record(video_record)
-
+        """
         logger.debug("embedded video", video=video)
         page.videos.append(video)
 
@@ -619,10 +614,15 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
                 )
                 uncaptured_youtube_watch_pages = []
                 for e in ie_result.get("entries_no_dl", []):
-                    youtube_watch_url = str(urlcanon.aggressive(f"http://www.youtube.com/watch?v={e['id']}"))
+                    # note: http needed for match
+                    youtube_watch_url = str(
+                        urlcanon.aggressive(f"http://www.youtube.com/watch?v={e['id']}")
+                    )
                     if youtube_watch_url in captured_youtube_watch_pages:
                         continue
-                    uncaptured_youtube_watch_pages.append(youtube_watch_url)
+                    uncaptured_youtube_watch_pages.append(
+                        f"https://www.youtube.com/watch?v={e['id']}"
+                    )
                 if uncaptured_youtube_watch_pages:
                     outlinks.add(uncaptured_youtube_watch_pages)
         # todo: handle outlinks for instagram and soundcloud, other media source, here (if anywhere)
