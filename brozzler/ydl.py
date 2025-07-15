@@ -24,7 +24,7 @@ import tempfile
 import threading
 import time
 import urllib.request
-from typing import Any, List, Optional
+from typing import Any, Bool, List, Optional
 
 import doublethink
 import psycopg
@@ -105,6 +105,33 @@ class VideoDataClient:
             logger.warn("postgres query failed: %s", e)
         return None
 
+    def get_recent_video_capture(self, site=None, containing_page_url=None) -> List:
+        account_id = site.account_id if site.account_id else None
+        seed_id = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
+
+        if account_id and seed_id and containing_page_url:
+            # check for postgres query for most recent record
+            pg_query = (
+                "SELECT * from video where account_id = %s and seed_id = %s and containing_page_url = %s LIMIT 1",
+                (
+                    account_id,
+                    seed_id,
+                    str(urlcanon.aggressive(containing_page_url))
+                )
+            )
+            try:
+                results = self._execute_query(
+                    pg_query, fetchall=True
+                )
+            except Exception as e:
+                logger.warn("postgres query failed: %s", e)
+                results = []
+        else:
+            logger.warn("missing account_id, seed_id, or containing_page_url")
+            results = []
+
+        return results
+
     def get_video_captures(self, site=None, source=None) -> List[str]:
         account_id = site.account_id if site.account_id else None
         seed_id = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
@@ -125,16 +152,17 @@ class VideoDataClient:
                     containing_page_url_pattern,
                 ),
             )
+            try:
+                results = self._execute_query(
+                    pg_query, row_factory=psycopg.rows.scalar_row, fetchall=True
+                )
+            except Exception as e:
+                logger.warn("postgres query failed: %s", e)
+                results = []
         else:
             logger.warn("missing account_id, seed_id, or source")
             results = []
-        try:
-            results = self._execute_query(
-                pg_query, row_factory=psycopg.rows.scalar_row, fetchall=True
-            )
-        except Exception as e:
-            logger.warn("postgres query failed: %s", e)
-            results = []
+
         return results
 
     def create_video_capture_record(self, video_capture_record):
@@ -591,7 +619,7 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
                 )
                 uncaptured_youtube_watch_pages = []
                 for e in ie_result.get("entries_no_dl", []):
-                    youtube_watch_url = f"https://www.youtube.com/watch?v={e['id']}"
+                    youtube_watch_url = str(urlcanon.aggressive(f"http://www.youtube.com/watch?v={e['id']}"))
                     if youtube_watch_url in captured_youtube_watch_pages:
                         continue
                     uncaptured_youtube_watch_pages.append(youtube_watch_url)
