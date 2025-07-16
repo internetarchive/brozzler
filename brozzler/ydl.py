@@ -24,7 +24,7 @@ import tempfile
 import threading
 import time
 import urllib.request
-from typing import Any, Bool, List, Optional
+from typing import Any, List, Optional
 
 import doublethink
 import psycopg
@@ -79,8 +79,10 @@ class VideoDataClient:
     import psycopg
     from psycopg_pool import ConnectionPool, PoolTimeout
 
+    VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
+
     def __init__(self):
-        pool = ConnectionPool(VIDEO_DATA_SOURCE, min_size=1, max_size=9)
+        pool = ConnectionPool(self.VIDEO_DATA_SOURCE, min_size=1, max_size=9)
         pool.wait()
         logger.info("pg pool ready")
         # atexit.register(pool.close)
