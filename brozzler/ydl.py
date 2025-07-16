@@ -619,6 +619,7 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
                         urlcanon.aggressive(f"http://www.youtube.com/watch?v={e['id']}")
                     )
                     if youtube_watch_url in captured_youtube_watch_pages:
+                        logger.info("skipping adding %s to outlinks", youtube_watch_url)
                         continue
                     uncaptured_youtube_watch_pages.append(
                         f"https://www.youtube.com/watch?v={e['id']}"
