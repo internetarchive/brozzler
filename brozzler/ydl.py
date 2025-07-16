@@ -114,11 +114,11 @@ class VideoDataClient:
         if account_id and seed_id and containing_page_url:
             # check for postgres query for most recent record
             pg_query = (
-                "SELECT * from video where account_id = %s and seed_id = %s and containing_page_url = %s LIMIT 1",
+                "SELECT * from video where account_id = %s and seed_id = %s and containing_page_url = %s ORDER BY video_timestamp LIMIT 1",
                 (account_id, seed_id, str(urlcanon.aggressive(containing_page_url))),
             )
             try:
-                results = self._execute_query(pg_query, fetchall=True)
+                results = self._execute_pg_query(pg_query, fetchall=True)
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
                 results = []
@@ -149,7 +149,7 @@ class VideoDataClient:
                 ),
             )
             try:
-                results = self._execute_query(
+                results = self._execute_pg_query(
                     pg_query, row_factory=psycopg.rows.scalar_row, fetchall=True
                 )
             except Exception as e:
@@ -162,16 +162,15 @@ class VideoDataClient:
         return results
 
     def create_video_capture_record(self, video_capture_record):
-        # note: brozzler postcrawl step 72 includes info from crawl-log — watch for differences!
+        # NOTE: we want to do this in brozzler postcrawl for now
+        # WIP
         # TODO: needs added fields added to postgres table, refinement
         pg_query = (
             f"INSERT INTO video ({VideoCaptureRecord - items}) VALUES (%s, %s, ...)",
             VideoCaptureRecord - values,
         )
         try:
-            results = self._execute_query(
-                pg_query, row_factory=psycopg.rows.scalar_row, fetchall=True
-            )
+            results = self._execute_pg_query(pg_query)
         except Exception as e:
             logger.warn("postgres query failed: %s", e)
             results = []
@@ -444,9 +443,10 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
     return ydl
 
 
-def _remember_videos(page, site, worker, ydl, ie_result, pushed_videos=None):
+# new maybe? def _remember_videos(page, site, worker, ydl, ie_result, pushed_videos=None):
+def _remember_videos(page, pushed_videos=None):
     """
-    Saves info about videos captured by yt-dlp in `page.videos` and postgres.
+    Saves info about videos captured by yt-dlp in `page.videos`
     """
     if "videos" not in page:
         page.videos = []
@@ -480,13 +480,11 @@ def _remember_videos(page, site, worker, ydl, ie_result, pushed_videos=None):
             urlcanon.aggressive(ydl.url)
         )  # probably?
         video_record.video_url = pushed_video["url"]
-        # note: ie_result may not be correct when multiple videos present
+        # note: NEW! ie_result may not be correct when multiple videos present
         video_record.video_title = ie_result.get("title")
         video_record.video_display_id = ie_result.get("display_id")
         video_record.video_resolution = ie_result.get("resolution")
         video_record.video_capture_status = None  # "recrawl" maybe
-
-        worker._video_data.save_video_capture_record(video_record)
         """
         logger.debug("embedded video", video=video)
         page.videos.append(video)
@@ -563,7 +561,7 @@ def _try_youtube_dl(worker, ydl, site, page):
     logger.info("ytdlp completed successfully")
 
     info_json = json.dumps(ie_result, sort_keys=True, indent=4)
-    _remember_videos(page, info_json, ydl.pushed_videos)
+    _remember_videos(page, ydl.pushed_videos)
     if worker._using_warcprox(site):
         logger.info(
             "sending WARCPROX_WRITE_RECORD request to warcprox with yt-dlp json",
@@ -610,9 +608,7 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
             if worker._video_data:
                 captured_youtube_watch_pages = set()
                 captured_youtube_watch_pages.add(
-                    worker._video_data.get_video_captures_by_source(
-                        site, source="youtube"
-                    )
+                    worker._video_data.get_video_captures(site, source="youtube")
                 )
                 uncaptured_youtube_watch_pages = []
                 for e in ie_result.get("entries_no_dl", []):
