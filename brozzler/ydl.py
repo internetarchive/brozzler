@@ -108,8 +108,10 @@ class VideoDataClient:
         return None
 
     def get_recent_video_capture(self, site=None, containing_page_url=None) -> List:
-        account_id = site.account_id if site.account_id else None
-        seed_id = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
+        account_id = site["account_id"] if site["account_id"] else None
+        seed_id = (
+            site["metadata"]["ait_seed_id"] if site["metadata"]["ait_seed_id"] else None
+        )
 
         if account_id and seed_id and containing_page_url:
             # check for postgres query for most recent record
@@ -129,8 +131,10 @@ class VideoDataClient:
         return results
 
     def get_video_captures(self, site=None, source=None) -> List[str]:
-        account_id = site.account_id if site.account_id else None
-        seed_id = site.metadata.ait_seed_id if site.metadata.ait_seed_id else None
+        account_id = site["account_id"] if site["account_id"] else None
+        seed_id = (
+            site["metadata"]["ait_seed_id"] if site["metadata"]["ait_seed_id"] else None
+        )
 
         # TODO: generalize, maybe make variable?
         # containing_page_timestamp_pattern = "2025%"  # for future pre-dup additions
@@ -465,7 +469,7 @@ def _remember_videos(page, pushed_videos=None):
         video_record = worker._video_data.VideoCaptureRecord()
         video_record.crawl_job_id = site.job_id
         video_record.is_test_crawl = True if warc_prefix_items[2] == "TEST" else False
-        video_record.seed_id = site.ait_seed_id
+        video_record.seed_id = site["metadata"]["ait_seed_id"]
         video_record.collection_id = int(warc_prefix_items[1])
         video_record.containing_page_timestamp = None
         video_record.containing_page_digest = None
@@ -606,23 +610,42 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
             or ie_result.get("extractor") == "youtube:tab"
         ):
             if worker._video_data:
-                captured_youtube_watch_pages = set()
-                captured_youtube_watch_pages.add(
-                    worker._video_data.get_video_captures(site, source="youtube")
+                logger.info(
+                    "checking for previously captured youtube watch pages for account %s, seed_id %s",
+                    site["account_id"],
+                    site["metadata"]["ait_seed_id"],
                 )
-                uncaptured_youtube_watch_pages = []
-                for e in ie_result.get("entries_no_dl", []):
-                    # note: http needed for match
-                    youtube_watch_url = str(
-                        urlcanon.aggressive(f"http://www.youtube.com/watch?v={e['id']}")
+                try:
+                    captured_youtube_watch_pages = set()
+                    captured_youtube_watch_pages.update(
+                        worker._video_data.get_video_captures(site, source="youtube")
                     )
-                    if youtube_watch_url in captured_youtube_watch_pages:
-                        logger.info("skipping adding %s to outlinks", youtube_watch_url)
-                        continue
-                    uncaptured_youtube_watch_pages.append(
-                        f"https://www.youtube.com/watch?v={e['id']}"
-                    )
-                if uncaptured_youtube_watch_pages:
-                    outlinks.add(uncaptured_youtube_watch_pages)
+                    uncaptured_youtube_watch_pages = []
+                    for e in ie_result.get("entries_no_dl", []):
+                        # note: http needed for match
+                        youtube_watch_url = str(
+                            urlcanon.aggressive(
+                                f"http://www.youtube.com/watch?v={e['id']}"
+                            )
+                        )
+                        if youtube_watch_url in captured_youtube_watch_pages:
+                            logger.info(
+                                "skipping adding %s to yt-dlp outlinks",
+                                youtube_watch_url,
+                            )
+                            continue
+                        uncaptured_youtube_watch_pages.append(
+                            f"https://www.youtube.com/watch?v={e['id']}"
+                        )
+                except Exception as e:
+                    logger.warning("hit exception processing worker._video_data: %s", e)
+                    if uncaptured_youtube_watch_pages:
+                        outlinks.update(uncaptured_youtube_watch_pages)
+            else:
+                outlinks = {
+                    "https://www.youtube.com/watch?v=%s" % e["id"]
+                    for e in ie_result.get("entries_no_dl", [])
+                }
+
         # todo: handle outlinks for instagram and soundcloud, other media source, here (if anywhere)
         return outlinks
