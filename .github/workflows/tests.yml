@@ -29,4 +29,4 @@ jobs:
 
       - name: Run tests
         run: |
-          uv run py.test --tb=native --verbose tests/test_cli.py tests/test_units.py
+          uv run py.test --tb=native --verbose tests/test_cli.py tests/test_frontier.py tests/test_units.py
