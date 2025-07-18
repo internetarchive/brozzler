@@ -18,6 +18,7 @@ limitations under the License.
 """
 
 import datetime
+import importlib.util
 import logging
 import threading
 from importlib.metadata import version as _version
@@ -414,12 +415,7 @@ __all__ = [
     "suggest_default_chrome_exe",
 ]
 
-# TODO try using importlib.util.find_spec to test for dependency presence
-# rather than try/except on import.
-# See https://docs.astral.sh/ruff/rules/unused-import/#example
-try:
-    import doublethink  # noqa: F401
-
+if importlib.util.find_spec("doublethink"):
     # All of these imports use doublethink for real and are unsafe
     # to do if doublethink is unavailable.
     from brozzler.frontier import RethinkDbFrontier  # noqa: F401
@@ -447,8 +443,6 @@ try:
             "InvalidJobConf",
         ]
     )
-except ImportError:
-    pass
 
 # we could make this configurable if there's a good reason
 MAX_PAGE_FAILURES = 3

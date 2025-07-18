@@ -18,6 +18,7 @@ limitations under the License.
 """
 
 import importlib.metadata
+import importlib.util
 import os
 import subprocess
 
@@ -47,14 +48,12 @@ def console_scripts():
 def cli_commands():
     commands = set(console_scripts().keys())
     commands.remove("brozzler-wayback")
-    try:
-        import gunicorn  # noqa: F401
-    except ImportError:
+    if not importlib.util.find_spec("gunicorn"):
         commands.remove("brozzler-dashboard")
-    try:
-        import pywb  # noqa: F401
-    except ImportError:
+
+    if not importlib.util.find_spec("pywb"):
         commands.remove("brozzler-easy")
+
     return commands
 
 
