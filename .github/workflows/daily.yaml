@@ -12,12 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - uses: ./.github/workflows/setup
         with:
           python-version: '3.12'
 
-      - uses: ./.github/workflows/setup
-
       - name: Run tests
         run: |
-          py.test --tb=native --verbose tests
+          uv run py.test --tb=native --verbose tests
