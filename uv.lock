@@ -1044,9 +1044,12 @@ wheels = [
 
 [[package]]
 name = "warctools"
-version = "4.10.0"
+version = "5.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e6/5b/17eacaa14dde83dbecb62be44c21c5e9b8f2c709c1da5846e361c3033f3b/warctools-4.10.0.tar.gz", hash = "sha256:ce0c6e274db8ac8810f7c97b3943e8e8deadbc3f5c982db77cddaae2d2ae6170", size = 24619, upload-time = "2016-09-02T16:06:52.31Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d4/86/fe310be791a32cbcb66a08120fcc7ec761ad9769663477f535066e5b24a2/warctools-5.0.0.tar.gz", hash = "sha256:129ce85272b2d1df12fdb02ed2268ece89ffbeb50db5270dff5941c06862a0f7", size = 27729, upload-time = "2025-05-30T17:25:19.134Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ab/6a/f69ca682ce765a6f83ec44ca1049b3265fbda3a3a2d09382f87cbcbac00d/warctools-5.0.0-py3-none-any.whl", hash = "sha256:d29fd6e5a620e69fdd3b34f9c767f8fe4c4989bbeda3289267f7a23714976e11", size = 34439, upload-time = "2025-05-30T17:25:18.167Z" },
+]
 
 [[package]]
 name = "websocket-client"
