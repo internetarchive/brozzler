@@ -264,6 +264,8 @@ class Site(doublethink.Document, ElapsedMixIn):
             self.scope = {}
         if "video_capture" not in self:
             self.video_capture = VideoCaptureOptions.ENABLE_VIDEO_CAPTURE.value
+        if "account_id" not in self:
+            self.account_id = None
 
         # backward compatibility
         if "surt" in self.scope:
