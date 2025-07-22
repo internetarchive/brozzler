@@ -201,6 +201,8 @@ class Job(doublethink.Document, ElapsedMixIn):
     def populate_defaults(self):
         if "status" not in self:
             self.status = "ACTIVE"
+        if "account_id" not in self:
+            self.account_id = None
         if "pdfs_only" not in self:
             self.pdfs_only = False
         if "starts_and_stops" not in self:
@@ -262,6 +264,8 @@ class Site(doublethink.Document, ElapsedMixIn):
             self.scope = {}
         if "video_capture" not in self:
             self.video_capture = VideoCaptureOptions.ENABLE_VIDEO_CAPTURE.value
+        if "account_id" not in self:
+            self.account_id = None
 
         # backward compatibility
         if "surt" in self.scope:

@@ -182,8 +182,8 @@ class VideoDataClient:
 
 
 def isyoutubehost(url):
-    # split 1 splits scheme from url, split 2 splits path from hostname, split 3 splits query string on hostname
-    return "youtube.com" in url.split("//")[-1].split("/")[0].split("?")[0]
+    # split 1 splits scheme from url, split 2 splits path from hostname
+    return "youtube.com" in url.split("//")[-1].split("/")[0]
 
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
@@ -427,7 +427,10 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     is_youtube_host = isyoutubehost(ytdlp_url)
     if is_youtube_host and ytdlp_proxy_endpoints:
-        ydl_opts["proxy"] = random.choice(ytdlp_proxy_endpoints)
+        if 'com/watch' not in ytdlp_url:
+            ydl_opts["proxy"] = ytdlp_proxy_endpoints[4]
+        else:
+            ydl_opts["proxy"] = random.choice(ytdlp_proxy_endpoints[0:4])
         # don't log proxy value secrets
         ytdlp_proxy_for_logs = (
             ydl_opts["proxy"].split("@")[1] if "@" in ydl_opts["proxy"] else "@@@"
