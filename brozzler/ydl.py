@@ -422,6 +422,8 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         # recommended to avoid bot detection
         "sleep_interval": 7,
         "max_sleep_interval": 27,
+        # preserve pre-2025.07.21 mtime handling
+        "updatetime": True,
     }
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
