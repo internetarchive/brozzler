@@ -1,10 +1,10 @@
-id:
+account_id:
   type:
   - string
   - integer
   required: false
 
-account_id:
+id:
   type:
   - string
   - integer
