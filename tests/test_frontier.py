@@ -69,6 +69,7 @@ def test_basics(rethinker):
         },
         "status": "ACTIVE",
         "starts_and_stops": [{"start": job.starts_and_stops[0]["start"], "stop": None}],
+        "account_id": None,
     }
 
     sites = sorted(list(frontier.job_sites(job.id)), key=lambda x: x.seed)
@@ -88,6 +89,7 @@ def test_basics(rethinker):
             {"start": sites[0].starts_and_stops[0]["start"], "stop": None}
         ],
         "status": "ACTIVE",
+        "account_id": None,
     }
     assert sites[1] == {
         "claimed": False,
@@ -105,6 +107,7 @@ def test_basics(rethinker):
             },
         ],
         "status": "ACTIVE",
+        "account_id": None,
     }
 
     pages = list(frontier.site_pages(sites[0].id))

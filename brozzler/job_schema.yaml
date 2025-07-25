@@ -4,12 +4,6 @@ id:
   - integer
   required: false
 
-account_id:
-  type:
-  - string
-  - integer
-  required: false
-
 <<: &multi_level_options
   time_limit:
     type: number
@@ -104,6 +98,11 @@ seeds:
       video_capture:
         type: string
 
+      account_id:
+        type:
+        - string
+        - integer
+
       <<: *multi_level_options
 
 max_claimed_sites:
@@ -111,3 +110,8 @@ max_claimed_sites:
 
 pdfs_only:
   type: boolean
+
+account_id:
+  type:
+  - string
+  - integer
