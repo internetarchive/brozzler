@@ -24,6 +24,7 @@ import tempfile
 import threading
 import time
 import urllib.request
+from dataclasses import dataclass
 from typing import Any, List, Optional
 
 import doublethink
@@ -31,7 +32,6 @@ import psycopg
 import structlog
 import urlcanon
 import yt_dlp
-from dataclasses import dataclass
 from psycopg_pool import ConnectionPool, PoolTimeout
 from yt_dlp.utils import ExtractorError, match_filter_func
 
@@ -164,6 +164,7 @@ class VideoDataClient:
             results = []
 
         return results
+
     """
     def create_video_capture_record(self, video_capture_record):
         # NOTE: we want to do this in brozzler postcrawl for now
@@ -180,6 +181,7 @@ class VideoDataClient:
             results = []
         return results
     """
+
 
 def isyoutubehost(url):
     # split 1 splits scheme from url, split 2 splits path from hostname
@@ -429,7 +431,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     is_youtube_host = isyoutubehost(ytdlp_url)
     if is_youtube_host and ytdlp_proxy_endpoints:
-        if 'com/watch' not in ytdlp_url:
+        if "com/watch" not in ytdlp_url:
             ydl_opts["proxy"] = ytdlp_proxy_endpoints[4]
         else:
             ydl_opts["proxy"] = random.choice(ytdlp_proxy_endpoints[0:4])
