@@ -98,6 +98,11 @@ seeds:
       video_capture:
         type: string
 
+      account_id:
+        type:
+        - string
+        - integer
+
       <<: *multi_level_options
 
 max_claimed_sites:
