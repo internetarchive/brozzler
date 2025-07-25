@@ -164,7 +164,7 @@ class VideoDataClient:
             results = []
 
         return results
-
+    """
     def create_video_capture_record(self, video_capture_record):
         # NOTE: we want to do this in brozzler postcrawl for now
         # WIP
@@ -179,7 +179,7 @@ class VideoDataClient:
             logger.warn("postgres query failed: %s", e)
             results = []
         return results
-
+    """
 
 def isyoutubehost(url):
     # split 1 splits scheme from url, split 2 splits path from hostname
