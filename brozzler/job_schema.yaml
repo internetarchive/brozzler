@@ -103,11 +103,10 @@ seeds:
 max_claimed_sites:
   type: integer
 
-pdfs_only:
-  type: boolean
-
 account_id:
   type:
   - string
   - integer
-  required: false
+
+pdfs_only:
+  type: boolean
