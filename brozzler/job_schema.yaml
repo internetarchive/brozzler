@@ -105,3 +105,8 @@ max_claimed_sites:
 
 pdfs_only:
   type: boolean
+
+account_id:
+  type:
+  - string
+  - integer

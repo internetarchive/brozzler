@@ -98,10 +98,14 @@ def new_job(frontier, job_conf):
         frontier.rr,
         {"conf": job_conf, "status": "ACTIVE", "started": doublethink.utcnow()},
     )
-    job.id = job_conf.get("id")
-    job.account_id = job_conf.get("account_id")
-    job.max_claimed_sites = job_conf.get("max_claimed_sites")
-    job.pdfs_only = job_conf.get("pdfs_only")
+    if "id" in job_conf:
+        job.id = job_conf["id"]
+    if "max_claimed_sites" in job_conf:
+        job.max_claimed_sites = job_conf["max_claimed_sites"]
+    if "pdfs_only" in job_conf:
+        job.pdfs_only = job_conf["pdfs_only"]
+    if "account_id" in job_conf:
+        job.account_id = job_conf.["account_id"]
     job.save()
 
     sites = []
