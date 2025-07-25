@@ -1,9 +1,3 @@
-account_id:
-  type:
-  - string
-  - integer
-  required: false
-
 id:
   type:
   - string
@@ -111,3 +105,9 @@ max_claimed_sites:
 
 pdfs_only:
   type: boolean
+
+account_id:
+  type:
+  - string
+  - integer
+  required: false
