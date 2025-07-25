@@ -105,7 +105,7 @@ def new_job(frontier, job_conf):
     if "pdfs_only" in job_conf:
         job.pdfs_only = job_conf["pdfs_only"]
     if "account_id" in job_conf:
-        job.account_id = job_conf.["account_id"]
+        job.account_id = job_conf["account_id"]
     job.save()
 
     sites = []
