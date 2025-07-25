@@ -25,7 +25,5 @@ runs:
 
     - name: Install pip dependencies
       run: |
-        pip install .[rethinkdb,warcprox,yt-dlp,psycopg]
-        # setuptools required by rethinkdb==2.4.9
-        pip install pytest setuptools
+        uv sync --python ${{ inputs.python-version }} --extra rethinkdb --extra warcprox --extra yt-dlp --extra psycopg
       shell: bash
