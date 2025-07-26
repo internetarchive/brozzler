@@ -2,7 +2,7 @@
 brozzler/models.py - model classes representing jobs, sites, and pages, with
 related logic
 
-Copyright (C) 2014-2024 Internet Archive
+Copyright (C) 2014-2025 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -104,6 +104,8 @@ def new_job(frontier, job_conf):
         job.max_claimed_sites = job_conf["max_claimed_sites"]
     if "pdfs_only" in job_conf:
         job.pdfs_only = job_conf["pdfs_only"]
+    if "partition_id" in job_conf:
+        job.partition_id = job_conf["partition_id"]
     job.save()
 
     sites = []
@@ -115,6 +117,7 @@ def new_job(frontier, job_conf):
         merged_conf["seed"] = merged_conf.pop("url")
         site = brozzler.Site(frontier.rr, merged_conf)
         site.id = str(uuid.uuid4())
+        site.partition_id = job.partition_id
         sites.append(site)
         pages.append(new_seed_page(frontier, site))
 
@@ -202,6 +205,8 @@ class Job(doublethink.Document, ElapsedMixIn):
     def populate_defaults(self):
         if "status" not in self:
             self.status = "ACTIVE"
+        if "partition_id" not in self:
+            self.partition_id = None
         if "pdfs_only" not in self:
             self.pdfs_only = False
         if "starts_and_stops" not in self:
@@ -263,6 +268,8 @@ class Site(doublethink.Document, ElapsedMixIn):
             self.scope = {}
         if "video_capture" not in self:
             self.video_capture = VideoCaptureOptions.ENABLE_VIDEO_CAPTURE.value
+        if "partition_id" not in self:
+            self.partition_id = None
 
         # backward compatibility
         if "surt" in self.scope:
