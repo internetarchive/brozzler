@@ -108,16 +108,16 @@ class VideoDataClient:
         return None
 
     def get_recent_video_capture(self, site=None, containing_page_url=None) -> List:
-        account_id = site["account_id"] if site["account_id"] else None
+        partition_id = site["partition_id"] if site["partition_id"] else None
         seed_id = (
             site["metadata"]["ait_seed_id"] if site["metadata"]["ait_seed_id"] else None
         )
 
-        if account_id and seed_id and containing_page_url:
+        if partition_id and seed_id and containing_page_url:
             # check for postgres query for most recent record
             pg_query = (
-                "SELECT * from video where account_id = %s and seed_id = %s and containing_page_url = %s ORDER BY video_timestamp LIMIT 1",
-                (account_id, seed_id, str(urlcanon.aggressive(containing_page_url))),
+                "SELECT * from video where partition_id = %s and seed_id = %s and containing_page_url = %s ORDER BY video_timestamp LIMIT 1",
+                (partition_id, seed_id, str(urlcanon.aggressive(containing_page_url))),
             )
             try:
                 results = self._execute_pg_query(pg_query, fetchall=True)
@@ -125,13 +125,13 @@ class VideoDataClient:
                 logger.warn("postgres query failed: %s", e)
                 results = []
         else:
-            logger.warn("missing account_id, seed_id, or containing_page_url")
+            logger.warn("missing partition_id, seed_id, or containing_page_url")
             results = []
 
         return results
 
     def get_video_captures(self, site=None, source=None) -> List[str]:
-        account_id = site["account_id"] if site["account_id"] else None
+        partition_id = site["partition_id"] if site["partition_id"] else None
         seed_id = (
             site["metadata"]["ait_seed_id"] if site["metadata"]["ait_seed_id"] else None
         )
@@ -143,11 +143,11 @@ class VideoDataClient:
             containing_page_url_pattern = "http://youtube.com/watch%"  # yes, video data canonicalization uses "http"
         # support other media sources here
 
-        if account_id and seed_id and source:
+        if partition_id and seed_id and source:
             pg_query = (
-                "SELECT containing_page_url from video where account_id = %s and seed_id = %s and containing_page_url like %s",
+                "SELECT containing_page_url from video where partition_id = %s and seed_id = %s and containing_page_url like %s",
                 (
-                    account_id,
+                    partition_id,
                     seed_id,
                     containing_page_url_pattern,
                 ),
@@ -160,7 +160,7 @@ class VideoDataClient:
                 logger.warn("postgres query failed: %s", e)
                 results = []
         else:
-            logger.warn("missing account_id, seed_id, or source")
+            logger.warn("missing partition_id, seed_id, or source")
             results = []
 
         return results
@@ -619,7 +619,7 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
             if worker._video_data:
                 logger.info(
                     "checking for previously captured youtube watch pages for account %s, seed_id %s",
-                    site["account_id"],
+                    site["partition_id"],
                     site["metadata"]["ait_seed_id"],
                 )
                 try:

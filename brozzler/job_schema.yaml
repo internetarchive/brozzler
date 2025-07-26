@@ -98,7 +98,7 @@ seeds:
       video_capture:
         type: string
 
-      account_id:
+      partition_id:
         type:
         - string
         - integer
@@ -111,7 +111,7 @@ max_claimed_sites:
 pdfs_only:
   type: boolean
 
-account_id:
+partition_id:
   type:
   - string
   - integer
