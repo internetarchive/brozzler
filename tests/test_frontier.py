@@ -107,7 +107,6 @@ def test_basics(rethinker):
             },
         ],
         "status": "ACTIVE",
-        "partition_id": None,
         "video_capture": "ENABLE_VIDEO_CAPTURE",
         "partition_id": None,
     }
