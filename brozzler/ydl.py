@@ -116,7 +116,7 @@ class VideoDataClient:
         if partition_id and seed_id and containing_page_url:
             # check for postgres query for most recent record
             pg_query = (
-                "SELECT * from video where partition_id = %s and seed_id = %s and containing_page_url = %s ORDER BY video_timestamp LIMIT 1",
+                "SELECT * from video where account_id = %s and seed_id = %s and containing_page_url = %s ORDER BY video_timestamp LIMIT 1",
                 (partition_id, seed_id, str(urlcanon.aggressive(containing_page_url))),
             )
             try:
@@ -145,7 +145,7 @@ class VideoDataClient:
 
         if partition_id and seed_id and source:
             pg_query = (
-                "SELECT containing_page_url from video where partition_id = %s and seed_id = %s and containing_page_url like %s",
+                "SELECT containing_page_url from video where account_id = %s and seed_id = %s and containing_page_url like %s",
                 (
                     partition_id,
                     seed_id,
