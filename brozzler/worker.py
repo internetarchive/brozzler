@@ -19,6 +19,7 @@ limitations under the License.
 """
 
 import datetime
+import importlib.util
 import io
 import json
 import os
@@ -105,14 +106,8 @@ class BrozzlerWorker:
         if worker_id is not None:
             self.logger = self.logger.bind(worker_id=worker_id)
 
-        # TODO try using importlib.util.find_spec to test for dependency
-        # presence rather than try/except on import.
-        # See https://docs.astral.sh/ruff/rules/unused-import/#example
-
         # We definitely shouldn't ytdlp if the optional extra is missing
-        try:
-            import yt_dlp  # noqa: F401
-        except ImportError:
+        if not importlib.util.find_spec("yt_dlp"):
             self.logger.info(
                 "optional yt-dlp extra not installed; setting skip_youtube_dl to True"
             )
