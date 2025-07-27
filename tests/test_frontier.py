@@ -70,7 +70,6 @@ def test_basics(rethinker):
         "status": "ACTIVE",
         "pdfs_only": False,
         "starts_and_stops": [{"start": job.starts_and_stops[0]["start"], "stop": None}],
-        "partition_id": None,
     }
 
     sites = sorted(list(frontier.job_sites(job.id)), key=lambda x: x.seed)
@@ -90,7 +89,6 @@ def test_basics(rethinker):
         ],
         "status": "ACTIVE",
         "video_capture": "ENABLE_VIDEO_CAPTURE",
-        "partition_id": None,
     }
     assert sites[1] == {
         "claimed": False,
@@ -108,7 +106,6 @@ def test_basics(rethinker):
         ],
         "status": "ACTIVE",
         "video_capture": "ENABLE_VIDEO_CAPTURE",
-        "partition_id": None,
     }
 
     pages = list(frontier.site_pages(sites[0].id))
