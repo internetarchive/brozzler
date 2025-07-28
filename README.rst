@@ -139,12 +139,6 @@ At this point Brozzler Dashboard will be accessible at http://localhost:8000/.
 
 See ``brozzler-dashboard --help`` for configuration options.
 
-Headless Chrome (experimental)
-------------------------------
-
-Brozzler is known to work nominally with Chrome/Chromium in headless mode, but
-this has not yet been extensively tested.
-
 License
 -------
 
