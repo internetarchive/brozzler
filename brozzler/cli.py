@@ -270,6 +270,12 @@ def brozzle_page(argv=None):
     )
     arg_parser.add_argument("--proxy", dest="proxy", default=None, help="http proxy")
     arg_parser.add_argument(
+        "--no-headless",
+        dest="headless",
+        action="store_false",
+        help="Do not run Chrome headlessly",
+    )
+    arg_parser.add_argument(
         "--browser_throughput",
         type=int,
         dest="download_throughput",
@@ -357,6 +363,7 @@ def brozzle_page(argv=None):
     worker = brozzler.BrozzlerWorker(
         frontier=None,
         proxy=args.proxy,
+        headless=args.headless,
         skip_extract_outlinks=args.skip_extract_outlinks,
         skip_visit_hashtags=args.skip_visit_hashtags,
         skip_youtube_dl=args.skip_youtube_dl,
@@ -389,6 +396,7 @@ def brozzle_page(argv=None):
             proxy=args.proxy,
             window_height=args.window_height,
             window_width=args.window_width,
+            headless=args.headless,
         )
         outlinks = worker.brozzle_page(
             browser,
@@ -556,6 +564,12 @@ def brozzler_worker(argv=None):
     )
     arg_parser.add_argument("--proxy", dest="proxy", default=None, help="http proxy")
     arg_parser.add_argument(
+        "--no-headless",
+        dest="headless",
+        action="store_false",
+        help="Do not run Chrome headlessly",
+    )
+    arg_parser.add_argument(
         "--browser_throughput",
         type=int,
         dest="download_throughput",
@@ -694,6 +708,7 @@ def brozzler_worker(argv=None):
         max_browsers=int(args.max_browsers),
         chrome_exe=args.chrome_exe,
         proxy=args.proxy,
+        headless=args.headless,
         warcprox_auto=args.warcprox_auto,
         skip_extract_outlinks=args.skip_extract_outlinks,
         skip_visit_hashtags=args.skip_visit_hashtags,
