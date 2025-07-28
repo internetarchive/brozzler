@@ -28,9 +28,11 @@ from dataclasses import dataclass
 from typing import Any, List, Optional
 
 import doublethink
+import psycopg
 import structlog
 import urlcanon
 import yt_dlp
+from psycopg_pool import ConnectionPool, PoolTimeout
 from yt_dlp.utils import ExtractorError, match_filter_func
 
 import brozzler
@@ -74,9 +76,6 @@ class VideoCaptureRecord:
 
 
 class VideoDataClient:
-    import psycopg
-    from psycopg_pool import ConnectionPool, PoolTimeout
-
     VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 
     def __init__(self):
