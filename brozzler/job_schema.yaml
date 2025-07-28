@@ -98,11 +98,6 @@ seeds:
       video_capture:
         type: string
 
-      partition_id:
-        type:
-        - string
-        - integer
-
       <<: *multi_level_options
 
 max_claimed_sites:
@@ -110,8 +105,3 @@ max_claimed_sites:
 
 pdfs_only:
   type: boolean
-
-partition_id:
-  type:
-  - string
-  - integer

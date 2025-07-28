@@ -108,10 +108,18 @@ class VideoDataClient:
         return None
 
     def get_recent_video_capture(self, site=None, containing_page_url=None) -> List:
-        partition_id = site["partition_id"] if site["partition_id"] else None
+        # using ait_account_id as postgres partition id
+        partition_id = (
+            site["metadata"]["ait_account_id"]
+            if site["metadata"]["ait_account_id"]
+            else None
+        )
         seed_id = (
             site["metadata"]["ait_seed_id"] if site["metadata"]["ait_seed_id"] else None
         )
+
+        # TODO: generalize, make variable?
+        # containing_page_timestamp_pattern = "2025%"  # for future pre-dup additions
 
         if partition_id and seed_id and containing_page_url:
             # check for postgres query for most recent record
@@ -125,19 +133,23 @@ class VideoDataClient:
                 logger.warn("postgres query failed: %s", e)
                 results = []
         else:
-            logger.warn("missing partition_id, seed_id, or containing_page_url")
+            logger.warn(
+                "missing partition_id/account_id, seed_id, or containing_page_url"
+            )
             results = []
 
         return results
 
     def get_video_captures(self, site=None, source=None) -> List[str]:
-        partition_id = site["partition_id"] if site["partition_id"] else None
+        # using ait_account_id as postgres partition id
+        partition_id = (
+            site["metadata"]["ait_account_id"]
+            if site["metadata"]["ait_account_id"]
+            else None
+        )
         seed_id = (
             site["metadata"]["ait_seed_id"] if site["metadata"]["ait_seed_id"] else None
         )
-
-        # TODO: generalize, maybe make variable?
-        # containing_page_timestamp_pattern = "2025%"  # for future pre-dup additions
 
         if source == "youtube":
             containing_page_url_pattern = "http://youtube.com/watch%"  # yes, video data canonicalization uses "http"
@@ -160,7 +172,7 @@ class VideoDataClient:
                 logger.warn("postgres query failed: %s", e)
                 results = []
         else:
-            logger.warn("missing partition_id, seed_id, or source")
+            logger.warn("missing partition_id/account_id, seed_id, or source")
             results = []
 
         return results
@@ -619,7 +631,7 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
             if worker._video_data:
                 logger.info(
                     "checking for previously captured youtube watch pages for account %s, seed_id %s",
-                    site["partition_id"],
+                    site["metadata"]["ait_account_id"],
                     site["metadata"]["ait_seed_id"],
                 )
                 try:
