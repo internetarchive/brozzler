@@ -142,7 +142,7 @@ See ``brozzler-dashboard --help`` for configuration options.
 License
 -------
 
-Copyright 2015-2024 Internet Archive
+Copyright 2015-2025 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may
 not use this software except in compliance with the License. You may
