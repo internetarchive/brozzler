@@ -76,9 +76,6 @@ class VideoCaptureRecord:
 
 
 class VideoDataClient:
-    import psycopg
-    from psycopg_pool import ConnectionPool, PoolTimeout
-
     VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 
     def __init__(self):
@@ -165,9 +162,9 @@ class VideoDataClient:
                 ),
             )
             try:
-                results = [row[0] for row in self._execute_pg_query(
-                    pg_query, fetchall=True
-                )]
+                results = [
+                    row[0] for row in self._execute_pg_query(pg_query, fetchall=True)
+                ]
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
                 results = []
@@ -666,8 +663,8 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
                             )
                 except Exception as e:
                     logger.warning("hit exception processing worker._video_data: %s", e)
-                    if uncaptured_youtube_watch_pages:
-                        outlinks.update(uncaptured_youtube_watch_pages)
+                    if uncaptured_watch_pages:
+                        outlinks.update(uncaptured_watch_pages)
             else:
                 outlinks = {
                     "https://www.youtube.com/watch?v=%s" % e["id"]
