@@ -635,27 +635,35 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
                     site["metadata"]["ait_seed_id"],
                 )
                 try:
-                    captured_youtube_watch_pages = set()
-                    captured_youtube_watch_pages.update(
+                    captured_youtube_watch_pages = (
                         worker._video_data.get_video_captures(site, source="youtube")
                     )
-                    uncaptured_youtube_watch_pages = []
-                    for e in ie_result.get("entries_no_dl", []):
-                        # note: http needed for match
-                        youtube_watch_url = str(
-                            urlcanon.aggressive(
-                                f"http://www.youtube.com/watch?v={e['id']}"
-                            )
+                    if captured_youtube_watch_pages:
+                        logger.info(
+                            "found %s previously captured youtube watch pages for account %s, seed_id %s",
+                            len(captured_youtube_watch_pages),
+                            site["metadata"]["ait_account_id"],
+                            site["metadata"]["ait_seed_id"],
                         )
-                        if youtube_watch_url in captured_youtube_watch_pages:
-                            logger.info(
-                                "skipping adding %s to yt-dlp outlinks",
-                                youtube_watch_url,
+                        captured_watch_pages = set()
+                        captured_watch_pages.update(captured_youtube_watch_pages)
+                        uncaptured_watch_pages = []
+                        for e in ie_result.get("entries_no_dl", []):
+                            # note: http matches, not https
+                            youtube_watch_url = str(
+                                urlcanon.aggressive(
+                                    f"http://www.youtube.com/watch?v={e['id']}"
+                                )
                             )
-                            continue
-                        uncaptured_youtube_watch_pages.append(
-                            f"https://www.youtube.com/watch?v={e['id']}"
-                        )
+                            if youtube_watch_url in captured_watch_pages:
+                                logger.info(
+                                    "skipping adding %s to yt-dlp outlinks",
+                                    youtube_watch_url,
+                                )
+                                continue
+                            uncaptured_watch_pages.append(
+                                f"https://www.youtube.com/watch?v={e['id']}"
+                            )
                 except Exception as e:
                     logger.warning("hit exception processing worker._video_data: %s", e)
                     if uncaptured_youtube_watch_pages:
