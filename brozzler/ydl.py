@@ -165,9 +165,9 @@ class VideoDataClient:
                 ),
             )
             try:
-                results = self._execute_pg_query(
-                    pg_query, row_factory=psycopg.rows.scalar_row, fetchall=True
-                )
+                results = [row[0] for row in self._execute_pg_query(
+                    pg_query, fetchall=True
+                )]
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
                 results = []
