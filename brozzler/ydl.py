@@ -41,6 +41,7 @@ from . import metrics
 
 thread_local = threading.local()
 
+
 PROXY_ATTEMPTS = 4
 YTDLP_WAIT = 10
 YTDLP_MAX_REDIRECTS = 5
@@ -176,23 +177,6 @@ class VideoDataClient:
             results = []
 
         return results
-
-    """
-    def create_video_capture_record(self, video_capture_record):
-        # NOTE: we want to do this in brozzler postcrawl for now
-        # WIP
-        # TODO: needs added fields added to postgres table, refinement
-        pg_query = (
-            f"INSERT INTO video ({VideoCaptureRecord - items}) VALUES (%s, %s, ...)",
-            VideoCaptureRecord - values,
-        )
-        try:
-            results = self._execute_pg_query(pg_query)
-        except Exception as e:
-            logger.warn("postgres query failed: %s", e)
-            results = []
-        return results
-    """
 
 
 def isyoutubehost(url):
@@ -443,6 +427,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     is_youtube_host = isyoutubehost(ytdlp_url)
     if is_youtube_host and ytdlp_proxy_endpoints:
+        # use last proxy_endpoint only for youtube user, channel, playlist pages
         if "com/watch" not in ytdlp_url:
             ydl_opts["proxy"] = ytdlp_proxy_endpoints[4]
         else:
@@ -466,10 +451,9 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
     return ydl
 
 
-# new maybe? def _remember_videos(page, site, worker, ydl, ie_result, pushed_videos=None):
-def _remember_videos(page, pushed_videos=None):
+def _remember_videos(page, ie_result, pushed_videos=None):
     """
-    Saves info about videos captured by yt-dlp in `page.videos`
+    Saves info about videos captured by yt-dlp in `page.videos`.
     """
     if "videos" not in page:
         page.videos = []
@@ -481,34 +465,12 @@ def _remember_videos(page, pushed_videos=None):
             "content-type": pushed_video["content-type"],
             "content-length": pushed_video["content-length"],
         }
-        """
-        # WIP: add new video record to QA postgres here, or in postcrawl only?
-        warc_prefix_items = site.warcprox_meta["warc-prefix"].split("-")
-
-        video_record = worker._video_data.VideoCaptureRecord()
-        video_record.crawl_job_id = site.job_id
-        video_record.is_test_crawl = True if warc_prefix_items[2] == "TEST" else False
-        video_record.seed_id = site["metadata"]["ait_seed_id"]
-        video_record.collection_id = int(warc_prefix_items[1])
-        video_record.containing_page_timestamp = None
-        video_record.containing_page_digest = None
-        video_record.containing_page_media_index = None
-        video_record.containing_page_media_count = None
-        video_record.video_digest = None
-        video_record.video_timestamp = None
-        video_record.video_mimetype = pushed_video["content-type"]
-        video_record.video_http_status = pushed_video["response_code"]
-        video_record.video_size = pushed_video["content-length"]  # probably?
-        video_record.containing_page_url = str(
-            urlcanon.aggressive(ydl.url)
-        )  # probably?
-        video_record.video_url = pushed_video["url"]
-        # note: NEW! ie_result may not be correct when multiple videos present
-        video_record.video_title = ie_result.get("title")
-        video_record.video_display_id = ie_result.get("display_id")
-        video_record.video_resolution = ie_result.get("resolution")
-        video_record.video_capture_status = None  # "recrawl" maybe
-        """
+        # should be only 1 video for youtube watch pages
+        if len(pushed_videos) == 1:
+            video["title"] = ie_result.get("title")
+            video["display_id"] = ie_result.get("display_id")
+            video["resolution"] = ie_result.get("resolution")
+            video["capture_status"] = None
         logger.debug("embedded video", video=video)
         page.videos.append(video)
 
@@ -583,9 +545,9 @@ def _try_youtube_dl(worker, ydl, site, page):
 
     logger.info("ytdlp completed successfully")
 
-    info_json = json.dumps(ie_result, sort_keys=True, indent=4)
-    _remember_videos(page, ydl.pushed_videos)
+    _remember_videos(page, ie_result, ydl.pushed_videos)
     if worker._using_warcprox(site):
+        info_json = json.dumps(ie_result, sort_keys=True, indent=4)
         logger.info(
             "sending WARCPROX_WRITE_RECORD request to warcprox with yt-dlp json",
             url=ydl.url,
@@ -622,7 +584,6 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
         logger.info("tempdir for yt-dlp", tempdir=tempdir)
         ydl = _build_youtube_dl(worker, tempdir, site, page, ytdlp_proxy_endpoints)
         ie_result = _try_youtube_dl(worker, ydl, site, page)
-        # print(ie_result)
         outlinks = set()
         if ie_result and (
             ie_result.get("extractor") == "youtube:playlist"
