@@ -87,16 +87,14 @@ class VideoDataClient:
         self.pool = pool
 
     def _execute_pg_query(
-        self, query: str, row_factory=None, fetchone=False, fetchall=False
+        self, query_tuple, row_factory=None, fetchall=False
     ) -> Optional[Any]:
+        query_str, params = query_tuple
         try:
             with self.pool.connection() as conn:
                 with conn.cursor(row_factory=row_factory) as cur:
-                    cur.execute(query)
-                    if fetchone:
-                        return cur.fetchone()
-                    if fetchall:
-                        return cur.fetchall()
+                    cur.execute(query_str, params)
+                    return cur.fetchall() if fetchall else cur.fetchone()
         except PoolTimeout as e:
             logger.warn("hit PoolTimeout: %s", e)
             self.pool.check()
@@ -162,9 +160,14 @@ class VideoDataClient:
                 ),
             )
             try:
-                results = [
-                    row[0] for row in self._execute_pg_query(pg_query, fetchall=True)
-                ]
+                result = self._execute_pg_query(pg_query, fetchall=True)
+                if result:
+                    results = [
+                        row[0]
+                        for row in self._execute_pg_query(pg_query, fetchall=True)
+                    ]
+                else:
+                    results = None
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
                 results = []
