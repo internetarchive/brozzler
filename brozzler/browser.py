@@ -256,7 +256,7 @@ class WebsockReceiverThread(threading.Thread):
                     method="Page.handleJavaScriptDialog",
                     params={"accept": accept},
                 ),
-                separators=",:",
+                separators=(",", ":"),
             )
         )
 
@@ -363,7 +363,7 @@ class Browser:
     def send_to_chrome(self, suppress_logging=False, **kwargs):
         msg_id = next(self._command_id)
         kwargs["id"] = msg_id
-        msg = json.dumps(kwargs, separators=",:")
+        msg = json.dumps(kwargs, separators=(",", ":"))
         self.logger.debug(
             "sending message",
             websock=self.websock,
