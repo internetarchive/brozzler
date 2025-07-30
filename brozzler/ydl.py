@@ -28,7 +28,6 @@ from dataclasses import dataclass
 from typing import Any, List, Optional
 
 import doublethink
-import psycopg
 import structlog
 import urlcanon
 import yt_dlp
@@ -439,6 +438,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         logger.info("using yt-dlp proxy ...", proxy=ytdlp_proxy_for_logs)
 
     # skip warcprox proxying yt-dlp v.2023.07.06: youtube extractor using ranges
+    # should_proxy_vid_maybe = not ydl.is_youtube_host
     # if worker._proxy_for(site):
     #    ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
 
@@ -481,11 +481,6 @@ def _try_youtube_dl(worker, ydl, site, page):
     while attempt < max_attempts:
         try:
             logger.info("trying yt-dlp", url=ydl.url)
-            # should_download_vid = not ydl.is_youtube_host
-            # then
-            # ydl.extract_info(str(urlcanon.whatwg(ydl.url)), download=should_download_vid)
-            # if ydl.is_youtube_host and ie_result:
-            #     download_url = ie_result.get("url")
             with brozzler.thread_accept_exceptions():
                 # we do whatwg canonicalization here to avoid "<urlopen error
                 # no host given>" resulting in ProxyError
