@@ -113,27 +113,26 @@ class VideoDataClient:
             site["metadata"]["ait_seed_id"] if site["metadata"]["ait_seed_id"] else None
         )
 
-        # TODO: generalize, make variable?
-        # containing_page_timestamp_pattern = "2025%"  # for future pre-dup additions
-
         if partition_id and seed_id and containing_page_url:
             # check for postgres query for most recent record
             pg_query = (
-                "SELECT * from video where account_id = %s and seed_id = %s and containing_page_url = %s ORDER BY video_timestamp LIMIT 1",
+                "SELECT * from video where account_id = %s and seed_id = %s and containing_page_url = %s ORDER BY containing_page_timestamp DESC LIMIT 1",
                 (partition_id, seed_id, str(urlcanon.aggressive(containing_page_url))),
             )
             try:
-                results = self._execute_pg_query(pg_query, fetchall=True)
+                result = self._execute_pg_query(pg_query, row_factory=dict_row)
+                if not result:
+                    result = None
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
-                results = []
+                result = None
         else:
             logger.warn(
                 "missing partition_id/account_id, seed_id, or containing_page_url"
             )
-            results = []
+            result = None
 
-        return results
+        return result
 
     def get_video_captures(self, site=None, source=None) -> List[str]:
         # using ait_account_id as postgres partition id
@@ -167,7 +166,7 @@ class VideoDataClient:
                         for row in self._execute_pg_query(pg_query, fetchall=True)
                     ]
                 else:
-                    results = None
+                    results = []
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
                 results = []
@@ -622,8 +621,8 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
                             )
                 except Exception as e:
                     logger.warning("hit exception processing worker._video_data: %s", e)
-                    if uncaptured_watch_pages:
-                        outlinks.update(uncaptured_watch_pages)
+                if uncaptured_watch_pages:
+                    outlinks.update(uncaptured_watch_pages)
             else:
                 outlinks = {
                     "https://www.youtube.com/watch?v=%s" % e["id"]
