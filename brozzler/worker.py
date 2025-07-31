@@ -312,16 +312,18 @@ class BrozzlerWorker:
 
         # predup...
         if "youtube.com/watch" in ytdlp_url:
-            previous_capture = get_recent_video_capture(site, ytdlp_url)
+            previous_capture = VideoDataClient.get_recent_video_capture(site, ytdlp_url)
             if previous_capture:
                 capture_timestamp = datetime.datetime(
-                    *_timestamp4datetime(previous_capture["containing_page_timestamp"])
+                    *self._timestamp4datetime(
+                        previous_capture["containing_page_timestamp"]
+                    )
                 )
-                logging.info("capture_timestamp: %s", capture_timestamp)
+                logger.info("capture_timestamp: %s", capture_timestamp)
                 time_diff = datetime.datetime.now() - capture_timestamp
                 # TODO: make variable for timedelta
                 if time_diff < datetime.timedelta(days=90):
-                    logging.info(
+                    logger.info(
                         "skipping ytdlp for %s since there's a recent capture",
                         previous_capture["containing_page_url"],
                     )

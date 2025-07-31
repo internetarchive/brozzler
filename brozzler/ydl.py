@@ -120,7 +120,7 @@ class VideoDataClient:
                 (partition_id, seed_id, str(urlcanon.aggressive(containing_page_url))),
             )
             try:
-                result = self._execute_pg_query(pg_query, row_factory=dict_row)
+                result = self._execute_pg_query(pg_query, row_factory=dict_row)  # noqa
                 if not result:
                     result = None
             except Exception as e:
