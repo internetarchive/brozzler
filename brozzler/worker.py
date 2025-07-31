@@ -278,10 +278,10 @@ class BrozzlerWorker:
         return out.getbuffer()
 
     def _timestamp4datetime(timestamp):
-    """split `timestamp` into a tuple of 6 integers.
+        """split `timestamp` into a tuple of 6 integers.
 
-    :param timestamp: full-length timestamp
-    """
+        :param timestamp: full-length timestamp
+        """
         timestamp = timestamp[:14]
         return (
             int(timestamp[:-10]),
@@ -289,8 +289,8 @@ class BrozzlerWorker:
             int(timestamp[-8:-6]),
             int(timestamp[-6:-4]),
             int(timestamp[-4:-2]),
-            int(timestamp[-2:])
-            )
+            int(timestamp[-2:]),
+        )
 
     def should_ytdlp(self, logger, site, page, page_status):
         # called only after we've passed needs_browsing() check
@@ -311,15 +311,20 @@ class BrozzlerWorker:
             return False
 
         # predup...
-        if 'youtube.com/watch' in ytdlp_url:
+        if "youtube.com/watch" in ytdlp_url:
             previous_capture = get_recent_video_capture(site, ytdlp_url)
             if previous_capture:
-                capture_timestamp = datetime.datetime(*_timestamp4datetime(previous_capture["containing_page_timestamp"]))
+                capture_timestamp = datetime.datetime(
+                    *_timestamp4datetime(previous_capture["containing_page_timestamp"])
+                )
                 logging.info("capture_timestamp: %s", capture_timestamp)
                 time_diff = datetime.datetime.now() - capture_timestamp
                 # TODO: make variable for timedelta
                 if time_diff < datetime.timedelta(days=90):
-                    logging.info("skipping ytdlp for %s since there's a recent capture", previous_capture["containing_page_url"])
+                    logging.info(
+                        "skipping ytdlp for %s since there's a recent capture",
+                        previous_capture["containing_page_url"],
+                    )
                     return False
 
         return True
