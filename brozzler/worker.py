@@ -311,24 +311,31 @@ class BrozzlerWorker:
             return False
 
         # predup...
+        logger.info("checking for recent previous captures of %s", ytdlp_url)
         if "youtube.com/watch" in ytdlp_url:
-            previous_capture = VideoDataClient.get_recent_video_capture(site, ytdlp_url)
-            if previous_capture:
-                capture_timestamp = datetime.datetime(
-                    *self._timestamp4datetime(
-                        previous_capture["containing_page_timestamp"]
-                    )
+            try:
+                previous_capture = self._video_data.get_recent_video_capture(
+                    site, ytdlp_url
                 )
-                logger.info("capture_timestamp: %s", capture_timestamp)
-                time_diff = datetime.datetime.now() - capture_timestamp
-                # TODO: make variable for timedelta
-                if time_diff < datetime.timedelta(days=90):
-                    logger.info(
-                        "skipping ytdlp for %s since there's a recent capture",
-                        previous_capture["containing_page_url"],
+                if previous_capture:
+                    capture_timestamp = datetime.datetime(
+                        *self._timestamp4datetime(previous_capture[0])
                     )
-                    return False
-
+                    logger.info("capture_timestamp: %s", capture_timestamp)
+                    time_diff = datetime.datetime.now() - capture_timestamp
+                    # TODO: make variable for timedelta
+                    if time_diff < datetime.timedelta(days=90):
+                        logger.info(
+                            "skipping ytdlp for %s since there's a recent capture",
+                            ytdlp_url,
+                        )
+                        return False
+            except Exception as e:
+                logger.warning(
+                    "exception querying for previous capture for %s: %s",
+                    ytdlp_url,
+                    str(e),
+                )
         return True
 
     @metrics.brozzler_page_processing_duration_seconds.time()

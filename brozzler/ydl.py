@@ -86,13 +86,11 @@ class VideoDataClient:
 
         self.pool = pool
 
-    def _execute_pg_query(
-        self, query_tuple, row_factory=None, fetchall=False
-    ) -> Optional[Any]:
+    def _execute_pg_query(self, query_tuple, fetchall=False) -> Optional[Any]:
         query_str, params = query_tuple
         try:
             with self.pool.connection() as conn:
-                with conn.cursor(row_factory=row_factory) as cur:
+                with conn.cursor() as cur:
                     cur.execute(query_str, params)
                     return cur.fetchall() if fetchall else cur.fetchone()
         except PoolTimeout as e:
@@ -112,25 +110,23 @@ class VideoDataClient:
         seed_id = (
             site["metadata"]["ait_seed_id"] if site["metadata"]["ait_seed_id"] else None
         )
+        result = None
 
         if partition_id and seed_id and containing_page_url:
             # check for postgres query for most recent record
             pg_query = (
-                "SELECT * from video where account_id = %s and seed_id = %s and containing_page_url = %s ORDER BY containing_page_timestamp DESC LIMIT 1",
+                "SELECT containing_page_timestamp from video where account_id = %s and seed_id = %s and containing_page_url = %s ORDER BY containing_page_timestamp DESC LIMIT 1",
                 (partition_id, seed_id, str(urlcanon.aggressive(containing_page_url))),
             )
             try:
-                result = self._execute_pg_query(pg_query, row_factory=dict_row)  # noqa
-                if not result:
-                    result = None
+                result = self._execute_pg_query(pg_query)
+
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
-                result = None
         else:
             logger.warn(
                 "missing partition_id/account_id, seed_id, or containing_page_url"
             )
-            result = None
 
         return result
 
@@ -144,6 +140,7 @@ class VideoDataClient:
         seed_id = (
             site["metadata"]["ait_seed_id"] if site["metadata"]["ait_seed_id"] else None
         )
+        results = []
 
         if source == "youtube":
             containing_page_url_pattern = "http://youtube.com/watch%"  # yes, video data canonicalization uses "http"
@@ -161,18 +158,11 @@ class VideoDataClient:
             try:
                 result = self._execute_pg_query(pg_query, fetchall=True)
                 if result:
-                    results = [
-                        row[0]
-                        for row in self._execute_pg_query(pg_query, fetchall=True)
-                    ]
-                else:
-                    results = []
+                    results = [row[0] for row in result]
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
-                results = []
         else:
             logger.warn("missing partition_id/account_id, seed_id, or source")
-            results = []
 
         return results
 
@@ -622,6 +612,10 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
                 except Exception as e:
                     logger.warning("hit exception processing worker._video_data: %s", e)
                 if uncaptured_watch_pages:
+                    logger.info(
+                        "adding %s uncaptured watch pages to yt-dlp outlinks",
+                        len(uncaptured_watch_pages),
+                    )
                     outlinks.update(uncaptured_watch_pages)
             else:
                 outlinks = {
