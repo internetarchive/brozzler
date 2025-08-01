@@ -22,6 +22,7 @@ import datetime
 import importlib.util
 import io
 import json
+import os
 import socket
 import threading
 import time
@@ -41,6 +42,7 @@ from urllib3.exceptions import ProxyError, TimeoutError
 import brozzler
 import brozzler.browser
 from brozzler.model import VideoCaptureOptions
+from brozzler.ydl import VideoDataClient
 
 from . import metrics
 
@@ -58,6 +60,7 @@ class BrozzlerWorker:
     SITE_SESSION_MINUTES = 15
     HEADER_REQUEST_TIMEOUT = 30
     FETCH_URL_TIMEOUT = 60
+    VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 
     def __init__(
         self,
@@ -91,6 +94,8 @@ class BrozzlerWorker:
         self._service_registry = service_registry
         self._ytdlp_proxy_endpoints = ytdlp_proxy_endpoints
         self._max_browsers = max_browsers
+        if self.VIDEO_DATA_SOURCE and self.VIDEO_DATA_SOURCE.startswith("postgresql"):
+            self._video_data = VideoDataClient()
 
         self._warcprox_auto = warcprox_auto
         self._proxy = proxy
@@ -275,6 +280,21 @@ class BrozzlerWorker:
         img.save(out, "jpeg", quality=95)
         return out.getbuffer()
 
+    def _timestamp4datetime(timestamp):
+        """split `timestamp` into a tuple of 6 integers.
+
+        :param timestamp: full-length timestamp
+        """
+        timestamp = timestamp[:14]
+        return (
+            int(timestamp[:-10]),
+            int(timestamp[-10:-8]),
+            int(timestamp[-8:-6]),
+            int(timestamp[-6:-4]),
+            int(timestamp[-4:-2]),
+            int(timestamp[-2:]),
+        )
+
     def should_ytdlp(self, logger, site, page, page_status):
         # called only after we've passed needs_browsing() check
 
@@ -293,6 +313,32 @@ class BrozzlerWorker:
         if "chrome-error:" in ytdlp_url:
             return False
 
+        # predup...
+        logger.info("checking for recent previous captures of %s", ytdlp_url)
+        if "youtube.com/watch" in ytdlp_url:
+            try:
+                previous_capture = self._video_data.get_recent_video_capture(
+                    site, ytdlp_url
+                )
+                if previous_capture:
+                    capture_timestamp = datetime.datetime(
+                        *self._timestamp4datetime(previous_capture[0])
+                    )
+                    logger.info("capture_timestamp: %s", capture_timestamp)
+                    time_diff = datetime.datetime.now() - capture_timestamp
+                    # TODO: make variable for timedelta
+                    if time_diff < datetime.timedelta(days=90):
+                        logger.info(
+                            "skipping ytdlp for %s since there's a recent capture",
+                            ytdlp_url,
+                        )
+                        return False
+            except Exception as e:
+                logger.warning(
+                    "exception querying for previous capture for %s: %s",
+                    ytdlp_url,
+                    str(e),
+                )
         return True
 
     @metrics.brozzler_page_processing_duration_seconds.time()
