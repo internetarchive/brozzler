@@ -31,7 +31,6 @@ import doublethink
 import structlog
 import urlcanon
 import yt_dlp
-from psycopg_pool import ConnectionPool, PoolTimeout
 from yt_dlp.utils import ExtractorError, match_filter_func
 
 import brozzler
@@ -76,6 +75,8 @@ class VideoCaptureRecord:
 
 
 class VideoDataClient:
+    from psycopg_pool import ConnectionPool, PoolTimeout
+
     VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 
     def __init__(self):
@@ -119,7 +120,10 @@ class VideoDataClient:
                 (partition_id, seed_id, str(urlcanon.aggressive(containing_page_url))),
             )
             try:
-                result = self._execute_pg_query(pg_query)
+                result_tuple = self._execute_pg_query(pg_query)
+                if result_tuple:
+                    result = result_tuple[0]
+                    logger.info("found most recent video capture record: %s", result)
 
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
