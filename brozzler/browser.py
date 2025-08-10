@@ -277,12 +277,12 @@ class WebsockReceiverThread(threading.Thread):
             "params" in message
             and "type" in message["params"]
             and "frameId" in message["params"]
-            and message["params"]["type"] != "Document"
+            and message["params"]["type"] == "Document"
         ):
             if self.initial_document is None:
                 self.initial_document = message["params"]["frameId"]
             return self.initial_document == message["params"]["frameId"]
-        return False
+        return True
 
     def _handle_message(self, websock, json_message):
         message = json.loads(json_message)
