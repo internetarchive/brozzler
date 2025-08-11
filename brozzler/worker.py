@@ -319,7 +319,7 @@ class BrozzlerWorker:
                 )
                 if previous_capture:
                     capture_timestamp = datetime.datetime(
-                        *self._timestamp4datetime(previous_capture[0])
+                        *self._timestamp4datetime(previous_capture)
                     )
                     logger.info("capture_timestamp: %s", capture_timestamp)
                     time_diff = datetime.datetime.now() - capture_timestamp
