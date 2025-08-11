@@ -166,6 +166,12 @@ class WebsockReceiverThread(threading.Thread):
         self.on_response = None
         self.on_service_worker_version_updated = None
 
+        self.activity_lock = threading.Lock()
+        self.last_network_activity = time.time()  # Latest time a request finished
+        self.active_connections = set()
+
+        self.initial_document = None
+
         self._result_messages = {}
 
     def expect_result(self, msg_id):
@@ -256,9 +262,27 @@ class WebsockReceiverThread(threading.Thread):
                     method="Page.handleJavaScriptDialog",
                     params={"accept": accept},
                 ),
-                separators=",:",
+                separators=(",", ":"),
             )
         )
+
+    def _should_track_request(self, message) -> bool:
+        """
+        Decides whether or not to include a request in the idle check.
+        """
+        # Workaround for https://github.com/GoogleChrome/lighthouse/issues/11850
+        # Don't add frame URLs to the set of active requests because they will
+        # never receive a loadingFinished event.
+        if (
+            "params" in message
+            and "type" in message["params"]
+            and "frameId" in message["params"]
+            and message["params"]["type"] == "Document"
+        ):
+            if self.initial_document is None:
+                self.initial_document = message["params"]["frameId"]
+            return self.initial_document == message["params"]["frameId"]
+        return True
 
     def _handle_message(self, websock, json_message):
         message = json.loads(json_message)
@@ -267,9 +291,43 @@ class WebsockReceiverThread(threading.Thread):
                 self.got_page_load_event = datetime.datetime.utcnow()
             elif message["method"] == "Network.responseReceived":
                 self._network_response_received(message)
+                with self.activity_lock:
+                    self.last_network_activity = time.time()
             elif message["method"] == "Network.requestWillBeSent":
                 if self.on_request:
                     self.on_request(message)
+
+                if "params" in message and "requestId" in message["params"]:
+                    with self.activity_lock:
+                        if self._should_track_request(message):
+                            self.active_connections.add(message["params"]["requestId"])
+                        self.last_network_activity = time.time()
+            elif (
+                message["method"] == "Network.dataReceived"
+                and "params" in message
+                and "requestId" in message["params"]
+            ):
+                with self.activity_lock:
+                    self.last_network_activity = time.time()
+            elif (
+                message["method"] == "Network.loadingFinished"
+                and "params" in message
+                and "requestId" in message["params"]
+            ):
+                with self.activity_lock:
+                    self.active_connections.discard(message["params"]["requestId"])
+                    self.last_network_activity = time.time()
+            elif message["method"] == "Network.loadingFailed" and "params" in message:
+                if "requestId" in message["params"]:
+                    with self.activity_lock:
+                        self.active_connections.discard(message["params"]["requestId"])
+                        self.last_network_activity = time.time()
+                if (
+                    "errorText" in message["params"]
+                    and message["params"]["errorText"]
+                    == "net::ERR_PROXY_CONNECTION_FAILED"
+                ):
+                    brozzler.thread_raise(self.calling_thread, brozzler.ProxyError)
             elif message["method"] == "Page.interstitialShown":
                 # AITFIVE-1529: handle http auth
                 # we should kill the browser when we receive Page.interstitialShown and
@@ -294,13 +352,6 @@ class WebsockReceiverThread(threading.Thread):
                 self.logger.debug("uncaught exception", message=message)
             elif message["method"] == "Page.javascriptDialogOpening":
                 self._javascript_dialog_opening(message)
-            elif (
-                message["method"] == "Network.loadingFailed"
-                and "params" in message
-                and "errorText" in message["params"]
-                and message["params"]["errorText"] == "net::ERR_PROXY_CONNECTION_FAILED"
-            ):
-                brozzler.thread_raise(self.calling_thread, brozzler.ProxyError)
             elif message["method"] == "ServiceWorker.workerVersionUpdated":
                 if self.on_service_worker_version_updated:
                     self.on_service_worker_version_updated(message)
@@ -363,7 +414,7 @@ class Browser:
     def send_to_chrome(self, suppress_logging=False, **kwargs):
         msg_id = next(self._command_id)
         kwargs["id"] = msg_id
-        msg = json.dumps(kwargs, separators=",:")
+        msg = json.dumps(kwargs, separators=(",", ":"))
         self.logger.debug(
             "sending message",
             websock=self.websock,
@@ -647,10 +698,35 @@ class Browser:
             url.hash_sign = b"#"
             url.fragment = hashtag[1:].encode("utf-8")
             self.send_to_chrome(method="Page.navigate", params={"url": str(url)})
-            time.sleep(5)  # um.. wait for idleness or something?
+            time.sleep(1)  # allow time for any scripts to run
+            self._wait_for_idle(idle_time=2, timeout=4)
             # take another screenshot?
             # run behavior again with short timeout?
             # retrieve outlinks again and append to list?
+
+    def _wait_for_idle(self, idle_time: float, timeout: float):
+        """
+        Waits up to timeout seconds for the network to be idle.
+        "Idle" is defined as having no active requests for at least idle_time seconds.
+
+        Args:
+            idle_time: The minimum required idle time. (This function may not wait at all
+                if the network has already been idle for this time.)
+            timeout: The maximum number of seconds to wait for.
+        """
+
+        def is_idle():
+            with self.websock_thread.activity_lock:
+                elapsed = time.time() - self.websock_thread.last_network_activity
+                return (
+                    len(self.websock_thread.active_connections) == 0
+                    and elapsed > idle_time
+                )
+
+        try:
+            self._wait_for(is_idle, timeout)
+        except BrowsingTimeout:
+            self.logger.debug("idle timed out")
 
     def configure_browser(
         self, extra_headers=None, user_agent=None, download_throughput=-1, stealth=False

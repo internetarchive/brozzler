@@ -26,6 +26,7 @@ import os
 import socket
 import threading
 import time
+import urllib.error
 import urllib.request
 
 import doublethink
@@ -70,6 +71,7 @@ class BrozzlerWorker:
         chrome_exe="chromium-browser",
         warcprox_auto=False,
         proxy=None,
+        headless=True,
         skip_extract_outlinks=False,
         skip_visit_hashtags=False,
         skip_youtube_dl=False,
@@ -99,6 +101,7 @@ class BrozzlerWorker:
         self._proxy = proxy
         assert not (warcprox_auto and proxy)
         self._proxy_is_warcprox = None
+        self._headless = headless
         self._skip_extract_outlinks = skip_extract_outlinks
         self._skip_visit_hashtags = skip_visit_hashtags
         self._skip_youtube_dl = skip_youtube_dl
@@ -549,6 +552,7 @@ class BrozzlerWorker:
                 cookie_db=site.get("cookie_db"),
                 window_height=self._window_height,
                 window_width=self._window_width,
+                headless=self._headless,
             )
         final_page_url, outlinks = browser.browse_page(
             page.url,

@@ -24,6 +24,7 @@ import logging
 import os
 import socket
 import threading
+import time
 import urllib
 
 import pytest
@@ -73,6 +74,11 @@ def httpd(request):
                 self.end_headers()
                 self.wfile.write(self.headers.get("Authorization", b""))
                 self.wfile.write(b"not authenticated")
+            elif self.path == "/sleep-3s":
+                self.send_response(200)
+                self.end_headers()
+                time.sleep(3)
+                self.wfile.write(b"ok")
             else:
                 super().do_GET()
 
@@ -343,3 +349,52 @@ def test_try_login(httpd):
     assert len(response_urls) == 2
     assert response_urls[0] == form_without_login_url
     assert response_urls[1] == favicon_url
+
+
+def test_network_monitoring(httpd):
+    chrome_exe = brozzler.suggest_default_chrome_exe()
+    url = "http://localhost:%s/site12/" % httpd.server_port
+    with brozzler.Browser(chrome_exe=chrome_exe) as browser:
+        # This page has no requests beyond the page itself.
+        browser.navigate_to_page(url + "blank_page.html")
+
+        assert len(browser.websock_thread.active_connections) == 0
+        idle = time.time() - browser.websock_thread.last_network_activity
+        # The page should have finished loading less than a second ago.
+        assert 0 < idle < 1
+
+        time.sleep(2)
+        idle = time.time() - browser.websock_thread.last_network_activity
+        assert 2 < idle < 3
+
+        # This page will request an endpoint (which responds after 3 seconds) after 1s.
+        browser.navigate_to_page(url + "with_request.html")
+
+        assert len(browser.websock_thread.active_connections) == 0
+        idle = time.time() - browser.websock_thread.last_network_activity
+        assert 0 < idle < 1
+
+        time.sleep(1)
+        # The request should have started by now.
+        assert len(browser.websock_thread.active_connections) == 1
+
+        time.sleep(4)
+        # The request should have finished by now.
+        assert len(browser.websock_thread.active_connections) == 0
+
+        browser.navigate_to_page(url + "blank_page.html")
+        time.sleep(2)
+        # This should be considered idle already.
+        start = time.time()
+        browser._wait_for_idle(2, 10)
+        elapsed = time.time() - start
+        assert 0 < elapsed < 1
+
+        # Now make sure _wait_for_idle does the right thing.
+        browser.navigate_to_page(url + "with_request.html")
+        time.sleep(1)
+        start = time.time()
+        browser._wait_for_idle(2, 10)
+        # 3 second request + 2 seconds idle = 5 seconds
+        elapsed = time.time() - start
+        assert 5 < elapsed < 6
