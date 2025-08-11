@@ -75,11 +75,12 @@ class VideoCaptureRecord:
 
 
 class VideoDataClient:
-    from psycopg_pool import ConnectionPool, PoolTimeout
 
     VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 
     def __init__(self):
+        from psycopg_pool import ConnectionPool
+
         pool = ConnectionPool(self.VIDEO_DATA_SOURCE, min_size=1, max_size=9)
         pool.wait()
         logger.info("pg pool ready")
@@ -88,6 +89,8 @@ class VideoDataClient:
         self.pool = pool
 
     def _execute_pg_query(self, query_tuple, fetchall=False) -> Optional[Any]:
+        from psycopg_pool import PoolTimeout
+
         query_str, params = query_tuple
         try:
             with self.pool.connection() as conn:
