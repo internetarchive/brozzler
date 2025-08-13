@@ -41,7 +41,7 @@ from urllib3.exceptions import ProxyError, TimeoutError
 import brozzler
 import brozzler.browser
 from brozzler.model import VideoCaptureOptions
-from brozzler.ydl import VideoDataClient
+from brozzler.video_data import VideoDataClient
 
 from . import metrics
 
@@ -92,6 +92,7 @@ class BrozzlerWorker:
         self._service_registry = service_registry
         self._ytdlp_proxy_endpoints = ytdlp_proxy_endpoints
         self._max_browsers = max_browsers
+        # see video_data.py for more info
         if self.VIDEO_DATA_SOURCE and self.VIDEO_DATA_SOURCE.startswith("postgresql"):
             self._video_data = VideoDataClient()
 
