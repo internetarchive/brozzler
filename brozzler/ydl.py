@@ -24,8 +24,6 @@ import tempfile
 import threading
 import time
 import urllib.request
-from dataclasses import dataclass
-from typing import Any, List, Optional
 
 import doublethink
 import structlog
