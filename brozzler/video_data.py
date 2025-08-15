@@ -16,9 +16,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import datetime
 import os
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any, Bool, List, Optional
 
 import structlog
 import urlcanon
@@ -83,7 +84,24 @@ class VideoDataClient:
             logger.warn("postgres query failed: %s", e)
         return None
 
-    def get_recent_video_capture(self, site=None, containing_page_url=None) -> List:
+    def _timestamp4datetime(timestamp):
+        """split `timestamp` into a tuple of 6 integers.
+
+        :param timestamp: full-length timestamp
+        """
+        timestamp = timestamp[:14]
+        return (
+            int(timestamp[:-10]),
+            int(timestamp[-10:-8]),
+            int(timestamp[-8:-6]),
+            int(timestamp[-6:-4]),
+            int(timestamp[-4:-2]),
+            int(timestamp[-2:]),
+        )
+
+    def recent_video_capture_exists(
+        self, site=None, containing_page_url=None, recent=30
+    ) -> Bool:
         # using ait_account_id as postgres partition id
         partition_id = (
             site["metadata"]["ait_account_id"]
@@ -93,7 +111,7 @@ class VideoDataClient:
         seed_id = (
             site["metadata"]["ait_seed_id"] if site["metadata"]["ait_seed_id"] else None
         )
-        result = None
+        result = False
 
         if partition_id and seed_id and containing_page_url:
             # check for postgres query for most recent record
@@ -105,7 +123,20 @@ class VideoDataClient:
                 result_tuple = self._execute_pg_query(pg_query)
                 if result_tuple:
                     result = result_tuple[0]
-                    logger.info("found most recent video capture record: %s", result)
+                    logger.info("found most recent capture timestamp: %s", result)
+                    capture_timestamp = datetime.datetime(
+                        *self._timestamp4datetime(result)
+                    )
+                    time_diff = (
+                        datetime.datetime.now(datetime.timezone.utc)()
+                        - capture_timestamp
+                    )
+                    if time_diff < datetime.timedelta(recent):
+                        logger.info(
+                            "recent video capture from %s exists",
+                            containing_page_url,
+                        )
+                        result = True
 
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
