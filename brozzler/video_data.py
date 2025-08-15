@@ -19,7 +19,7 @@ limitations under the License.
 import datetime
 import os
 from dataclasses import dataclass
-from typing import Any, Bool, List, Optional
+from typing import Any, List, Optional
 
 import structlog
 import urlcanon
@@ -101,7 +101,7 @@ class VideoDataClient:
 
     def recent_video_capture_exists(
         self, site=None, containing_page_url=None, recent=30
-    ) -> Bool:
+    ):
         # using ait_account_id as postgres partition id
         partition_id = (
             site["metadata"]["ait_account_id"]
