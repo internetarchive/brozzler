@@ -324,7 +324,10 @@ class BrozzlerWorker:
                         *self._timestamp4datetime(previous_capture)
                     )
                     logger.info("capture_timestamp: %s", capture_timestamp)
-                    time_diff = datetime.datetime.now(datetime.timezone.utc)() - capture_timestamp
+                    time_diff = (
+                        datetime.datetime.now(datetime.timezone.utc)()
+                        - capture_timestamp
+                    )
                     # TODO: make variable for timedelta
                     if time_diff < datetime.timedelta(days=90):
                         logger.info(
