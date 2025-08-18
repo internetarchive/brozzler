@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.12' and implementation_name == 'cpython' and os_name != 'nt'",
@@ -1044,11 +1044,11 @@ wheels = [
 
 [[package]]
 name = "warctools"
-version = "5.0.0"
+version = "5.0.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d4/86/fe310be791a32cbcb66a08120fcc7ec761ad9769663477f535066e5b24a2/warctools-5.0.0.tar.gz", hash = "sha256:129ce85272b2d1df12fdb02ed2268ece89ffbeb50db5270dff5941c06862a0f7", size = 27729, upload-time = "2025-05-30T17:25:19.134Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/62/106611f9a00330abd8bb16dba3df696153d4a3b68cfb5cfded32bad7668e/warctools-5.0.1.tar.gz", hash = "sha256:7621dae273673df9f1b2ea2cb292e7fa66d3eefa6b302269e457407a3fbe218e", size = 35177, upload-time = "2025-08-18T22:19:28.815Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ab/6a/f69ca682ce765a6f83ec44ca1049b3265fbda3a3a2d09382f87cbcbac00d/warctools-5.0.0-py3-none-any.whl", hash = "sha256:d29fd6e5a620e69fdd3b34f9c767f8fe4c4989bbeda3289267f7a23714976e11", size = 34439, upload-time = "2025-05-30T17:25:18.167Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/f1/7aa41b739339d07aabd8a0b55c4050fa1cb756798377c8f57b9e7695c54b/warctools-5.0.1-py3-none-any.whl", hash = "sha256:2f792cb69d76b3f1ffdcea77ba07a5f3bc8260da92d9b5118c082505ba236004", size = 42400, upload-time = "2025-08-18T22:19:27.55Z" },
 ]
 
 [[package]]
