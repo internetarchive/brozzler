@@ -78,3 +78,11 @@ dev = [
   "pytest>=8.3.5",
   "ruff>=0.9.9"
 ]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+  # Comes from reppy, a third-party deps we don't control
+  "ignore: is an invalid escape sequence. Such sequences will not work in the future",
+  # Also comes from reppy
+  "ignore: The 'warn' method is deprecated, use 'warning' instead",
+]
