@@ -116,20 +116,20 @@ class VideoDataClient:
         if partition_id and seed_id and containing_page_url:
             # check for postgres query for most recent record
             pg_query = (
-                "SELECT containing_page_timestamp from video where account_id = %s and seed_id = %s and containing_page_url = %s ORDER BY containing_page_timestamp DESC LIMIT 1",
+                "SELECT video_timestamp from video where account_id = %s and seed_id = %s and containing_page_url = %s ORDER BY video_timestamp DESC LIMIT 1",
                 (partition_id, seed_id, str(urlcanon.aggressive(containing_page_url))),
             )
             try:
                 result_tuple = self._execute_pg_query(pg_query)
                 if result_tuple:
-                    result = result_tuple[0]
+                    capture_timestamp = result_tuple[0]
                     logger.info("found most recent capture timestamp: %s", result)
-                    capture_timestamp = datetime.datetime(
-                        *self._timestamp4datetime(result)
+                    capture_datetime = datetime.datetime(
+                        *self._timestamp4datetime(capture_timestamp)
                     )
                     time_diff = (
                         datetime.datetime.now(datetime.timezone.utc)()
-                        - capture_timestamp
+                        - capture_datetime
                     )
                     if time_diff < datetime.timedelta(recent):
                         logger.info(
