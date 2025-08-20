@@ -299,10 +299,7 @@ class BrozzlerWorker:
 
         # predup...
         logger.info("checking for recent previous captures of %s", ytdlp_url)
-        if "youtube.com/watch" in ytdlp_url:
-            recent = 90  # 90 days
-        else:
-            recent = 30  # 30 days, current default
+        recent = 90 if "youtube.com/watch" in ytdlp_url else 30
         try:
             recent_capture_exists = self._video_data.recent_video_capture_exists(
                 site, ytdlp_url, recent
