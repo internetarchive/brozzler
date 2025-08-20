@@ -121,9 +121,9 @@ class VideoDataClient:
             )
             try:
                 result_tuple = self._execute_pg_query(pg_query)
-                if result_tuple:
-                    capture_timestamp = result_tuple[0]
-                    logger.info("found most recent capture timestamp: %s", result)
+                capture_timestamp = result_tuple[0] if result_tuple[0] else None
+                if capture_timestamp:
+                    logger.info("found most recent capture timestamp: %s", capture_timestamp)
                     capture_datetime = datetime.datetime(
                         *self._timestamp4datetime(capture_timestamp)
                     )
