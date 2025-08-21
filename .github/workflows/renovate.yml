@@ -2,7 +2,7 @@ name: Renovate
 on: 
   pull_request:
     branches:
-      - "renovate/qa-yt-dlp-**"
+      - "renovate/yt-dlp-**"
 
 permissions:
   contents: write
