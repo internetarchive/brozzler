@@ -121,23 +121,31 @@ class VideoDataClient:
             )
             try:
                 result_tuple = self._execute_pg_query(pg_query)
-                capture_timestamp = result_tuple[0] if result_tuple[0] else None
-                if capture_timestamp:
-                    logger.info("found most recent capture timestamp: %s", capture_timestamp)
-                    capture_datetime = datetime.datetime(
-                        *self._timestamp4datetime(capture_timestamp)
-                    )
-                    time_diff = (
-                        datetime.datetime.now(datetime.timezone.utc)()
-                        - capture_datetime
-                    )
-                    if time_diff < datetime.timedelta(recent):
-                        logger.info(
-                            "recent video capture from %s exists",
-                            containing_page_url,
+                if result_tuple is None:
+                    logger.info("found no result for query '%s'", pg_query)
+                else:
+                    if result_tuple[0]:
+                        logger.info("found most recent capture timestamp: %s", result_tuple[0])
+                        capture_datetime = datetime.datetime(
+                            *self._timestamp4datetime(result_tuple[0])
                         )
-                        result = True
-
+                        time_diff = (
+                            datetime.datetime.now(datetime.timezone.utc)()
+                            - capture_datetime
+                        )
+                        if time_diff < datetime.timedelta(recent):
+                            logger.info(
+                                "recent video capture exists from %s",
+                                containing_page_url,
+                            )
+                            result = True
+                        else:
+                            logger.info(
+                                "no recent video capture exists from %s, time_diff = %s",
+                                containing_page_url, time_diff
+                            )
+                    else:
+                        logger.info("no video timestamp in result for query '%s'", pg_query)
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
         else:
