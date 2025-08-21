@@ -2,5 +2,26 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
-  ]
+  ],
+  "baseBranchPatterns": ["master", "qa"],
+  "packageRules": [
+    {
+      "datasources": ["cdnjs"],
+      "enabled": false
+    },
+    {
+      "matchPackageNames": "reppy",
+      "enabled": false
+    },
+    {
+      "matchPackageNames": "actions/python-versions",
+      "enabled": false
+    },
+    {
+      "matchPackageNames": "yt-dlp",
+      "enabled": true,
+      "matchBaseBranches": ["qa"]
+    }
+  ],
+  "rangeStrategy": "update-lockfile"
 }
