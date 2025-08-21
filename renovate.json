@@ -3,10 +3,14 @@
   "extends": [
     "config:recommended"
   ],
-  "baseBranchPatterns": ["qa"],
+  "baseBranchPatterns": [
+    "qa"
+  ],
   "packageRules": [
     {
-      "datasources": ["cdnjs"],
+      "matchDatasources": [
+        "cdnjs"
+      ],
       "enabled": false
     },
     {
