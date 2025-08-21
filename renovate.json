@@ -3,24 +3,19 @@
   "extends": [
     "config:recommended"
   ],
-  "baseBranchPatterns": ["master", "qa"],
+  "baseBranchPatterns": ["qa"],
   "packageRules": [
     {
       "datasources": ["cdnjs"],
       "enabled": false
     },
     {
-      "matchPackageNames": "reppy",
-      "enabled": false
-    },
-    {
-      "matchPackageNames": "actions/python-versions",
+      "matchPackageNames": "*",
       "enabled": false
     },
     {
       "matchPackageNames": "yt-dlp",
-      "enabled": true,
-      "matchBaseBranches": ["qa"]
+      "enabled": true
     }
   ],
   "rangeStrategy": "update-lockfile"
