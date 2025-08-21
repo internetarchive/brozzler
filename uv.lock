@@ -134,7 +134,7 @@ wheels = [
 
 [[package]]
 name = "brozzler"
-version = "1.7.1a12"
+version = "1.7.1a17"
 source = { editable = "." }
 dependencies = [
     { name = "cerberus" },
@@ -198,7 +198,7 @@ requires-dist = [
     { name = "urlcanon", specifier = ">=0.1.dev23" },
     { name = "warcprox", marker = "extra == 'warcprox'", specifier = ">=2.4.31" },
     { name = "websocket-client", specifier = "==1.8.0" },
-    { name = "yt-dlp", extras = ["default", "curl-cffi"], marker = "extra == 'yt-dlp'", specifier = ">=2024.7.25" },
+    { name = "yt-dlp", extras = ["default", "curl-cffi"], marker = "extra == 'yt-dlp'", specifier = "==2025.8.11" },
 ]
 provides-extras = ["yt-dlp", "psycopg", "dashboard", "warcprox", "rethinkdb"]
 
