@@ -125,7 +125,9 @@ class VideoDataClient:
                     logger.info("found no result for query '%s'", pg_query)
                 else:
                     if result_tuple[0]:
-                        logger.info("found most recent capture timestamp: %s", result_tuple[0])
+                        logger.info(
+                            "found most recent capture timestamp: %s", result_tuple[0]
+                        )
                         capture_datetime = datetime.datetime(
                             *self._timestamp4datetime(result_tuple[0])
                         )
@@ -142,10 +144,13 @@ class VideoDataClient:
                         else:
                             logger.info(
                                 "no recent video capture exists from %s, time_diff = %s",
-                                containing_page_url, time_diff
+                                containing_page_url,
+                                time_diff,
                             )
                     else:
-                        logger.info("no video timestamp in result for query '%s'", pg_query)
+                        logger.info(
+                            "no video timestamp in result for query '%s'", pg_query
+                        )
             except Exception as e:
                 logger.warn("postgres query failed: %s", e)
         else:
