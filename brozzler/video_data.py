@@ -84,7 +84,7 @@ class VideoDataClient:
             logger.warn("postgres query failed: %s", e)
         return None
 
-    def _timestamp4datetime(timestamp):
+    def _timestamp4datetime(self, timestamp):
         """split `timestamp` into a tuple of 6 integers.
 
         :param timestamp: full-length timestamp
@@ -130,7 +130,7 @@ class VideoDataClient:
                             *self._timestamp4datetime(result_tuple[0])
                         )
                         time_diff = (
-                            datetime.datetime.now(datetime.timezone.utc)()
+                            datetime.datetime.now(datetime.timezone.utc)
                             - capture_datetime
                         )
                         if time_diff < datetime.timedelta(recent):
