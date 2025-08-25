@@ -130,7 +130,7 @@ class VideoDataClient:
                         )
                         capture_datetime = datetime.datetime(
                             *self._timestamp4datetime(result_tuple[0]),
-                            tzinfo=datetime.timezone.utc
+                            tzinfo=datetime.timezone.utc,
                         )
                         time_diff = (
                             datetime.datetime.now(datetime.timezone.utc)
