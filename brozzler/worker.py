@@ -306,7 +306,7 @@ class BrozzlerWorker:
             )
             if recent_capture_exists:
                 logger.info(
-                    "recent previous capture of %s found, skipping ytdlp",
+                    "recent capture of %s found, skipping ytdlp",
                     ytdlp_url,
                 )
                 return False
