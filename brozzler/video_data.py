@@ -129,7 +129,8 @@ class VideoDataClient:
                             "found most recent capture timestamp: %s", result_tuple[0]
                         )
                         capture_datetime = datetime.datetime(
-                            *self._timestamp4datetime(result_tuple[0])
+                            *self._timestamp4datetime(result_tuple[0]),
+                            tzinfo=datetime.timezone.utc
                         )
                         time_diff = (
                             datetime.datetime.now(datetime.timezone.utc)
