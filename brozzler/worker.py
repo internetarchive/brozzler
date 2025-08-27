@@ -96,6 +96,8 @@ class BrozzlerWorker:
             from brozzler.video_data import VideoDataClient
 
             self._video_data = VideoDataClient()
+        else:
+            self._video_data = None
 
         self._warcprox_auto = warcprox_auto
         self._proxy = proxy
