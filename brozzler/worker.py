@@ -298,7 +298,7 @@ class BrozzlerWorker:
             return False
 
         # predup...
-        if worker._video_data:
+        if self._video_data:
             logger.info("checking for recent previous captures of %s", ytdlp_url)
             recent = 90 if "youtube.com/watch" in ytdlp_url else 30
             try:
