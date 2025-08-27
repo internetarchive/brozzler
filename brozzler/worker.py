@@ -298,24 +298,25 @@ class BrozzlerWorker:
             return False
 
         # predup...
-        logger.info("checking for recent previous captures of %s", ytdlp_url)
-        recent = 90 if "youtube.com/watch" in ytdlp_url else 30
-        try:
-            recent_capture_exists = self._video_data.recent_video_capture_exists(
-                site, ytdlp_url, recent
-            )
-            if recent_capture_exists:
-                logger.info(
-                    "recent capture of %s found, skipping ytdlp",
-                    ytdlp_url,
+        if worker._video_data:
+            logger.info("checking for recent previous captures of %s", ytdlp_url)
+            recent = 90 if "youtube.com/watch" in ytdlp_url else 30
+            try:
+                recent_capture_exists = self._video_data.recent_video_capture_exists(
+                    site, ytdlp_url, recent
                 )
-                return False
-        except Exception as e:
-            logger.warning(
-                "exception querying for previous capture for %s: %s",
-                ytdlp_url,
-                str(e),
-            )
+                if recent_capture_exists:
+                    logger.info(
+                        "recent capture of %s found, skipping ytdlp",
+                        ytdlp_url,
+                    )
+                    return False
+            except Exception as e:
+                logger.warning(
+                    "exception querying for previous capture for %s: %s",
+                    ytdlp_url,
+                    str(e),
+                )
 
         return True
 
