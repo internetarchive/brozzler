@@ -47,8 +47,8 @@ logger = structlog.get_logger(logger_name=__name__)
 
 
 def isyoutubehost(url):
-    # split 1 splits scheme from url, split 2 splits path from hostname, split 3 splits query string on hostname
-    return "youtube.com" in url.split("//")[-1].split("/")[0].split("?")[0]
+    # split 1 splits scheme from url, split 2 splits path from hostname
+    return "youtube.com" in url.split("//")[-1].split("/")[0]
 
 
 class ExtraHeaderAdder(urllib.request.BaseHandler):
@@ -287,12 +287,18 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         # recommended to avoid bot detection
         "sleep_interval": 7,
         "max_sleep_interval": 27,
+        # preserve pre-2025.07.21 mtime handling
+        "updatetime": True,
     }
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     is_youtube_host = isyoutubehost(ytdlp_url)
     if is_youtube_host and ytdlp_proxy_endpoints:
-        ydl_opts["proxy"] = random.choice(ytdlp_proxy_endpoints)
+        # use last proxy_endpoint only for youtube user, channel, playlist pages
+        if "com/watch" not in ytdlp_url:
+            ydl_opts["proxy"] = ytdlp_proxy_endpoints[4]
+        else:
+            ydl_opts["proxy"] = random.choice(ytdlp_proxy_endpoints[0:4])
         # don't log proxy value secrets
         ytdlp_proxy_for_logs = (
             ydl_opts["proxy"].split("@")[1] if "@" in ydl_opts["proxy"] else "@@@"
@@ -300,6 +306,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         logger.info("using yt-dlp proxy ...", proxy=ytdlp_proxy_for_logs)
 
     # skip warcprox proxying yt-dlp v.2023.07.06: youtube extractor using ranges
+    # should_proxy_vid_maybe = not ydl.is_youtube_host
     # if worker._proxy_for(site):
     #    ydl_opts["proxy"] = "http://{}".format(worker._proxy_for(site))
 
@@ -312,7 +319,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
     return ydl
 
 
-def _remember_videos(page, pushed_videos=None):
+def _remember_videos(page, ie_result, pushed_videos=None):
     """
     Saves info about videos captured by yt-dlp in `page.videos`.
     """
@@ -326,6 +333,12 @@ def _remember_videos(page, pushed_videos=None):
             "content-type": pushed_video["content-type"],
             "content-length": pushed_video["content-length"],
         }
+        # should be only 1 video for youtube watch pages
+        if len(pushed_videos) == 1:
+            video["title"] = ie_result.get("title")
+            video["display_id"] = ie_result.get("display_id")
+            video["resolution"] = ie_result.get("resolution")
+            video["capture_status"] = None
         logger.debug("embedded video", video=video)
         page.videos.append(video)
 
@@ -336,11 +349,6 @@ def _try_youtube_dl(worker, ydl, site, page):
     while attempt < max_attempts:
         try:
             logger.info("trying yt-dlp", url=ydl.url)
-            # should_download_vid = not ydl.is_youtube_host
-            # then
-            # ydl.extract_info(str(urlcanon.whatwg(ydl.url)), download=should_download_vid)
-            # if ydl.is_youtube_host and ie_result:
-            #     download_url = ie_result.get("url")
             with brozzler.thread_accept_exceptions():
                 # we do whatwg canonicalization here to avoid "<urlopen error
                 # no host given>" resulting in ProxyError
@@ -400,7 +408,7 @@ def _try_youtube_dl(worker, ydl, site, page):
 
     logger.info("ytdlp completed successfully")
 
-    _remember_videos(page, ydl.pushed_videos)
+    _remember_videos(page, ie_result, ydl.pushed_videos)
     if worker._using_warcprox(site):
         info_json = json.dumps(ie_result, sort_keys=True, indent=4)
         logger.info(
@@ -444,10 +452,55 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
             ie_result.get("extractor") == "youtube:playlist"
             or ie_result.get("extractor") == "youtube:tab"
         ):
-            # youtube watch pages as outlinks
-            outlinks = {
-                "https://www.youtube.com/watch?v=%s" % e["id"]
-                for e in ie_result.get("entries_no_dl", [])
-            }
-        # any outlinks for other cases? soundcloud, maybe?
+            if worker._video_data:
+                logger.info(
+                    "checking for previously captured youtube watch pages for account %s, seed_id %s",
+                    site["metadata"]["ait_account_id"],
+                    site["metadata"]["ait_seed_id"],
+                )
+                try:
+                    captured_youtube_watch_pages = (
+                        worker._video_data.get_video_captures(site, source="youtube")
+                    )
+                    if captured_youtube_watch_pages:
+                        logger.info(
+                            "found %s previously captured youtube watch pages for account %s, seed_id %s",
+                            len(captured_youtube_watch_pages),
+                            site["metadata"]["ait_account_id"],
+                            site["metadata"]["ait_seed_id"],
+                        )
+                        captured_watch_pages = set()
+                        captured_watch_pages.update(captured_youtube_watch_pages)
+                        uncaptured_watch_pages = []
+                        for e in ie_result.get("entries_no_dl", []):
+                            # note: http matches, not https
+                            youtube_watch_url = str(
+                                urlcanon.aggressive(
+                                    f"http://www.youtube.com/watch?v={e['id']}"
+                                )
+                            )
+                            if youtube_watch_url in captured_watch_pages:
+                                logger.info(
+                                    "skipping adding %s to yt-dlp outlinks",
+                                    youtube_watch_url,
+                                )
+                                continue
+                            uncaptured_watch_pages.append(
+                                f"https://www.youtube.com/watch?v={e['id']}"
+                            )
+                except Exception as e:
+                    logger.warning("hit exception processing worker._video_data: %s", e)
+                if uncaptured_watch_pages:
+                    logger.info(
+                        "adding %s uncaptured watch pages to yt-dlp outlinks",
+                        len(uncaptured_watch_pages),
+                    )
+                    outlinks.update(uncaptured_watch_pages)
+            else:
+                outlinks = {
+                    "https://www.youtube.com/watch?v=%s" % e["id"]
+                    for e in ie_result.get("entries_no_dl", [])
+                }
+
+        # todo: handle outlinks for instagram and soundcloud, other media source, here (if anywhere)
         return outlinks

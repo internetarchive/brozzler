@@ -22,6 +22,7 @@ import datetime
 import importlib.util
 import io
 import json
+import os
 import socket
 import threading
 import time
@@ -58,6 +59,7 @@ class BrozzlerWorker:
     SITE_SESSION_MINUTES = 15
     HEADER_REQUEST_TIMEOUT = 30
     FETCH_URL_TIMEOUT = 60
+    VIDEO_DATA_SOURCE = os.getenv("VIDEO_DATA_SOURCE")
 
     def __init__(
         self,
@@ -91,6 +93,13 @@ class BrozzlerWorker:
         self._service_registry = service_registry
         self._ytdlp_proxy_endpoints = ytdlp_proxy_endpoints
         self._max_browsers = max_browsers
+        # see video_data.py for more info
+        if self.VIDEO_DATA_SOURCE and self.VIDEO_DATA_SOURCE.startswith("postgresql"):
+            from brozzler.video_data import VideoDataClient
+
+            self._video_data = VideoDataClient()
+        else:
+            self._video_data = None
 
         self._warcprox_auto = warcprox_auto
         self._proxy = proxy
@@ -292,6 +301,27 @@ class BrozzlerWorker:
 
         if "chrome-error:" in ytdlp_url:
             return False
+
+        # predup...
+        if self._video_data:
+            logger.info("checking for recent previous captures of %s", ytdlp_url)
+            recent = 90 if "youtube.com/watch" in ytdlp_url else 30
+            try:
+                recent_capture_exists = self._video_data.recent_video_capture_exists(
+                    site, ytdlp_url, recent
+                )
+                if recent_capture_exists:
+                    logger.info(
+                        "recent capture of %s found, skipping ytdlp",
+                        ytdlp_url,
+                    )
+                    return False
+            except Exception as e:
+                logger.warning(
+                    "exception querying for previous capture for %s: %s",
+                    ytdlp_url,
+                    str(e),
+                )
 
         return True
 
