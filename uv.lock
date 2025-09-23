@@ -198,7 +198,7 @@ requires-dist = [
     { name = "urlcanon", specifier = ">=0.1.dev23" },
     { name = "warcprox", marker = "extra == 'warcprox'", specifier = ">=2.4.31" },
     { name = "websocket-client", specifier = "==1.8.0" },
-    { name = "yt-dlp", extras = ["default", "curl-cffi"], marker = "extra == 'yt-dlp'", specifier = "==2025.9.5" },
+    { name = "yt-dlp", extras = ["default", "curl-cffi"], marker = "extra == 'yt-dlp'", specifier = "==2025.9.23" },
 ]
 provides-extras = ["yt-dlp", "psycopg", "dashboard", "warcprox", "rethinkdb"]
 
@@ -1193,11 +1193,11 @@ wheels = [
 
 [[package]]
 name = "yt-dlp"
-version = "2025.9.5"
+version = "2025.9.23"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/50/b2/fb255d991857a6a8b2539487ed6063e7bf318f19310d81f039dedb3c2ad6/yt_dlp-2025.9.5.tar.gz", hash = "sha256:9ce080f80b2258e872fe8a75f4707ea2c644e697477186e20b9a04d9a9ea37cf", size = 3045982, upload-time = "2025-09-05T23:07:53.962Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/90/77/24a13bbd3190849e7e37e6093aa9648f3b26a836d37ba67e3429ee89ad1d/yt_dlp-2025.9.23.tar.gz", hash = "sha256:9282ad1deadb4c90b2e6d3bcf9f360abf88c5f2e4ba836dad7b51387b086d757", size = 3036855, upload-time = "2025-09-23T06:54:46.174Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/64/b3cc116e4f209c493f23d6af033c60ba32df74e086190fbed2bdc0073d12/yt_dlp-2025.9.5-py3-none-any.whl", hash = "sha256:68a03b5c50e3d0f6af7244bd4bf491c1b12e4e2112b051cde05cdfd2647eb9a8", size = 3272317, upload-time = "2025-09-05T23:07:51.396Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/b7/723a4061d7efac4bbb86eddef9ceec0fc1e85415c7d665c2e5e1879759bb/yt_dlp-2025.9.23-py3-none-any.whl", hash = "sha256:84e36acf2dfbadb307d734a590dd937923173b13c57cf45a662f40c93e746302", size = 3241497, upload-time = "2025-09-23T06:54:43.485Z" },
 ]
 
 [package.optional-dependencies]
