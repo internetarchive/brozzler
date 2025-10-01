@@ -42,10 +42,49 @@ from urllib3.exceptions import ProxyError, TimeoutError
 import brozzler
 import brozzler.browser
 from brozzler.model import VideoCaptureOptions
+from brozzler.ssl import CustomSSLContextHTTPAdapter, permissive_ssl_context
 
 from . import metrics
 
 r = rdb.RethinkDB()
+
+
+def _get_with_legacy_renegotiation(url, **kwargs) -> requests.Response:
+    """
+    Performs a get request with unsafe legacy renegotiation enabled.
+    """
+    session = requests.session()
+    ctx = permissive_ssl_context()
+    if not kwargs.get("verify", True):
+        ctx.check_hostname = False
+    session.mount("https://", CustomSSLContextHTTPAdapter(ctx))
+    return session.get(url, **kwargs)
+
+
+def _get_with_permissive_fallback(url, **kwargs) -> requests.Response:
+    """
+    Attempts to perform a request with default SSL settings, then falls
+    back to a request with unsafe legacy renegotiation enabled if
+    necessary.
+    """
+    try:
+        return requests.get(url, **kwargs)
+    except requests.exceptions.SSLError as e:
+        if (
+            e.__context__
+            and e.__context__.__context__
+            and e.__context__.__context__.__context__
+            and e.__context__.__context__.__context__.reason
+            == "UNSAFE_LEGACY_RENEGOTIATION_DISABLED"
+        ):
+            logger = structlog.get_logger(logger_name=__name__)
+            logger.info(
+                "request failed with legacy renegotiation disabled; "
+                "retrying with it enabled",
+                url=url,
+            )
+            return _get_with_legacy_renegotiation(url, **kwargs)
+        raise
 
 
 class BrozzlerWorker:
@@ -415,7 +454,7 @@ class BrozzlerWorker:
             user_agent = site.get("user_agent")
             headers = {"User-Agent": user_agent} if user_agent else {}
             url_logger.info("getting page headers")
-            with requests.get(
+            with _get_with_permissive_fallback(
                 page.url,
                 stream=True,
                 verify=False,

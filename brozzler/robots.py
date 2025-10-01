@@ -31,6 +31,7 @@ import requests
 import structlog
 
 import brozzler
+from brozzler.ssl import CustomSSLContextHTTPAdapter, permissive_ssl_context
 
 __all__ = ["is_permitted_by_robots"]
 
@@ -74,6 +75,11 @@ def _robots_cache(site, proxy=None):
     if site.id not in _robots_caches:
         req_sesh = _SessionRaiseOn420()
         req_sesh.verify = False  # ignore cert errors
+
+        ctx = permissive_ssl_context()  # allow unsafe SSL renegotiation
+        ctx.check_hostname = False  # required when verify=False
+        req_sesh.mount("https://", CustomSSLContextHTTPAdapter(ctx))
+
         if proxy:
             proxie = "http://%s" % proxy
             req_sesh.proxies = {"http": proxie, "https": proxie}
