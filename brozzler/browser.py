@@ -145,10 +145,11 @@ class BrowserPool:
 class WebsockReceiverThread(threading.Thread):
     logger = structlog.get_logger(logger_name=__module__ + "." + __qualname__)
 
-    def __init__(self, websock, name=None, daemon=True):
+    def __init__(self, parent, name=None, daemon=True):
         super().__init__(name=name, daemon=daemon)
 
-        self.websock = websock
+        self.parent = parent
+        self.websock = parent.websock
 
         self.calling_thread = threading.current_thread()
 
@@ -255,13 +256,19 @@ class WebsockReceiverThread(threading.Thread):
             accept = True
         else:
             accept = False
+
+        payload = dict(
+            id=0,
+            method="Page.handleJavaScriptDialog",
+            params={"accept": accept},
+        )
+
+        if session_id := message.get("sessionId"):
+            payload["sessionId"] = session_id
+
         self.websock.send(
             json.dumps(
-                dict(
-                    id=0,
-                    method="Page.handleJavaScriptDialog",
-                    params={"accept": accept},
-                ),
+                payload,
                 separators=(",", ":"),
             )
         )
@@ -284,11 +291,17 @@ class WebsockReceiverThread(threading.Thread):
             return self.initial_document == message["params"]["frameId"]
         return True
 
+    def _attached_to_target(self, message):
+        if "params" in message and "sessionId" in message["params"]:
+            self.parent._configure_target(message["params"]["sessionId"])
+
     def _handle_message(self, websock, json_message):
         message = json.loads(json_message)
         if "method" in message:
             if message["method"] == "Page.loadEventFired":
                 self.got_page_load_event = datetime.datetime.utcnow()
+            elif message["method"] == "Target.attachedToTarget":
+                self._attached_to_target(message)
             elif message["method"] == "Network.responseReceived":
                 self._network_response_received(message)
                 with self.activity_lock:
@@ -388,6 +401,10 @@ class Browser:
         self.is_browsing = False
         self._command_id = Counter()
         self._wait_interval = 0.5
+        self.session_id = None
+        # Set default configuration in case the caller doesn't use
+        # configure_browser or browse_page
+        self.configure_browser()
 
     def __enter__(self):
         self.start()
@@ -411,7 +428,23 @@ class Browser:
                 )
             brozzler.sleep(self._wait_interval)
 
-    def send_to_chrome(self, suppress_logging=False, **kwargs):
+    # Marker value for session_id in send_to_chrome to use the main session (the tab).
+    _DEFAULT_SESSION = object()
+
+    def send_to_chrome(self, session_id=_DEFAULT_SESSION, **kwargs):
+        """
+        Sends a message to Chrome.
+
+        Args:
+            session_id: session id to use; _DEFAULT_SESSION uses the
+                main tab's session, None omits it
+        """
+        if session_id is self._DEFAULT_SESSION:
+            session_id = self.session_id
+
+        if session_id:
+            kwargs["sessionId"] = session_id
+
         msg_id = next(self._command_id)
         kwargs["id"] = msg_id
         msg = json.dumps(kwargs, separators=(",", ":"))
@@ -431,45 +464,47 @@ class Browser:
             **kwargs: arguments for self.chrome.start(...)
         """
         if not self.is_running():
+            self.session_id = None
             self.websock_url = self.chrome.start(**kwargs)
             self.websock = websocket.WebSocketApp(self.websock_url)
             self.websock_thread = WebsockReceiverThread(
-                self.websock, name="WebsockThread:%s" % self.chrome.port
+                self, name="WebsockThread:%s" % self.chrome.port
             )
             self.websock_thread.start()
 
             self._wait_for(lambda: self.websock_thread.is_open, timeout=30)
 
-            # tell browser to send us messages we're interested in
-            self.send_to_chrome(method="Network.enable")
-            self.send_to_chrome(method="Page.enable")
-            # Enable Console & Runtime output only when debugging.
-            # After all, we just print these events with debug(), we don't use
-            # them in Brozzler logic.
-            if self.logger.is_enabled_for(logging.DEBUG):
-                self.send_to_chrome(method="Console.enable")
-                self.send_to_chrome(method="Runtime.enable")
-            self.send_to_chrome(method="ServiceWorker.enable")
-            self.send_to_chrome(method="ServiceWorker.setForceUpdateOnPageLoad")
-
-            # disable google analytics and amp analytics
-            self.send_to_chrome(
-                method="Network.setBlockedURLs",
-                params={
-                    "urls": [
-                        "*google-analytics.com/analytics.js*",
-                        "*google-analytics.com/ga.js*",
-                        "*google-analytics.com/ga_exp.js*",
-                        "*google-analytics.com/urchin.js*",
-                        "*google-analytics.com/collect*",
-                        "*google-analytics.com/r/collect*",
-                        "*google-analytics.com/__utm.gif*",
-                        "*google-analytics.com/gtm/js?*",
-                        "*google-analytics.com/cx/api.js*",
-                        "*cdn.ampproject.org/*/amp-analytics*.js",
-                    ]
-                },
+            # Find the right target
+            self.websock_thread.expect_result(self._command_id.peek())
+            msg_id = self.send_to_chrome(method="Target.getTargets")
+            self._wait_for(
+                lambda: self.websock_thread.received_result(msg_id), timeout=10
             )
+            message = self.websock_thread.pop_result(msg_id)
+            self.logger.debug("target list", message=message)
+            for target in message.get("result", {}).get("targetInfos", []):
+                # Find the first about:blank page that hasn't been attached
+                if (
+                    "targetId" in target
+                    and target.get("type") == "page"
+                    and target.get("url") == "about:blank"
+                    and not target.get("attached", True)
+                ):
+                    target_id = target["targetId"]
+                    break
+            else:  # No target found
+                raise Exception("could not find page to attach")
+
+            self.websock_thread.expect_result(self._command_id.peek())
+            msg_id = self.send_to_chrome(
+                method="Target.attachToTarget",
+                params={"targetId": target_id, "flatten": True},
+            )
+            self._wait_for(
+                lambda: self.websock_thread.received_result(msg_id), timeout=10
+            )
+            attached_msg = self.websock_thread.pop_result(msg_id)
+            self.session_id = attached_msg["result"]["sessionId"]
 
     def stop(self):
         """
@@ -670,7 +705,6 @@ class Browser:
         """
         self.send_to_chrome(
             method="Runtime.evaluate",
-            suppress_logging=True,
             params={"expression": "window.scroll(0,0)"},
         )
         for i in range(3):
@@ -731,31 +765,87 @@ class Browser:
     def configure_browser(
         self, extra_headers=None, user_agent=None, download_throughput=-1, stealth=False
     ):
-        headers = extra_headers or {}
+        self._extra_headers = extra_headers
+        self._user_agent = user_agent
+        self._download_throughput = download_throughput
+        self._stealth = stealth
+
+        if self.is_running():
+            # Assume we only need to update the root frame, as
+            # this function should only ever be called between pages.
+            self._configure_target(self._DEFAULT_SESSION)
+
+    def _configure_target(self, session_id):
+        # tell browser to send us messages we're interested in
+        self.send_to_chrome(method="Network.enable", session_id=session_id)
+        self.send_to_chrome(method="Page.enable", session_id=session_id)
+        # Enable Console & Runtime output only when debugging.
+        # After all, we just print these events with debug(), we don't use
+        # them in Brozzler logic.
+        if self.logger.is_enabled_for(logging.DEBUG):
+            self.send_to_chrome(method="Console.enable", session_id=session_id)
+            self.send_to_chrome(method="Runtime.enable", session_id=session_id)
+        self.send_to_chrome(method="ServiceWorker.enable", session_id=session_id)
+        self.send_to_chrome(
+            method="ServiceWorker.setForceUpdateOnPageLoad", session_id=session_id
+        )
+
+        # disable google analytics and amp analytics
+        self.send_to_chrome(
+            method="Network.setBlockedURLs",
+            params={
+                "urls": [
+                    "*google-analytics.com/analytics.js*",
+                    "*google-analytics.com/ga.js*",
+                    "*google-analytics.com/ga_exp.js*",
+                    "*google-analytics.com/urchin.js*",
+                    "*google-analytics.com/collect*",
+                    "*google-analytics.com/r/collect*",
+                    "*google-analytics.com/__utm.gif*",
+                    "*google-analytics.com/gtm/js?*",
+                    "*google-analytics.com/cx/api.js*",
+                    "*cdn.ampproject.org/*/amp-analytics*.js",
+                ]
+            },
+            session_id=session_id,
+        )
+
+        headers = self._extra_headers or {}
         headers["Accept-Encoding"] = "gzip"  # avoid encodings br, sdch
         msg_id = self.send_to_chrome(
-            method="Network.setExtraHTTPHeaders", params={"headers": headers}
+            method="Network.setExtraHTTPHeaders",
+            params={"headers": headers},
+            session_id=session_id,
         )
-        if user_agent:
+        if self._user_agent:
             msg_id = self.send_to_chrome(
-                method="Network.setUserAgentOverride", params={"userAgent": user_agent}
+                method="Network.setUserAgentOverride",
+                params={"userAgent": self._user_agent},
+                session_id=session_id,
             )
-        if download_throughput > -1:
+        if self._download_throughput > -1:
             # traffic shaping already used by SPN2 to aid warcprox resilience
             # parameter value as bytes/second, or -1 to disable (default)
             msg_id = self.send_to_chrome(
                 method="Network.emulateNetworkConditions",
-                params={"downloadThroughput": download_throughput},
+                params={"downloadThroughput": self._download_throughput},
+                session_id=session_id,
             )
-        if stealth:
+        if self._stealth:
             self.websock_thread.expect_result(self._command_id.peek())
             js = brozzler.jinja2_environment().get_template("stealth.js").render()
             msg_id = self.send_to_chrome(
-                method="Page.addScriptToEvaluateOnNewDocument", params={"source": js}
+                method="Page.addScriptToEvaluateOnNewDocument",
+                params={"source": js},
+                session_id=session_id,
             )
             self._wait_for(
                 lambda: self.websock_thread.received_result(msg_id), timeout=10
             )
+
+        self.send_to_chrome(
+            method="Runtime.runIfWaitingForDebugger", session_id=session_id
+        )
 
     def navigate_to_page(self, page_url, timeout=300):
         self.logger.info("navigating to page", page_url=page_url)
@@ -854,7 +944,6 @@ class Browser:
     def run_behavior(self, behavior_script, timeout=900):
         self.send_to_chrome(
             method="Runtime.evaluate",
-            suppress_logging=True,
             params={"expression": behavior_script},
         )
 
@@ -871,7 +960,6 @@ class Browser:
             self.websock_thread.expect_result(self._command_id.peek())
             msg_id = self.send_to_chrome(
                 method="Runtime.evaluate",
-                suppress_logging=True,
                 params={"expression": "umbraBehaviorFinished()"},
             )
             try:
@@ -905,7 +993,6 @@ class Browser:
         self.websock_thread.got_page_load_event = None
         self.send_to_chrome(
             method="Runtime.evaluate",
-            suppress_logging=True,
             params={"expression": try_login_js},
         )
 
@@ -954,12 +1041,15 @@ class Browser:
 class Counter:
     def __init__(self):
         self.next_value = 0
+        self.lock = threading.Lock()
 
     def __next__(self):
-        try:
-            return self.next_value
-        finally:
-            self.next_value += 1
+        with self.lock:
+            try:
+                return self.next_value
+            finally:
+                self.next_value += 1
 
     def peek(self):
-        return self.next_value
+        with self.lock:
+            return self.next_value
