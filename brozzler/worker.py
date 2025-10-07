@@ -95,7 +95,7 @@ class BrozzlerWorker:
     # cluster with slow rethinkdb.
     HEARTBEAT_INTERVAL = 200.0
     SITE_SESSION_MINUTES = 15
-    HEADER_REQUEST_TIMEOUT = 30
+    HEADER_REQUEST_TIMEOUT = 60
     FETCH_URL_TIMEOUT = 60
 
     def __init__(
