@@ -17,7 +17,7 @@ Brozzler is designed to work in conjunction with `warcprox
 Requirements
 ------------
 
-- Python 3.8 or later
+- Python 3.9 or later
 - RethinkDB deployment
 - Chromium or Google Chrome >= version 64
 
@@ -139,16 +139,10 @@ At this point Brozzler Dashboard will be accessible at http://localhost:8000/.
 
 See ``brozzler-dashboard --help`` for configuration options.
 
-Headless Chrome (experimental)
-------------------------------
-
-Brozzler is known to work nominally with Chrome/Chromium in headless mode, but
-this has not yet been extensively tested.
-
 License
 -------
 
-Copyright 2015-2024 Internet Archive
+Copyright 2015-2025 Internet Archive
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may
 not use this software except in compliance with the License. You may

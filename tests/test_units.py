@@ -177,7 +177,7 @@ def test_robots_connection_failure():
 
 def test_scoping():
     test_scope = yaml.safe_load(
-        """
+        r"""
 max_hops: 100
 accepts:
 - url_match: REGEX_MATCH

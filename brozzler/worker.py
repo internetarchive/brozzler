@@ -19,11 +19,13 @@ limitations under the License.
 """
 
 import datetime
+import importlib.util
 import io
 import json
 import socket
 import threading
 import time
+import urllib.error
 import urllib.request
 
 import doublethink
@@ -39,10 +41,49 @@ from urllib3.exceptions import ProxyError, TimeoutError
 import brozzler
 import brozzler.browser
 from brozzler.model import VideoCaptureOptions
+from brozzler.ssl import CustomSSLContextHTTPAdapter, permissive_ssl_context
 
 from . import metrics
 
 r = rdb.RethinkDB()
+
+
+def _get_with_legacy_renegotiation(url, **kwargs) -> requests.Response:
+    """
+    Performs a get request with unsafe legacy renegotiation enabled.
+    """
+    session = requests.session()
+    ctx = permissive_ssl_context()
+    if not kwargs.get("verify", True):
+        ctx.check_hostname = False
+    session.mount("https://", CustomSSLContextHTTPAdapter(ctx))
+    return session.get(url, **kwargs)
+
+
+def _get_with_permissive_fallback(url, **kwargs) -> requests.Response:
+    """
+    Attempts to perform a request with default SSL settings, then falls
+    back to a request with unsafe legacy renegotiation enabled if
+    necessary.
+    """
+    try:
+        return requests.get(url, **kwargs)
+    except requests.exceptions.SSLError as e:
+        if (
+            e.__context__
+            and e.__context__.__context__
+            and e.__context__.__context__.__context__
+            and e.__context__.__context__.__context__.reason
+            == "UNSAFE_LEGACY_RENEGOTIATION_DISABLED"
+        ):
+            logger = structlog.get_logger(logger_name=__name__)
+            logger.info(
+                "request failed with legacy renegotiation disabled; "
+                "retrying with it enabled",
+                url=url,
+            )
+            return _get_with_legacy_renegotiation(url, **kwargs)
+        raise
 
 
 class BrozzlerWorker:
@@ -66,6 +107,7 @@ class BrozzlerWorker:
         chrome_exe="chromium-browser",
         warcprox_auto=False,
         proxy=None,
+        headless=True,
         skip_extract_outlinks=False,
         skip_visit_hashtags=False,
         skip_youtube_dl=False,
@@ -93,6 +135,7 @@ class BrozzlerWorker:
         self._proxy = proxy
         assert not (warcprox_auto and proxy)
         self._proxy_is_warcprox = None
+        self._headless = headless
         self._skip_extract_outlinks = skip_extract_outlinks
         self._skip_visit_hashtags = skip_visit_hashtags
         self._skip_youtube_dl = skip_youtube_dl
@@ -100,14 +143,8 @@ class BrozzlerWorker:
         if worker_id is not None:
             self.logger = self.logger.bind(worker_id=worker_id)
 
-        # TODO try using importlib.util.find_spec to test for dependency
-        # presence rather than try/except on import.
-        # See https://docs.astral.sh/ruff/rules/unused-import/#example
-
         # We definitely shouldn't ytdlp if the optional extra is missing
-        try:
-            import yt_dlp  # noqa: F401
-        except ImportError:
+        if not importlib.util.find_spec("yt_dlp"):
             self.logger.info(
                 "optional yt-dlp extra not installed; setting skip_youtube_dl to True"
             )
@@ -321,9 +358,9 @@ class BrozzlerWorker:
             elif site.video_capture in [
                 VideoCaptureOptions.DISABLE_VIDEO_CAPTURE.value,
                 VideoCaptureOptions.BLOCK_VIDEO_MIME_TYPES.value,
-            ] and self._is_video_type(page_headers):
+            ] and self._is_media_type(page_headers):
                 page_logger.info(
-                    "skipping video content: video MIME type capture disabled for site"
+                    "skipping audio/video content: video MIME type capture disabled for site"
                 )
             else:
                 self._fetch_url(site, page=page)
@@ -339,6 +376,7 @@ class BrozzlerWorker:
                     raise brozzler.PageConnectionError()
             except brozzler.PageInterstitialShown:
                 page_logger.info("page interstitial shown (http auth)")
+                status_code = -1
 
             if enable_youtube_dl and self.should_ytdlp(
                 page_logger, site, page, status_code
@@ -386,7 +424,7 @@ class BrozzlerWorker:
             user_agent = site.get("user_agent")
             headers = {"User-Agent": user_agent} if user_agent else {}
             url_logger.info("getting page headers")
-            with requests.get(
+            with _get_with_permissive_fallback(
                 page.url,
                 stream=True,
                 verify=False,
@@ -406,13 +444,16 @@ class BrozzlerWorker:
             and "html" not in page_headers["content-type"]
         )
 
-    def _is_video_type(self, page_headers) -> bool:
+    def _is_media_type(self, page_headers) -> bool:
         """
         Determines if the page's Content-Type header specifies that it contains
-        a video.
+        audio or video.
         """
-        return (
-            "content-type" in page_headers and "video" in page_headers["content-type"]
+        return "content-type" in page_headers and (
+            "video" in page_headers["content-type"]
+            or "audio" in page_headers["content-type"]
+            # https://github.com/gsuberland/UMP_Format/blob/main/UMP_Format.md
+            or page_headers["content-type"] == "application/vnd.yt-ump"
         )
 
     def _is_pdf(self, page_headers) -> bool:
@@ -510,6 +551,7 @@ class BrozzlerWorker:
                 cookie_db=site.get("cookie_db"),
                 window_height=self._window_height,
                 window_width=self._window_width,
+                headless=self._headless,
             )
         final_page_url, outlinks = browser.browse_page(
             page.url,

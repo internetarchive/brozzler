@@ -11,3 +11,8 @@ brozzler.egg-info/
 # editor config
 .idea
 .vscode
+
+# warcprox
+*.local-warcprox-ca*
+/warcprox.sqlite
+/warcs
