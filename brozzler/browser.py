@@ -803,13 +803,13 @@ class Browser:
 
         headers = self._extra_headers or {}
         headers["Accept-Encoding"] = "gzip"  # avoid encodings br, sdch
-        msg_id = self.send_to_chrome(
+        self.send_to_chrome(
             method="Network.setExtraHTTPHeaders",
             params={"headers": headers},
             session_id=session_id,
         )
         if self._user_agent:
-            msg_id = self.send_to_chrome(
+            self.send_to_chrome(
                 method="Network.setUserAgentOverride",
                 params={"userAgent": self._user_agent},
                 session_id=session_id,
@@ -817,7 +817,7 @@ class Browser:
         if self._download_throughput > -1:
             # traffic shaping already used by SPN2 to aid warcprox resilience
             # parameter value as bytes/second, or -1 to disable (default)
-            msg_id = self.send_to_chrome(
+            self.send_to_chrome(
                 method="Network.emulateNetworkConditions",
                 params={"downloadThroughput": self._download_throughput},
                 session_id=session_id,
@@ -825,7 +825,7 @@ class Browser:
         if self._stealth:
             self.websock_thread.expect_result(self._command_id.peek())
             js = brozzler.jinja2_environment().get_template("stealth.js").render()
-            msg_id = self.send_to_chrome(
+            self.send_to_chrome(
                 method="Page.addScriptToEvaluateOnNewDocument",
                 params={"source": js},
                 session_id=session_id,
