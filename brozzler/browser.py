@@ -273,24 +273,6 @@ class WebsockReceiverThread(threading.Thread):
             )
         )
 
-    def _should_track_request(self, message) -> bool:
-        """
-        Decides whether or not to include a request in the idle check.
-        """
-        # Workaround for https://github.com/GoogleChrome/lighthouse/issues/11850
-        # Don't add frame URLs to the set of active requests because they will
-        # never receive a loadingFinished event.
-        if (
-            "params" in message
-            and "type" in message["params"]
-            and "frameId" in message["params"]
-            and message["params"]["type"] == "Document"
-        ):
-            if self.initial_document is None:
-                self.initial_document = message["params"]["frameId"]
-            return self.initial_document == message["params"]["frameId"]
-        return True
-
     def _attached_to_target(self, message):
         if "params" in message and "sessionId" in message["params"]:
             self.parent._configure_target(message["params"]["sessionId"])
@@ -312,8 +294,7 @@ class WebsockReceiverThread(threading.Thread):
 
                 if "params" in message and "requestId" in message["params"]:
                     with self.activity_lock:
-                        if self._should_track_request(message):
-                            self.active_connections.add(message["params"]["requestId"])
+                        self.active_connections.add(message["params"]["requestId"])
                         self.last_network_activity = time.time()
             elif (
                 message["method"] == "Network.dataReceived"
@@ -790,6 +771,16 @@ class Browser:
             method="ServiceWorker.setForceUpdateOnPageLoad", session_id=session_id
         )
 
+        self.send_to_chrome(
+            method="Target.setAutoAttach",
+            params={
+                "autoAttach": True,
+                "waitForDebuggerOnStart": True,
+                "flatten": True,
+            },
+            session_id=session_id,
+        )
+
         # disable google analytics and amp analytics
         self.send_to_chrome(
             method="Network.setBlockedURLs",
@@ -838,9 +829,6 @@ class Browser:
                 method="Page.addScriptToEvaluateOnNewDocument",
                 params={"source": js},
                 session_id=session_id,
-            )
-            self._wait_for(
-                lambda: self.websock_thread.received_result(msg_id), timeout=10
             )
 
         self.send_to_chrome(
