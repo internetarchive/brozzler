@@ -12,7 +12,7 @@ maintainers = [
 ]
 description = "Distributed web crawling with browsers"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
