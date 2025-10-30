@@ -333,7 +333,7 @@ def _remember_videos(page, ie_result, pushed_videos=None):
             "content-type": pushed_video["content-type"],
             "content-length": pushed_video["content-length"],
         }
-        # should be only 1 video for youtube watch pages
+        # should be only 1 video for youtube watch pages, maybe vimeo, too, and other similar...
         if len(pushed_videos) == 1:
             video["title"] = ie_result.get("title")
             video["display_id"] = ie_result.get("display_id")
@@ -407,6 +407,9 @@ def _try_youtube_dl(worker, ydl, site, page):
         )
 
     logger.info("ytdlp completed successfully")
+
+    # NOTE: good place for a check for duplicate display_id = ie_result.get("display_id")?
+    # see ydl_postprocess_hook... best to check for duplicate display_id before writing video!
 
     _remember_videos(page, ie_result, ydl.pushed_videos)
     if worker._using_warcprox(site):
