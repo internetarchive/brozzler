@@ -17,6 +17,10 @@ jobs:
           sudo apt-get install chromium-browser
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - name: Test new yt-dlp
         run: |
           set -euo pipefail
