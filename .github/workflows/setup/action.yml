@@ -28,6 +28,11 @@ runs:
         sudo /etc/init.d/rethinkdb restart
       shell: bash
 
+    - name: Install Deno
+      uses: denoland/setup-deno@v2
+      with:
+        deno-version: v2.x
+
     - name: Install pip dependencies
       run: |
         uv sync --python ${{ inputs.python-version }} --extra rethinkdb --extra warcprox --extra yt-dlp --extra psycopg
