@@ -388,6 +388,8 @@ class Browser:
         self.is_browsing = False
         self._command_id = Counter()
         self._wait_interval = 0.5
+        self._max_screenshot_width = kwargs.get('max_screenshot_width', 2000)
+        self._max_screenshot_height = kwargs.get('max_screenshot_height', 10000)
 
     def __enter__(self):
         self.start()
@@ -808,8 +810,8 @@ class Browser:
                 lambda: self.websock_thread.received_result(msg_id), timeout=timeout
             )
             message = self.websock_thread.pop_result(msg_id)
-            width = message["result"]["contentSize"]["width"]
-            height = message["result"]["contentSize"]["height"]
+            width = min(message["result"]["contentSize"]["width"], self._max_screenshot_width)
+            height = min(message["result"]["contentSize"]["height"], self._max_screenshot_height)
             clip = dict(x=0, y=0, width=width, height=height, scale=1)
             deviceScaleFactor = 1
             screenOrientation = {"angle": 0, "type": "portraitPrimary"}
