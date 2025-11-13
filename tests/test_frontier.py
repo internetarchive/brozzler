@@ -1052,6 +1052,45 @@ def test_max_claimed_sites_cross_job(rethinker):
     rr.table("sites").delete().run()
 
 
+def test_many_active_claimed_sites_cross_job(rethinker):
+    rr = rethinker
+    frontier = brozzler.RethinkDbFrontier(rr)
+
+    # clean slate
+    rr.table("jobs").delete().run()
+    rr.table("sites").delete().run()
+
+    job_conf_1 = {
+        "id": 1,
+        "seeds": [{"url": f"http://example.com/{i}"} for i in range(0, 2000)],
+        "max_claimed_sites": 3,
+    }
+    job_conf_2 = {
+        "id": 2,
+        "seeds": [
+            {"url": "http://example.com/1"},
+            {"url": "http://example.com/2"},
+            {"url": "http://example.com/3"},
+            {"url": "http://example.com/4"},
+            {"url": "http://example.com/5"},
+        ],
+        "max_claimed_sites": 5,
+    }
+
+    brozzler.new_job(frontier, job_conf_1)
+
+    # Claim all possible sites from job 1. We should only get 3 due to max_claimed_sites
+    claimed_sites_1 = frontier.claim_sites(4)
+    assert len(claimed_sites_1) == 3
+
+    # Add 5 more seeds
+    brozzler.new_job(frontier, job_conf_2)
+
+    # We shouldn't have trouble getting seeds from job 2
+    claimed_sites_1 = frontier.claim_sites(5)
+    assert len(claimed_sites_1) == 5
+
+
 # Works locally, but reliably fails in CI.
 @pytest.mark.xfail
 def test_max_claimed_sites_load_perf(rethinker):
