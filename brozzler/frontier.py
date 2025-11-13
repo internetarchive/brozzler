@@ -65,9 +65,6 @@ def filter_claimable_site_ids(
         if is_claimable:
             claimable_sites.append(site)
 
-        if len(claimable_sites) >= max_sites_to_claim:
-            break
-
     site_ids_to_claim = []
     # gather sites that are under the max without going over
     for site in claimable_sites:

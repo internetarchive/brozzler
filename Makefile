@@ -59,3 +59,8 @@ check-format:
 format:
 	$(VIRTUAL_ENV_DIR)/bin/ruff check $(OUTPUT_FLAGS) --select I --fix .
 	$(VIRTUAL_ENV_DIR)/bin/ruff format .
+
+.PHONY: test
+test:
+	uv sync --all-extras
+	uv run py.test tests
