@@ -1077,15 +1077,14 @@ def test_many_active_claimed_sites_cross_job(rethinker):
         "max_claimed_sites": 5,
     }
 
-    seeds_seen = []
-    job_1 = brozzler.new_job(frontier, job_conf_1)
+    brozzler.new_job(frontier, job_conf_1)
 
     # Claim all possible sites from job 1. We should only get 3 due to max_claimed_sites
     claimed_sites_1 = frontier.claim_sites(4)
     assert len(claimed_sites_1) == 3
 
     # Add 5 more seeds
-    job_2 = brozzler.new_job(frontier, job_conf_2)
+    brozzler.new_job(frontier, job_conf_2)
 
     # We shouldn't have trouble getting seeds from job 2
     claimed_sites_1 = frontier.claim_sites(5)
