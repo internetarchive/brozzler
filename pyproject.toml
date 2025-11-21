@@ -1,6 +1,6 @@
 [project]
 name = "brozzler"
-version = "1.8.0"
+version = "1.8.1"
 authors = [
   { name="Noah Levitt", email="nlevitt@archive.org" },
 ]
@@ -13,7 +13,7 @@ maintainers = [
 ]
 description = "Distributed web crawling with browsers"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
