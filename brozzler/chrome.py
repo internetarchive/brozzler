@@ -28,12 +28,14 @@ import tempfile
 import threading
 import time
 import urllib.request
+from functools import lru_cache
 
 import structlog
 
 import brozzler
 
 
+@lru_cache
 def check_version(chrome_exe):
     """
     Raises SystemExit if `chrome_exe` is not a supported browser version.
