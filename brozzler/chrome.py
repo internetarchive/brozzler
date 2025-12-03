@@ -199,7 +199,6 @@ class Chrome:
             "--no-first-run",
             "--homepage=about:blank",
             "--disable-features=HttpsUpgrades,HttpsFirstBalancedModeAutoEnable,OptimizationGuideModelDownloading,OptimizationHintsFetching,OptimizationTargetPrediction,OptimizationHints",
-            "--disable-direct-npapi-requests",
             "--disable-web-security",
             "--disable-notifications",
             "--disable-extensions",
