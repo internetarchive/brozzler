@@ -58,6 +58,7 @@ def filter_claimable_site_ids(
             is_claimable = True
 
         # Count number of claimed sites per job_id (ignoring sites claimed over an hour ago)
+        # for enforcing the optional max_claimed_sites per job
         if site["claimed"] and "max_claimed_sites" in site and "job_id" in site:
             if not is_claimable:
                 job_id = site["job_id"]
