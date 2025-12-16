@@ -27,6 +27,7 @@ import time
 
 import doublethink
 import pytest
+import rethinkdb as rdb
 
 import brozzler.cli
 
@@ -35,6 +36,7 @@ brozzler.cli.add_common_options(arg_parser)
 args = arg_parser.parse_args([])
 args.log_level = logging.INFO
 brozzler.cli.configure_logging(args)
+r = rdb.RethinkDB()
 
 
 @pytest.fixture(scope="module")
@@ -953,10 +955,20 @@ def test_max_claimed_sites(rethinker):
     sites = list(frontier.job_sites(job.id))
     assert len(sites) == 5
 
-    claimed_sites = frontier.claim_sites(1)
-    assert len(claimed_sites) == 1
-    claimed_sites = frontier.claim_sites(3)
-    assert len(claimed_sites) == 2
+    claimed_sites_1 = frontier.claim_sites(1)
+    assert len(claimed_sites_1) == 1
+    claimed_sites_2 = frontier.claim_sites(3)
+    assert len(claimed_sites_2) == 2
+    with pytest.raises(brozzler.NothingToClaim):
+        frontier.claim_sites(3)
+
+    # if we "wait" an hour, we can reclaim
+    rr.table("sites").get_all(
+        r.args([item["id"] for item in (claimed_sites_1 + claimed_sites_2)])
+    ).update({"claimed": True, "last_claimed": r.now().sub(61 * 60)}).run()
+
+    claimed_sites_3 = frontier.claim_sites(3)
+    assert len(claimed_sites_3) == 3
     with pytest.raises(brozzler.NothingToClaim):
         frontier.claim_sites(3)
 

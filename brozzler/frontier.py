@@ -51,16 +51,17 @@ def filter_claimable_site_ids(
         ):
             is_claimable = True
 
-        # or site has been disclaimed more than an hour ago
+        # or site has been claimed more than an hour ago
         if "last_claimed" in site and site["last_claimed"] <= (
             now - datetime.timedelta(hours=1)
         ):
             is_claimable = True
 
-        # Count number of claimed sites per job_id (optional field)
+        # Count number of claimed sites per job_id (ignoring sites claimed over an hour ago)
         if site["claimed"] and "max_claimed_sites" in site and "job_id" in site:
-            job_id = site["job_id"]
-            job_counts[job_id] = job_counts.get(job_id, 0) + 1
+            if not is_claimable:
+                job_id = site["job_id"]
+                job_counts[job_id] = job_counts.get(job_id, 0) + 1
 
         if is_claimable:
             claimable_sites.append(site)
