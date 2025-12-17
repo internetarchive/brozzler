@@ -42,7 +42,7 @@ var __brzl_tryLogin = function() {
             console.log('submitting username=' + usernameField.value
                         + ' password=*** to detected login form');
             try {
-                form.submit();
+                form.requestSubmit();
             } catch (e) {
                 // "If a form control (such as a submit button) has a name or
                 // id of 'submit' it will mask the form's submit method." -MDN
