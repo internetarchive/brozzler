@@ -27,6 +27,7 @@ class UmbraBehavior {
         this.intervalId = null;
         this.intervalTimeMs = {{interval or 300}};
         this.index = 0;
+        this.outlinks = [];
     }
 
     simpleIntervalFunc() {
@@ -43,6 +44,8 @@ class UmbraBehavior {
         var didSomething = false;
         var somethingLeftAbove = false;
         var somethingLeftBelow = false;
+        var extractOutlinks = this.actions[k].extractOutlinks ? this.actions[k].extractOutlinks : false;
+        var extractOutlinksInLoop = this.actions[k].extractOutlinksInLoop ? this.actions[k].extractOutlinksInLoop : false;
 
         var documents = [];
         documents[0] = document;
@@ -121,6 +124,12 @@ class UmbraBehavior {
                             childSelectors = documents[j].querySelectorAll(childSelector);
                         }
                     }
+                    // If we were asked to extract outlinks within the loop,
+                    // repeat this every time we iterate
+                    if (extractOutlinks && extractOutlinksInLoop) {
+                        this.outlinks = this.outlinks.concat(__brzl_compileOutlinks(window));
+                    }
+
                     didSomething = true;
                     break;
                 } else if (where > 0) {
@@ -134,6 +143,12 @@ class UmbraBehavior {
                 this.nextAction();
                 break;
             }
+        }
+
+        // If we were asked not to extract outlinks within the loop,
+        // do this once after we've finished looping
+        if (extractOutlinks && !extractOutlinksInLoop) {
+            this.outlinks = this.outlinks.concat(__brzl_compileOutlinks(window));
         }
 
         if (!didSomething) {
@@ -221,7 +236,12 @@ var umbraBehavior = new UmbraBehavior( {{actions|json}} );
 
 // Called from outside of this script.
 var umbraBehaviorFinished = function() {
-    return umbraBehavior.isFinished();
+    let outlinkStrings = umbraBehavior.outlinks.map(el => el.toString());
+
+    return {
+        finished: umbraBehavior.isFinished(),
+        outlinks: Array.from(outlinkStrings),
+    };
 };
 
 umbraBehavior.start();
