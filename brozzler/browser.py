@@ -770,12 +770,26 @@ class Browser:
         self.logger.info("extracting outlinks")
         self.websock_thread.expect_result(self._command_id.peek())
         js = brozzler.jinja2_environment().get_template("extract-outlinks.js").render()
+        # This defines the method but doesn't extract outlinks yet
         msg_id = self.send_to_chrome(
-            method="Runtime.evaluate", params={"expression": js}
+            method="Runtime.evaluate",
+            suppress_logging=True,
+            params={"expression": js},
         )
         self._wait_for(
             lambda: self.websock_thread.received_result(msg_id), timeout=timeout
         )
+        self.websock_thread.expect_result(self._command_id.peek())
+
+        # Now we actually do outlink extraction
+        msg_id = self.send_to_chrome(
+            method="Runtime.evaluate",
+            params={"expression": "__brzl_outlinksString()"},
+        )
+        self._wait_for(
+            lambda: self.websock_thread.received_result(msg_id), timeout=timeout
+        )
+
         message = self.websock_thread.pop_result(msg_id)
         if (
             "result" in message

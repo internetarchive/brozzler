@@ -36,4 +36,6 @@ var __brzl_compileOutlinks = function(frame) {
 
     return outlinks;
 }
-__brzl_compileOutlinks(window).join('\n');
+var __brzl_outlinksString = function() {
+    return __brzl_compileOutlinks(window).join('\n');
+}
