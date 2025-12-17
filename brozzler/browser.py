@@ -767,8 +767,7 @@ class Browser:
         self.send_to_chrome(method="Page.navigate", params={"url": page_url})
         self._wait_for(lambda: self.websock_thread.got_page_load_event, timeout=timeout)
 
-    def extract_outlinks(self, timeout=60) -> frozenset[str]:
-        self.logger.info("extracting outlinks")
+    def inject_outlink_extractor(self, timeout=60):
         self.websock_thread.expect_result(self._command_id.peek())
         js = brozzler.jinja2_environment().get_template("extract-outlinks.js").render()
         # This defines the method but doesn't extract outlinks yet
@@ -780,8 +779,14 @@ class Browser:
         self._wait_for(
             lambda: self.websock_thread.received_result(msg_id), timeout=timeout
         )
-        self.websock_thread.expect_result(self._command_id.peek())
 
+    def extract_outlinks(self, timeout=60) -> frozenset[str]:
+        self.logger.info("extracting outlinks")
+
+        # Define the outlink extractor first before extracting
+        self.inject_outlink_extractor(timeout=timeout)
+
+        self.websock_thread.expect_result(self._command_id.peek())
         # Now we actually do outlink extraction
         msg_id = self.send_to_chrome(
             method="Runtime.evaluate",
@@ -873,6 +878,9 @@ class Browser:
         return message["result"]["result"]["value"]
 
     def run_behavior(self, behavior_script, timeout=900) -> frozenset[str]:
+        # Inject the outlink extractor so it's available to behaviors
+        self.inject_outlink_extractor(timeout=timeout)
+
         self.send_to_chrome(
             method="Runtime.evaluate",
             suppress_logging=True,
