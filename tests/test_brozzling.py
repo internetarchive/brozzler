@@ -297,7 +297,7 @@ def test_try_login(httpd):
     login_url = "http://localhost:%s/login-action" % httpd.server_port
     # When username and password are defined and initial page has login form,
     # detect login form, submit login, and then return to the initial page.
-    username = "user1"
+    username = "user1@example.com"  # input type="email"
     password = "pass1"
     with brozzler.Browser(chrome_exe=chrome_exe) as browser:
         browser.browse_page(
