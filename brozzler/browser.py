@@ -782,7 +782,11 @@ class Browser:
         # Now we actually do outlink extraction
         msg_id = self.send_to_chrome(
             method="Runtime.evaluate",
-            params={"expression": "__brzl_outlinksString()"},
+            params={
+                "expression": "__brzl_extractOutlinks()",
+                # returnByValue ensures we can receive an array response
+                "returnByValue": True,
+            },
         )
         self._wait_for(
             lambda: self.websock_thread.received_result(msg_id), timeout=timeout
@@ -796,7 +800,7 @@ class Browser:
         ):
             if message["result"]["result"]["value"]:
                 out = []
-                for link in message["result"]["result"]["value"].split("\n"):
+                for link in message["result"]["result"]["value"]:
                     try:
                         out.append(str(urlcanon.whatwg(link)))
                     except AddressValueError:
