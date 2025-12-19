@@ -250,7 +250,7 @@ class Chrome:
         return self._websocket_url(timeout_sec=websocket_timeout)
 
     def _websocket_url(self, timeout_sec=60):
-        json_url = "http://localhost:%s/json" % self.port
+        json_url = "http://localhost:%s/json/version" % self.port
         url_logger = self.logger.bind(json_url=json_url)
         # make this a member variable so that kill -QUIT reports it
         self._start = time.time()
@@ -258,12 +258,11 @@ class Chrome:
         while True:
             try:
                 raw_json = urllib.request.urlopen(json_url, timeout=30).read()
-                all_debug_info = json.loads(raw_json.decode("utf-8"))
-                debug_info = [x for x in all_debug_info if x["url"] == "about:blank"]
+                debug_info = json.loads(raw_json.decode("utf-8"))
 
-                if debug_info and "webSocketDebuggerUrl" in debug_info[0]:
+                if debug_info and "webSocketDebuggerUrl" in debug_info:
                     url_logger.debug("webSocketDebuggerUrl returned", raw_json=raw_json)
-                    url = debug_info[0]["webSocketDebuggerUrl"]
+                    url = debug_info["webSocketDebuggerUrl"]
                     url_logger.info(
                         "got chrome window websocket debug url",
                         debug_url=url,
