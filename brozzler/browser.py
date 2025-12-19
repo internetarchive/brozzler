@@ -648,7 +648,7 @@ class Browser:
                         self._try_screenshot(on_screenshot, screenshot_full_page)
 
                 if not run_behaviors or skip_extract_outlinks:
-                    outlinks = []
+                    outlinks: frozenset[str] = frozenset()
                 else:
                     outlinks = self.extract_outlinks(timeout=extract_outlinks_timeout)
                 if run_behaviors and not skip_visit_hashtags:
@@ -766,7 +766,7 @@ class Browser:
         self.send_to_chrome(method="Page.navigate", params={"url": page_url})
         self._wait_for(lambda: self.websock_thread.got_page_load_event, timeout=timeout)
 
-    def extract_outlinks(self, timeout=60):
+    def extract_outlinks(self, timeout=60) -> frozenset[str]:
         self.logger.info("extracting outlinks")
         self.websock_thread.expect_result(self._command_id.peek())
         js = brozzler.jinja2_environment().get_template("extract-outlinks.js").render()
