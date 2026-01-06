@@ -411,6 +411,8 @@ def brozzle_page(argv=None):
         logger.exception("reached limit")
     except brozzler.PageInterstitialShown:
         logger.exception("page interstitial shown")
+    except brozzler.PageConnectionError:
+        logger.exception("Error between Chrome and Warcprox")
     finally:
         browser.stop()
 
