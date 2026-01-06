@@ -720,7 +720,7 @@ class BrozzlerWorker:
                     seconds=retry_delay
                 )
                 page.failed_attempts = (page.failed_attempts or 0) + 1
-                if page.failed_attempts > brozzler.MAX_PAGE_FAILURES:
+                if page.failed_attempts >= brozzler.MAX_PAGE_FAILURES:
                     self.logger.info(
                         'marking page "completed" after several unexpected '
                         "exceptions attempting to brozzle",
