@@ -1,14 +1,15 @@
 ---
 - name: ensure required packages are installed
   become: true
-  apt: name={{item}} state=present
-  with_items:
-  - gcc
-  - python3-dev
-  - libffi-dev
-  - libssl-dev
-  - tor
-  - git
+  apt:
+    state: present
+    name:
+    - gcc
+    - python3-dev
+    - libffi-dev
+    - libssl-dev
+    - tor
+    - git
 - name: mkdir {{venv_root}}/warcprox-ve3
   become: true
   file: path={{venv_root}}/warcprox-ve3 state=directory owner={{user}}
