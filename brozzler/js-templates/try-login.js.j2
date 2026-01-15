@@ -39,6 +39,12 @@ var __brzl_tryLogin = function() {
         if (usernameField && passwordField) {
             usernameField.value = {{username|json}};
             passwordField.value = {{password|json}};
+            // Trigger input and change events for username and password fields
+            for (const field of [usernameField, passwordField]) {
+              field.dispatchEvent(new Event("input",  { bubbles: true }));
+              field.dispatchEvent(new Event("change", { bubbles: true }));
+              field.blur();
+            }
             console.log('submitting username=' + usernameField.value
                         + ' password=*** to detected login form');
             try {
