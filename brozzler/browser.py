@@ -948,6 +948,10 @@ class Browser:
             .render(username=username, password=password)
         )
 
+        self.logger.info("trying to login")
+        time.sleep(1)  # allow time for any scripts to run
+        self._wait_for_idle(idle_time=2, timeout=4)
+
         self.websock_thread.got_page_load_event = None
         self.send_to_chrome(
             method="Runtime.evaluate",
