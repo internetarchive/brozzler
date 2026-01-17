@@ -407,7 +407,7 @@ def test_chrome_error(httpd):
     site = brozzler.Site(None, {})
     page = brozzler.Page(None, {"url": url})
     with brozzler.Browser(chrome_exe=chrome_exe) as browser:
-        with pytest.raises(brozzler.PageConnectionError) as excinfo:
+        with pytest.raises(brozzler.PageConnectionError):
             worker.brozzle_page(browser, site, page)
         assert page.redirect_url and page.redirect_url.startswith("chrome-error:")
         page.url = "http://localhost:%s/site1/" % httpd.server_port
