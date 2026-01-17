@@ -405,9 +405,7 @@ def test_chrome_error(httpd):
     url = "http://nonexistent.invalid"
     worker = brozzler.BrozzlerWorker(None)
     site = brozzler.Site(None, {})
-    page = brozzler.Page(
-        None, {"url": url}
-    )
+    page = brozzler.Page(None, {"url": url})
     with brozzler.Browser(chrome_exe=chrome_exe) as browser:
         with pytest.raises(brozzler.PageConnectionError) as excinfo:
             worker.brozzle_page(browser, site, page)
