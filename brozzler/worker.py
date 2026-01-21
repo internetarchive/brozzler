@@ -556,7 +556,7 @@ class BrozzlerWorker:
                 window_width=self._window_width,
                 headless=self._headless,
             )
-        page.redirect_url = None
+        page.clear_redirect()
         final_page_url, outlinks = browser.browse_page(
             page.url,
             extra_headers=site.extra_headers(page),
