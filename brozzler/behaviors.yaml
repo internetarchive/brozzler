@@ -213,6 +213,16 @@
   default_parameters:
     actions:
       - selector: img#navForward1
+- # https://webarchive.jira.com/browse/WT-3779
+  url_regex: '^https?://libraries.mit.edu/news/$'
+  behavior_js_template: umbraBehavior.js.j2
+  request_idle_timeout_sec: 10
+  default_parameters:
+    actions:
+      - selector: '#another'
+        repeatSameElement: true
+        repeatUntilSelector: '#another:has(style)'
+        limit: 1000
 - # default fallback behavior
   url_regex: '^.*$'
   behavior_js_template: umbraBehavior.js.j2
