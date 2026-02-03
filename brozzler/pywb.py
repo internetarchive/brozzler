@@ -111,8 +111,9 @@ class RethinkCDXSource(pywb.cdx.cdxsource.CDXSource):
             )
         )
         reql = reql.filter(
-            lambda capture: (capture["canon_surt"] >= start_key)
-            & (capture["canon_surt"] < end_key)
+            lambda capture: (
+                (capture["canon_surt"] >= start_key) & (capture["canon_surt"] < end_key)
+            )
         )
         if cdx_query.limit:
             reql = reql.limit(cdx_query.limit)
