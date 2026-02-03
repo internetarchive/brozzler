@@ -1228,8 +1228,9 @@ def brozzler_list_captures(argv=None):
         )
         reql = reql.order_by(index="abbr_canon_surt_timestamp")
         reql = reql.filter(
-            lambda capture: (capture["canon_surt"] >= key)
-            & (capture["canon_surt"] <= end_key)
+            lambda capture: (
+                (capture["canon_surt"] >= key) & (capture["canon_surt"] <= end_key)
+            )
         )
         logger.debug("querying rethinkdb", query=reql)
         results = reql.run()
