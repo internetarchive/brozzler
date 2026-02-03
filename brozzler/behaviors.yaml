@@ -223,6 +223,50 @@
         repeatSameElement: true
         repeatUntilSelector: '#another:has(style)'
         limit: 1000
+- # https://webarchive.jira.com/browse/WT-3724
+  url_regex: '^https?://news.stanford.edu/press-center/?$'
+  default_parameters:
+    interval: 10
+    actions:
+      - selector: button[aria-label='Next page']
+        repeatSameElement: true
+        repeatUntilSelector: button[aria-label='Next page'][disabled]
+        extractOutlinks: true
+        extractOutlinksInLoop: true
+        limit: 1000
+- # https://webarchive.jira.com/browse/WT-3724
+  url_regex: '^https?://www.jacksonjc.com/obits/?$'
+  default_parameters:
+    interval: 10
+    actions:
+      - selector: .pagination > .next
+        repeatSameElement: true
+        repeatUntilSelector: .pagination > .next.disabled
+        extractOutlinks: true
+        extractOutlinksInLoop: true
+        limit: 1000
+- # https://webarchive.jira.com/browse/WT-3724
+  url_regex: '^https?://www.watsonmortuaryservice.com/obits/?$'
+  default_parameters:
+    interval: 10
+    actions:
+      - selector: '#next-page'
+        repeatSameElement: true
+        repeatUntilSelector: '#next-page.nav-disabled'
+        extractOutlinks: true
+        extractOutlinksInLoop: true
+        limit: 1000
+- # https://webarchive.jira.com/browse/WT-3724
+  url_regex: '^https?://aquatic-chemistry.ethz.ch/publications-and-awards/.+$'
+  default_parameters:
+    interval: 10
+    actions:
+      - selector: .EthPagination__button--next
+        repeatSameElement: true
+        repeatUntilSelector: .EthPagination__button--next[disabled]
+        extractOutlinks: true
+        extractOutlinksInLoop: true
+        limit: 1000
 - # default fallback behavior
   url_regex: '^.*$'
   behavior_js_template: umbraBehavior.js.j2
