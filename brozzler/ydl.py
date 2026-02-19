@@ -269,6 +269,12 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         "socket_timeout": 40,
         "progress_hooks": [maybe_heartbeat_site_last_claimed],
         "postprocessor_hooks": [ydl_postprocess_hook],
+        # YouTube has started providing videos in upscaled "Super Resolution"
+        # format, which we don't want to download. yt-dlp identifies these via
+        # the -sr suffix on the format_id. We can filter these out from the
+        # list without putting any other prerequisites on the results.
+        # https://alexwlchan.net/til/2025/ignore-ai-scaled-videos/
+        "format": "[format_id!*=-sr]",
         # https://github.com/yt-dlp/yt-dlp#format-selection
         # "By default, yt-dlp tries to download the best available quality..."
         # v.2023.07.06 https://www.reddit.com/r/youtubedl/wiki/h264/?rdt=63577
