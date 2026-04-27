@@ -295,6 +295,11 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         "max_sleep_interval": 27,
     }
 
+    # http_headers is yt-dlp's default UA; extractors that set their own
+    # User-Agent on a request still override this.
+    if site.get("user_agent"):
+        ydl_opts["http_headers"] = {"User-Agent": site.get("user_agent")}
+
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     is_youtube_host = isyoutubehost(ytdlp_url)
     if is_youtube_host and ytdlp_proxy_endpoints:
