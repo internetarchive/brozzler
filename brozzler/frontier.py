@@ -51,14 +51,23 @@ def filter_claimable_site_ids(
         ):
             is_claimable = True
 
-        # or site has been disclaimed more than an hour ago
-        if "last_claimed" in site and site["last_claimed"] <= (
+        # or site has been claimed more than an hour ago (worker crashed
+        # before disclaim; we reclaim the orphan row)
+        is_stale_claim = "last_claimed" in site and site["last_claimed"] <= (
             now - datetime.timedelta(hours=1)
-        ):
+        )
+        if is_stale_claim:
             is_claimable = True
 
-        # Count number of claimed sites per job_id (optional field)
-        if site["claimed"] and "max_claimed_sites" in site and "job_id" in site:
+        # Count *live* claims per job_id toward the cap. Skip stale claims
+        # because we're about to reclaim them — counting them lets a cap
+        # fill up with orphans and permanently block recovery on that job.
+        if (
+            site["claimed"]
+            and not is_stale_claim
+            and "max_claimed_sites" in site
+            and "job_id" in site
+        ):
             job_id = site["job_id"]
             job_counts[job_id] = job_counts.get(job_id, 0) + 1
 
