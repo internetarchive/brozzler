@@ -445,6 +445,9 @@ class Page(doublethink.Document):
     def note_redirect(self, url):
         self.redirect_url = url
 
+    def clear_redirect(self):
+        self.redirect_url = None
+
     def _calc_priority(self):
         if not self.url:
             return None

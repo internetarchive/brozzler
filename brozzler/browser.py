@@ -620,6 +620,9 @@ class Browser:
                             "login navigated away; returning!", page_url=page_url
                         )
                         self.navigate_to_page(page_url, timeout=page_timeout)
+                    # allow time for any additional redirects or scripts to run after login
+                    time.sleep(10)
+                    self._wait_for_idle(idle_time=5, timeout=4)
                 # If the target page HTTP status is 4xx/5xx, there is no point
                 # in running behaviors, screenshot, outlink and hashtag
                 # extraction as we didn't get a valid page.
@@ -631,11 +634,14 @@ class Browser:
                 ):
                     run_behaviors = False
 
+                behavior_outlinks: frozenset[str] = frozenset()
                 if run_behaviors and behavior_timeout > 0:
                     behavior_script = brozzler.behavior_script(
                         page_url, behavior_parameters, behaviors_dir=behaviors_dir
                     )
-                    self.run_behavior(behavior_script, timeout=behavior_timeout)
+                    behavior_outlinks = self.run_behavior(
+                        behavior_script, timeout=behavior_timeout
+                    )
                 final_page_url = self.url()
                 if on_screenshot:
                     if simpler404:
@@ -648,12 +654,12 @@ class Browser:
                         self._try_screenshot(on_screenshot, screenshot_full_page)
 
                 if not run_behaviors or skip_extract_outlinks:
-                    outlinks = []
+                    outlinks: frozenset[str] = frozenset()
                 else:
                     outlinks = self.extract_outlinks(timeout=extract_outlinks_timeout)
                 if run_behaviors and not skip_visit_hashtags:
                     self.visit_hashtags(final_page_url, hashtags, outlinks)
-                return final_page_url, outlinks
+                return final_page_url, outlinks.union(behavior_outlinks)
         except brozzler.ReachedLimit:
             # websock_thread has stashed the ReachedLimit exception with
             # more information, raise that one
@@ -766,16 +772,39 @@ class Browser:
         self.send_to_chrome(method="Page.navigate", params={"url": page_url})
         self._wait_for(lambda: self.websock_thread.got_page_load_event, timeout=timeout)
 
-    def extract_outlinks(self, timeout=60):
-        self.logger.info("extracting outlinks")
+    def inject_outlink_extractor(self, timeout=60):
         self.websock_thread.expect_result(self._command_id.peek())
         js = brozzler.jinja2_environment().get_template("extract-outlinks.js").render()
+        # This defines the method but doesn't extract outlinks yet
         msg_id = self.send_to_chrome(
-            method="Runtime.evaluate", params={"expression": js}
+            method="Runtime.evaluate",
+            suppress_logging=True,
+            params={"expression": js},
         )
         self._wait_for(
             lambda: self.websock_thread.received_result(msg_id), timeout=timeout
         )
+
+    def extract_outlinks(self, timeout=60) -> frozenset[str]:
+        self.logger.info("extracting outlinks")
+
+        # Define the outlink extractor first before extracting
+        self.inject_outlink_extractor(timeout=timeout)
+
+        self.websock_thread.expect_result(self._command_id.peek())
+        # Now we actually do outlink extraction
+        msg_id = self.send_to_chrome(
+            method="Runtime.evaluate",
+            params={
+                "expression": "__brzl_extractOutlinks()",
+                # returnByValue ensures we can receive an array response
+                "returnByValue": True,
+            },
+        )
+        self._wait_for(
+            lambda: self.websock_thread.received_result(msg_id), timeout=timeout
+        )
+
         message = self.websock_thread.pop_result(msg_id)
         if (
             "result" in message
@@ -784,7 +813,7 @@ class Browser:
         ):
             if message["result"]["result"]["value"]:
                 out = []
-                for link in message["result"]["result"]["value"].split("\n"):
+                for link in message["result"]["result"]["value"]:
                     try:
                         out.append(str(urlcanon.whatwg(link)))
                     except AddressValueError:
@@ -857,7 +886,10 @@ class Browser:
         message = self.websock_thread.pop_result(msg_id)
         return message["result"]["result"]["value"]
 
-    def run_behavior(self, behavior_script, timeout=900):
+    def run_behavior(self, behavior_script, timeout=900) -> frozenset[str]:
+        # Inject the outlink extractor so it's available to behaviors
+        self.inject_outlink_extractor(timeout=timeout)
+
         self.send_to_chrome(
             method="Runtime.evaluate",
             suppress_logging=True,
@@ -870,7 +902,7 @@ class Browser:
             elapsed = time.time() - start
             if elapsed > timeout:
                 self.logger.info("behavior reached hard timeout", elapsed=elapsed)
-                return
+                return frozenset()
 
             brozzler.sleep(check_interval)
 
@@ -878,7 +910,11 @@ class Browser:
             msg_id = self.send_to_chrome(
                 method="Runtime.evaluate",
                 suppress_logging=True,
-                params={"expression": "umbraBehaviorFinished()"},
+                params={
+                    "expression": "umbraBehaviorFinished()",
+                    # returnByValue ensures we can return more complicated types like dicts
+                    "returnByValue": True,
+                },
             )
             try:
                 self._wait_for(
@@ -893,11 +929,18 @@ class Browser:
                         "wasThrown" in msg["result"] and msg["result"]["wasThrown"]
                     )
                     and "result" in msg["result"]
-                    and isinstance(msg["result"]["result"]["value"], bool)
-                    and msg["result"]["result"]["value"]
                 ):
-                    self.logger.info("behavior decided it has finished")
-                    return
+                    if isinstance(msg["result"]["result"]["value"], bool):
+                        if msg["result"]["result"]["value"]:
+                            self.logger.info("behavior decided it has finished")
+                            return frozenset()
+                    # new-style response dict that has more than just a finished bool
+                    elif isinstance(msg["result"]["result"]["value"], dict):
+                        response = msg["result"]["result"]["value"]
+                        if response["finished"]:
+                            self.logger.info("behavior decided it has finished")
+                            outlinks = frozenset(response.get("outlinks", []))
+                            return outlinks
             except BrowsingTimeout:
                 pass
 
@@ -907,6 +950,10 @@ class Browser:
             .get_template("try-login.js.j2")
             .render(username=username, password=password)
         )
+
+        self.logger.info("trying to login")
+        time.sleep(1)  # allow time for any scripts to run
+        self._wait_for_idle(idle_time=2, timeout=4)
 
         self.websock_thread.got_page_load_event = None
         self.send_to_chrome(

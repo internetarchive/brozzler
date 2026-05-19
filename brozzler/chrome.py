@@ -17,6 +17,7 @@ limitations under the License.
 """
 
 import json
+import logging
 import os
 import re
 import select
@@ -181,7 +182,6 @@ class Chrome:
         new_env["HOME"] = self._home_tmpdir.name
         chrome_args = [
             self.chrome_exe,
-            "-v",
             "--remote-debugging-port=%s" % self.port,
             "--remote-allow-origins=http://localhost:%s" % self.port,
             "--use-mock-keychain",  # mac thing
@@ -198,13 +198,15 @@ class Chrome:
             "--disable-first-run-ui",
             "--no-first-run",
             "--homepage=about:blank",
-            "--disable-features=HttpsUpgrades,HttpsFirstBalancedModeAutoEnable,OptimizationGuideModelDownloading,OptimizationHintsFetching,OptimizationTargetPrediction,OptimizationHints",
+            "--disable-features=HttpsUpgrades,HttpsFirstBalancedModeAutoEnable,OptimizationGuideModelDownloading,OptimizationHintsFetching,OptimizationTargetPrediction,OptimizationGuideOnDeviceModel,OptimizationHints",
             "--disable-web-security",
             "--disable-notifications",
             "--disable-extensions",
             "--disable-save-password-bubble",
             "--disable-sync",
         ]
+        if self.logger.is_enabled_for(logging.DEBUG):
+            chrome_args.append("-v")
         if headless:
             major_version = check_version(self.chrome_exe)
             if major_version >= 109:

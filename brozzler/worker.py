@@ -372,7 +372,10 @@ class BrozzlerWorker:
                 )
                 outlinks.update(browser_outlinks)
                 status_code = browser.websock_thread.page_status
-                if status_code in [502, 504]:
+                if status_code in [502, 504] or (
+                    page.redirect_url and page.redirect_url.startswith("chrome-error:")
+                ):
+                    self.logger.warning("Chrome Error page encountered", page=page)
                     raise brozzler.PageConnectionError()
             except brozzler.PageInterstitialShown:
                 page_logger.info("page interstitial shown (http auth)")
@@ -553,6 +556,7 @@ class BrozzlerWorker:
                 window_width=self._window_width,
                 headless=self._headless,
             )
+        page.clear_redirect()
         final_page_url, outlinks = browser.browse_page(
             page.url,
             extra_headers=site.extra_headers(page),

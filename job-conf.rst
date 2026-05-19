@@ -14,7 +14,6 @@ Example
 
     id: myjob
     time_limit: 60 # seconds
-    proxy: 127.0.0.1:8000 # point at warcprox for archiving
     ignore_robots: false
     max_claimed_sites: 2
     warcprox_meta:
@@ -219,16 +218,6 @@ enforced at the seed level. If a time limit is specified at the top level, it
 is inherited by each seed as described above, and enforced individually on each
 seed.
 
-``proxy``
-~~~~~~~~~
-+--------+----------+---------+
-| type   | required | default |
-+========+==========+=========+
-| string | no       | *none*  |
-+--------+----------+---------+
-HTTP proxy, with the format ``host:port``. Typically configured to point to
-warcprox for archival crawling.
-
 ``ignore_robots``
 ~~~~~~~~~~~~~~~~~
 +---------+----------+-----------+
@@ -259,8 +248,8 @@ to contact the operator if the crawl is causing problems.
 +============+==========+===========+
 | dictionary | no       | ``false`` |
 +------------+----------+-----------+
-Specifies the ``Warcprox-Meta`` header to send with every request, if ``proxy``
-is configured. The value of the ``Warcprox-Meta`` header is a json blob. It is
+Specifies the ``Warcprox-Meta`` header to send with every request, if warcprox
+is enabled. The value of the ``Warcprox-Meta`` header is a json blob. It is
 used to pass settings and information to warcprox. Warcprox does not forward
 the header on to the remote site. For further explanation of this field and
 its uses see
