@@ -32,7 +32,6 @@ dependencies = [
   "urlcanon>=0.1.dev23",
   "cerberus>=1.0.1",
   "jinja2>=2.10",
-  "cryptography>=2.3",
   "python-magic>=0.4.15",
   "prometheus-client>=0.20.0",
   "structlog>=25.1.0",
