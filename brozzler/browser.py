@@ -303,13 +303,6 @@ class WebsockReceiverThread(threading.Thread):
                             self.active_connections.add(message["params"]["requestId"])
                         self.last_network_activity = time.time()
             elif (
-                message["method"] == "Network.dataReceived"
-                and "params" in message
-                and "requestId" in message["params"]
-            ):
-                with self.activity_lock:
-                    self.last_network_activity = time.time()
-            elif (
                 message["method"] == "Network.loadingFinished"
                 and "params" in message
                 and "requestId" in message["params"]
