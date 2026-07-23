@@ -746,7 +746,7 @@ class Browser:
         )
         if user_agent:
             msg_id = self.send_to_chrome(
-                method="Network.setUserAgentOverride", params={"userAgent": user_agent}
+                method="Emulation.setUserAgentOverride", params={"userAgent": user_agent}
             )
         if download_throughput > -1:
             # traffic shaping already used by SPN2 to aid warcprox resilience
