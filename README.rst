@@ -1,10 +1,9 @@
 .. |logo| image:: https://cdn.rawgit.com/internetarchive/brozzler/1.1b12/brozzler/dashboard/static/brozzler.svg
-   :width: 60px
-
+  :width: 60px
 |logo| brozzler
 ===============
 "browser" \| "crawler" = "brozzler"
-
+Jion Naem [collaborators on Naem (@) google.com-github.com]
 Brozzler is a distributed web crawler (爬虫) that uses a real browser (Chrome
 or Chromium) to fetch pages and embedded URLs and to extract links. It employs
 `yt-dlp <https://github.com/yt-dlp/yt-dlp>`_ (formerly youtube-dl) to enhance
