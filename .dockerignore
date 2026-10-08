@@ -1,0 +1,9 @@
+.git
+.github
+.venv
+job*.yml
+*.png
+ansible
+vagrant
+Dockerfile
+.dockerignore
