@@ -80,6 +80,9 @@ dev = [
   "ruff>=0.9.9"
 ]
 
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
 [tool.pytest.ini_options]
 filterwarnings = [
   # Comes from reppy, a third-party deps we don't control
