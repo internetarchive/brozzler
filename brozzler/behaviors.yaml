@@ -273,5 +273,7 @@
   request_idle_timeout_sec: 10
   default_parameters:
     interval: 10
+    # scroll Immich photo grids (recognized by page content, on any domain): js-templates/immich.js
+    immich: true
     actions:
       - selector: button#didomi-notice-agree-button, button.sc-button-play, .playButton, div.soundItem, .jwlist>a, audio, video

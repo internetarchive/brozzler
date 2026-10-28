@@ -17,6 +17,8 @@
  */
 
 
+{% if immich %}{% include "immich.js" %}
+{% endif %}
 class UmbraBehavior {
 
     constructor(actions) {
@@ -28,6 +30,7 @@ class UmbraBehavior {
         this.intervalTimeMs = {{interval or 300}};
         this.index = 0;
         this.outlinks = [];
+        this.immich = {% if immich %}new ImmichGrid(this){% else %}null{% endif %};
     }
 
     simpleIntervalFunc() {
@@ -152,7 +155,9 @@ class UmbraBehavior {
         }
 
         if (!didSomething) {
-            if (somethingLeftBelow || ( (window.scrollY + window.innerHeight) < document.documentElement.scrollHeight)) {
+            if (this.immich && this.immich.scroll()) {
+                // scrolled (or waited to scroll) Immich's photo grid instead
+            } else if (somethingLeftBelow || ( (window.scrollY + window.innerHeight) < document.documentElement.scrollHeight)) {
                 window.scrollBy(0, 200);
                 this.idleSince = null;
             } else if (somethingLeftAbove) {
