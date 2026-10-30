@@ -701,7 +701,7 @@ def brozzler_worker(argv=None):
         try:
             # make list from file
             with open(YTDLP_PROXY_ENDPOINTS_FILE) as endpoints:
-                ytdlp_proxy_endpoints = [line for line in endpoints.readlines()]
+                ytdlp_proxy_endpoints = list(filter(None, map(str.strip, endpoints.readlines())))
                 if ytdlp_proxy_endpoints:
                     logger.info(
                         "running with ytdlp proxy endpoints file",
