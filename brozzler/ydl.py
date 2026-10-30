@@ -274,7 +274,10 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         # the -sr suffix on the format_id. We can filter these out from the
         # list without putting any other prerequisites on the results.
         # https://alexwlchan.net/til/2025/ignore-ai-scaled-videos/
-        "format": "[format_id!*=-sr]",
+        # Accepts split audio/video formats (which YT sometimes uses to
+        # trick us into thinking we can't find an compatible format).
+        "format": "bestvideo*[format_id!*=-sr]+bestaudio/best[format_id!*=-sr]",
+
         # https://github.com/yt-dlp/yt-dlp#format-selection
         # "By default, yt-dlp tries to download the best available quality..."
         # v.2023.07.06 https://www.reddit.com/r/youtubedl/wiki/h264/?rdt=63577
