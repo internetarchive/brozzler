@@ -1,0 +1,7 @@
+{
+  "QuicAllowed": false,
+  "SignedHTTPExchangeEnabled": false,
+  "HttpsOnlyMode": "disallowed",
+  "XSLTEnabled": true,
+  "ComponentUpdatesEnabled": false
+}
