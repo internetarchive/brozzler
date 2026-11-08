@@ -19,6 +19,7 @@ limitations under the License.
 
 import datetime
 import http.server
+import json
 import os
 import socket
 import tempfile
@@ -558,6 +559,32 @@ def test_seed_redirect():
             },
         ]
     }
+
+
+def test_extra_headers_without_metadata():
+    site = brozzler.Site(
+        None,
+        {"seed": "http://example.com/", "warcprox_meta": {"warc-prefix": "seed1"}},
+    )
+    page = brozzler.Page(
+        None,
+        {
+            "url": "http://example.com/a",
+            "site_id": "test-site",
+            "hop_path": "L",
+            "via_page_url": "http://example.com/",
+        },
+    )
+    warcprox_meta = json.loads(site.extra_headers(page)["Warcprox-Meta"])
+    assert warcprox_meta == {
+        "warc-prefix": "seed1",
+        "metadata": {
+            "hop_path": "L",
+            "brozzled_url": "http://example.com/a",
+            "hop_via_url": "http://example.com/",
+        },
+    }
+    assert site.warcprox_meta == {"warc-prefix": "seed1"}
 
 
 def test_limit_failures():
