@@ -29,7 +29,8 @@ import doublethink
 import structlog
 import urlcanon
 import yt_dlp
-from yt_dlp.utils import ExtractorError, match_filter_func
+from yt_dlp.networking.exceptions import network_exceptions
+from yt_dlp.utils import ExtractorError, GeoRestrictedError, match_filter_func
 
 import brozzler
 
@@ -51,6 +52,45 @@ def isyoutubehost(url):
     return "youtube.com" in url.split("//")[-1].split("/")[0].split("?")[0]
 
 
+def _proxy_for_logs(proxy):
+    """`proxy` without any user:password, which may be secret."""
+    return proxy.rsplit("@", 1)[-1]
+
+
+def _choose_ytdlp_proxy(ytdlp_proxy_endpoints, tried_proxies):
+    """A random proxy endpoint, preferring ones not yet tried for this page."""
+    untried = [p for p in ytdlp_proxy_endpoints if p not in tried_proxies]
+    return random.choice(untried or ytdlp_proxy_endpoints)
+
+
+# Messages YouTube gives an address it's suspicious of or rate-limiting. yt-dlp
+# raises them as "expected" errors, like a removed video, but another proxy
+# endpoint (another address) can succeed.
+YTDLP_ADDRESS_ERROR_MESSAGES = ("not a bot", "captcha", "try again later")
+
+
+def _is_permanent_ytdlp_error(e):
+    """True if yt-dlp says the video can't be had (private, removed,
+    members-only, age-restricted...), so retrying won't help.
+
+    yt-dlp marks these `expected`, but it also marks network errors
+    `expected`, so those, geo-blocks and address-related refusals (bot checks,
+    rate limits) are excluded: a different proxy endpoint can fix them.
+    """
+    exc_info = getattr(e, "exc_info", None)
+    exc = exc_info[1] if exc_info else e
+    if not isinstance(exc, ExtractorError) or not exc.expected:
+        return False
+    if isinstance(exc, GeoRestrictedError):
+        return False
+    if isinstance(exc.cause, network_exceptions) or (
+        exc.exc_info and isinstance(exc.exc_info[1], network_exceptions)
+    ):
+        return False
+    msg = str(exc).lower()
+    return not any(m in msg for m in YTDLP_ADDRESS_ERROR_MESSAGES)
+
+
 class ExtraHeaderAdder(urllib.request.BaseHandler):
     def __init__(self, extra_headers):
         self.extra_headers = extra_headers
@@ -64,9 +104,16 @@ class ExtraHeaderAdder(urllib.request.BaseHandler):
         return req
 
 
-def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
+def _build_youtube_dl(
+    worker, destdir, site, page, ytdlp_proxy_endpoints, tried_proxies=()
+):
     """
     Builds a yt-dlp `yt_dlp.YoutubeDL` for brozzling `site` with `worker`.
+
+    For YouTube it uses one of `ytdlp_proxy_endpoints` for everything it
+    fetches (YouTube ties a video's download URLs to the address that asked
+    for them), preferring one not in `tried_proxies`. The one it uses is
+    `ydl.proxy`.
 
     The `YoutubeDL` instance does a few special brozzler-specific things:
 
@@ -79,6 +126,8 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         destdir (str): where to save downloaded videos
         site (brozzler.Site): the site we are brozzling
         page (brozzler.Page): the page we are brozzling
+        ytdlp_proxy_endpoints (list of str): proxies for YouTube
+        tried_proxies (collection of str): proxies already tried for `page`
 
     Returns:
         a yt-dlp `yt_dlp.YoutubeDL` instance
@@ -299,13 +348,15 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
 
     ytdlp_url = page.redirect_url if page.redirect_url else page.url
     is_youtube_host = isyoutubehost(ytdlp_url)
+    proxy = None
     if is_youtube_host and ytdlp_proxy_endpoints:
-        ydl_opts["proxy"] = random.choice(ytdlp_proxy_endpoints)
-        # don't log proxy value secrets
-        ytdlp_proxy_for_logs = (
-            ydl_opts["proxy"].split("@")[1] if "@" in ydl_opts["proxy"] else "@@@"
+        proxy = _choose_ytdlp_proxy(ytdlp_proxy_endpoints, tried_proxies)
+        ydl_opts["proxy"] = proxy
+        logger.info(
+            "using yt-dlp proxy",
+            proxy=_proxy_for_logs(proxy),
+            already_tried=len(tried_proxies),
         )
-        logger.info("using yt-dlp proxy ...", proxy=ytdlp_proxy_for_logs)
 
     # skip warcprox proxying yt-dlp v.2023.07.06: youtube extractor using ranges
     # if worker._proxy_for(site):
@@ -316,6 +367,7 @@ def _build_youtube_dl(worker, destdir, site, page, ytdlp_proxy_endpoints):
         ydl._opener.add_handler(ExtraHeaderAdder(site.extra_headers(page)))
     ydl.pushed_videos = []
     ydl.is_youtube_host = is_youtube_host
+    ydl.proxy = proxy
 
     return ydl
 
@@ -338,12 +390,30 @@ def _remember_videos(page, pushed_videos=None):
         page.videos.append(video)
 
 
-def _try_youtube_dl(worker, ydl, site, page):
+def _try_youtube_dl(worker, new_ydl, site, page):
+    """Runs yt-dlp for `page`, retrying YouTube up to `PROXY_ATTEMPTS` times.
+
+    `new_ydl(tried_proxies)` builds a fresh `YoutubeDL` for each try, so each
+    retry starts a new session through a proxy endpoint not tried yet for this
+    page (the one that just failed is often the problem). Each try keeps one
+    proxy throughout, since YouTube ties download URLs to an address.
+    """
+    tried_proxies = []
+    ydl = new_ydl(tried_proxies)
     max_attempts = PROXY_ATTEMPTS if ydl.is_youtube_host else 1
     attempt = 0
     while attempt < max_attempts:
+        if attempt > 0:
+            ydl = new_ydl(tried_proxies)
+        if ydl.proxy:
+            tried_proxies.append(ydl.proxy)
         try:
-            logger.info("trying yt-dlp", url=ydl.url)
+            logger.info(
+                "trying yt-dlp",
+                url=ydl.url,
+                attempt=attempt + 1,
+                proxy=_proxy_for_logs(ydl.proxy) if ydl.proxy else None,
+            )
             # should_download_vid = not ydl.is_youtube_host
             # then
             # ydl.extract_info(str(urlcanon.whatwg(ydl.url)), download=should_download_vid)
@@ -378,6 +448,12 @@ def _try_youtube_dl(worker, ydl, site, page):
                 "Redirect loop detected" in e.msg or "Too many redirects" in e.msg
             ):
                 raise brozzler.VideoExtractorError(e.msg)
+            elif _is_permanent_ytdlp_error(e):
+                # private, removed, members-only...: another try won't help
+                logger.info("yt-dlp says the video isn't available", error=str(e))
+                raise brozzler.VideoExtractorError(
+                    "yt-dlp: video not available at %s" % ydl.url
+                )
             else:
                 # todo: other errors to handle separately?
                 # OSError('Tunnel connection failed: 464 Host Not Allowed') (caused by ProxyError...)
@@ -396,9 +472,10 @@ def _try_youtube_dl(worker, ydl, site, page):
                 else:
                     retry_wait = min(60, YTDLP_WAIT * (1.5 ** (attempt - 1)))
                     logger.info(
-                        "Attempt %s failed. Retrying in %s seconds...",
+                        "Attempt %s failed. Retrying in %s seconds with another proxy...",
                         attempt,
                         retry_wait,
+                        proxy=_proxy_for_logs(ydl.proxy) if ydl.proxy else None,
                     )
                     time.sleep(retry_wait)
     else:
@@ -445,8 +522,17 @@ def do_youtube_dl(worker, site, page, ytdlp_proxy_endpoints):
         prefix="brzl-ydl-", dir=worker._ytdlp_tmpdir
     ) as tempdir:
         logger.info("tempdir for yt-dlp", tempdir=tempdir)
-        ydl = _build_youtube_dl(worker, tempdir, site, page, ytdlp_proxy_endpoints)
-        ie_result = _try_youtube_dl(worker, ydl, site, page)
+
+        def new_ydl(tried_proxies):
+            # each try gets its own directory, so a retry (maybe of another
+            # format, through another proxy) never resumes the last try's
+            # partial file
+            destdir = tempfile.mkdtemp(dir=tempdir)
+            return _build_youtube_dl(
+                worker, destdir, site, page, ytdlp_proxy_endpoints, tried_proxies
+            )
+
+        ie_result = _try_youtube_dl(worker, new_ydl, site, page)
         outlinks = set()
         if ie_result and (
             ie_result.get("extractor") == "youtube:playlist"
