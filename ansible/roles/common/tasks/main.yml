@@ -73,4 +73,4 @@
   user: name={{user}} system=yes createhome=no home=/nonexistent
         shell=/usr/sbin/nologin
   become: true
-  when: id_user|failed
+  when: id_user is failed
