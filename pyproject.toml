@@ -1,6 +1,6 @@
 [project]
 name = "brozzler"
-version = "1.9.11"
+version = "1.10.0"
 authors = [
   { name="Noah Levitt", email="nlevitt@archive.org" },
 ]
@@ -13,7 +13,7 @@ maintainers = [
 ]
 description = "Distributed web crawling with browsers"
 readme = "README.rst"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
@@ -40,7 +40,7 @@ dependencies = [
 license = "Apache-2.0"
 
 [project.optional-dependencies]
-yt-dlp = ["yt-dlp[default,curl-cffi]>=2024.7.25"]
+yt-dlp = ["yt-dlp[default,curl-cffi]>=2026.10.26"]
 dashboard = ["flask>=1.0", "gunicorn>=19.8.1"]
 warcprox = ["warcprox>=2.4.31"]
 rethinkdb = [
