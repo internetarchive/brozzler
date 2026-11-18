@@ -2,9 +2,9 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "jdashel/build-and-publish-image" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "master", "jdashel/build-and-publish-image" ]
 
 jobs:
 
