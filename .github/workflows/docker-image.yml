@@ -11,9 +11,9 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-      permissions:
-        contents: read
-        packages: write
+    permissions:
+      contents: read
+      packages: write
 
     steps:
     - name: Log in to GitHub Container Registry
