@@ -339,9 +339,10 @@ class Site(doublethink.Document, ElapsedMixIn):
                     zlib.compress(blocks_str.encode())
                 ).decode()
             if page is not None:
-                temp_warcprox_meta["metadata"]["hop_path"] = page.hop_path
-                temp_warcprox_meta["metadata"]["brozzled_url"] = page.url
-                temp_warcprox_meta["metadata"]["hop_via_url"] = page.via_page_url
+                metadata = temp_warcprox_meta.setdefault("metadata", {})
+                metadata["hop_path"] = page.hop_path
+                metadata["brozzled_url"] = page.url
+                metadata["hop_via_url"] = page.via_page_url
             hdrs["Warcprox-Meta"] = json.dumps(
                 temp_warcprox_meta, separators=(",", ":")
             )
